@@ -74,6 +74,6 @@ Projects Plus работает только с вашим хранилищем �
 - [История изменений](CHANGELOG-RU.md) и [сообщения об ошибках](https://github.com/ParkPavel/obs-projects-plus/issues).
 - [Участие в разработке](CONTRIBUTING.md) и [API пользовательских представлений](docs/api.md).
 
-Разработка проекта ведётся через [Claudex](https://github.com/ParkPavel/claudex). Настройки и инструкции для ИИ поддерживаются в том отдельном проекте.
+Разработка в рабочем пространстве сопровождающего ведётся через Borshkit. См. [правила участия](CONTRIBUTING-RU.md) и [матрицу завершения 3.7.1](docs/development-3.7.1-RU.md); закрытые настройки задач находятся вне истории плагина.
 
 Projects Plus основан на [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects) Маркуса Олссона. Текущий сопровождающий — Park Pavel. Лицензия: [Apache 2.0](https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE); сведения об авторстве — [NOTICE](https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE).

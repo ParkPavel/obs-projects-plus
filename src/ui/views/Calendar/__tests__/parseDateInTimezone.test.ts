@@ -3,6 +3,8 @@
  * it is written, not the day `Date()` makes of it.
  */
 import { parseDateInTimezone } from "../calendar";
+import { processCalendarData } from "../processor";
+import { DataFieldType } from "src/lib/dataframe/dataframe";
 
 const day = (value: unknown, tz?: string): string | null =>
   parseDateInTimezone(value, tz)?.format("YYYY-MM-DD") ?? null;
@@ -44,4 +46,25 @@ describe("parseDateInTimezone — written order", () => {
     expect(day(new Date(2026, 3, 10))).toBe("2026-04-10");
     expect(day(0)).toBeNull();
   });
+});
+
+it.each([
+  ["DD/MM/YYYY", "10/04/2026 09:30"],
+  ["MM/DD/YYYY", "04/10/2026 09:30"],
+])("calendar string parsing honours %s", (format, raw) => {
+  expect(parseDateInTimezone(raw, "Europe/Moscow", format)?.format("YYYY-MM-DD HH:mm")).toBe("2026-04-10 09:30");
+});
+
+it.each(["local", "Europe/Moscow"])("the calendar processor honours project format for raw start/end strings (%s)", timezone => {
+  const frame = {
+    fields: [{ name: "since", type: DataFieldType.String, identifier: false, derived: false, repeated: false }],
+    records: [{ id: "A.md", values: { since: "10/04/2026 09:30", until: "11/04/2026 10:30" } }],
+  };
+  const config = { startDateField: "since", endDateField: "until", timezone };
+  const uk = processCalendarData(frame, config, undefined, "DD/MM/YYYY");
+  expect(uk.processed[0]?.startDate?.format("YYYY-MM-DD HH:mm")).toBe("2026-04-10 09:30");
+  expect(uk.processed[0]?.endDate?.format("YYYY-MM-DD HH:mm")).toBe("2026-04-11 10:30");
+  // Reprocessing the same frame after a format change must not reuse UK dates.
+  const us = processCalendarData(frame, config, undefined, "MM/DD/YYYY");
+  expect(us.processed[0]?.startDate?.format("YYYY-MM-DD")).toBe("2026-10-04");
 });

@@ -1,6 +1,7 @@
 import type { DataField } from "src/lib/dataframe/dataframe";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
-import type { WidgetType, ChartConfig, StatsConfig } from "../types";
+import type { WidgetType, ChartConfig } from "../types";
+import { defaultStatsConfig } from "./Stats/statsDefaults";
 import { defaultTableTabLabel } from "./legacyMigration";
 
 /**
@@ -37,11 +38,6 @@ const DEFAULT_CHART_CONFIG: ChartConfig = {
   },
 };
 
-const DEFAULT_STATS_CONFIG: StatsConfig = {
-  cards: [],
-  columns: 2,
-};
-
 const PANELS = {
   "data-table": {
     // DataTable settings live in the right-click column menu; no cog.
@@ -61,7 +57,7 @@ const PANELS = {
   stats: {
     hasCog: true,
     isConfigured: (c) => !!c && typeof c === "object" && "cards" in c,
-    initDefaults: () => ({ ...DEFAULT_STATS_CONFIG }),
+    initDefaults: (fields) => ({ ...defaultStatsConfig(fields) }),
   },
   checklist: {
     hasCog: true,

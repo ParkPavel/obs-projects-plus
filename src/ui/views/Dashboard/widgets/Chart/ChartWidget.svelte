@@ -13,7 +13,7 @@
   import ScatterChart from "./ScatterChart.svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { toRem } from "src/ui/utils/cssLength";
-  import { getContext } from "svelte";
+  import { getContext, onDestroy } from "svelte";
   import {
     SELECTION_CONTEXT_KEY,
     type SelectionState,
@@ -43,9 +43,10 @@
   const selectionStore = getContext<SelectionStore | undefined>(SELECTION_CONTEXT_KEY);
   let currentSelection: SelectionState | null = null;
   if (selectionStore) {
-    selectionStore.subscribe((v) => {
+    const unsubscribe = selectionStore.subscribe((v) => {
       currentSelection = v;
     });
+    onDestroy(unsubscribe);
   }
 
   // Self-highlight only — receiver-style cross-widget dimming lands in #044.4/.5.

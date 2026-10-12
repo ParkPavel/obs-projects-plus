@@ -85,7 +85,7 @@ export abstract class FrontMatterDataSource extends DataSource {
       );
     }
 
-    const records = parseRecords(res.right, fields);
+    const records = parseRecords(res.right, fields, this.project.dateFormat?.writeFormat);
 
     return { fields, records, errors: res.left };
   }

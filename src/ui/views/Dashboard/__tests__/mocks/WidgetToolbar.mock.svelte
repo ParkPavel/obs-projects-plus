@@ -17,3 +17,4 @@
 <button class="widget-toolbar-mock-apply" on:click={() => dispatch("applyTemplate", templateWidgets)}>
 	Apply Mock Template
 </button>
+<button class="widget-toolbar-mock-add" on:click={() => dispatch("addWidget", "chart")}>Add chart</button>

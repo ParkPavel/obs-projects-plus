@@ -2,7 +2,7 @@
 
 [Русский](CONTRIBUTING-RU.md)
 
-Projects Plus is an Obsidian plugin maintained as a fork of [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects). This guide covers building, changing and testing the plugin. Development coordination is maintained in [Claudex](https://github.com/ParkPavel/claudex).
+Projects Plus is an Obsidian plugin maintained as a fork of [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects). This guide covers building, changing and testing the plugin. Development coordination in the maintainer workspace uses Borshkit. Start with its local `borshkit/START-HERE.md`; task contracts and acceptance evidence are private workspace material, not plugin runtime files.
 
 ## Build locally
 
@@ -14,6 +14,14 @@ npm run build
 ```
 
 The build type-checks TypeScript and bundles the plugin with esbuild. The runtime files are `main.js`, `manifest.json` and `styles.css`. For incremental builds, run `npm run dev`.
+
+`npm run build` and `npm run dev` overwrite generated runtime files in the checkout, including tracked `main.js`. In maintainer task worktrees, use the isolated build helper instead. Run it from the workspace root, with explicit checkout and output paths:
+
+```sh
+node handoff/2026-10-07-claudex-to-borshkit/tools/build-branch.mjs <candidate-checkout> <output-directory>
+```
+
+This helper belongs to the maintainer workspace, not a standalone repository clone. It includes the checkout's uncommitted source changes and records artifact hashes without replacing its tracked bundle. Install each task worktree's dependencies with `npm ci`; do not share its `node_modules` through a junction.
 
 To test in Obsidian, copy those three files into `.obsidian/plugins/obs-projects-plus/` in a separate test vault. Create the directory if necessary, enable the plugin in Community plugins, and reload it after each build. Use sample notes: testing editing and deletion changes vault files.
 
@@ -45,12 +53,14 @@ Run these commands from the repository root:
 npm run build
 npm test -- --runInBand
 npm run lint
-npm run svelte-check
+npm run svelte-check -- --fail-on-warnings
 ```
 
 Use focused tests while developing; run the full suite before submitting a pull request. Tests are located alongside their modules and under `src/__tests__`. Add regression coverage when fixing behavior that could recur. For a documentation-only change, check links, examples and any tests that validate the changed reference material.
 
 UI changes also need an Obsidian check: open the affected view, perform the changed action, and verify its result after reopening the view or reloading the plugin when persistence is involved. Describe the vault, Obsidian version and checks in the pull request without including private notes.
+
+For the 3.7.1 stabilization candidate, use the [completion baseline](docs/development-3.7.1.md). In the maintainer workspace, run `borshkit задача проверить release-371`, then `borshkit задача итог release-371`. Automated success does not accept manual criteria; the user decides those. Merge, push and release require the user's instruction.
 
 ## Translate the interface
 

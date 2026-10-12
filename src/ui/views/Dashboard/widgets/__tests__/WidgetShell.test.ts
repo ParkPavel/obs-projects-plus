@@ -3,6 +3,7 @@
  */
 
 import "@testing-library/jest-dom";
+import { tick } from "svelte";
 
 jest.mock("src/lib/stores/i18n", () => {
   const { writable } = require("svelte/store");
@@ -21,7 +22,7 @@ function mount(props: Record<string, unknown>) {
   document.body.appendChild(target);
   const component = new WidgetShell({
     target,
-    props: { widgetId: "w-1", title: "My widget", widgetType: "stats", ...props },
+    props: { widgetId: "w-1", title: "My widget", ...props },
   });
   return {
     component,
@@ -118,6 +119,32 @@ describe("WidgetShell (#067 F1)", () => {
     const host = target.querySelector(".ppp-widget-host")!;
     expect(host.getAttribute("aria-labelledby")).toBe("ppp-widget-title-w-1");
     expect(target.querySelector("#ppp-widget-title-w-1")).not.toBeNull();
+    destroy();
+  });
+
+  it("does not commit a title during IME, and Escape followed by blur writes nothing", async () => {
+    const { component, target, destroy } = mount({ renameSignal: 1 }); await tick();
+    const changes = jest.fn(); component.$on("titleChange", changes);
+    const input = target.querySelector<HTMLInputElement>("input")!;
+    input.value = "Renamed"; input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); await tick();
+    expect(target.querySelector("input")).toBe(input); expect(changes).not.toHaveBeenCalled();
+    input.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    input.dispatchEvent(new Event("blur")); await tick();
+    expect(changes).not.toHaveBeenCalled(); expect(target.querySelector("input")).toBeNull();
+    destroy();
+  });
+
+  it("a title committed on Enter is not committed again by blur", async () => {
+    const { component, target, destroy } = mount({ renameSignal: 1 }); await tick();
+    const changes = jest.fn(); component.$on("titleChange", changes);
+    const input = target.querySelector<HTMLInputElement>("input")!;
+    input.value = "Renamed"; input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    input.dispatchEvent(new Event("blur")); await tick();
+    expect(changes).toHaveBeenCalledTimes(1); expect(changes.mock.calls[0]![0].detail).toBe("Renamed");
     destroy();
   });
 });

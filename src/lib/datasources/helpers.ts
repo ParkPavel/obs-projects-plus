@@ -26,7 +26,8 @@ import { markTouched, touchedKeys } from "src/lib/recordDiff";
  */
 export function parseRecords(
   records: DataRecord[],
-  fields: DataField[]
+  fields: DataField[],
+  writeFormat?: string
 ): DataRecord[] {
   for (const field of fields) {
     for (const record of records) {
@@ -41,7 +42,7 @@ export function parseRecords(
             // spelling that names no day (`2024-02-30`) stays the original
             // string: it stays visible and editable instead of being rolled
             // over to another day or erased.
-            const stored = parseStoredDate(value);
+            const stored = parseStoredDate(value, writeFormat);
             if (stored === undefined) record.values[field.name] = dayjs(value).toDate();
             else if (stored !== null) record.values[field.name] = stored;
           }

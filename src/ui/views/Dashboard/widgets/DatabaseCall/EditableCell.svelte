@@ -5,7 +5,7 @@
    * Commit on blur/Enter/option-click, revert on Esc. Boolean toggles instantly. Relation editing is
    * #081 (RelationPickerPopover); derived types are read-only by contract.
    */
-  import { createEventDispatcher, tick } from "svelte";
+  import { createEventDispatcher } from "svelte";
   import {
     DataFieldType,
     type DataField,
@@ -15,11 +15,14 @@
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
   import { cellDisplay } from "./tableCanon";
-  import { toNumber } from "src/lib/engine/numeric";
-  import { dateInputValue, dateToStore } from "src/lib/helpers/dateShape";
+  import { editedCellValue } from "./editedCellValue";
+  import TypedCellEditor from "./TypedCellEditor.svelte";
+  import ListCellEditor from "./ListCellEditor.svelte";
   import CellChoiceDropdown from "./CellChoiceDropdown.svelte";
   import RelationPickerPopover from "./RelationPickerPopover.svelte";
   import RollupCellRenderer from "src/ui/components/RollupCellRenderer/RollupCellRenderer.svelte";
+
+  type DateFormatConfig = import("src/settings/v3/settings").DateFormatConfig;
 
   export let field: DataField;
   export let value: Optional<DataValue>;
@@ -30,6 +33,7 @@
   /** #081 — the Relation picker resolves the target project's records. */
   export let api: ViewApi;
   export let frame: DataFrame;
+  export let dateFormat: DateFormatConfig | undefined = undefined;
 
   const dispatch = createEventDispatcher<{
     startEdit: void;
@@ -42,20 +46,20 @@
   $: editable = !readonly && !field.derived &&
     field.type !== DataFieldType.Formula &&
     field.type !== DataFieldType.Rollup &&
-    !field.typeConfig?.rollup;
+    !field.typeConfig?.rollup &&
+    (!Array.isArray(value) || field.type === DataFieldType.String || field.type === DataFieldType.List || field.type === DataFieldType.Relation);
   $: isChoice = field.type === DataFieldType.Select || field.type === DataFieldType.Status;
-
   let draft = "";
-  let inputEl: HTMLInputElement | null = null;
   let committed = false;
   let wasEditing = false;
+  let invalid = false;
 
   // Seeded on the turn INTO editing, inside a function: `draft` is bound, and a `$:` that assigns it re-seeds per keystroke (R0.34).
   function onEditing(on: boolean) {
     if (on && !wasEditing) {
-      draft = field.type === DataFieldType.Date ? dateInputValue(value) : value === null || value === undefined ? "" : String(value);
+      draft = value == null ? "" : String(value);
       committed = false;
-      void tick().then(() => inputEl?.focus());
+      invalid = false;
     }
     wasEditing = on;
   }
@@ -74,26 +78,9 @@
   function commitDraft(raw: string) {
     if (committed) return;
     committed = true;
-    if (field.type === DataFieldType.Number) {
-      // #180a: `toNumber` is the one numeric rule; it returns null for empty and NaN.
-      dispatch("commit", toNumber(raw));
-      return;
-    }
-    // A date keeps the stored shape (date-only, time, spelling); emptied clears.
-    if (field.type === DataFieldType.Date) return void dispatch("commit", dateToStore(value, raw, field.typeConfig?.time === true));
-    dispatch("commit", raw);
+    dispatch("commit", editedCellValue(field, value, raw, dateFormat));
   }
 
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      commitDraft(draft);
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      committed = true;
-      dispatch("cancel");
-    }
-  }
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -102,30 +89,27 @@
   class:ppp-t2-cell--number={cell.kind === "number"}
   class:ppp-t2-cell--editable={editable}
   class:ppp-t2-cell--editing={editing}
+  class:ppp-t2-cell--invalid={invalid}
   role="gridcell"
   tabindex={editable ? 0 : -1}
   on:click={handleCellClick}
   on:keydown={(e) => { if (e.target === e.currentTarget && e.key === "Enter" && !editing) { e.preventDefault(); handleCellClick(); } }}
 >
-  {#if editing && field.type === DataFieldType.Date}
-    <input bind:this={inputEl} class="ppp-t2-editor" type="date" bind:value={draft}
-      on:keydown={handleKeydown} on:blur={() => commitDraft(draft)} />
-  {:else if editing && field.type === DataFieldType.Number}
-    <input bind:this={inputEl} class="ppp-t2-editor ppp-t2-editor--number" type="text" inputmode="decimal"
-      bind:value={draft} on:keydown={handleKeydown} on:blur={() => commitDraft(draft)} />
-  {:else if editing && field.type === DataFieldType.Relation}
+  {#if editing && field.type === DataFieldType.Relation}
     <span class="ppp-t2-text">{cell.kind === "text" ? cell.text : ""}</span>
     <RelationPickerPopover {field} {value} {api} {frame}
       on:commit={(e) => { committed = true; dispatch("commit", e.detail); }}
       on:cancel={() => { committed = true; dispatch("cancel"); }}
       on:setupRelation={() => { committed = true; dispatch("setupRelation", field); }} />
+  {:else if editing && (field.type === DataFieldType.List || (field.type === DataFieldType.String && (field.repeated || Array.isArray(value))))}
+    <ListCellEditor {field} {value} on:commit on:cancel />
   {:else if editing && isChoice}
     <CellChoiceDropdown bind:draft {options}
       on:commit={(e) => commitDraft(e.detail)}
       on:cancel={() => { committed = true; dispatch("cancel"); }} />
   {:else if editing}
-    <input bind:this={inputEl} class="ppp-t2-editor" type="text" bind:value={draft}
-      on:keydown={handleKeydown} on:blur={() => commitDraft(draft)} />
+    <TypedCellEditor {field} {value} {dateFormat}
+      on:commit on:cancel on:invalid={(e) => { invalid = e.detail; }} />
   {:else if field.type === DataFieldType.Rollup || field.typeConfig?.rollup}
     <!-- #045.4: shown by its mode (percent bar, show chips, plain count); read-only like every derived field.
          A rollup column keeps its detected type (a sum is a Number); its typeConfig.rollup says what it is. -->
@@ -137,7 +121,7 @@
       on:click|stopPropagation={() => { if (editable) dispatch("commit", value !== true); }} />
   {:else if cell.kind === "pills"}
     <span class="ppp-t2-pills">
-      {#each cell.pills as pill (pill.label)}
+      {#each cell.pills as pill}
         <span class="ppp-t2-pill" style:background-color={pill.color ?? ""}>
           {#if cell.status}<span class="ppp-t2-pill-dot" aria-hidden="true">●</span>{/if}{pill.label}
         </span>
@@ -175,26 +159,13 @@
   /* Canon §2: the editing cell becomes a popover — ring + shadow */
   .ppp-t2-cell--editing {
     background: var(--background-primary);
-    box-shadow: 0 0 0 0.125rem var(--interactive-accent), var(--ppp-shadow-md);
+    box-shadow: 0 0 0 0.125rem var(--ppp-t2-editor-ring, var(--interactive-accent)), var(--ppp-shadow-md);
     border-radius: var(--radius-s, 0.25rem);
     z-index: 2;
   }
 
-  .ppp-t2-editor {
-    width: 100%;
-    min-width: 0;
-    border: none;
-    background: transparent;
-    font-size: var(--font-ui-small);
-    color: var(--text-normal);
-    outline: none;
-    padding: 0;
-    height: 100%;
-  }
-
-  .ppp-t2-editor--number {
-    text-align: right;
-    font-variant-numeric: tabular-nums;
+  .ppp-t2-cell--invalid {
+    --ppp-t2-editor-ring: var(--text-error);
   }
 
   .ppp-t2-empty {

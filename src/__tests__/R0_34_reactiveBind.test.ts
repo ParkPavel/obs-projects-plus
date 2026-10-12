@@ -364,12 +364,18 @@ describe("R0.34 — the tree", () => {
       "$: if (editing) { draft = value === null || value === undefined ? \"\" : String(value); }"
     );
     expect(planted).not.toBe(text);
-    // Date, number, the choice dropdown's shorthand, text — in markup order.
+    // Scalar inputs moved to TypedCellEditor; the choice binding stays here.
     expect(reactiveBinds(planted).map((h) => `${h.kind}:${h.name}`)).toEqual([
-      "value:draft",
-      "value:draft",
       "draft:draft",
-      "value:draft",
     ]);
+  });
+
+  it("the old seed planted into the extracted scalar editor is still reported", () => {
+    const text = readText(join(SRC_ROOT, "ui/views/Dashboard/widgets/DatabaseCall/TypedCellEditor.svelte"));
+    expect(reactiveBinds(text)).toEqual([]);
+    const planted = text.replace("</script>", "$: draft = value == null ? \"\" : String(value);\n</script>");
+    expect(planted).not.toBe(text);
+    // Date input + shared text/number input: both must trip the zero budget.
+    expect(reactiveBinds(planted).map((h) => `${h.kind}:${h.name}`)).toEqual(["value:draft", "value:draft"]);
   });
 });

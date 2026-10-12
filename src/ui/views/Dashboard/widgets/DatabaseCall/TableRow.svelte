@@ -13,11 +13,14 @@
   import { cellDisplay, type TableColumn } from "./tableCanon";
   import EditableCell from "./EditableCell.svelte";
 
+  type DateFormatConfig = import("src/settings/v3/settings").DateFormatConfig;
+
   export let columns: TableColumn[];
   export let record: DataRecord;
   export let readonly: boolean;
   export let api: ViewApi;
   export let frame: DataFrame;
+  export let dateFormat: DateFormatConfig | undefined = undefined;
   /** R3 — this row currently drives the canvas Selection Bus. */
   export let driving = false;
   /** Field name currently edited in THIS record (single editor per table). */
@@ -56,7 +59,9 @@
   {#each columns as col (col.field.name)}
     {#if col.isPrimary}
       <div class="ppp-t2-cell ppp-t2-cell--primary" role="gridcell">
-        <span class="ppp-t2-name">{nameText()}</span>
+        <button type="button" class="ppp-t2-name"
+          on:click|stopPropagation={(e) => dispatch("openRecord", { record, event: e })}
+        >{nameText()}</button>
         <button
           class="ppp-t2-rowbtn clickable-icon"
           on:click|stopPropagation={(e) => dispatch("openRecord", { record, event: e })}
@@ -81,6 +86,7 @@
         {readonly}
         {api}
         {frame}
+        {dateFormat}
         editing={editingField === col.field.name}
         options={optionsByField.get(col.field.name) ?? []}
         on:startEdit={() => dispatch("startEdit", { recordId: record.id, field: col.field.name })}
@@ -117,10 +123,24 @@
   }
 
   .ppp-t2-name {
+    min-width: 0;
+    height: auto;
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    color: inherit;
+    font-size: inherit;
+    text-align: left;
+    cursor: pointer;
     font-weight: var(--font-medium, 500);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .ppp-t2-name:focus-visible {
+    outline: var(--ppp-border-width) solid var(--interactive-accent);
   }
 
   .ppp-t2-rowbtn {

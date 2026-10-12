@@ -148,19 +148,7 @@ export function applySort(
   });
 }
 
-// ── Search ───────────────────────────────────────────────────
-
-export function applySearch(
-  records: readonly DataRecord[],
-  query: string
-): DataRecord[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return [...records];
-  return records.filter((r) =>
-    r.id.toLowerCase().includes(q) ||
-    Object.values(r.values).some((v) => v != null && String(v).toLowerCase().includes(q))
-  );
-}
+export { applySearch } from "./tableSearchMatch";
 
 // ── Grouping render model (F2.5, canon §1) ───────────────────
 
@@ -229,7 +217,7 @@ export function cellDisplay(field: DataField, value: Optional<DataValue>): CellD
   const cfg = field.typeConfig as ExtendedFieldTypeConfig | undefined;
   const optionColor = (label: string) => (cfg ? getOptionColor(cfg, label) : null);
 
-  if (field.repeated && Array.isArray(value)) return toPills(value.map((v) => String(v)), optionColor, false);
+  if ((field.repeated || field.type === DataFieldType.List) && Array.isArray(value)) return toPills(value.map((v) => String(v)), optionColor, false);
 
   switch (field.type) {
     case DataFieldType.Boolean:

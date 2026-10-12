@@ -18,6 +18,18 @@ export interface TableViewport {
 
 const CLIPPING = /^(auto|scroll|hidden|overlay|clip)$/;
 
+/** A refreshed dataset may shrink before observers correct the old offset. */
+export function rowWindow(length: number, rowPx: number, viewport: TableViewport): { start: number; end: number } {
+  const overscan = 12;
+  return {
+    start: Math.min(
+      Math.max(0, length - Math.ceil(viewport.viewportPx / rowPx) - overscan),
+      Math.max(0, Math.floor(viewport.scrollTop / rowPx) - overscan),
+    ),
+    end: Math.min(length, Math.ceil((viewport.scrollTop + viewport.viewportPx) / rowPx) + overscan),
+  };
+}
+
 /** The node, then its ancestors that clip vertically, nearest first. */
 function clippers(node: HTMLElement): HTMLElement[] {
   const view = node.ownerDocument.defaultView;

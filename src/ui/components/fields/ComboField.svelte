@@ -30,6 +30,7 @@
   import { remAt, rootFontPx } from "src/ui/utils/cssLength";
   import { createDraftController, type CommitReason } from "./draftController";
   import { filterOptions, optionDomId, stepActive, type ComboOption } from "./comboOptions";
+  import { visibleViewport } from "src/ui/utils/visibleViewport";
 
   export let value = "";
   export let options: ComboOption[] = [];
@@ -121,13 +122,19 @@
     const gap = 0.25 * base;
     const anchor = rootEl.getBoundingClientRect();
     const box = popupEl.getBoundingClientRect();
+    const bounds = visibleViewport(view);
+    const below = Math.max(0, bounds.bottom - margin - anchor.bottom - gap);
+    const above = Math.max(0, anchor.top - gap - bounds.top - margin);
     let top = anchor.bottom + gap;
     // Flip above the anchor when the list does not fit below and does above.
-    if (top + box.height > view.innerHeight - margin && anchor.top - gap - box.height >= margin) {
-      top = anchor.top - gap - box.height;
+    if (box.height > below && above > below) {
+      top = anchor.top - gap - Math.min(box.height, above);
     }
-    const left = Math.min(Math.max(anchor.left, margin), Math.max(margin, view.innerWidth - box.width - margin));
-    popupStyle = `top: ${remAt(top, base)}; left: ${remAt(left, base)}; min-width: ${remAt(anchor.width, base)};`;
+    const height = Math.max(0, bounds.height - 2 * margin);
+    const width = Math.max(0, bounds.width - 2 * margin);
+    top = Math.min(Math.max(top, bounds.top + margin), Math.max(bounds.top + margin, bounds.bottom - margin - Math.min(box.height, height)));
+    const left = Math.min(Math.max(anchor.left, bounds.left + margin), Math.max(bounds.left + margin, bounds.right - Math.min(Math.max(box.width, anchor.width), width) - margin));
+    popupStyle = `top: ${remAt(top, base)}; left: ${remAt(left, base)}; min-width: ${remAt(Math.min(anchor.width, width), base)}; max-width: ${remAt(width, base)}; max-height: ${remAt(Math.max(0, bounds.bottom - margin - top), base)};`;
   }
   $: if (expanded && popupEl && shown) void place();
 
@@ -138,9 +145,13 @@
     if (view === watching) return;
     watching?.removeEventListener("resize", onViewChange);
     watching?.removeEventListener("scroll", onViewChange, true);
+    watching?.visualViewport?.removeEventListener("resize", onViewChange);
+    watching?.visualViewport?.removeEventListener("scroll", onViewChange);
     watching = view;
     watching?.addEventListener("resize", onViewChange);
     watching?.addEventListener("scroll", onViewChange, true);
+    watching?.visualViewport?.addEventListener("resize", onViewChange);
+    watching?.visualViewport?.addEventListener("scroll", onViewChange);
   }
   $: watch(expanded ? rootEl?.ownerDocument.defaultView ?? null : null);
   onDestroy(() => watch(null));

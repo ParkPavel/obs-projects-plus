@@ -129,9 +129,16 @@ describe("configPanelRegistry (Phase 2a)", () => {
       const cfg = defaults as { xAxis: { property: string } };
       expect(cfg.xAxis.property).toBe("status");
     });
-    test("stats: returns empty cards + columns=2", () => {
+    test("stats: seeds the editable count and first numeric field's sum/average, columns=2", () => {
       const defaults = panel("stats").initDefaults(mkFields());
-      expect(defaults).toEqual({ cards: [], columns: 2 });
+      expect(defaults).toEqual({ cards: [
+        { id: "_count", label: "Count all", field: "*", aggregation: "count_total" },
+        { id: "_sum", label: "estimate · Sum", field: "estimate", aggregation: "sum", format: "number" },
+        { id: "_avg", label: "estimate · Average", field: "estimate", aggregation: "avg", format: "number" },
+      ], columns: 2 });
+      expect(panel("stats").initDefaults([])).toEqual({ cards: [
+        { id: "_count", label: "Count all", field: "*", aggregation: "count_total" },
+      ], columns: 2 });
     });
     test("checklist: picks first boolean field", () => {
       const defaults = panel("checklist").initDefaults(mkFields());

@@ -178,6 +178,7 @@ describe("FilterRow — field list", () => {
     await settle();
     expect(document.querySelector('[role="searchbox"]')).toBeNull();
     expect(m.events).toEqual([]);
+    expect(document.activeElement).toBe(m.target.querySelector(".chip--field"));
     m.destroy();
   });
 });
@@ -209,5 +210,68 @@ describe("AgendaFilterEditor — P1 #12: the typed value reaches the list state"
     expect(box.value).toBe("Bet");
     expect(m.events.map((e) => e.filters[0]?.value)).toEqual(["Be", "Bet"]);
     m.destroy();
+  });
+});
+
+describe("FilterRow — operator menu on the shared popup", () => {
+  const activeDocDescriptor = Object.getOwnPropertyDescriptor(globalThis, "activeDocument");
+  beforeEach(() => {
+    // Mimic the old Obsidian-only DOM extension, so RED tests its menu behavior.
+    Object.defineProperty(globalThis, "activeDocument", { configurable: true, value: {
+      body: document.body,
+      createElement: (tag: string) => {
+        const node = document.createElement(tag);
+        Object.assign(node, { addClass: (...classes: string[]) => node.classList.add(...classes) });
+        return node;
+      },
+    } });
+  });
+  afterEach(() => {
+    if (activeDocDescriptor) Object.defineProperty(globalThis, "activeDocument", activeDocDescriptor);
+    else Reflect.deleteProperty(globalThis, "activeDocument");
+  });
+  test("keyboard arrows navigate and button activation selects once, no-value operators clear the old value", async () => {
+    const m = mountCollecting<Filter>(FilterRow, { filter: { ...filter, value: "Alpha" }, fields, records }, "update");
+    const trigger = m.target.querySelector<HTMLElement>(".chip--operator")!;
+    trigger.focus(); trigger.click(); await settle();
+    const menu = document.querySelector<HTMLElement>('[role="menu"]')!;
+    expect(menu).not.toBeNull(); expect(document.querySelector(".ppp-filter-popover")).toBeNull();
+    const items = Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+    expect(document.activeElement).toBe(items[0]);
+    press(items[0]!, "ArrowDown"); expect(document.activeElement).toBe(items[1]);
+    press(items[1]!, "Home"); expect(document.activeElement).toBe(items[0]);
+    items[0]!.click(); await settle();
+    expect(m.events).toEqual([{ ...filter, operator: "is-empty", value: null }]);
+    expect(document.querySelector('[role="menu"]')).toBeNull(); expect(document.activeElement).toBe(trigger);
+    m.destroy();
+  });
+
+  test("IME Escape does not close; normal Escape cancels, a touch-style click preserves a required value", async () => {
+    const m = mountCollecting<Filter>(FilterRow, { filter: { ...filter, value: "Alpha" }, fields, records }, "update");
+    const trigger = m.target.querySelector<HTMLElement>(".chip--operator")!;
+    trigger.click(); await settle();
+    const menu = document.querySelector<HTMLElement>('[role="menu"]')!; expect(menu).not.toBeNull();
+    press(menu, "Escape", { isComposing: true }); await settle(); expect(document.querySelector('[role="menu"]')).not.toBeNull();
+    press(menu, "Escape"); await settle(); expect(document.querySelector('[role="menu"]')).toBeNull(); expect(m.events).toEqual([]);
+    trigger.click(); await settle();
+    (document.querySelectorAll<HTMLElement>('[role="menuitem"]')[4])!.click(); await settle();
+    expect(m.events).toEqual([{ ...filter, operator: "contains", value: "Alpha" }]);
+    m.destroy(); expect(document.querySelector('[role="menu"]')).toBeNull();
+  });
+
+  test("a row moved to another window opens and dismisses its operator menu in that document, not the global activeDocument", async () => {
+    const m = mountCollecting<Filter>(FilterRow, { filter, fields, records }, "update");
+    const iframe = document.createElement("iframe"); document.body.append(iframe);
+    const ownDoc = iframe.contentDocument!;
+    ownDoc.body.append(m.target);
+    const trigger = m.target.querySelector<HTMLElement>(".chip--operator")!;
+    trigger.focus(); trigger.click(); await settle();
+    const menu = ownDoc.querySelector<HTMLElement>('[role="menu"]'); expect(menu).not.toBeNull();
+    expect(document.querySelector('[role="menu"]')).toBeNull();
+    const ownView = iframe.contentWindow! as Window & typeof globalThis;
+    menu!.dispatchEvent(new ownView.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })); await settle();
+    expect(ownDoc.querySelector('[role="menu"]')).toBeNull(); expect(m.events).toEqual([]);
+    expect(ownDoc.activeElement).toBe(trigger);
+    m.destroy(); iframe.remove();
   });
 });

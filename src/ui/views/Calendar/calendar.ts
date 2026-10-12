@@ -66,7 +66,8 @@ export function subtractInterval(
 
 export function parseDateInTimezone(
   value: unknown,
-  tz?: string
+  tz?: string,
+  writeFormat?: string
 ): dayjs.Dayjs | null {
   if (!value) return null;
 
@@ -83,7 +84,7 @@ export function parseDateInTimezone(
   // A day that does not exist is no day, rather than the one it rolls over to.
   let input: string | Date | dayjs.Dayjs = value;
   if (typeof value === "string") {
-    const stored = normalizeStoredDate(value);
+    const stored = normalizeStoredDate(value, writeFormat);
     if (stored === null) return null;
     if (stored !== undefined) input = stored;
   }
@@ -556,12 +557,13 @@ export function extractDateWithPriority(
   startDateField?: string,
   dateField?: string,
   endDateField?: string,
-  timezone: string = "local"
+  timezone: string = "local",
+  writeFormat?: string
 ): dayjs.Dayjs | null {
   // Priority 1: startDateField (default: "startDate")
   const startFieldName = startDateField || "startDate";
   if (record.values[startFieldName] !== undefined) {
-    return parseDateInTimezone(record.values[startFieldName], timezone);
+    return parseDateInTimezone(record.values[startFieldName], timezone, writeFormat);
   }
 
   // Priority 2: dateField is now creation date — skip for event start detection
@@ -570,7 +572,7 @@ export function extractDateWithPriority(
   // Priority 3: endDateField only (use as deadline)
   const endFieldName = endDateField || "endDate";
   if (record.values[endFieldName] !== undefined) {
-    return parseDateInTimezone(record.values[endFieldName], timezone);
+    return parseDateInTimezone(record.values[endFieldName], timezone, writeFormat);
   }
 
   // No date found

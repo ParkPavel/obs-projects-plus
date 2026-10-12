@@ -49,9 +49,9 @@ test-results.json
 # Recovery bundles
 *.bundle
 
-# Agent configuration moved to https://github.com/ParkPavel/claudex (2026-09-10).
+# Agent configuration is managed by Borshkit in the maintainer workspace.
 # Keep accidental legacy copies and machine-local settings out of this product repo.
-# Native entrypoints are generated at the workspace desktop level by Claudex.
+# Legacy entrypoints below stay excluded; see workspace Borshkit instructions.
 .claude/
 .codex/
 .agents/

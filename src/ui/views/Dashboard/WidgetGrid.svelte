@@ -170,7 +170,7 @@
   >
     {#each dndWidgets as widget (widget.id)}
       <WidgetHost
-        reorderable
+        reorderable={!widget.layout?.locked}
         {widget}
         frame={widget.type === "filter-tabs" ? frame : displayFrame}
         {api}

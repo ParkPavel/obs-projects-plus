@@ -110,8 +110,8 @@
       patchWidget({ config: change.widgetConfig });
     } else handleWidgetConfigChange(change.widgetConfig);
   }
-  /** Toggle panel, seeding type defaults on first configure. */
   function toggleConfig() {
+    if (readonly) return;
     if (!panelDescriptor.isConfigured(widget.config ?? {})) {
       handleWidgetConfigChange(panelDescriptor.initDefaults(panelFields(ctx)));
       showConfig = true;

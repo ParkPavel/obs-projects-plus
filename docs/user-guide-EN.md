@@ -86,6 +86,18 @@ A Dashboard is a workspace made of blocks. Start with one data block: select its
 
 In a table you can edit writable cells, choose columns, sort, and filter records. The schema configures field types, including text, number, checkbox, status, list, formula, and relation. Older saved Table and Database views are converted to Dashboard on load; they are not separate new installation modes.
 
+In the 3.7.1 stabilization candidate, Enter commits an edit and Escape cancels it; accepting an IME candidate does not close the cell. For numbers, use a decimal point without thousands separators. A malformed number or incomplete date is marked invalid and does not erase the stored value; intentionally clearing a valid control is still allowed. The record name opens the note, Alt-click opens its preview, and the name is keyboard accessible.
+
+Text lists in candidate 3.7.1 use per-item editing in the shared popup: Add item, remove the chosen row, Apply or Cancel. On a phone this uses the shared bottom sheet. Commas, quotes, duplicate and empty strings remain part of their values; a list never becomes a scalar string. Applying unchanged does not write the note; removing every item stores an empty list. Non-text entries in a mixed list retain their types and can be removed, but not edited as text. Numeric/date/boolean arrays in scalar columns are protected from such editing; a dedicated typed-array editor is not implemented yet. Popup positioning and software-keyboard behavior still require acceptance on a real phone.
+
+Large-table search runs in chunks: “…” replaces the count while waiting, followed by the complete result of the latest query. Changing or clearing the query cancels the previous search. “No matches” means a completed search with zero results, not a frozen table. These changes belong to the candidate, not the already installed 3.7.0.
+
+In wave 2 of candidate 3.7.1, Add widget immediately opens the type menu without an intermediate Widgets panel. A new tile is appended, focused and scrolled into view without rearranging existing tiles. The tile menu's lock pins its index in the vertical stack: it has no drag grip, and moving neighbors cannot change its index. This does not prevent editing, deletion or collapse. Title editing supports IME; Enter commits once and Escape cancels.
+
+Stats is a numeric summary, not a diagram. First configuration seeds editable cards for record count and, if a numeric field exists, its sum and average. Settings choose each card's field/operation, remove cards and select 2/3/4 columns. Narrow tiles reduce the grid to two or one column; clearing all cards leaves an explanation instead of resurrecting totals. A sparkline is a bounded preview of up to 200 points; the numeric aggregate uses every value. For a full diagram, add Chart. Read-only mode offers no configuration action for an unconfigured widget.
+
+Shared popups and suggestions use the visible window area when `visualViewport` exists; the first Escape closes inner suggestions, the next closes the window. With two popups open, only the topmost handles Escape and outside presses. These behaviors were tested with a modeled viewport; real software-keyboard and Obsidian popout behavior still requires manual acceptance.
+
 Each block can have its own source and filters. If two blocks show different records, compare those settings first. To link blocks, configure a dependency on a selected record: selecting a client in one block can then limit another block's data. Placing blocks next to each other does not create a link.
 
 ### Board
@@ -135,6 +147,10 @@ If several notes share a filename, include the folder in the link. A missing or 
 **A summary over related records.** With the relation configured, add a field of type “Rollup”: pick the relation column under “Through relation” and a function such as “Count all.” The card then shows how many records are related — `2` for a client with two sessions, `0` for a client with none. No data pipeline is needed for this.
 
 **A chart over related data.** The “+” in the block palette adds a “Chart”; its settings choose the type and the X and Y axes. Dates on the X axis group by day, week, month, quarter or year, and the Y axis can take a sum, an average, a min, a max, a median, a count or a unique count.
+
+**A first verifiable chart.** Use three records with text field `status` and numeric `amount`: A/10, A/30, B/20. Add a chart, choose bars, X = `status`, Y = `amount`, aggregation “Sum”: expect A = 40 and B = 20. Switching to a line chart preserves these values. Operations depend on field type: text does not offer sum, while “Count all” counts records, including empty values, rather than adding numbers. A hint explains the chosen operation. If an old configuration is incompatible with its field, it remains visible with a warning: opening it does not change it; explicitly choose a supported operation. Explicitly changing Y preserves a compatible operation or selects “Count all”. Scatter does not use this aggregation choice.
+
+**Agenda filter operator.** Press the operator button in a filter row. The menu uses the shared popup: arrows move focus, Enter/Space or pressing a button selects an item, and Escape cancels and restores focus to the trigger. Escape during IME composition does not dismiss input. Choosing an operator without a value clears the old value; opening and cancelling leave it unchanged. Actual soft-keyboard and separate Obsidian-window behavior still needs device verification.
 
 ## Computation across tables and projects
 

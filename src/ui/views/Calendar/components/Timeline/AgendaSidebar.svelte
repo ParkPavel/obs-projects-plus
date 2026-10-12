@@ -18,7 +18,7 @@
   import { dragHandleZone, SHADOW_PLACEHOLDER_ITEM_ID } from 'svelte-dnd-action';
   import { Icon } from 'obsidian-svelte';
   import { portal } from "src/ui/portal";
-  import { remAt, rootFontPx, toRem } from "src/ui/utils/cssLength";
+  import { toRem } from "src/ui/utils/cssLength";
   import { i18n } from '../../../../../lib/stores/i18n';
   import type { DataRecord, DataField } from '../../../../../lib/dataframe/dataframe';
   import type { ProjectDefinition } from '../../../../../settings/settings';
@@ -30,6 +30,7 @@
   import AgendaListEditor from '../../agenda/AgendaListEditor.svelte';
   import { applyDragFeedback } from '../../agenda/TouchDndCoordinator';
   import { pauseGestures, resumeGestures } from '../../gestures/GestureCoordinator';
+  import { fitAgendaOverlay } from '../../agenda/fitAgendaOverlay';
   
   const dispatch = createEventDispatcher();
   
@@ -252,17 +253,17 @@
   }
   
   // DATA PROCESSING
-  function getRecordDate(record: DataRecord): dayjs.Dayjs | null {
+  function getRecordDate(record: DataRecord, writeFormat?: string): dayjs.Dayjs | null {
     const fieldName = dateField ?? 'startDate';
     const value = record.values[fieldName] ?? record.values['date'] ?? record.values['deadline'];
     if (!value) return null;
-    return parseDateInTimezone(value, timezone);
+    return parseDateInTimezone(value, timezone, writeFormat);
   }
   
-  function getEndDate(record: DataRecord): dayjs.Dayjs | null {
+  function getEndDate(record: DataRecord, writeFormat?: string): dayjs.Dayjs | null {
     const value = record.values['endDate'] ?? record.values['end'];
     if (!value) return null;
-    return parseDateInTimezone(value, timezone);
+    return parseDateInTimezone(value, timezone, writeFormat);
   }
   
   function categorize(
@@ -318,7 +319,7 @@
     });
   }
 
-  function buildAgenda(recs: DataRecord[], baseDate: dayjs.Dayjs): AgendaEvent[] {
+  function buildAgenda(recs: DataRecord[], baseDate: dayjs.Dayjs, writeFormat?: string): AgendaEvent[] {
     const result: AgendaEvent[] = [];
     
     for (const record of recs) {
@@ -327,8 +328,8 @@
         : record.id.split('/').pop()?.replace('.md', '') ?? record.id;
       const title = stripWikilinks(rawTitle);
       
-      const date = getRecordDate(record);
-      const endDate = getEndDate(record);
+      const date = getRecordDate(record, writeFormat);
+      const endDate = getEndDate(record, writeFormat);
       
       // Check if task is completed
       const isCompleted = checkField 
@@ -402,7 +403,7 @@
     });
   }
   
-  $: agenda = buildAgenda(records, selectedDate);
+  $: agenda = buildAgenda(records, selectedDate, project.dateFormat?.writeFormat);
   
   $: grouped = CATEGORY_ORDER.reduce((acc, cat) => {
     acc[cat] = agenda.filter(e => e.category === cat);
@@ -501,23 +502,11 @@
     // Codex review of 125c617); only the container's measured bounds are inline.
     node.classList.add('obsidian-projects-agenda-overlay');
     node.classList.toggle('obsidian-projects-agenda-overlay--viewport', !container);
-    function update() {
-      if (!container) return;
-      const rect = container.getBoundingClientRect();
-      const root = rootFontPx(node.ownerDocument);
-      node.style.top = remAt(rect.top, root);
-      node.style.left = remAt(rect.left, root);
-      node.style.width = remAt(rect.width, root);
-      node.style.height = remAt(rect.height, root);
-    }
-
-    update();
-    const ro = container ? new ResizeObserver(update) : null;
-    if (container) ro!.observe(container);
+    const fitted = fitAgendaOverlay(node, container);
 
     return {
       destroy() {
-        ro?.disconnect();
+        fitted.destroy();
         // #192: the restore branch that used to live here was dead code, and
         // that is measured rather than argued -- `A192_portalContract.test.ts`
         // shows Svelte 3.59.2 detaching the element BEFORE running an action's

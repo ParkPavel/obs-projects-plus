@@ -1051,9 +1051,9 @@
     try {
       const startFieldName = dateField.name;
       const endFieldName = endDateField?.name;
-      const sourceStart = parseDateInTimezone(record.values[startFieldName], timezoneValue);
+      const sourceStart = parseDateInTimezone(record.values[startFieldName], timezoneValue, project.dateFormat?.writeFormat);
       const sourceEnd = endFieldName
-        ? parseDateInTimezone(record.values[endFieldName], timezoneValue)
+        ? parseDateInTimezone(record.values[endFieldName], timezoneValue, project.dateFormat?.writeFormat)
         : null;
       // The copy keeps the note's text. Read before anything is created, so a
       // note that cannot be read fails the whole duplicate instead of leaving
@@ -1268,26 +1268,27 @@
   //   → $: block runs → writes -1/'' (even same values) → $$invalidate → component dirty
   //   → flush() sees dirty[0] === -1 (reset before fragment.p runs) → pushes back → re-runs → ∞
   // Function body is NOT analyzed for $: dependencies — only the explicit arguments are tracked.
-  $: updateProcessedData(dateField, config, records, dataVersion, frame, getRecordColor);
+  $: updateProcessedData(dateField, config, records, dataVersion, frame, getRecordColor, project.dateFormat?.writeFormat);
   function updateProcessedData(
     df: typeof dateField,
     cfg: typeof config,
     recs: typeof records,
     dv: typeof dataVersion,
     fr: typeof frame,
-    getColor: typeof getRecordColor
+    getColor: typeof getRecordColor,
+    writeFormat?: string
   ): void {
     const startField = df?.name;
     
     if (startField && cfg && recs && recs.length > 0) {
       // Cheap change detection: dataVersion increments on every data update,
       // configKey only includes fields that affect processing
-      const configKey = `${cfg.startDateField}|${cfg.endDateField}|${cfg.startTimeField}|${cfg.endTimeField}|${cfg.eventColorField}|${cfg.timezone}|${cfg.startHour}|${cfg.endHour}`;
+      const configKey = `${cfg.startDateField}|${cfg.endDateField}|${cfg.startTimeField}|${cfg.endTimeField}|${cfg.eventColorField}|${cfg.timezone}|${cfg.startHour}|${cfg.endHour}|${writeFormat}`;
       
       if (dv !== lastProcessedVersion || configKey !== lastProcessedConfigKey) {
         lastProcessedVersion = dv;
         lastProcessedConfigKey = configKey;
-        cachedProcessedData = processCalendarData(fr, cfg, getColor);
+        cachedProcessedData = processCalendarData(fr, cfg, getColor, writeFormat);
         calendarLogger.debug('[Perf] processCalendarData called', { data: { dataVersion: dv, records: recs.length } });
       }
     } else {
@@ -1389,7 +1390,8 @@
         startDateField?.name,
         undefined, // creation date field is not used for event start
         endDateField?.name,
-        timezoneValue
+        timezoneValue,
+        project.dateFormat?.writeFormat
       );
       const targetDate = date.startOf('day');
 
@@ -1430,7 +1432,7 @@
         targetDate,
         options,
         originalStart,
-        originalEnd: endDateField?.name ? parseDateInTimezone(endRawValue, timezoneValue) : null,
+        originalEnd: endDateField?.name ? parseDateInTimezone(endRawValue, timezoneValue, project.dateFormat?.writeFormat) : null,
         validateEndShift: (orig, next, hasTime) => validateDateUpdate(orig, next, hasTime, timezoneValue),
       });
       const newStartDate = built.newStartDate;
@@ -1740,7 +1742,7 @@
       ...latest,
       agenda: {
         ...latest.agenda,
-        mode: latest.agenda?.mode ?? 'standard',
+        mode: latest.agenda?.mode ?? 'custom',
         standard: {
           inheritCalendarFilters: latest.agenda?.standard?.inheritCalendarFilters ?? true,
         },
@@ -1771,7 +1773,7 @@
       ...latest,
       agenda: {
         ...latest.agenda,
-        mode: latest.agenda?.mode ?? 'standard',
+        mode: latest.agenda?.mode ?? 'custom',
         standard: {
           inheritCalendarFilters: latest.agenda?.standard?.inheritCalendarFilters ?? true,
         },
@@ -1809,7 +1811,7 @@
       ...latest,
       agenda: {
         ...latest.agenda,
-        mode: latest.agenda?.mode ?? 'standard',
+        mode: latest.agenda?.mode ?? 'custom',
         standard: {
           inheritCalendarFilters: latest.agenda?.standard?.inheritCalendarFilters ?? true,
         },

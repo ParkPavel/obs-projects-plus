@@ -279,3 +279,75 @@ describe("boolean cell", () => {
     expect(container.querySelector("input.ppp-t2-editor")).toBeNull();
   });
 });
+
+describe("safe typed input (feedback 01)", () => {
+  it.each([DataFieldType.Number, DataFieldType.Boolean, DataFieldType.Date])("never edits an array as a scalar %s", async type => {
+    const { container, commits } = mount(makeField(type), [1, 2], { editing: false });
+    const cell = container.querySelector<HTMLElement>(".ppp-t2-cell");
+    expect(cell).not.toHaveClass("ppp-t2-cell--editable");
+    cell?.click();
+    await tick();
+    expect(commits).toEqual([]);
+    expect(container.querySelector("input.ppp-t2-editor")).toBeNull();
+  });
+  it("does not mistake a partially typed native date for an intentional clear", async () => {
+    const { container, commits } = mount(makeField(DataFieldType.Date), "2024-01-15");
+    await tick();
+    const el = editor(container);
+    // Chromium/Safari may expose an empty value while the date subfields are
+    // incomplete, but mark badInput. That is not the explicit clear action.
+    await typeInto(el, "");
+    Object.defineProperty(el.validity, "badInput", { configurable: true, get: () => true });
+    key(el, "Enter");
+    el.dispatchEvent(new FocusEvent("blur"));
+    expect(commits).toEqual([]);
+    await tick();
+    expect(el).toHaveAttribute("aria-invalid", "true");
+    Object.defineProperty(el.validity, "badInput", { configurable: true, get: () => false });
+    await typeInto(el, "2024-03-05");
+    key(el, "Enter");
+    expect(commits).toEqual(["2024-03-05"]);
+  });
+
+  it.each(["12abc", "1,5", "Infinity"])("does not erase the stored number when %s is entered", async (raw) => {
+    const { container, commits } = mount(makeField(DataFieldType.Number), 12);
+    await tick();
+    const el = editor(container);
+    await typeInto(el, raw);
+    key(el, "Enter");
+    await tick();
+    expect(commits).toEqual([]);
+    expect(el).toHaveAttribute("aria-invalid", "true");
+    el.dispatchEvent(new FocusEvent("blur"));
+    expect(commits).toEqual([]);
+    await typeInto(el, "24.5");
+    key(el, "Enter");
+    expect(commits).toEqual([24.5]);
+  });
+
+  it.each(["Enter", "Escape"])("does not commit/cancel on IME %s before composition ends", async (k) => {
+    const { container, commits, cancels } = mount(makeField(DataFieldType.String), "old");
+    await tick();
+    const el = editor(container);
+    el.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+    await typeInto(el, "候補");
+    key(el, k);
+    expect(commits).toEqual([]);
+    expect(cancels()).toBe(0);
+    el.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true }));
+    await typeInto(el, "確定");
+    key(el, "Enter");
+    expect(commits).toEqual(["確定"]);
+  });
+
+  it.each([{ isComposing: true }, { keyCode: 229 }])("ignores the host IME key flag %j", async (flags) => {
+    const { container, commits } = mount(makeField(DataFieldType.String), "old");
+    await tick();
+    const el = editor(container);
+    await typeInto(el, "candidate");
+    el.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, ...flags }));
+    expect(commits).toEqual([]);
+    key(el, "Enter");
+    expect(commits).toEqual(["candidate"]);
+  });
+});

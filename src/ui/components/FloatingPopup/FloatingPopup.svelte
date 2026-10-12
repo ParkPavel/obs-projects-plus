@@ -18,6 +18,9 @@
   import { portal } from "src/ui/portal";
   import { isMobile } from "src/lib/stores/ui";
   import { remAt, rootFontPx } from "src/ui/utils/cssLength";
+  import { isImeKey } from "src/ui/components/fields/draftController";
+  import { fitVisibleViewport } from "src/ui/actions/fitVisibleViewport";
+  import { visibleViewport } from "src/ui/utils/visibleViewport";
 
   // ── Public types ───────────────────────────────────────────
   type PopupPlacement =
@@ -64,6 +67,8 @@
 
   let popupEl: HTMLDivElement | null = null;
   let style = "";
+  let composing = false;
+  $: if (!open) composing = false;
 
   // Track previous open to fire focus-restore exactly once on close.
   let wasOpen = false;
@@ -111,17 +116,21 @@
   function bindTo(doc: Document): void {
     if (listening && doc === boundDoc) return;
     if (listening) {
-      boundDoc.removeEventListener("keydown", handleKeydown, true);
+      boundDoc.removeEventListener("keydown", handleKeydown);
       boundDoc.removeEventListener("mousedown", handleOutsideMouseDown, true);
       boundView.removeEventListener("resize", handleReposition);
       boundView.removeEventListener("scroll", handleReposition, true);
+      boundView.visualViewport?.removeEventListener("resize", handleReposition);
+      boundView.visualViewport?.removeEventListener("scroll", handleReposition);
     }
     boundDoc = doc;
     boundView = doc.defaultView ?? window;
-    boundDoc.addEventListener("keydown", handleKeydown, true);
+    boundDoc.addEventListener("keydown", handleKeydown);
     boundDoc.addEventListener("mousedown", handleOutsideMouseDown, true);
     boundView.addEventListener("resize", handleReposition);
     boundView.addEventListener("scroll", handleReposition, true);
+    boundView.visualViewport?.addEventListener("resize", handleReposition);
+    boundView.visualViewport?.addEventListener("scroll", handleReposition);
     listening = true;
   }
 
@@ -135,10 +144,12 @@
 
   onDestroy(() => {
     if (!listening) return;
-    boundDoc.removeEventListener("keydown", handleKeydown, true);
+    boundDoc.removeEventListener("keydown", handleKeydown);
     boundDoc.removeEventListener("mousedown", handleOutsideMouseDown, true);
     boundView.removeEventListener("resize", handleReposition);
     boundView.removeEventListener("scroll", handleReposition, true);
+    boundView.visualViewport?.removeEventListener("resize", handleReposition);
+    boundView.visualViewport?.removeEventListener("scroll", handleReposition);
     listening = false;
   });
 
@@ -161,8 +172,9 @@
     // different screen area entirely.
     const doc = popupEl.ownerDocument;
     const view = doc.defaultView ?? window;
-    const vw = view.innerWidth;
-    const vh = view.innerHeight;
+    const bounds = visibleViewport(view);
+    const vw = bounds.right;
+    const vh = bounds.bottom;
 
     // The root of the popup's own document (#192), read once for the offsets
     // below and for writing the result back in rem; 16 when it reports none.
@@ -185,8 +197,8 @@
     // Flip vertically.
     if (placement.startsWith("bottom") && top + pRect.height > vh - marginPx) {
       const flipped = tRect.top - pRect.height - offsetPx;
-      if (flipped >= marginPx) top = flipped;
-    } else if (placement.startsWith("top") && top < marginPx) {
+      if (flipped >= bounds.top + marginPx) top = flipped;
+    } else if (placement.startsWith("top") && top < bounds.top + marginPx) {
       const flipped = tRect.bottom + offsetPx;
       if (flipped + pRect.height <= vh - marginPx) top = flipped;
     }
@@ -194,20 +206,20 @@
     // Flip horizontally for left/right.
     if (placement === "right-start" && left + pRect.width > vw - marginPx) {
       const flipped = tRect.left - pRect.width - offsetPx;
-      if (flipped >= marginPx) left = flipped;
-    } else if (placement === "left-start" && left < marginPx) {
+      if (flipped >= bounds.left + marginPx) left = flipped;
+    } else if (placement === "left-start" && left < bounds.left + marginPx) {
       const flipped = tRect.right + offsetPx;
       if (flipped + pRect.width <= vw - marginPx) left = flipped;
     }
 
     // Clamp inside viewport.
     const clampedLeft = Math.min(
-      Math.max(left, marginPx),
-      Math.max(marginPx, vw - pRect.width - marginPx)
+      Math.max(left, bounds.left + marginPx),
+      Math.max(bounds.left + marginPx, vw - pRect.width - marginPx)
     );
     const clampedTop = Math.min(
-      Math.max(top, marginPx),
-      Math.max(marginPx, vh - pRect.height - marginPx)
+      Math.max(top, bounds.top + marginPx),
+      Math.max(bounds.top + marginPx, vh - pRect.height - marginPx)
     );
 
     // Constrain WIDTH to the space from the clamped origin to the right
@@ -222,7 +234,7 @@
         ? Math.min(viewportWidthCap, cssMaxWidth)
         : viewportWidthCap;
 
-    style = `top: ${remAt(clampedTop, baseFontPx)}; left: ${remAt(clampedLeft, baseFontPx)}; max-width: ${remAt(Math.max(0, widthCap), baseFontPx)};`;
+    style = `top: ${remAt(clampedTop, baseFontPx)}; left: ${remAt(clampedLeft, baseFontPx)}; max-width: ${remAt(Math.max(0, widthCap), baseFontPx)}; min-width: ${remAt(Math.min(12 * baseFontPx, Math.max(0, widthCap)), baseFontPx)}; max-height: ${remAt(Math.max(0, vh - clampedTop - marginPx), baseFontPx)};`;
   }
 
   async function focusFirst(): Promise<void> {
@@ -235,8 +247,13 @@
   }
 
   // ── Event handlers ─────────────────────────────────────────
+  function isTopmost(): boolean {
+    const popups = boundDoc.querySelectorAll(".ppp-popup--floating, .ppp-popup--bottom-sheet");
+    return popupEl === popups[popups.length - 1];
+  }
   function handleKeydown(e: KeyboardEvent): void {
-    if (!open) return;
+    if (!open || e.defaultPrevented || composing || isImeKey(e)) return;
+    if (!isTopmost()) return;
     if (e.key === "Escape") {
       e.preventDefault();
       requestClose();
@@ -278,7 +295,7 @@
   }
 
   function handleOutsideMouseDown(e: MouseEvent): void {
-    if (!open) return;
+    if (!open || !isTopmost()) return;
     const target = e.target as Node | null;
     if (!target) return;
     if (popupEl && popupEl.contains(target)) return;
@@ -318,7 +335,9 @@
   {#if $isMobile}
     <!-- ── MOBILE: Bottom Sheet ──────────────────────────── -->
     <div
-      class="ppp-popup-backdrop"
+      class="ppp-popup ppp-popup-backdrop"
+      use:portal={{ to: "document-body" }}
+      use:fitVisibleViewport
       role="presentation"
       on:mousedown|self={requestClose}
     >
@@ -329,6 +348,7 @@
         aria-label={ariaLabel || undefined}
         aria-modal="true"
         on:click={handleInnerClick}
+        on:compositionstart={() => { composing = true; }} on:compositionend={() => { composing = false; }}
       >
         <div class="ppp-bottom-sheet-handle" aria-hidden="true"></div>
         <slot />
@@ -344,6 +364,7 @@
       {role}
       aria-label={ariaLabel || undefined}
       on:click={handleInnerClick}
+      on:compositionstart={() => { composing = true; }} on:compositionend={() => { composing = false; }}
     >
       <slot />
     </div>
@@ -355,6 +376,8 @@
     position: fixed;
     z-index: var(--ppp-z-popover, 50);
     min-width: var(--ppp-popup-min-w, 12rem);
+    box-sizing: border-box;
+    overflow-y: auto;
     max-width: var(--ppp-popup-max-w, 24rem);
     background: var(--background-primary);
     border: 0.0625rem solid var(--background-modifier-border);
@@ -390,7 +413,7 @@
     /* A caller may cap this at a measured room (App's short-landscape rule),
        so the padding has to count inside the cap, not on top of it. */
     box-sizing: border-box;
-    max-height: var(--ppp-bottom-sheet-max-h, 85vh);
+    max-height: min(var(--ppp-bottom-sheet-max-h, 85vh), 100%);
     overflow-y: auto;
     background: var(--background-primary);
     border-radius: var(--ppp-bottom-sheet-radius, 1rem 1rem 0 0);

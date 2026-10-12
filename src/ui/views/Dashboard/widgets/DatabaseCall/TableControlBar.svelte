@@ -17,6 +17,7 @@
   export let recordCount = 0;
   export let readonly = false;
   export let searchQuery = "";
+  export let searching = false;
 
   const dispatch = createEventDispatcher<{
     search: string;
@@ -82,7 +83,9 @@
     title={$i18n.t("views.dashboard.table-v2.search", { defaultValue: "Search records" })}
   ><Icon name="search" size="sm" /></button>
 
-  <span class="ppp-t2-cb-count" aria-live="polite">{recordCount}</span>
+  <span class="ppp-t2-cb-count" aria-live="polite" aria-busy={searching}
+    aria-label={searching ? $i18n.t("views.dashboard.table-v2.searching", { defaultValue: "Searching…" }) : undefined}
+  >{searching ? "…" : recordCount}</span>
 </div>
 
 <style>

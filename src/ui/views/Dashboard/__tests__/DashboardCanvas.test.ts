@@ -45,7 +45,7 @@ jest.mock("src/lib/stores/settings", () => {
   const { writable } = require("svelte/store");
   return {
     settings: {
-      ...writable({ projects: [] }),
+      ...writable({ projects: [], preferences: { animationBehavior: "instant" } }),
       updateFieldConfig: () => {},
       deleteFieldConfig: () => {},
     },
@@ -164,6 +164,40 @@ describe("DatabaseViewCanvas", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
     isMobile.set(false);
+  });
+
+  test("locked stack widgets have no drag entrance and retain their index on reorder", async () => {
+    const first = createConfig().widgets[0]!;
+    const locked = { ...first, id: "locked", layout: { ...first.layout, locked: true } };
+    const last = { ...first, id: "last" };
+    const view = mountCanvas({ widgets: [first, locked, last] });
+    try {
+      expect(view.target.querySelector('[data-widget-id="locked"]')?.getAttribute("data-reorderable")).toBe("false");
+      const zone = view.target.querySelector(".ppp-database-canvas--stack");
+      const { SOURCES, TRIGGERS } = require("svelte-dnd-action");
+      zone?.dispatchEvent(new CustomEvent("finalize", { detail: { items: [last, first, locked], info: { source: SOURCES.POINTER, trigger: TRIGGERS.DROPPED_INTO_ZONE, id: last.id } } }));
+      await flush();
+      expect(view.onConfigChange.mock.calls.at(-1)?.[0].widgets.map((w: { id: string }) => w.id)).toEqual(["last", "locked", "existing-widget"]);
+    } finally { view.destroy(); }
+  });
+
+  test("the top creation entrance is direct and a newly added widget is revealed and focused", async () => {
+    const scroll = jest.fn();
+    const previous = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = scroll;
+    const view = mountCanvas();
+    try {
+      const add = view.target.querySelector(".widget-toolbar-mock-add");
+      expect(add).not.toBeNull();
+      click(add);
+      await flush(); await flush();
+      const next = view.onConfigChange.mock.calls.at(-1)?.[0].widgets.at(-1);
+      const node = view.target.querySelector(`[data-widget-id="${next?.id}"]`);
+      expect(node).not.toBeNull();
+      expect(document.activeElement).toBe(node);
+      expect(scroll).toHaveBeenCalledWith(expect.objectContaining({ block: "nearest" }));
+      expect(view.onConfigChange.mock.calls.at(-1)?.[0].widgets[0].id).toBe("existing-widget");
+    } finally { view.destroy(); HTMLElement.prototype.scrollIntoView = previous; }
   });
 
   test("#191 a stored apply-template action does not reach the screen", () => {

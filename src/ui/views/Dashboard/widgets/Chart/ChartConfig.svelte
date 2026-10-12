@@ -10,6 +10,8 @@
   import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { isRelationCompanionField } from "src/lib/engine/crossProjectResolver";
+  import { chartAggregations, chartYAxis } from "./chartAggregations";
+  import { aggregationLabel, aggregationConsequence } from "src/lib/dashboard-engine/aggregationOptions";
 
   export let config: ChartConfig;
   export let fields: DataField[];
@@ -41,6 +43,9 @@
     .filter((f) => !isRelationCompanionField(f.name))
     .map((f) => f.name);
   $: isScatter = config.chartType === "scatter";
+  $: yAggregations = chartAggregations(fields.find(f => f.name === config.yAxis.property));
+  $: unsupportedAggregation = !isScatter && config.yAxis.property !== "count" && !yAggregations.includes(config.yAxis.aggregation);
+  $: tr = (key: string, defaultValue: string) => $i18n.t(key, { defaultValue });
 
   // #096.3 — granularity <select> is gated on the X-axis field being a Date.
   // Dispatch by DataFieldType (invariant #1), never by field name.
@@ -215,32 +220,34 @@
     <span>{$i18n.t("views.dashboard.chart.y-axis")}</span>
     <select
       value={config.yAxis.property}
-      on:change={(e) => emit({ yAxis: { ...config.yAxis, property: e.currentTarget.value } })}
+      on:change={(e) => emit({ yAxis: chartYAxis(config, e.currentTarget.value, fields) })}
     >
-      <option value="count">{$i18n.t("views.dashboard.chart.aggregations.count")}</option>
+      <option value="count">{aggregationLabel("count_total", tr)}</option>
       {#each fieldNames as name}
         <option value={name}>{name}</option>
       {/each}
     </select>
   </label>
 
-  {#if config.yAxis.property !== "count"}
+  {#if !isScatter && config.yAxis.property !== "count"}
     <label class="ppp-config-row">
       <span>{$i18n.t("views.dashboard.chart.aggregation")}</span>
       <select
         value={config.yAxis.aggregation}
         on:change={onAggregationChange}
       >
-        <option value="sum">{$i18n.t("views.dashboard.chart.aggregations.sum")}</option>
-        <option value="avg">{$i18n.t("views.dashboard.chart.aggregations.average")}</option>
-        <option value="min">{$i18n.t("views.dashboard.chart.aggregations.min")}</option>
-        <option value="max">{$i18n.t("views.dashboard.chart.aggregations.max")}</option>
-        <option value="median">{$i18n.t("views.dashboard.chart.aggregations.median")}</option>
-        <option value="count_total">{$i18n.t("views.dashboard.chart.aggregations.count")}</option>
-        <option value="count_unique">{$i18n.t("views.dashboard.chart.aggregations.unique")}</option>
+        {#if unsupportedAggregation}<option value={config.yAxis.aggregation} disabled>{aggregationLabel(config.yAxis.aggregation, tr)}</option>{/if}
+        {#each yAggregations as aggregation}
+          <option value={aggregation} title={aggregationConsequence(aggregation, tr)}>{aggregationLabel(aggregation, tr)}</option>
+        {/each}
       </select>
     </label>
   {/if}
+
+  {#if !isScatter}<p class="ppp-config-hint ppp-chart-aggregation-hint" role={unsupportedAggregation ? "alert" : "note"}>
+    {#if unsupportedAggregation}{$i18n.t("views.dashboard.chart.unsupported-aggregation", { defaultValue: "This aggregation is not supported for the selected field. Choose a compatible operation." })}
+    {:else}{aggregationConsequence(config.yAxis.property === "count" ? "count_total" : config.yAxis.aggregation, tr)}{/if}
+  </p>{/if}
 
   <label class="ppp-config-row">
     <span>{$i18n.t("views.dashboard.chart.sort-by")}</span>

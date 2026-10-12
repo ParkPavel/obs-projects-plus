@@ -100,6 +100,19 @@ afterEach(() => {
 });
 
 describe("DataTableContent windowing in an auto-height tile (stab-dash)", () => {
+  it("does not hide a shortened dataset behind the old scroll offset", async () => {
+    const { body, target, component } = setup();
+    const bodyPx = ROWS * ROW_REM * rootFontPx(document);
+    await scrollPage(body, bodyPx / 2, bodyPx);
+    component.$set({ frame: { fields: [field], records: [frame.records[0]] } });
+    await tick();
+    // ResizeObserver/scroll have not corrected the geometry yet. The next
+    // render must still show the surviving row, not a hundred-row spacer.
+    expect(rows(target)).toHaveLength(1);
+    expect(rows(target)[0]).toContain("row-0");
+    expect(spacers(target)).toEqual([]);
+  });
+
   it("renders the rows in view when the page, not the table, scrolls to the middle", async () => {
     const { body, target } = setup();
     const rowPx = ROW_REM * rootFontPx(document);

@@ -5,13 +5,11 @@
   import { Icon } from "obsidian-svelte";
   import { createEventDispatcher } from "svelte";
 
-  export let showToolbar: boolean;
   export let readonly: boolean;
   export let showFormulaBar: boolean;
   export let currentWidgets: WidgetDefinition[];
 
   const dispatch = createEventDispatcher<{
-    toggleToolbar: void;
     openSchema: void;
     toggleFormulaBar: void;
     addWidget: WidgetType;
@@ -19,15 +17,8 @@
 </script>
 
 <div class="ppp-database-toolbar">
-  <button
-    class="ppp-toolbar-btn clickable-icon"
-    on:click={() => dispatch("toggleToolbar")}
-    aria-pressed={showToolbar}
-    aria-label={showToolbar ? $i18n.t("views.dashboard.canvas.hide-toolbar") : $i18n.t("views.dashboard.canvas.show-toolbar")}
-  >
-    <Icon name={showToolbar ? "minus" : "plus"} size="sm" /> {$i18n.t("views.dashboard.canvas.widgets")}
-  </button>
   {#if !readonly}
+    <WidgetToolbar {currentWidgets} on:addWidget={(e) => dispatch("addWidget", e.detail)} />
     <button
       class="ppp-toolbar-btn clickable-icon"
       on:click={() => dispatch("openSchema")}
@@ -51,12 +42,6 @@
     >
       <Icon name="function-square" size="sm" /> {$i18n.t("views.dashboard.canvas.formula-builder", { defaultValue: "Formulas" })}
     </button>
-  {/if}
-  {#if showToolbar && !readonly}
-    <WidgetToolbar
-      {currentWidgets}
-      on:addWidget={(e) => dispatch("addWidget", e.detail)}
-    />
   {/if}
 </div>
 

@@ -22,6 +22,7 @@ import type { DatabaseViewConfig, WidgetDefinition, WidgetType } from "./types";
 interface WidgetControllerOptions {
   getConfig: () => DatabaseViewConfig | undefined;
   saveConfig: (cfg: DatabaseViewConfig) => void;
+  onAdded?: (id: string) => void;
   /** Lazily read — avoids capturing a stale store reference at construction time. */
   i18nStore: typeof I18nStore;
 }
@@ -48,6 +49,7 @@ export function createWidgetController({
   getConfig,
   saveConfig,
   i18nStore,
+  onAdded,
 }: WidgetControllerOptions): WidgetController {
   function cfg() {
     return getConfig();
@@ -74,6 +76,7 @@ export function createWidgetController({
     };
     const next: DatabaseViewConfig = { ...config, widgets: [...config.widgets, newWidget] };
     saveConfig(next);
+    onAdded?.(id);
     return next;
   }
 

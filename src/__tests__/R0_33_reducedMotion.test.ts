@@ -73,7 +73,6 @@ const ROOTS: ReadonlyArray<{ root: string; owner: string }> = [
   // FloatingPopup: the desktop branch is portalled to <body>.
   { root: ".ppp-popup", owner: "ui/components/FloatingPopup/FloatingPopup.svelte" },
   // Hand-appended to <body>.
-  { root: ".ppp-popover-container", owner: "ui/views/Calendar/agenda/FilterRow.svelte" },
   { root: ".ppp-list-editor-overlay", owner: "ui/views/Calendar/components/Timeline/AgendaSidebar.svelte" },
   { root: ".obsidian-projects-popup-portal", owner: "ui/views/Calendar/components/DayPopup/DayPopup.svelte" },
   // Drag ghosts portalled to <body>.
@@ -363,6 +362,13 @@ describe("R0.33 — the tree", () => {
       ({ root, owner }) => !stripComponentComments(readText(join(SRC_ROOT, owner))).includes(root.slice(1))
     ).map(({ root, owner }) => `${owner} → ${root}`);
     expect(stale).toEqual([]);
+  });
+
+  it("Agenda operators cannot restore the retired hand-appended popup outside the shared root", () => {
+    const row = stripComponentComments(readText(join(SRC_ROOT, "ui/views/Calendar/agenda/FilterRow.svelte")));
+    expect(row).toContain("<FloatingPopup triggerEl={operatorTriggerEl}");
+    expect(row).not.toContain("ppp-popover-container");
+    expect(row).not.toContain("activeDocument.body.appendChild");
   });
 
   it("every node portalled to <body> carries a plugin root", () => {

@@ -29,6 +29,8 @@
   import { createSuggestionController } from "./dashboardSuggest";
   import { createSelectionStore, bindEscapeClear, SELECTION_CONTEXT_KEY, type SelectionStore } from "./canvasSelectionStore";
   import { createConfigEcho } from "./dashboardConfigEcho";
+  import { reorderWidgets } from "./dashboardReorder";
+  import { createWidgetReveal } from "./dashboardReveal";
 
   export let project: ProjectDefinition;
   export let frame: DataFrame;
@@ -56,7 +58,7 @@
   }
   $: effectiveConfig = (commitTick, configEcho.receiveProp(config), configEcho.current);
   $: widgets = effectiveConfig?.widgets ?? [];
-  $: showToolbar = effectiveConfig?.showWidgetToolbar ?? false;
+  let rootEl: HTMLDivElement | null = null;
   // #191. Filtered by kind HERE as well as in the migration, and the two are
   // not redundant. The migration cleans the stored file; this decides what is
   // drawn from whatever it is handed — and after the template dispatcher was
@@ -67,7 +69,7 @@
   // rather than throw, and `.filter()` on a string would down the whole canvas.
   $: quickActions = (Array.isArray(effectiveConfig?.quickActions) ? effectiveConfig.quickActions : [])
     .filter((action) => action?.kind === "toggle-formula-bar");
-  const widgetController = createWidgetController({ getConfig: () => effectiveConfig, saveConfig, i18nStore: i18n });
+  const widgetController = createWidgetController({ getConfig: () => effectiveConfig, saveConfig, i18nStore: i18n, onAdded: createWidgetReveal(() => rootEl) });
   function handleFieldPresetsChange(e: CustomEvent<{ fieldPresets: FieldPreset[]; activeFieldPresetId: string | undefined }>) {
     if (!effectiveConfig) return;
     const { fieldPresets, activeFieldPresetId } = e.detail;
@@ -75,7 +77,6 @@
     if (activeFieldPresetId !== undefined) saveConfig({ ...base, activeFieldPresetId });
     else { const { activeFieldPresetId: _omit, ...rest } = base; void _omit; saveConfig(rest); }
   }
-  function toggleToolbar() { if (effectiveConfig) saveConfig({ ...effectiveConfig, showWidgetToolbar: !showToolbar }); }
   const t = (key: string, opts?: Record<string, unknown>) => opts !== undefined ? $i18n.t(key, opts) : $i18n.t(key);
   const schemaController = createSchemaController({
     app: $app, api, getProjectId: () => project.id, t,
@@ -112,9 +113,9 @@
     activeFilterTab = null;
   }
   $: dndWidgets = widgets.map((w) => ({ ...w }));
-  function handleDndConsider(e: CustomEvent<DndEvent<WidgetDefinition>>) { dndWidgets = e.detail.items; }
+  function handleDndConsider(e: CustomEvent<DndEvent<WidgetDefinition>>) { dndWidgets = reorderWidgets(widgets, e.detail.items, SHADOW_PLACEHOLDER_ITEM_ID.toString()); }
   function handleDndFinalize(e: CustomEvent<DndEvent<WidgetDefinition>>) {
-    dndWidgets = e.detail.items;
+    dndWidgets = reorderWidgets(widgets, e.detail.items);
     if (!effectiveConfig) return;
     saveConfig({ ...effectiveConfig, widgets: dndWidgets.filter((w) => w.id !== SHADOW_PLACEHOLDER_ITEM_ID.toString()) });
   }
@@ -135,10 +136,10 @@
 </script>
 <ViewLayout>
   <ViewContent>
-    <div class="ppp-database-root" role="region" aria-label={$i18n.t("views.dashboard.name")}>
+    <div class="ppp-database-root" bind:this={rootEl} role="region" aria-label={$i18n.t("views.dashboard.name")}>
       <div class="ppp-toolbar-row">
-        <DashboardToolbar {showToolbar} {readonly} {showFormulaBar} currentWidgets={widgets}
-          on:toggleToolbar={toggleToolbar} on:openSchema={() => schemaController.openSchema()}
+        <DashboardToolbar {readonly} {showFormulaBar} currentWidgets={widgets}
+          on:openSchema={() => schemaController.openSchema()}
           on:toggleFormulaBar={() => (showFormulaBar = !showFormulaBar)}
           on:addWidget={(e) => widgetController.addWidget(e.detail)} />
         {#if isRecalculating}<span class="ppp-recalc-dot" aria-label={$i18n.t("views.dashboard.canvas.recalculating", { defaultValue: "Recalculating…" })} aria-live="polite" />{/if}
@@ -171,7 +172,6 @@
         fieldPresets={effectiveConfig?.fieldPresets ?? []} activeFieldPresetId={effectiveConfig?.activeFieldPresetId}
         {availableSources} {availableWidgets} {rightFrames} sourceStates={$sourceStatesStore} {project}
         on:consider={handleDndConsider} on:finalize={handleDndFinalize} on:filter={handleFilterTab}
-        on:showToolbar={() => { if (!effectiveConfig) return; saveConfig({ ...effectiveConfig, showWidgetToolbar: true }); }}
         on:addWidget={(e) => widgetController.addWidget(e.detail)}
         on:configChange={widgetController.handleWidgetConfigChange}
         on:tableConfigChange={widgetController.handleTableConfigChange}

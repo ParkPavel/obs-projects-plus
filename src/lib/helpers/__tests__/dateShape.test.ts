@@ -5,7 +5,7 @@
  * `Date` values are built from LOCAL components, the way ingestion builds them
  * (`dayjs(text).toDate()`), so these hold in any process timezone.
  */
-import { dateInputValue, dateToStore } from "src/lib/helpers/dateShape";
+import { dateInputValue, dateToStore, parseStoredDate } from "src/lib/helpers/dateShape";
 
 describe("dateInputValue — what the date control is seeded with", () => {
   it.each([
@@ -56,6 +56,36 @@ describe("dateInputValue — what the date control is seeded with", () => {
   it("another spelling is shown as ingestion reads it; nonsense shows nothing", () => {
     expect(dateInputValue("Jan 5, 2025")).toBe("2025-01-05");
     expect(dateInputValue("soon")).toBe("");
+  });
+});
+
+describe("ingested source spelling and project format", () => {
+  it("disambiguates raw slash text using the selected write format", () => {
+    expect(dateInputValue("10/04/2026", "DD/MM/YYYY")).toBe("2026-04-10");
+    expect(dateInputValue("10/04/2026", "MM/DD/YYYY")).toBe("2026-10-04");
+    expect(dateInputValue("10/04/2026")).toBe("2026-10-04");
+  });
+
+  it("keeps the original fractional time, timezone and editor day through ingestion", () => {
+    const date = parseStoredDate("15.01.2024T23:30:15.250-08:00");
+    expect(date).toBeInstanceOf(Date);
+    expect(dateInputValue(date)).toBe("2024-01-15");
+    expect(dateToStore(date, "2024-03-05")).toBe("05.03.2024T23:30:15.250-08:00");
+    expect(dateToStore(date, "2024-01-15")).toBe(date);
+  });
+
+  it("rejects stale source spelling when a parsed Date was mutated", () => {
+    const date = parseStoredDate("15.01.2024 09:30");
+    if (!(date instanceof Date)) throw new Error("date was not parsed");
+    date.setDate(16);
+    expect(dateInputValue(date)).toBe("2024-01-16");
+    expect(dateToStore(date, "2024-03-05")).toBe("2024-03-05T09:30");
+  });
+
+  it("formats a new or native Date with the project format and preserves its time", () => {
+    expect(dateToStore(null, "2024-03-05", false, { writeFormat: "DD/MM/YYYY" })).toBe("05/03/2024");
+    expect(dateToStore(null, "2024-03-05", false, { writeFormat: "DD.MM.YYYY", includeTime: true })).toBe("05.03.2024 00:00");
+    expect(dateToStore(new Date(2024, 0, 15, 9, 30, 15), "2024-03-05", false, { writeFormat: "DD.MM.YYYY" })).toBe("05.03.2024 09:30:15");
   });
 });
 

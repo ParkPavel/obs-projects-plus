@@ -6,6 +6,14 @@ This is the plan of record for Projects Plus after 3.6.3. It changes when priori
 shipped is in the [changelog](CHANGELOG.md). Items are listed in priority order within each track; no
 dates are promised.
 
+## Current priority — stabilize 3.7.1
+
+Before new roadmap functionality, finish the existing workflows reported by the tester.
+The [3.7.1 completion baseline](docs/development-3.7.1.md) consolidates all 19 cases, their
+implementation boundaries and device acceptance. The October 5 stabilization cycle takes
+precedence over the track order below. A green check on the narrower release contract does
+not mean that the whole matrix has been accepted. This is a candidate, not a released version.
+
 ## Principles that do not change
 
 - **Your data stays in your notes.** Frontmatter and Markdown are the database. Nothing is moved into a
@@ -17,7 +25,7 @@ dates are promised.
 - **Layouts adapt to their container, not to the screen.** A view sized for a small window works the same
   on a small phone.
 
-## Track 1 — Calculations and data (first priority)
+## Track 1 — Calculations and data (after stabilization)
 
 One calculation model, closer to a spreadsheet, for everything you see in tables, cards and charts.
 
