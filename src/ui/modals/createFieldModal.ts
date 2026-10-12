@@ -18,7 +18,14 @@ export class CreateFieldModal extends Modal {
   constructor(
     app: App,
     readonly fields: DataField[],
-    readonly onCreate: (field: DataField, value: Optional<DataValue>) => void | Promise<void>,
+    /**
+     * Resolves to `false` (or throws) when the write failed: the modal stays
+     * open with the draft. M03 (C03): it used to close before the write ended.
+     */
+    readonly onCreate: (
+      field: DataField,
+      value: Optional<DataValue>
+    ) => void | boolean | Promise<void | boolean>,
     readonly availableProjects: ProjectDefinition[] = [],
     readonly currentProjectId: string = "",
     readonly onSetupRelation?: (field: DataField) => void,
@@ -47,9 +54,10 @@ export class CreateFieldModal extends Modal {
         currentProjectId: this.currentProjectId,
         onSetupRelation: this.onSetupRelation,
         recordCount: this.recordCount,
-        onCreate: (field: DataField, value: Optional<DataValue>) => {
-          void this.onCreate(field, value);
-          this.close();
+        onCreate: async (field: DataField, value: Optional<DataValue>) => {
+          const outcome = await this.onCreate(field, value);
+          if (outcome !== false) this.close();
+          return outcome;
         },
       },
     });

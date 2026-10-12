@@ -484,6 +484,7 @@
                     "no-default-stage-a": "该类型为计算或关联字段 — 无需设置默认值。",
                     "empty-name-error": "字段名不能为空。",
                     "existing-name-error": "字段名称重复。",
+                    "write-failed": "字段未能添加到所有笔记。已保留您的输入，请重试。",
                     "type": {
                         "name": "字段类型",
                         "description": ""

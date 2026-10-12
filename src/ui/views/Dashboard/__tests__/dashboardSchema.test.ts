@@ -87,3 +87,35 @@ describe("#158 createSchemaController follows the project the canvas shows", () 
     expect(mockUpdateFieldConfig.mock.calls[0]?.[0]).toBe("project-B");
   });
 });
+
+describe("M03 (C13) — the create callback reports the real outcome to the modal", () => {
+  const field = { name: "budget", type: DataFieldType.Number, repeated: false, identifier: false, derived: false };
+  const controllerWith = (addField: jest.Mock) => createSchemaController({
+    app: {} as never,
+    api: { addField } as never,
+    getProjectId: () => "p",
+    t: (key, opts) => opts?.defaultValue ?? key,
+    getFields: () => [],
+    getRecords: () => [{ id: "a.md" }, { id: "b.md" }],
+    getProjects: () => [],
+  });
+
+  beforeEach(() => { capturedOnCreate = undefined; });
+
+  test("every note written → true", async () => {
+    controllerWith(jest.fn().mockResolvedValue({ written: 2, failed: [], missing: [] })).openCreateField();
+    await expect(capturedOnCreate?.(field, null)).resolves.toBe(true);
+  });
+
+  test("some notes not written → false, so the form keeps the draft for a retry", async () => {
+    controllerWith(jest.fn().mockResolvedValue({ written: 1, failed: ["b.md"], missing: [] })).openCreateField();
+    await expect(capturedOnCreate?.(field, null)).resolves.toBe(false);
+  });
+
+  test("the writer throws → false, not a promise that resolved inside catch", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    controllerWith(jest.fn().mockRejectedValue(new Error("disk"))).openCreateField();
+    await expect(capturedOnCreate?.(field, null)).resolves.toBe(false);
+    warn.mockRestore();
+  });
+});

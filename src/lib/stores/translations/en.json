@@ -455,6 +455,7 @@
                     "no-default-stage-a": "This type is computed or linked — no default value to set here.",
                     "empty-name-error": "Field name can't be empty.",
                     "existing-name-error": "A field with that name already exists.",
+                    "write-failed": "The field was not added to every note. Your entries are kept — try again.",
                     "type": {
                         "name": "Type",
                         "description": ""

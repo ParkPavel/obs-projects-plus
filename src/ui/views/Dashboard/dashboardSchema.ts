@@ -93,14 +93,20 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
     const createModal = new CreateFieldModal(
       deps.app,
       deps.getFields(),
+      // M03 (C13): the modal waits for this answer. `false` keeps it open with
+      // the draft; a partial write (some notes not written) counts as failed so
+      // the person can retry — addField leaves existing values unchanged.
       async (field, value) => {
         try {
-          await deps.api.addField(field, value);
+          const outcome = await deps.api.addField(field, value);
           persistFieldTypeConfig(field);
+          if (outcome && outcome.failed.length + outcome.missing.length > 0) return false;
           reopenSchema();
+          return true;
         } catch (err) {
           new Notice(noticeFor(ADD_FIELD_FAILED));
           console.warn("[Projects+] addField failed", err);
+          return false;
         }
       },
       deps.getProjects(),

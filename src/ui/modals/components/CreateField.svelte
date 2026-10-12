@@ -8,8 +8,6 @@
     SettingItem,
     TextInput,
     NumberInput,
-    // DateInput,
-    // DatetimeInput,
     Switch,
   } from "obsidian-svelte";
   import { TagsInput } from "src/ui/components/TagsInput";
@@ -72,7 +70,14 @@
   let listValue: string = "[]";
   let dateValue: Optional<Date> = new Date();
 
-  export let onCreate: (field: DataField, value: Optional<DataValue>) => void;
+  /**
+   * Resolves to `false` (or throws) when the write did not happen; the form
+   * then stays open with the draft so the person can retry. M03 (C03/C13).
+   */
+  export let onCreate: (
+    field: DataField,
+    value: Optional<DataValue>
+  ) => void | boolean | Promise<void | boolean>;
   /**
    * #144 — number of notes this create will write to. The modal closed on click
    * without ever stating that the write touches every note in the project;
@@ -398,6 +403,67 @@
     patchRollup({ function: e.detail as RollupFunction });
   }
 
+  /**
+   * M03 (C16): the one submission both Enter and the Create button go through.
+   * Enter used to hand the raw draft to the writer, so a derived type wrote an
+   * empty literal into every note and a date was not formatted.
+   */
+  function normalizedSubmission(): [DataField, Optional<DataValue>] {
+    if (field.repeated) {
+      return [{ ...field, type: DataFieldType.String }, safeParseList(listValue)];
+    }
+    if (isStageANoDefault(field.type)) {
+      // Stage A.10 — derived / pickable types do not own a literal
+      // default. Passing null prevents `dataApi.addField` from writing
+      // an empty string into every record's frontmatter on creation.
+      return [field, null];
+    }
+    if (field.type === DataFieldType.Date) {
+      // If no date(time) value specified still add today's date / current time
+      return [
+        field,
+        dayjs(dateValue ?? "").format(field.typeConfig?.time ? "YYYY-MM-DDTHH:mm" : "YYYY-MM-DD"),
+      ];
+    }
+    if (
+      (field.type === DataFieldType.String ||
+        field.type === DataFieldType.Select ||
+        field.type === DataFieldType.Status) &&
+      field.typeConfig?.options
+    ) {
+      // uniquify options items and omit empty
+      const options = [...new Set(field.typeConfig.options)].filter((v) => v !== "");
+      return [{ ...field, typeConfig: { ...field.typeConfig, options } }, value];
+    }
+    return [field, value];
+  }
+
+  // The form stays open until the write answers: a failure keeps the draft
+  // and says so here, instead of a Notice behind an already closed modal.
+  let pending = false;
+  let submitError = "";
+
+  async function submit(): Promise<void> {
+    if (pending || fieldNameError) return;
+    pending = true;
+    submitError = "";
+    const [submittedField, submittedValue] = normalizedSubmission();
+    try {
+      const outcome = await onCreate(submittedField, submittedValue);
+      if (outcome === false) submitError = createFailedText();
+    } catch {
+      submitError = createFailedText();
+    } finally {
+      pending = false;
+    }
+  }
+
+  function createFailedText(): string {
+    return $i18n.t("modals.field.create.write-failed", {
+      defaultValue: "The field was not added to every note. Your entries are kept — try again.",
+    });
+  }
+
   function isStageANoDefault(t: DataFieldType): boolean {
     return (
       t === DataFieldType.Formula ||
@@ -429,7 +495,7 @@
         on:keydown={(ev) => {
           if (ev.key === "Enter" && !fieldNameError) {
             ev.preventDefault();
-            onCreate(field, value);
+            void submit();
           }
         }}
       />
@@ -464,7 +530,7 @@
           on:keydown={(ev) => {
             if (ev.key === "Enter" && !fieldNameError) {
               ev.preventDefault();
-              onCreate(field, value);
+              void submit();
             }
           }}
         />
@@ -476,7 +542,7 @@
           on:keydown={(ev) => {
             if (ev.key === "Enter" && !fieldNameError) {
               ev.preventDefault();
-              onCreate(field, value);
+              void submit();
             }
           }}
         />
@@ -670,49 +736,13 @@
         })}
       </p>
     {/if}
+    {#if submitError}
+      <p class="ppp-create-field-error" role="alert">{submitError}</p>
+    {/if}
     <Button
       variant={"primary"}
-      disabled={!!fieldNameError}
-      on:click={() => {
-        if (field.repeated) {
-          onCreate(
-            { ...field, type: DataFieldType.String },
-            safeParseList(listValue)
-          );
-        } else if (isStageANoDefault(field.type)) {
-          // Stage A.10 — derived / pickable types do not own a literal
-          // default. Passing null prevents `dataApi.addField` from writing
-          // an empty string into every record's frontmatter on creation.
-          onCreate(field, null);
-        } else if (field.type === DataFieldType.Date) {
-          onCreate(
-            field,
-            // If no date(time) value specified still add today's date / current time
-            dayjs(dateValue ?? "").format(
-              field.typeConfig?.time ? "YYYY-MM-DDTHH:mm" : "YYYY-MM-DD"
-            )
-          );
-        } else if (
-          field.type === DataFieldType.String ||
-          field.type === DataFieldType.Select ||
-          field.type === DataFieldType.Status
-        ) {
-          // uniquify options items and omit empty
-          if (field?.typeConfig && field.typeConfig?.options) {
-            const options = field.typeConfig.options;
-            field = {
-              ...field,
-              typeConfig: {
-                ...field.typeConfig,
-                options: [...new Set(options)].filter((v) => v !== ""),
-              },
-            };
-          }
-          onCreate(field, value);
-        } else {
-          onCreate(field, value);
-        }
-      }}
+      disabled={!!fieldNameError || pending}
+      on:click={() => void submit()}
     >
       {$i18n.t("modals.field.create.create")}
     </Button>
