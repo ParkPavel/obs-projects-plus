@@ -10,15 +10,21 @@ import { createSchemaController } from "../dashboardSchema";
 // rather than remembering the one it was built with.
 
 let capturedOnCreate: ((field: unknown, value: unknown) => void) | undefined;
+let capturedRecordCount: number | undefined;
 
 jest.mock("src/ui/modals/createFieldModal", () => ({
   CreateFieldModal: class {
     constructor(
       _app: unknown,
       _fields: unknown,
-      onCreate: (field: unknown, value: unknown) => void
+      onCreate: (field: unknown, value: unknown) => void,
+      _projects?: unknown,
+      _projectId?: unknown,
+      _onSetupRelation?: unknown,
+      recordCount?: number
     ) {
       capturedOnCreate = onCreate;
+      capturedRecordCount = recordCount;
     }
     open() {}
     close() {}
@@ -55,7 +61,7 @@ describe("#158 createSchemaController follows the project the canvas shows", () 
 
   test("a field created after the canvas switches projects is configured against the new project", async () => {
     let liveProjectId = "project-A";
-    const api = { addField: jest.fn().mockResolvedValue({ written: 3, failed: [], missing: [] }) };
+    const api = { addField: jest.fn().mockResolvedValue({ written: 3, failed: [], missing: [] }), fieldWriteTargets: () => [] };
     const controller = createSchemaController({
       app: {} as never,
       api: api as never,
@@ -92,7 +98,7 @@ describe("M03 (C13) — the create callback reports the real outcome to the moda
   const field = { name: "budget", type: DataFieldType.Number, repeated: false, identifier: false, derived: false };
   const controllerWith = (addField: jest.Mock) => createSchemaController({
     app: {} as never,
-    api: { addField } as never,
+    api: { addField, fieldWriteTargets: () => ["a.md", "b.md", "c.md"] } as never,
     getProjectId: () => "p",
     t: (key, opts) => opts?.defaultValue ?? key,
     getFields: () => [],
@@ -100,7 +106,13 @@ describe("M03 (C13) — the create callback reports the real outcome to the moda
     getProjects: () => [],
   });
 
-  beforeEach(() => { capturedOnCreate = undefined; });
+  beforeEach(() => { capturedOnCreate = undefined; capturedRecordCount = undefined; });
+
+  test("the notice counts the notes the writer goes through, not the view's filtered rows", () => {
+    // The view shows 2 rows (getRecords); the project frame the writer walks has 3.
+    controllerWith(jest.fn()).openCreateField();
+    expect(capturedRecordCount).toBe(3);
+  });
 
   test("every note written → true", async () => {
     controllerWith(jest.fn().mockResolvedValue({ written: 2, failed: [], missing: [] })).openCreateField();

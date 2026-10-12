@@ -121,7 +121,8 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
           ...(displayField !== undefined ? { displayField } : {}),
         });
       },
-      deps.getRecords().length
+      // M03 (C8): the count the writer will actually touch, not the view's rows.
+      deps.api.fieldWriteTargets().length
     );
     createModal.open();
   }

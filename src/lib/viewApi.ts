@@ -216,6 +216,15 @@ export class ViewApi {
    * failures are surfaced. The in-memory field is still added first, so the
    * column appears immediately.
    */
+  /**
+   * M03 (C8): the notes a schema write (add field) goes through — every record
+   * of the project frame, not the filtered rows a view shows. The create-field
+   * form states this count before the write.
+   */
+  fieldWriteTargets(): string[] {
+    return get(dataFrame).records.map((record) => record.id);
+  }
+
   async addField(
     field: DataField,
     value: Optional<DataValue>,
@@ -223,11 +232,7 @@ export class ViewApi {
   ): Promise<BulkFieldWriteOutcome> {
     dataFrame.addField(field, position);
 
-    const outcome = await this.dataApi.addField(
-      get(dataFrame).records.map((record) => record.id),
-      field,
-      value
-    );
+    const outcome = await this.dataApi.addField(this.fieldWriteTargets(), field, value);
     reportBulkFieldWrite(outcome, field.name);
     return outcome;
   }
