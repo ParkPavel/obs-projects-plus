@@ -484,6 +484,19 @@
                     "no-default-stage-a": "该类型为计算或关联字段 — 无需设置默认值。",
                     "empty-name-error": "字段名不能为空。",
                     "existing-name-error": "字段名称重复。",
+                    "flow": {
+                        "group-basic": "基础",
+                        "group-linked": "关联与计算",
+                        "create-relation-option": "新建与 {{project}} 的关联",
+                        "new-relation-note": "同时创建关联“{{name}}”到 {{project}}。",
+                        "example": "基于 {{n}} 条记录的示例：{{values}} → {{result}}",
+                        "example-empty": "关联项目暂无记录——有记录后会显示示例。",
+                        "relation-failed": "关联未创建，因此属性未添加。请重试。",
+                        "choose-property": "选择属性…",
+                        "formula-name": "公式",
+                        "formula-description": "输入字段或函数名称——提示会立即出现。",
+                        "all-calculations": "更多计算"
+                    },
                     "write-failed": "字段未能添加到所有笔记。已保留您的输入，请重试。",
                     "type": {
                         "name": "字段类型",

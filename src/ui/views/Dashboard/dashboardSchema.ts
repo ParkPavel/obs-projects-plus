@@ -79,17 +79,23 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
     getProjects: deps.getProjects, t: deps.t,
   });
 
-  function persistFieldTypeConfig(field: DataField) {
+  /**
+   * `alsoKeep` — fields written in the same dialog that the live frame may not
+   * list yet: `updateFieldConfig` prunes every config whose field is not in
+   * the list, and would drop the relation a rollup was just created with (B5).
+   */
+  function persistFieldTypeConfig(field: DataField, alsoKeep: readonly string[] = []) {
     if (!field.typeConfig) return;
     settings.updateFieldConfig(
       deps.getProjectId(),
       field.name,
-      deps.getFields().map((f) => f.name),
+      [...deps.getFields().map((f) => f.name), ...alsoKeep],
       field.typeConfig
     );
   }
 
   function openCreateField() {
+    const createdHere: string[] = [];
     const createModal = new CreateFieldModal(
       deps.app,
       deps.getFields(),
@@ -99,7 +105,7 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
       async (field, value) => {
         try {
           const outcome = await deps.api.addField(field, value);
-          persistFieldTypeConfig(field);
+          persistFieldTypeConfig(field, createdHere);
           if (outcome && outcome.failed.length + outcome.missing.length > 0) return false;
           reopenSchema();
           return true;
@@ -122,7 +128,25 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
         });
       },
       // M03 (C8): the count the writer will actually touch, not the view's rows.
-      deps.api.fieldWriteTargets().length
+      deps.api.fieldWriteTargets().length,
+      {
+        ...(deps.api.resolveExternalFrame
+          ? { resolveFrame: (projectId: string) => deps.api.resolveExternalFrame!(projectId) }
+          : {}),
+        // B5 — the relation a new rollup reads through, created first and on
+        // the same write path as any field; a partial write stops the rollup.
+        onCreateRelation: async (relation: DataField) => {
+          try {
+            const outcome = await deps.api.addField(relation, []);
+            persistFieldTypeConfig(relation, createdHere);
+            createdHere.push(relation.name);
+            return !(outcome && outcome.failed.length + outcome.missing.length > 0);
+          } catch (err) {
+            console.warn("[Projects+] addField (relation) failed", err);
+            return false;
+          }
+        },
+      }
     );
     createModal.open();
   }

@@ -455,6 +455,19 @@
                     "no-default-stage-a": "This type is computed or linked — no default value to set here.",
                     "empty-name-error": "Field name can't be empty.",
                     "existing-name-error": "A field with that name already exists.",
+                    "flow": {
+                        "group-basic": "Basic",
+                        "group-linked": "Relations and computations",
+                        "create-relation-option": "New relation to {{project}}",
+                        "new-relation-note": "Also creates the relation '{{name}}' to {{project}}.",
+                        "example": "Example on {{n}} records: {{values}} → {{result}}",
+                        "example-empty": "The linked project has no records yet — the example appears once it does.",
+                        "relation-failed": "The relation was not created, so the property was not added. Try again.",
+                        "choose-property": "Choose a property…",
+                        "formula-name": "Formula",
+                        "formula-description": "Type a field or function name — hints appear as you type.",
+                        "all-calculations": "More calculations"
+                    },
                     "write-failed": "The field was not added to every note. Your entries are kept — try again.",
                     "type": {
                         "name": "Type",

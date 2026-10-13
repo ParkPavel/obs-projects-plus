@@ -46,12 +46,12 @@ describe("formula suggestion index (B5)", () => {
     let rowsRead = 0;
     const evaluate = jest.fn((expr: string) => { for (const r of RECORDS) rowsRead += r.values.field_000 >= 0 ? 1 : 0; return expr; });
     const run = debounceLatest(evaluate, 150);
-    const expr = "SUM(field_0";
+    const expr = "SUM(fiel_0";
     for (let i = 1; i <= 10; i++) { run.call(expr.slice(0, i)); jest.advanceTimersByTime(10); }
     expect(evaluate).not.toHaveBeenCalled();
     jest.advanceTimersByTime(150);
     expect(evaluate).toHaveBeenCalledTimes(1);
-    expect(evaluate).toHaveBeenLastCalledWith("SUM(field_0");
+    expect(evaluate).toHaveBeenLastCalledWith("SUM(fiel_0");
     expect(rowsRead).toBe(5000);
     run.call("x");
     run.flush();

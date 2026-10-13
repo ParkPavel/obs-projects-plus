@@ -25,7 +25,9 @@
   //     on:commit={() => handleApply()}
   //   />
 
-  import { createEventDispatcher } from "svelte";
+  import { createEventDispatcher, onDestroy } from "svelte";
+  import { suggestIndexCache } from "src/lib/engine/formulaSuggestIndex";
+  import { debounceLatest } from "src/lib/engine/debounceLatest";
   import {
     validateFormulaExpression,
     getFormulaFunctions,
@@ -160,14 +162,30 @@
   $: snippetsMode = forceOpen && value.trim() === "" && snippets.length > 0;
 
   // ── Reactive derived ────────────────────────────────────────
-  $: errors = value.trim() ? validate(value, fields) : [];
+  // B5 — validation parses the whole expression against every field, so it
+  // waits for a 150 ms pause in typing; suggestions answer at once from an
+  // index built once per schema (src/lib/engine/formulaSuggestIndex.ts).
+  const validation = debounceLatest((expr: string) => {
+    errors = expr.trim() ? validate(expr, fields) : [];
+  }, 150);
+  onDestroy(() => validation.cancel());
+  $: {
+    void fields;
+    validation.call(value);
+  }
+  /** Answers a commit on the expression as it is now, not as it was 150 ms ago. */
+  function validateNow(): void {
+    validation.call(value);
+    validation.flush();
+  }
+
+  const suggestCache = suggestIndexCache();
+  $: suggestIndex = suggestCache.get(allFunctions, fields);
 
   $: {
     const word = cursorWord.toUpperCase();
     if (word.length > 0) {
-      const fnMatches = allFunctions.filter((f) => f.startsWith(word));
-      const fieldMatches = fields.filter((f) => f.toUpperCase().startsWith(word));
-      filteredSuggestions = [...fnMatches, ...fieldMatches].slice(0, 12);
+      filteredSuggestions = suggestIndex.suggest(word, 12);
     } else if (forceOpen && value.trim() !== "") {
       filteredSuggestions = allFunctions.slice(0, 12);
     } else {
@@ -333,6 +351,7 @@
     }
 
     if (e.key === "Enter" && e.ctrlKey) {
+      validateNow();
       if (errors.length === 0 && value.trim()) dispatch("commit");
     }
   }
