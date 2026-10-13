@@ -1,5 +1,6 @@
 <script lang="ts">
   import { loadAppLocal, saveAppLocal } from "src/lib/appStorage";
+  import { isAgendaCollapsed, isAgendaExpanded, shouldMountAgenda } from "./agenda/agendaVisibility";
   import dayjs from "dayjs";
   import { Notice, TFile } from "obsidian";
   import { createDataRecord } from "src/lib/dataApi";
@@ -1683,8 +1684,6 @@
 
   // Agenda Logic
   $: agendaDate = focusedDate ?? dayjs();
-  // Desktop uses local visibility state, mobile uses config
-  let desktopAgendaVisible = true;
   // Sync agendaVisible with config for mobile in day scale
   // On mobile day scale, agendaOpen controls visibility directly
   // Mobile drawer is local state that always starts closed on mount: persisted
@@ -1696,7 +1695,7 @@
   $: drawerOpen = drawerKey ? $agendaDrawer[drawerKey] === true : false;
   $: agendaVisible = isMobile
     ? drawerOpen  // Mobile: session store
-    : desktopAgendaVisible;  // Desktop: use local state
+    : true;  // Desktop: always mounted; collapsed via config.agendaOpen
 
   function handleAgendaRecordClick(id: string) {
     const record = records.find((r: DataRecord) => r.id === id);
@@ -1839,8 +1838,8 @@
       closeAgendaDrawer(drawerKey);
       return;
     }
-    // Desktop: toggle local state
-    desktopAgendaVisible = !desktopAgendaVisible;
+    // Desktop: collapse/expand the panel, persisted through the view config
+    if (config) saveConfig({ ...config, agendaOpen: !isAgendaExpanded(config.agendaOpen) });
   }
   
   getRecordColorContext.set(getRecordColor);
@@ -2005,7 +2004,7 @@
 
     <!-- Agenda sidebar: Available on ALL devices (matryoshka principle) -->
     <!-- Desktop: Side panel with collapse, Mobile: Full drawer show/hide -->
-    {#if interval === 'day' || config?.agendaOpen || (isMobile && drawerOpen)}
+    {#if shouldMountAgenda({ isMobile, interval, drawerOpen })}
       <AgendaSidebar 
         project={project}
         records={agendaSidebarRecords}
@@ -2020,7 +2019,7 @@
         onRecordClick={handleAgendaRecordClick}
         onCreateRecord={(date) => handleRecordAdd(date)}
         visible={agendaVisible}
-        collapsed={!isMobile && config?.agendaOpen === false}
+        collapsed={isAgendaCollapsed(isMobile, config?.agendaOpen)}
         on:toggle={handleAgendaToggle}
         on:openInNewWindow={handleAgendaOpenInNewWindow}
         on:saveList={handleAgendaSaveList}

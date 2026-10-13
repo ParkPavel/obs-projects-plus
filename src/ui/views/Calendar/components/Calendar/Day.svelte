@@ -12,6 +12,7 @@
   import { parseDateInTimezone } from "src/ui/views/Calendar/calendar";
   import { openContextMenuDeferred } from "src/lib/contextMenu";
   import { toRem } from "src/ui/utils/cssLength";
+  import { layoutOverlapClusters, stackCell } from "../../utils/eventLayout";
 
   /**
    * Specifies the date of the day.
@@ -138,9 +139,22 @@
       })
     : records; // Fallback if no processed data
 
-  // Limit visible events to prevent overflow
-  const MAX_VISIBLE_EVENTS = 4;
-  $: hiddenCount = Math.max(0, cellRecords.length - MAX_VISIBLE_EVENTS);
+  // Month cell stack: as many cards as fit the measured area, the rest behind "+N".
+  // Row height is measured from the first rendered card (fallback 1.5rem + gap).
+  let scrollAreaHeight = 0;
+  let rowPx = 0;
+  const FALLBACK_ROW_PX = 26;
+  $: if (eventScrollArea && cellRecords.length > 0) {
+    const first = eventScrollArea.querySelector('.event-list > *');
+    const h = first instanceof HTMLElement ? first.offsetHeight : 0;
+    if (h > 0) rowPx = h + 2;
+  }
+  $: rowsThatFit = scrollAreaHeight > 0
+    ? scrollAreaHeight / (rowPx || FALLBACK_ROW_PX)
+    : cellRecords.length;
+  $: stack = stackCell(cellRecords.length, rowsThatFit);
+  $: visibleCellRecords = cellRecords.slice(0, stack.visible);
+  $: hiddenCount = stack.hidden;
 
   // NOTE: Multi-day and All-day events are now handled by HeaderStripsSection.svelte
   // Day.svelte only renders TIMED events (bars or list mode)
@@ -165,70 +179,12 @@
     totalColumns: number;  // Total columns in overlap group
   }
   
-  /**
-   * Calculate overlapping groups and assign columns to events
-   * v3.3.0: GREEDY column assignment - reuse columns when possible
-   * Events that don't overlap in time can share the same column
-   */
+  /** Cluster-of-overlaps → columns (shared with the week timeline). */
   function calculateOverlapLayout(bars: Omit<TimedBar, 'column' | 'totalColumns'>[]): TimedBar[] {
-    if (bars.length === 0) return [];
-    if (bars.length === 1) {
-      const bar = bars[0];
-      if (!bar) return [];
-      return [{ ...bar, column: 0, totalColumns: 1 }];
-    }
-    
-    // v8.1: No buffer needed - adjacent events can share column
-    // Only truly overlapping events (start < previousEnd) need separate columns
-    
-    // Sort by start time, then by duration (longer first for better visual layout)
-    const sorted = [...bars].sort((a, b) => 
-      a.startMinutes - b.startMinutes || (b.endMinutes - b.startMinutes) - (a.endMinutes - a.startMinutes)
-    );
-    
-    // GREEDY column assignment: each event gets first available column
-    // columnEndTimes[col] = when that column becomes free
-    const columnEndTimes: number[] = [];
-    const assignments: { bar: typeof sorted[0], column: number }[] = [];
-    
-    for (const bar of sorted) {
-      if (!bar) continue;
-      
-      // Find first column that's free when this event starts
-      // v8.1.3: Use strict > instead of >= because endMinutes includes visual height
-      // If event A visually ends at 10:30 (due to min-height) and B starts at 10:00,
-      // they should NOT share a column even though real times don't overlap
-      let assignedColumn = -1;
-      for (let col = 0; col < columnEndTimes.length; col++) {
-        const colEndTime = columnEndTimes[col] ?? 0;
-        // Column is free ONLY if this event starts AFTER the visual end of previous
-        if (bar.startMinutes > colEndTime) {
-          assignedColumn = col;
-          break;
-        }
-      }
-      
-      // No free column found - create new one
-      if (assignedColumn === -1) {
-        assignedColumn = columnEndTimes.length;
-        columnEndTimes.push(0);
-      }
-      
-      // Update column end time
-      columnEndTimes[assignedColumn] = bar.endMinutes;
-      
-      assignments.push({ bar, column: assignedColumn });
-    }
-    
-    const totalColumns = columnEndTimes.length;
-    
-    return assignments.map(({ bar, column }) => ({
-      ...bar,
-      column,
-      totalColumns,
-    }));
+    const slots = layoutOverlapClusters(bars.map((b) => ({ start: b.startMinutes, end: b.endMinutes })));
+    return bars.map((bar, i) => ({ ...bar, ...(slots[i] ?? { column: 0, totalColumns: 1 }) }));
   }
-  
+
   // Get timed events with calculated positions for relative bars
   $: timedBars = (() => {
     if (!isVisible) return [];
@@ -642,11 +598,11 @@
       </div>
     {:else if displayMode === 'list'}
       <!-- LIST MODE: Scrollable event list (Shift+wheel to scroll) -->
-      <div class="event-scroll-area" bind:this={eventScrollArea}>
+      <div class="event-scroll-area" bind:this={eventScrollArea} bind:clientHeight={scrollAreaHeight}>
         <EventList
           {checkField}
           {iconField}
-          records={cellRecords}
+          records={visibleCellRecords}
           {onRecordClick}
           {onRecordCheck}
           {isMobile}
@@ -699,9 +655,10 @@
   }
 
   .more-events-btn {
-    background: linear-gradient(transparent, var(--background-primary) 60%);
+    flex: 0 0 auto;
+    background: transparent;
     border: none;
-    padding: 0.75rem var(--ppp-spacing-2xs, 0.25rem) var(--ppp-spacing-3xs, 0.125rem);
+    padding: var(--ppp-spacing-3xs, 0.125rem) var(--ppp-spacing-2xs, 0.25rem);
     font-size: 0.625em;
     color: var(--text-muted);
     cursor: pointer;
@@ -709,8 +666,6 @@
     width: 100%;
     border-radius: 0.25rem;
     position: relative;
-    margin-top: -0.75rem;
-    z-index: 2;
   }
 
   .more-events-btn:hover {

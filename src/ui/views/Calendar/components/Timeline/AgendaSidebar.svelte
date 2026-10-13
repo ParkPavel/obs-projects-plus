@@ -134,6 +134,8 @@
     allDayTime: agendaT('all-day-time'),
     todayBtn: agendaT('today-btn'),
     addNote: agendaT('add-note'),
+    expand: agendaT('expand'),
+    collapse: agendaT('collapse'),
   };
   
   // LIFECYCLE
@@ -643,6 +645,19 @@
   {/if}
   
   <header class="header">
+    {#if !isMobile}
+      <!-- Desktop handle: collapsing keeps the panel as a strip, so it can always be reopened -->
+      <button
+        class="collapse-handle"
+        type="button"
+        aria-expanded={!collapsed}
+        aria-label={collapsed ? labels.expand : labels.collapse}
+        title={collapsed ? labels.expand : labels.collapse}
+        on:click={() => dispatch('toggle')}
+      >
+        <Icon name={collapsed ? 'chevron-left' : 'chevron-right'} size="sm" />
+      </button>
+    {/if}
     {#if !collapsed}
       <div class="date-picker-container">
         <button class="date-btn" on:click={toggleDatePicker}>
@@ -916,6 +931,33 @@
   }
   
   .agenda.resizing { transition: none; }
+
+  .collapse-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-width: var(--agenda-touch-min);
+    min-height: var(--agenda-touch-min);
+    padding: 0;
+    border: none;
+    border-radius: var(--ppp-radius-sm, var(--radius-s));
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    box-shadow: none;
+  }
+  .collapse-handle:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
+  .agenda.collapsed .collapse-handle { min-width: 100%; }
+  .agenda.collapsed .header {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+    border-bottom: none;
+  }
   
   /* Mobile: Full drawer from right (no collapsed state, just show/hide) */
   .agenda.mobile {
