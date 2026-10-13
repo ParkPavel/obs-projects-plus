@@ -118,7 +118,6 @@ describe("B2 a single-key write leaves every other key untouched", () => {
 
 describe("B2 setting default", () => {
   it("replaces Obsidian's properties block by default", () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { DEFAULT_PREFERENCES } = require("src/settings/v4/settings");
     expect(DEFAULT_PREFERENCES.propertiesInNoteHeader).toBe(true);
   });

@@ -59,6 +59,7 @@ const WIKILINK_SITES: ReadonlyArray<readonly [string, string]> = [
   ["ui/components/CardMetadata/Text.svelte", "an anchor inside rendered Markdown"],
   ["ui/components/TagList/RichTextTag.svelte", "an anchor inside a rendered tag"],
   ["ui/views/Board/components/Board/ColumnHeader.svelte", "an anchor inside a rendered column title"],
+  ["ui/properties/NotePropertiesBlock.svelte", "a parsed wikilink in a property value of the note header"],
 ];
 
 const CALL = /workspace\s*\.\s*openLinkText\s*\(/;

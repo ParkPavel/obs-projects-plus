@@ -8,6 +8,21 @@ import {
   HOST_CLASS,
 } from "../notePropertiesManager";
 
+// Obsidian's `el.createDiv()`, which jsdom lacks.
+beforeAll(() => {
+  const proto = HTMLElement.prototype as unknown as {
+    createDiv?: (o?: { cls?: string }) => HTMLDivElement;
+  };
+  if (!proto.createDiv) {
+    proto.createDiv = function (this: HTMLElement, o?: { cls?: string }) {
+      const div = this.ownerDocument.createElement("div");
+      if (o?.cls) div.className = o.cls;
+      this.appendChild(div);
+      return div;
+    };
+  }
+});
+
 type Handler = (...args: unknown[]) => void;
 
 const LEAF_HTML = [
