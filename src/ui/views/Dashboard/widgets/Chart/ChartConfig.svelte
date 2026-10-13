@@ -637,7 +637,7 @@
   /* 3.7.2 B6 — Setup / Customize tabs, as in Google Sheets. */
   .ppp-chart-config-tabs {
     display: flex;
-    gap: 0.25rem;
+    gap: 0.25em;
     border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
   }
 
@@ -646,10 +646,10 @@
     background: none;
     box-shadow: none;
     border: none;
-    border-bottom: 0.125rem solid transparent;
+    border-bottom: 0.125em solid transparent;
     border-radius: 0;
     color: var(--text-muted);
-    padding: 0.375rem 0.5rem;
+    padding: 0.375em 0.5em;
     cursor: pointer;
   }
 
@@ -662,23 +662,23 @@
   .ppp-chart-config-panel {
     display: flex;
     flex-direction: column;
-    gap: 0.375rem;
+    gap: 0.375em;
   }
 
   .ppp-chart-type-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(2.25rem, 1fr));
-    gap: 0.25rem;
+    grid-template-columns: repeat(auto-fill, minmax(2.25em, 1fr));
+    gap: 0.25em;
   }
 
   .ppp-chart-type-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 2.25rem;
-    padding: 0.25rem;
+    min-height: 2.25em;
+    padding: 0.25em;
     border: var(--ppp-border-width) solid var(--background-modifier-border);
-    border-radius: var(--radius-s, 0.25rem);
+    border-radius: var(--radius-s, 0.25em);
     background: var(--background-primary);
     color: var(--text-muted);
     cursor: pointer;
@@ -694,7 +694,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.375rem;
+    gap: 0.375em;
   }
 
   .ppp-chart-repick-btn {

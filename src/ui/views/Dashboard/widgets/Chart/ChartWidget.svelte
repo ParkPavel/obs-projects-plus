@@ -322,7 +322,7 @@
   }
 
   .ppp-chart-title {
-    padding: 0.25rem 0.5rem 0;
+    padding: 0.25em 0.5em 0;
     font-weight: var(--font-semibold, 600);
     color: var(--text-normal);
     overflow: hidden;
