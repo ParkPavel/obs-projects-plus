@@ -16,7 +16,7 @@ export type TypedDate =
   | { kind: "invalid" };
 
 // coercion-exempt: Class B - lexing digit runs a regular expression has already shaped
-const digits = (text: string): number => Number(text);
+const digits = (text: string | undefined): number => Number(text);
 
 const WORDS: Record<string, number> = {
   "сегодня": 0, "today": 0, "сьогодні": 0, "今天": 0,
