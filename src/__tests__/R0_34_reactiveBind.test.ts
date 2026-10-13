@@ -375,7 +375,8 @@ describe("R0.34 — the tree", () => {
     expect(reactiveBinds(text)).toEqual([]);
     const planted = text.replace("</script>", "$: draft = value == null ? \"\" : String(value);\n</script>");
     expect(planted).not.toBe(text);
-    // Date input + shared text/number input: both must trip the zero budget.
-    expect(reactiveBinds(planted).map((h) => `${h.kind}:${h.name}`)).toEqual(["value:draft", "value:draft"]);
+    // 3.7.2 B1: dates are typed too, so one input serves every scalar type;
+    // that one binding must trip the zero budget.
+    expect(reactiveBinds(planted).map((h) => `${h.kind}:${h.name}`)).toEqual(["value:draft"]);
   });
 });

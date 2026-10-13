@@ -2183,6 +2183,8 @@
             "select-project": "Select project",
             "syntax-help": "Syntax help",
             "date-placeholder": "YYYY-MM-DD",
+            "date-typed-placeholder": "DD.MM.YYYY",
+            "datetime-typed-placeholder": "DD.MM.YYYY HH:MM",
             "datetime-placeholder": "YYYY-MM-DD HH:MM",
             "field": "Field",
             "projects": "Projects",

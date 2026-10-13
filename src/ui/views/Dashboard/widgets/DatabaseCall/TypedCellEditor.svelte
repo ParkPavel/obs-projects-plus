@@ -7,6 +7,7 @@
   import { isImeKey } from "src/ui/components/fields/draftController";
   import { i18n } from "src/lib/stores/i18n";
   import { editedCellValue } from "./editedCellValue";
+  import { dayFromTyped, typedFromDay } from "src/lib/helpers/typedDate";
 
   type DateFormatConfig = import("src/settings/v3/settings").DateFormatConfig;
   export let field: DataField;
@@ -15,7 +16,7 @@
 
   const dispatch = createEventDispatcher<{ commit: Optional<DataValue>; cancel: void; invalid: boolean }>();
   // Mounted only during editing: seed once, never reset the draft on a flush.
-  let draft = field.type === DataFieldType.Date ? dateInputValue(value, dateFormat?.writeFormat) : value == null ? "" : String(value);
+  let draft = field.type === DataFieldType.Date ? typedFromDay(dateInputValue(value, dateFormat?.writeFormat)) : value == null ? "" : String(value);
   let inputEl: HTMLInputElement | null = null;
   let committed = false;
   let composing = false;
@@ -33,12 +34,13 @@
 
   function commitDraft(): void {
     if (committed || composing) return;
-    // Empty deliberately clears; native incomplete dates also report empty.
+    // Empty deliberately clears; a date the parser refuses keeps the stored value.
+    const day = field.type === DataFieldType.Date ? dayFromTyped(draft) : draft;
     setInvalid((field.type === DataFieldType.Number && draft.trim() !== "" && toNumber(draft) === null) ||
-      (field.type === DataFieldType.Date && inputEl?.validity.badInput === true));
-    if (invalid) return;
+      (field.type === DataFieldType.Date && day === null));
+    if (invalid || day === null) return;
     committed = true;
-    dispatch("commit", editedCellValue(field, value, draft, dateFormat));
+    dispatch("commit", editedCellValue(field, value, day, dateFormat));
   }
 
   function handleKeydown(e: KeyboardEvent): void {
@@ -54,21 +56,16 @@
   }
 </script>
 
-{#if field.type === DataFieldType.Date}
-  <input bind:this={inputEl} class="ppp-t2-editor" type="date" bind:value={draft}
-    aria-label={invalid ? `${field.name}: ${inputError}` : field.name}
-    title={invalid ? inputError : undefined} aria-invalid={invalid ? "true" : undefined}
-    on:input={() => setInvalid(false)} on:keydown={handleKeydown} on:blur={commitDraft} />
-{:else}
-<input bind:this={inputEl} class="ppp-t2-editor" type="text"
-  class:ppp-t2-editor--number={field.type === DataFieldType.Number}
+<!-- 3.7.2 B1: a date is typed too (14.10.2026, 1.11, «завтра»); the day goes on as YYYY-MM-DD. -->
+<input bind:this={inputEl} class="ppp-t2-editor" type="text" bind:value={draft}
+  class:ppp-t2-editor--number={field.type === DataFieldType.Number} class:ppp-t2-editor--date={field.type === DataFieldType.Date}
   inputmode={field.type === DataFieldType.Number ? "decimal" : undefined}
+  placeholder={field.type === DataFieldType.Date ? $i18n.t("common.date-typed-placeholder") : undefined}
   aria-label={invalid ? `${field.name}: ${inputError}` : field.name}
   title={invalid ? inputError : undefined} aria-invalid={invalid ? "true" : undefined}
   on:input={() => setInvalid(false)}
   on:compositionstart={() => { composing = true; }} on:compositionend={() => { composing = false; }}
-  bind:value={draft} on:keydown={handleKeydown} on:blur={commitDraft} />
-{/if}
+  on:keydown={handleKeydown} on:blur={commitDraft} />
 
 <style>
   .ppp-t2-editor {

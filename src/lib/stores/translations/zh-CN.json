@@ -2282,6 +2282,8 @@
             "select-project": "选择项目",
             "syntax-help": "语法帮助",
             "date-placeholder": "YYYY-MM-DD",
+            "date-typed-placeholder": "日.月.年",
+            "datetime-typed-placeholder": "日.月.年 时:分",
             "datetime-placeholder": "YYYY-MM-DD HH:MM",
             "field": "字段",
             "projects": "项目",

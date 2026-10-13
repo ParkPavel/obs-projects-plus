@@ -195,10 +195,10 @@ describe("select cell (CellChoiceDropdown)", () => {
 });
 
 describe("date cell", () => {
-  it("is seeded with the stored day, not String(date) the control rejects", async () => {
+  it("is seeded with the stored day as DD.MM.YYYY, not String(date)", async () => {
     const { container } = mount(makeField(DataFieldType.Date), new Date(2024, 0, 15));
     await tick();
-    expect(editor(container).value).toBe("2024-01-15");
+    expect(editor(container).value).toBe("15.01.2024");
   });
 
   it("keeps the picked day across a flush and writes a date-only value as date-only", async () => {
@@ -216,7 +216,7 @@ describe("date cell", () => {
     const { container, commits } = mount(makeField(DataFieldType.Date), "2024-01-15 10:30");
     await tick();
     const el = editor(container);
-    expect(el.value).toBe("2024-01-15");
+    expect(el.value).toBe("15.01.2024");
     await typeInto(el, "2024-03-05");
     el.dispatchEvent(new FocusEvent("blur"));
     expect(commits).toEqual(["2024-03-05 10:30"]);
@@ -235,7 +235,7 @@ describe("date cell", () => {
     const { container, commits } = mount(makeField(DataFieldType.Date), "15.01.2024");
     await tick();
     const el = editor(container);
-    expect(el.value).toBe("2024-01-15");
+    expect(el.value).toBe("15.01.2024");
     await typeInto(el, "2024-03-05");
     key(el, "Enter");
     expect(commits).toEqual(["05.03.2024"]);
@@ -290,21 +290,19 @@ describe("safe typed input (feedback 01)", () => {
     expect(commits).toEqual([]);
     expect(container.querySelector("input.ppp-t2-editor")).toBeNull();
   });
-  it("does not mistake a partially typed native date for an intentional clear", async () => {
+  it("does not mistake a partially typed date for an intentional clear", async () => {
     const { container, commits } = mount(makeField(DataFieldType.Date), "2024-01-15");
     await tick();
     const el = editor(container);
-    // Chromium/Safari may expose an empty value while the date subfields are
-    // incomplete, but mark badInput. That is not the explicit clear action.
-    await typeInto(el, "");
-    Object.defineProperty(el.validity, "badInput", { configurable: true, get: () => true });
+    // 3.7.2 B1: the cell takes typed text; an unfinished date is refused,
+    // marked, and never written — only an empty field clears.
+    await typeInto(el, "15.03.2");
     key(el, "Enter");
     el.dispatchEvent(new FocusEvent("blur"));
     expect(commits).toEqual([]);
     await tick();
     expect(el).toHaveAttribute("aria-invalid", "true");
-    Object.defineProperty(el.validity, "badInput", { configurable: true, get: () => false });
-    await typeInto(el, "2024-03-05");
+    await typeInto(el, "05.03.2024");
     key(el, "Enter");
     expect(commits).toEqual(["2024-03-05"]);
   });

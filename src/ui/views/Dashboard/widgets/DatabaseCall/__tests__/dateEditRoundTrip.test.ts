@@ -46,10 +46,10 @@ it.each<[string, string, string, DateFormatConfig]>([
   let committed: DataValue | null | undefined;
   component.$on("commitEdit", (e: CustomEvent<{ value: DataValue | null | undefined }>) => { committed = e.detail.value; });
   await tick();
-  const input = container.querySelector<HTMLInputElement>("input[type=date]");
+  const input = container.querySelector<HTMLInputElement>("input.ppp-t2-editor--date");
   if (!input) throw new Error("missing date editor");
   // Both slash formats must show April 10, never October 4.
-  expect(input.value).toBe(raw.includes("2026") ? "2026-04-10" : raw.startsWith("5.") ? "2024-01-05" : "2024-01-15");
+  expect(input.value).toBe(raw.includes("2026") ? "10.04.2026" : raw.startsWith("5.") ? "05.01.2024" : "15.01.2024");
   input.value = next;
   input.dispatchEvent(new Event("input", { bubbles: true }));
   await tick();
@@ -89,7 +89,7 @@ it.each([false, true])("a new table date uses the actual source project's format
     if (!cell) throw new Error("Missing editable date cell");
     cell.click();
     await tick();
-    const input = container.querySelector<HTMLInputElement>("input[type=date]");
+    const input = container.querySelector<HTMLInputElement>("input.ppp-t2-editor--date");
     if (!input) throw new Error("Missing editor in actual table");
     input.value = "2026-04-11";
     input.dispatchEvent(new Event("input", { bubbles: true }));

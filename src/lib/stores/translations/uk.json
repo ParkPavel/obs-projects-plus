@@ -2312,6 +2312,8 @@
             "select-project": "Вибір проекту",
             "syntax-help": "Довідка з синтаксису",
             "date-placeholder": "РРРР-ММ-ДД",
+            "date-typed-placeholder": "ДД.ММ.РРРР",
+            "datetime-typed-placeholder": "ДД.ММ.РРРР ГГ:ХХ",
             "datetime-placeholder": "РРРР-ММ-ДД ГГ:ХХ",
             "field": "Поле",
             "projects": "Проекти",
