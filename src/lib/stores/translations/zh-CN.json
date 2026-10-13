@@ -1277,6 +1277,31 @@
                     "empty": "（空）"
                 },
                 "chart": {
+                    "tabs": {
+                        "setup": "设置",
+                        "customize": "自定义"
+                    },
+                    "repick": "按数据重新选择",
+                    "repick-hint": "根据数据源的字段选择图表类型和坐标轴。",
+                    "x-none": "全部记录（一个总计）",
+                    "title": "图表标题",
+                    "title-placeholder": "无标题",
+                    "colors": "颜色",
+                    "color-schemes": {
+                        "auto": "自动",
+                        "accent": "强调色",
+                        "categorical": "不同颜色",
+                        "sequential": "同一颜色的深浅"
+                    },
+                    "empty": {
+                        "no-records": "数据源中还没有记录——请添加笔记或放宽筛选条件。",
+                        "no-x": "请在“设置”中为 X 轴选择字段。",
+                        "missing-field": "数据源中已没有字段“{{field}}”——请在“设置”中选择其他字段。",
+                        "no-numeric": "没有可用于“{{operation}}”的数字字段——请选择“全部计数”。",
+                        "not-numeric": "“{{field}}”不是数字，无法进行“{{operation}}”——请选择数字字段或“全部计数”。",
+                        "scatter-needs-numbers": "散点图需要两个数字字段：一个用于 X，一个用于 Y。",
+                        "x-all-empty": "所有记录的“{{field}}”均为空——请填写或为 X 轴选择其他字段。"
+                    },
                     "no-data": "暂无数据",
                     "type": "图表类型",
                     "x-axis": "X 轴",

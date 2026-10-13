@@ -1230,6 +1230,31 @@
                     "empty": "(empty)"
                 },
                 "chart": {
+                    "tabs": {
+                        "setup": "Setup",
+                        "customize": "Customize"
+                    },
+                    "repick": "Re-pick from data",
+                    "repick-hint": "Type and axes are chosen from the source's fields.",
+                    "x-none": "All records (one total)",
+                    "title": "Chart title",
+                    "title-placeholder": "No title",
+                    "colors": "Colours",
+                    "color-schemes": {
+                        "auto": "Automatic",
+                        "accent": "Accent colour",
+                        "categorical": "Different colours",
+                        "sequential": "Shades of one colour"
+                    },
+                    "empty": {
+                        "no-records": "The source has no records yet — add notes or loosen the filter.",
+                        "no-x": "Choose a field for the X axis in Setup.",
+                        "missing-field": "The field “{{field}}” is not in the source any more — choose another one in Setup.",
+                        "no-numeric": "No numeric fields for “{{operation}}” — choose “Count all”.",
+                        "not-numeric": "“{{field}}” is not a number, so “{{operation}}” is impossible — pick a numeric field or “Count all”.",
+                        "scatter-needs-numbers": "A scatter chart needs two numeric fields: one for X and one for Y.",
+                        "x-all-empty": "Every record has an empty “{{field}}” — fill it in or choose another X field."
+                    },
                     "no-data": "No data",
                     "type": "Chart type",
                     "x-axis": "X axis",

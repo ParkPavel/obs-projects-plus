@@ -113,7 +113,7 @@
   function toggleConfig() {
     if (readonly) return;
     if (!panelDescriptor.isConfigured(widget.config ?? {})) {
-      handleWidgetConfigChange(panelDescriptor.initDefaults(panelFields(ctx)));
+      handleWidgetConfigChange(panelDescriptor.initDefaults(panelFields(ctx), ctx.transformedFrame.records));
       showConfig = true;
       return;
     }

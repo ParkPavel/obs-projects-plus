@@ -24,6 +24,8 @@
     getSelectedChartLabel,
   } from "./chartSelectionDriver";
   import { CHART_WIDTH_FALLBACK, resolveChartWidth } from "./chartWidth";
+  import { chartEmptyReason, type ChartEmptyReason } from "./chartEmptyReason";
+  import { aggregationLabel } from "src/lib/dashboard-engine/aggregationOptions";
 
   export let config: ChartConfig;
   export let source: DataFrame;
@@ -143,6 +145,25 @@
     ((config.chartType === "line" || config.chartType === "area" || config.chartType === "bar" || config.chartType === "stacked-bar" || config.chartType === "horizontal-bar") && chartData.labels.length < 2)
   );
 
+  // 3.7.2 B6 — an empty chart names what it is missing.
+  $: emptyReason = isEmpty ? chartEmptyReason(config, source) : null;
+  $: tr = (key: string, defaultValue: string) => $i18n.t(key, { defaultValue });
+  $: emptyMessage = describeEmpty(emptyReason, tr);
+
+  function describeEmpty(reason: ChartEmptyReason | null, t: (key: string, defaultValue: string) => string): string {
+    if (!reason) return t("views.dashboard.chart.no-data", "No data");
+    const k = `views.dashboard.chart.empty.${reason.kind}`;
+    switch (reason.kind) {
+      case "no-records": return $i18n.t(k, { defaultValue: "The source has no records yet — add notes or loosen the filter." });
+      case "no-x": return $i18n.t(k, { defaultValue: "Choose a field for the X axis in Setup." });
+      case "missing-field": return $i18n.t(k, { defaultValue: "The field “{{field}}” is not in the source any more — choose another one in Setup.", field: reason.field });
+      case "no-numeric": return $i18n.t(k, { defaultValue: "No numeric fields for “{{operation}}” — choose “Count all”.", operation: aggregationLabel(reason.aggregation, t) });
+      case "not-numeric": return $i18n.t(k, { defaultValue: "“{{field}}” is not a number, so “{{operation}}” is impossible — pick a numeric field or “Count all”.", field: reason.field, operation: aggregationLabel(reason.aggregation, t) });
+      case "scatter-needs-numbers": return $i18n.t(k, { defaultValue: "A scatter chart needs two numeric fields: one for X and one for Y." });
+      case "x-all-empty": return $i18n.t(k, { defaultValue: "Every record has an empty “{{field}}” — fill it in or choose another X field.", field: reason.field });
+    }
+  }
+
   function extractScatterConfig(cfg: ChartConfig): ScatterChartConfig {
     const raw = cfg as unknown as Record<string, unknown>;
     const base: ScatterChartConfig = {
@@ -163,6 +184,7 @@
   }
 </script>
 
+{#if config.title}<div class="ppp-chart-title">{config.title}</div>{/if}
 <div class="ppp-chart-widget" class:ppp-chart-widget--degenerate={isDegenerate} style={isDegenerate ? "" : `min-height: ${toRem(heightPx)}`} bind:contentRect>
   {#if isDegenerate}
     <div class="ppp-chart-degenerate-hint" role="note">
@@ -189,7 +211,7 @@
         </span>
       </div>
     {:else}
-      <div class="ppp-chart-empty">{$i18n.t("views.dashboard.chart.no-data")}</div>
+      <div class="ppp-chart-empty" role="status">{emptyMessage}</div>
     {/if}
   {:else if isScatter && scatterData}
     {#if correlationWarning && correlationWarning.kind === "mostly-unmatched"}
@@ -299,7 +321,17 @@
     aspect-ratio: var(--ppp-chart-aspect, auto);
   }
 
+  .ppp-chart-title {
+    padding: 0.25rem 0.5rem 0;
+    font-weight: var(--font-semibold, 600);
+    color: var(--text-normal);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .ppp-chart-empty {
+    text-align: center;
     display: flex;
     align-items: center;
     justify-content: center;

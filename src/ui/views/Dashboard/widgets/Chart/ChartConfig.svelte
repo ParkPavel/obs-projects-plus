@@ -8,6 +8,10 @@
   import { DataFieldType } from "src/lib/dataframe/dataframe";
   import type { ChartConfig, ChartType, ChartStyle, ScatterChartConfig, ChartAxisX } from "../../types";
   import { createEventDispatcher } from "svelte";
+  import { Icon } from "obsidian-svelte";
+  import TextField from "src/ui/components/fields/TextField.svelte";
+  import type { DataRecord } from "src/lib/dataframe/dataframe";
+  import { resuggestChart } from "./chartSuggest";
   import { i18n } from "src/lib/stores/i18n";
   import { isRelationCompanionField } from "src/lib/engine/crossProjectResolver";
   import { chartAggregations, chartYAxis } from "./chartAggregations";
@@ -23,6 +27,44 @@
   export let availableWidgets: Array<{ id: string; title: string }> = [];
 
   const dispatch = createEventDispatcher<{ change: ChartConfig }>();
+
+  /** 3.7.2 B6: the source's records, for "Re-pick from data" (fields alone otherwise). */
+  export let records: readonly DataRecord[] = [];
+
+  // 3.7.2 B6 — two tabs as in Google Sheets. View state only: never written to the config.
+  let tab: "setup" | "customize" = "setup";
+
+  const TYPE_ICONS: Record<ChartType, string> = {
+    bar: "bar-chart-2",
+    "horizontal-bar": "bar-chart-horizontal",
+    "stacked-bar": "bar-chart-big",
+    line: "line-chart",
+    area: "area-chart",
+    pie: "pie-chart",
+    donut: "circle-dot",
+    number: "hash",
+    progress: "gauge",
+    scatter: "scatter-chart",
+  };
+
+  const COLOR_SCHEMES: ChartStyle["colorScheme"][] = ["auto", "accent", "categorical", "sequential"];
+
+  function onColorSchemeChange(e: Event) {
+    updateStyle({ colorScheme: (e.target as HTMLSelectElement).value as ChartStyle["colorScheme"] });
+  }
+
+  function repick() {
+    dispatch("change", resuggestChart(config, fields, records));
+  }
+
+  /** The caption is removed, not stored empty, when cleared. */
+  function setTitle(value: string) {
+    const next = value.trim();
+    if (next === (config.title ?? "")) return;
+    const { title: _drop, ...rest } = config;
+    void _drop;
+    dispatch("change", next ? { ...rest, title: next } : rest);
+  }
 
   const CHART_TYPES: { value: ChartType; labelKey: string }[] = [
     { value: "bar", labelKey: "views.dashboard.chart.types.bar" },
@@ -171,13 +213,26 @@
 </script>
 
 <div class="ppp-chart-config">
-  <details class="ppp-config-section" open>
-    <summary class="ppp-config-section-header">{$i18n.t("views.dashboard.chart.section.data")}</summary>
-  <DataProjectPicker
-    value={dataProjectId}
-    {availableSources}
-    on:change={(e) => setDataProject(e.detail)}
-  />
+  <div class="ppp-chart-config-tabs" role="tablist">
+    <button type="button" role="tab" class="ppp-chart-config-tab" class:is-active={tab === "setup"}
+      aria-selected={tab === "setup"} on:click={() => (tab = "setup")}
+    >{tr("views.dashboard.chart.tabs.setup", "Setup")}</button>
+    <button type="button" role="tab" class="ppp-chart-config-tab" class:is-active={tab === "customize"}
+      aria-selected={tab === "customize"} on:click={() => (tab = "customize")}
+    >{tr("views.dashboard.chart.tabs.customize", "Customize")}</button>
+  </div>
+
+  {#if tab === "setup"}
+  <div class="ppp-chart-config-panel" role="tabpanel">
+  <div class="ppp-chart-type-grid" role="radiogroup" aria-label={$i18n.t("views.dashboard.chart.type")}>
+    {#each CHART_TYPES as ct (ct.value)}
+      <button type="button" role="radio" class="ppp-chart-type-btn" class:is-active={config.chartType === ct.value}
+        aria-checked={config.chartType === ct.value} aria-label={$i18n.t(ct.labelKey)} title={$i18n.t(ct.labelKey)}
+        on:click={() => { if (config.chartType !== ct.value) emit({ chartType: ct.value }); }}
+      ><Icon name={TYPE_ICONS[ct.value]} /></button>
+    {/each}
+  </div>
+
   <label class="ppp-config-row">
     <span>{$i18n.t("views.dashboard.chart.type")}</span>
     <select
@@ -190,12 +245,26 @@
     </select>
   </label>
 
+  <div class="ppp-chart-repick">
+    <button type="button" class="ppp-chart-repick-btn" on:click={repick}>{tr("views.dashboard.chart.repick", "Re-pick from data")}</button>
+    <span class="ppp-config-hint">{tr("views.dashboard.chart.repick-hint", "Type and axes are chosen from the source's fields.")}</span>
+  </div>
+
+  <DataProjectPicker
+    value={dataProjectId}
+    {availableSources}
+    on:change={(e) => setDataProject(e.detail)}
+  />
+
   <label class="ppp-config-row">
     <span>{$i18n.t("views.dashboard.chart.x-axis")}</span>
     <select
       value={config.xAxis.property}
       on:change={(e) => emit({ xAxis: { ...config.xAxis, property: e.currentTarget.value } })}
     >
+      {#if config.chartType === "number" || !config.xAxis.property}
+        <option value="">{tr("views.dashboard.chart.x-none", "All records (one total)")}</option>
+      {/if}
       {#each fieldNames as name}
         <option value={name}>{name}</option>
       {/each}
@@ -271,78 +340,35 @@
     </label>
   {/if}
 
-  <label class="ppp-config-row">
-    <span>{$i18n.t("views.dashboard.chart.height")}</span>
-    <select
-      value={config.style.height}
-      on:change={onHeightChange}
-    >
-      <option value="small">{$i18n.t("views.dashboard.chart.heights.small")}</option>
-      <option value="medium">{$i18n.t("views.dashboard.chart.heights.medium")}</option>
-      <option value="large">{$i18n.t("views.dashboard.chart.heights.large")}</option>
-    </select>
+  <label class="ppp-config-check">
+    <input type="checkbox" checked={config.xAxis.omitZero}
+      on:change={(e) => emit({ xAxis: { ...config.xAxis, omitZero: e.currentTarget.checked } })} />
+    <span>{$i18n.t("views.dashboard.chart.options.hide-zero")}</span>
   </label>
 
-  </details>
+  <label class="ppp-config-check">
+    <input type="checkbox" checked={!!config.yAxis.cumulative}
+      on:change={(e) => emit({ yAxis: { ...config.yAxis, cumulative: e.currentTarget.checked } })} />
+    <span>{$i18n.t("views.dashboard.chart.options.cumulative")}</span>
+  </label>
 
-  <!-- Display options (collapsible) -->
-  <details class="ppp-config-section" open>
-    <summary class="ppp-config-section-header">{$i18n.t("views.dashboard.chart.section.display")}</summary>
+  <FollowSelectionPicker
+    value={config.linkedSelection}
+    {availableWidgets}
+    {fields}
+    on:change={(e) => setLinkedSelection(e.detail)}
+  />
 
-    <label class="ppp-config-check">
-      <input type="checkbox" checked={config.style.showGrid}
-        on:change={(e) => updateStyle({ showGrid: e.currentTarget.checked })} />
-      <span>{$i18n.t("views.dashboard.chart.options.grid")}</span>
-    </label>
-
-    <label class="ppp-config-check">
-      <input type="checkbox" checked={config.style.showLabels}
-        on:change={(e) => updateStyle({ showLabels: e.currentTarget.checked })} />
-      <span>{$i18n.t("views.dashboard.chart.options.labels")}</span>
-    </label>
-
-    <label class="ppp-config-check">
-      <input type="checkbox" checked={config.style.showValues}
-        on:change={(e) => updateStyle({ showValues: e.currentTarget.checked })} />
-      <span>{$i18n.t("views.dashboard.chart.options.values")}</span>
-    </label>
-
-    <label class="ppp-config-check">
-      <input type="checkbox" checked={config.style.showLegend}
-        on:change={(e) => updateStyle({ showLegend: e.currentTarget.checked })} />
-      <span>{$i18n.t("views.dashboard.chart.options.legend")}</span>
-    </label>
-
-    <label class="ppp-config-check">
-      <input type="checkbox" checked={config.xAxis.omitZero}
-        on:change={(e) => emit({ xAxis: { ...config.xAxis, omitZero: e.currentTarget.checked } })} />
-      <span>{$i18n.t("views.dashboard.chart.options.hide-zero")}</span>
-    </label>
-
-    <label class="ppp-config-check">
-      <input type="checkbox" checked={!!config.yAxis.cumulative}
-        on:change={(e) => emit({ yAxis: { ...config.yAxis, cumulative: e.currentTarget.checked } })} />
-      <span>{$i18n.t("views.dashboard.chart.options.cumulative")}</span>
-    </label>
-
-    <FollowSelectionPicker
-      value={config.linkedSelection}
-      {availableWidgets}
+  {#if config.chartType === "line" || config.chartType === "area" || config.chartType === "bar"}
+    <ChartSeriesEditor
+      following={!!config.linkedSelection}
+      series={config.series ?? []}
       {fields}
-      on:change={(e) => setLinkedSelection(e.detail)}
+      {availableSources}
+      {seriesFrames}
+      on:change={(e) => setSeries(e.detail)}
     />
-
-    {#if config.chartType === "line" || config.chartType === "area" || config.chartType === "bar"}
-      <ChartSeriesEditor
-        following={!!config.linkedSelection}
-        series={config.series ?? []}
-        {fields}
-        {availableSources}
-        {seriesFrames}
-        on:change={(e) => setSeries(e.detail)}
-      />
-    {/if}
-  </details>
+  {/if}
 
   <!-- Scatter-specific options -->
   {#if isScatter}
@@ -472,6 +498,65 @@
     {/if}
     </details>
   {/if}
+  </div>
+  {:else}
+  <div class="ppp-chart-config-panel" role="tabpanel">
+  <div class="ppp-config-row">
+    <span>{tr("views.dashboard.chart.title", "Chart title")}</span>
+    <TextField
+      value={config.title ?? ""}
+      placeholder={tr("views.dashboard.chart.title-placeholder", "No title")}
+      ariaLabel={tr("views.dashboard.chart.title", "Chart title")}
+      on:commit={(e) => setTitle(e.detail.value)}
+    />
+  </div>
+
+  <label class="ppp-config-row">
+    <span>{tr("views.dashboard.chart.colors", "Colours")}</span>
+    <select value={config.style.colorScheme} on:change={onColorSchemeChange}>
+      {#each COLOR_SCHEMES as scheme}
+        <option value={scheme}>{tr(`views.dashboard.chart.color-schemes.${scheme}`, scheme)}</option>
+      {/each}
+    </select>
+  </label>
+
+  <label class="ppp-config-row">
+    <span>{$i18n.t("views.dashboard.chart.height")}</span>
+    <select
+      value={config.style.height}
+      on:change={onHeightChange}
+    >
+      <option value="small">{$i18n.t("views.dashboard.chart.heights.small")}</option>
+      <option value="medium">{$i18n.t("views.dashboard.chart.heights.medium")}</option>
+      <option value="large">{$i18n.t("views.dashboard.chart.heights.large")}</option>
+    </select>
+  </label>
+
+  <label class="ppp-config-check">
+    <input type="checkbox" checked={config.style.showGrid}
+      on:change={(e) => updateStyle({ showGrid: e.currentTarget.checked })} />
+    <span>{$i18n.t("views.dashboard.chart.options.grid")}</span>
+  </label>
+
+  <label class="ppp-config-check">
+    <input type="checkbox" checked={config.style.showLabels}
+      on:change={(e) => updateStyle({ showLabels: e.currentTarget.checked })} />
+    <span>{$i18n.t("views.dashboard.chart.options.labels")}</span>
+  </label>
+
+  <label class="ppp-config-check">
+    <input type="checkbox" checked={config.style.showValues}
+      on:change={(e) => updateStyle({ showValues: e.currentTarget.checked })} />
+    <span>{$i18n.t("views.dashboard.chart.options.values")}</span>
+  </label>
+
+  <label class="ppp-config-check">
+    <input type="checkbox" checked={config.style.showLegend}
+      on:change={(e) => updateStyle({ showLegend: e.currentTarget.checked })} />
+    <span>{tr("views.dashboard.chart.options.legend", "Legend")}</span>
+  </label>
+  </div>
+  {/if}
 </div>
 
 <style>
@@ -547,5 +632,77 @@
     color: var(--text-muted);
     font-style: italic;
     padding: 0.125rem 0;
+  }
+
+  /* 3.7.2 B6 — Setup / Customize tabs, as in Google Sheets. */
+  .ppp-chart-config-tabs {
+    display: flex;
+    gap: 0.25rem;
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
+  }
+
+  .ppp-chart-config-tab {
+    flex: 1;
+    background: none;
+    box-shadow: none;
+    border: none;
+    border-bottom: 0.125rem solid transparent;
+    border-radius: 0;
+    color: var(--text-muted);
+    padding: 0.375rem 0.5rem;
+    cursor: pointer;
+  }
+
+  .ppp-chart-config-tab.is-active {
+    color: var(--text-normal);
+    border-bottom-color: var(--interactive-accent);
+    font-weight: 600;
+  }
+
+  .ppp-chart-config-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .ppp-chart-type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(2.25rem, 1fr));
+    gap: 0.25rem;
+  }
+
+  .ppp-chart-type-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.25rem;
+    padding: 0.25rem;
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
+    border-radius: var(--radius-s, 0.25rem);
+    background: var(--background-primary);
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .ppp-chart-type-btn.is-active {
+    border-color: var(--interactive-accent);
+    color: var(--interactive-accent);
+    background: color-mix(in srgb, var(--interactive-accent) 10%, var(--background-primary));
+  }
+
+  .ppp-chart-repick {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .ppp-chart-repick-btn {
+    cursor: pointer;
+  }
+
+  .ppp-config-row :global(input) {
+    flex: 1;
+    min-width: 0;
   }
 </style>
