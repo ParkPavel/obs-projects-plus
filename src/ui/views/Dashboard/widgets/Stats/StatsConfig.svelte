@@ -174,6 +174,7 @@
   <div class="ppp-cfg-list">
     {#each cards as card, idx (card.id)}
       <div class="ppp-cfg-item ppp-stats-config-item">
+        <!-- svelte-ignore a11y-label-has-associated-control -->
         <label>
           {$i18n.t("views.dashboard.stats.config.label", { defaultValue: "Label" })}
           <TextField
@@ -231,6 +232,7 @@
         </label>
 
         {#if card.format === "currency"}
+          <!-- svelte-ignore a11y-label-has-associated-control -->
           <label class="ppp-stats-currency">
             {$i18n.t("views.dashboard.stats.config.currency", { defaultValue: "Symbol" })}
             <TextField

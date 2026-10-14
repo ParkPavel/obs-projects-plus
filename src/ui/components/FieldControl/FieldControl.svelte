@@ -164,7 +164,7 @@
   }
   function normalizeTime(text: string): string {
     const m = TIME_RE.exec(text.trim());
-    return m ? `${m[1].padStart(2, "0")}:${m[2]}` : "";
+    return m ? `${(m[1] ?? "").padStart(2, "0")}:${m[2] ?? ""}` : "";
   }
 
   // ========================================

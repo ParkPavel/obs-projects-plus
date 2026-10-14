@@ -124,6 +124,7 @@
     <div class="ppp-cfg-list">
       {#each tabs as t, idx (t.id)}
         <div class="ppp-cfg-item">
+          <!-- svelte-ignore a11y-label-has-associated-control -->
           <label>
             {$i18n.t("views.dashboard.filter-tabs.config.tab-label", { defaultValue: "Label" })}
             <TextField
@@ -131,6 +132,7 @@
               on:input={(e) => updateTab(idx, { label: e.detail })}
             />
           </label>
+          <!-- svelte-ignore a11y-label-has-associated-control -->
           <label>
             {$i18n.t("views.dashboard.filter-tabs.config.tab-value", { defaultValue: "Value" })}
             <TextField

@@ -262,6 +262,7 @@
           </select>
         </label>
 
+        <!-- svelte-ignore a11y-label-has-associated-control -->
         <label>
           {$i18n.t('settings-menu.view-config.calendar.timezone')}
           <TextField
@@ -294,6 +295,7 @@
               </label>
             </div>
             
+            <!-- svelte-ignore a11y-label-has-associated-control -->
             <label>
               {$i18n.t('settings-menu.view-config.calendar.timeline.event-color-field')}
               <TextField
@@ -429,6 +431,7 @@
 
     {#if isBoard}
       <div class="group">
+        <!-- svelte-ignore a11y-label-has-associated-control -->
         <label>
           {$i18n.t('settings-menu.view-config.board.column-width')}
           <NumberField
@@ -563,6 +566,7 @@
           </div>
         </div>
 
+        <!-- svelte-ignore a11y-label-has-associated-control -->
         <label>
           {$i18n.t("settings-menu.view-config.gallery.card-width")}
           <NumberField
@@ -720,6 +724,7 @@
 
     {#if isBoard || isGallery}
       <div class="group">
+        <!-- svelte-ignore a11y-label-has-associated-control -->
         <label>
           {$i18n.t("settings-menu.view-config.card-frames.height")}
           <NumberField

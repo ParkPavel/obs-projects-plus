@@ -89,6 +89,7 @@
     </label>
   </div>
 
+  <!-- svelte-ignore a11y-label-has-associated-control -->
   <label>
     {$i18n.t("views.dashboard.checklist.config.limit", { defaultValue: "Limit" })}
     <NumberField
