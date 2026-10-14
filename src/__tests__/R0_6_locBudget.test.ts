@@ -90,6 +90,10 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   { file: "ui/views/Dashboard/widgets/ViewTabBar.svelte", maxLines: 260 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TableGroupSection.svelte", maxLines: 100 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/RelationPickerPopover.svelte", maxLines: 240 },
+  // B10: the calendar's day window moved onto FloatingPopup (1124 → 230 lines:
+  // its private layer, Escape, focus, scroll lock and swipe are the engine's
+  // now). Entered at its measured size so the room cannot grow back.
+  { file: "ui/views/Calendar/components/DayPopup/DayPopup.svelte", maxLines: 230 },
 ];
 
 describe("R0.6 component LOC budgets (#067)", () => {

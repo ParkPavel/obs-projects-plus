@@ -74,7 +74,6 @@ const ROOTS: ReadonlyArray<{ root: string; owner: string }> = [
   { root: ".ppp-popup", owner: "ui/components/FloatingPopup/FloatingPopup.svelte" },
   // Hand-appended to <body>.
   { root: ".ppp-list-editor-overlay", owner: "ui/views/Calendar/components/Timeline/AgendaSidebar.svelte" },
-  { root: ".obsidian-projects-popup-portal", owner: "ui/views/Calendar/components/DayPopup/DayPopup.svelte" },
   // Drag ghosts portalled to <body>.
   { root: ".ppp-strip-ghost-portal", owner: "ui/views/Calendar/components/Calendar/TimelineView.svelte" },
   { root: ".ppp-timed-ghost-portal", owner: "ui/views/Calendar/components/Calendar/TimelineView.svelte" },

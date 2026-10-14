@@ -12,6 +12,12 @@ import "@testing-library/jest-dom";
 import { tick } from "svelte";
 import dayjs from "dayjs";
 
+// The Svelte transform reads `dayjs.default`; the CommonJS build has none.
+jest.mock("dayjs", () => {
+  const real = jest.requireActual("dayjs");
+  real.default = real;
+  return real;
+});
 jest.mock("src/lib/stores/i18n", () => {
   const { writable } = require("svelte/store");
   return { i18n: writable({ t: (key: string) => key }) };

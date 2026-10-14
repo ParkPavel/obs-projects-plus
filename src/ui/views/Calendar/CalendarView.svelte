@@ -899,8 +899,9 @@
   let showDayPopup = false;
   let dayPopupDate: dayjs.Dayjs = dayjs();
   let dayPopupRecords: DataRecord[] = [];
-  let dayPopupAnchorX: number | undefined = undefined;
-  let dayPopupAnchorY: number | undefined = undefined;
+  // B10: the day window anchors at the tapped day (FloatingPopup); a day opened
+  // without a tap anchors at the calendar itself.
+  let calendarRootEl: HTMLElement | null = null;
   // The element the day was tapped on: where focus goes back to when the
   // duplicate window opened from that day's popup closes.
   let dayTapOrigin: HTMLElement | null = null;
@@ -923,7 +924,7 @@
    * v6.0: Works on both mobile AND desktop
    * @param date - The date that was tapped/clicked
    * @param records - Records for that date
-   * @param event - Optional mouse/touch event for positioning
+   * @param event - Optional mouse/touch event: its target anchors the window
    */
   function handleDayTap(date: dayjs.Dayjs, records: DataRecord[], event?: MouseEvent | TouchEvent) {
     dayPopupDate = date;
@@ -933,21 +934,6 @@
     const tapTarget = event?.target;
     dayTapOrigin = tapTarget && "closest" in tapTarget ? (tapTarget as HTMLElement) : null;
 
-    // Extract click position for desktop popup positioning
-    if (event) {
-      if ('clientX' in event) {
-        dayPopupAnchorX = event.clientX;
-        dayPopupAnchorY = event.clientY;
-      } else if (event.changedTouches?.[0]) {
-        dayPopupAnchorX = event.changedTouches[0].clientX;
-        dayPopupAnchorY = event.changedTouches[0].clientY;
-      }
-    } else {
-      // No event - use center of screen
-      dayPopupAnchorX = undefined;
-      dayPopupAnchorY = undefined;
-    }
-    
     showDayPopup = true;
   }
   
@@ -1815,6 +1801,7 @@
 <ViewLayout>
 
   <div 
+    bind:this={calendarRootEl}
     class="calendar-zoom-container"
     use:gestureAction={{ handlers: _gestureHandlers }}
     use:ignoreHostSwipe
@@ -2037,8 +2024,7 @@
     {getRecordColor}
     eventColorField={config?.eventColorField}
     visible={showDayPopup}
-    anchorX={dayPopupAnchorX}
-    anchorY={dayPopupAnchorY}
+    anchorEl={dayTapOrigin?.isConnected ? dayTapOrigin : calendarRootEl}
     on:close={() => showDayPopup = false}
     on:recordClick={({ detail }) => handleDayPopupRecordClick(detail)}
     on:recordOpenInNewWindow={({ detail }) => handleDayPopupRecordOpenInNewWindow(detail)}
