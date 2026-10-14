@@ -18,7 +18,7 @@ export interface LayoutSlot {
 }
 
 /**
- * @param minDuration minimum visual length of an event in the same unit as the
+ * @param minDuration - minimum visual length of an event in the same unit as the
  *   spans: a short event is drawn at least this tall, so collision uses it too.
  * @returns slots in the input order.
  */

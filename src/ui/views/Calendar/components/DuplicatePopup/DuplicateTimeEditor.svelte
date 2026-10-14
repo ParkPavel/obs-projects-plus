@@ -2,6 +2,7 @@
   import { createEventDispatcher } from "svelte";
   import dayjs from "dayjs";
   import { i18n } from "src/lib/stores/i18n";
+  import DateField from "src/ui/components/fields/DateField.svelte";
   
   export let startTime: dayjs.Dayjs;
   export let endTime: dayjs.Dayjs;
@@ -25,19 +26,16 @@
     return `${hours}h ${mins}m`;
   }
   
-  function handleStartChange(e: Event) {
-    const input = e.target as HTMLInputElement;
-    const [h, m] = input.value.split(':').map(Number);
-    if (h === undefined || m === undefined) return;
-    const newStart = startTime.hour(h).minute(m).second(0);
+  // Only the clock is taken from the field: the duplicate's day is chosen on the grid.
+  function handleStartChange(e: CustomEvent<Date | null>) {
+    if (!e.detail) return;
+    const newStart = startTime.hour(e.detail.getHours()).minute(e.detail.getMinutes()).second(0);
     dispatch('change', { startTime: newStart, endTime });
   }
   
-  function handleEndChange(e: Event) {
-    const input = e.target as HTMLInputElement;
-    const [h, m] = input.value.split(':').map(Number);
-    if (h === undefined || m === undefined) return;
-    const newEnd = endTime.hour(h).minute(m).second(0);
+  function handleEndChange(e: CustomEvent<Date | null>) {
+    if (!e.detail) return;
+    const newEnd = endTime.hour(e.detail.getHours()).minute(e.detail.getMinutes()).second(0);
     dispatch('change', { startTime, endTime: newEnd });
   }
   
@@ -50,19 +48,13 @@
   <div class="time-label">{$i18n.t("views.calendar.duplicate.time") || "Время"}:</div>
   
   <div class="time-inputs">
-    <input 
-      type="time" 
-      value={startTime.format('HH:mm')}
-      on:change={handleStartChange}
-      class="time-input"
-    />
+    <div class="time-field">
+      <DateField withTime value={startTime.toDate()} on:change={handleStartChange} />
+    </div>
     <span class="time-separator">—</span>
-    <input 
-      type="time" 
-      value={endTime.format('HH:mm')}
-      on:change={handleEndChange}
-      class="time-input"
-    />
+    <div class="time-field">
+      <DateField withTime value={endTime.toDate()} on:change={handleEndChange} />
+    </div>
     <span class="duration">({durationFormatted})</span>
   </div>
   
@@ -103,16 +95,9 @@
     flex: 1;
   }
   
-  .time-input {
-    padding: 0.375rem 0.5rem;
-    border: 0.0625rem solid var(--background-modifier-border);
-    border-radius: 0.25rem;
-    background: var(--background-primary);
-    color: var(--text-normal);
-    font-family: inherit;
-    font-size: 0.875rem;
+  .time-field {
+    flex: 1 1 0;
     min-width: 0;
-    flex: 0 0 auto;
   }
   
   .time-separator {
@@ -131,7 +116,7 @@
     padding: 0.25rem 0.5rem;
     background: none;
     border: 0.0625rem solid var(--background-modifier-border);
-    border-radius: 0.25rem;
+    border-radius: var(--ppp-radius-sm);
     color: var(--text-muted);
     cursor: pointer;
     font-size: 1rem;

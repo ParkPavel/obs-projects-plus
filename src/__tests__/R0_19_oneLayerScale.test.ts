@@ -52,7 +52,8 @@ import { collectStyled, SRC_ROOT } from "./support/cssScan";
  *     duplicate window. Read from this suite (total 66).
  */
 // 66 → 65 (3.7.2 B1): DatetimeInput's time-picker overlay left with the native field.
-const RAW_Z_BUDGET = 65;
+// 65 → 64 (3.7.2 B4): month cell +N no longer floats over the last card.
+const RAW_Z_BUDGET = 64;
 
 const RAW_Z = /z-index:\s*-?\d+\s*;/g;
 const TOKEN_WITH_FALLBACK = /z-index:\s*var\(\s*(--[a-z0-9-]+)\s*,\s*([^)]*)\)/gi;

@@ -15,9 +15,9 @@ const SRC = path.resolve(__dirname, "..");
 const KIT = path.join(SRC, "ui", "components", "fields");
 const TEXT_LIKE = ["text", "date", "datetime-local", "number", "search", "time", "email", "url", "tel"];
 
-// Measured 14.10.2026 on p372-b1. Lower it whenever a component moves to the kit.
-const MAX_FILES = 29;
-const MAX_TAGS = 52;
+// Measured 14.10.2026 on p372-b1; p372-b4 moved the duplicate time editors to DateField (29/52 → 27/48).
+const MAX_FILES = 27;
+const MAX_TAGS = 48;
 
 function svelteFiles(dir: string): string[] {
   const out: string[] = [];

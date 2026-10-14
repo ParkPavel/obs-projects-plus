@@ -947,9 +947,11 @@
     cursor: pointer;
     box-shadow: none;
   }
-  .collapse-handle:hover {
-    background: var(--background-modifier-hover);
-    color: var(--text-normal);
+  @media (hover: hover) and (pointer: fine) {
+    .collapse-handle:hover {
+      background: var(--background-modifier-hover);
+      color: var(--text-normal);
+    }
   }
   .agenda.collapsed .collapse-handle { min-width: 100%; }
   .agenda.collapsed .header {
