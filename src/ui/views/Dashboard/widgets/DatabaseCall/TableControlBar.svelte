@@ -12,12 +12,18 @@
   import SearchField from "src/ui/components/fields/SearchField.svelte";
   import { isImeKey } from "src/ui/components/fields/draftController";
   import type { DataTableSortCriteria } from "../../types";
+  import type { DataRecord } from "src/lib/dataframe/dataframe";
+  import { searchSuggestions, hintKey, type SearchSuggestion } from "./tableSearchQuery";
+  import SearchHints from "./SearchHints.svelte";
 
   export let sortCriteria: DataTableSortCriteria[] = [];
   export let recordCount = 0;
   export let readonly = false;
   export let searchQuery = "";
   export let searching = false;
+  /** B3: known fields and records, for `field:value` suggestions. */
+  export let fieldNames: readonly string[] = [];
+  export let records: readonly DataRecord[] = [];
 
   const dispatch = createEventDispatcher<{
     search: string;
@@ -26,7 +32,6 @@
   }>();
 
   let searchOpen = false;
-
   function toggleSearch() {
     searchOpen = !searchOpen;
     if (!searchOpen) {
@@ -35,14 +40,25 @@
     }
   }
 
+  let active = -1;
+  const listId = `ppp-t2-hints-${Math.random().toString(36).slice(2, 8)}`;
+  $: suggestions = searchOpen ? searchSuggestions(searchQuery, fieldNames, records) : ([] as SearchSuggestion[]);
+
   function setQuery(next: string) {
     searchQuery = next;
+    active = -1;
     dispatch("search", next);
   }
 
-  // Escape closes the search, but not while an IME composition owns the key.
+  // Arrows/Enter/Tab walk the hints; Escape closes them, then the search; never during IME.
   function onSearchKeydown(e: KeyboardEvent) {
-    if (!isImeKey(e) && e.key === "Escape") toggleSearch();
+    const step = isImeKey(e) ? null : hintKey(e.key, suggestions.length, active);
+    if (!step) return;
+    if (e.key !== "Escape") e.preventDefault();
+    active = step.active;
+    const chosen = step.choose === undefined ? undefined : suggestions[step.choose];
+    if (chosen) setQuery(chosen.query);
+    if (step.close) toggleSearch();
   }
 </script>
 
@@ -70,9 +86,11 @@
         focusOnMount
         placeholder={$i18n.t("views.dashboard.table-v2.search-placeholder", { defaultValue: "Search…" })}
         ariaLabel={$i18n.t("views.dashboard.table-v2.search", { defaultValue: "Search records" })}
+        controls={suggestions.length ? listId : undefined} activeDescendant={active >= 0 ? `${listId}-${active}` : undefined}
         on:queryChange={(e) => setQuery(e.detail)}
         on:keydown={onSearchKeydown}
       />
+      <SearchHints {suggestions} {active} {listId} showTip={searchQuery.trim() === ""} on:choose={(e) => setQuery(e.detail.query)} />
     </div>
   {/if}
   <button
@@ -137,6 +155,7 @@
   }
 
   .ppp-t2-cb-search {
+    position: relative;
     min-width: 0;
     max-width: 14rem;
   }
@@ -160,24 +179,8 @@
     background: var(--background-modifier-hover);
   }
 
-  /*
-   * #169 / #166 — what a narrow widget costs the bar.
-   *
-   * The design spec asked for pills to collapse to icon-only below the label
-   * budget. Measured against what a pill IS, that is the wrong trade: a filter
-   * pill with no text says only that SOME filter exists and not which one, and
-   * an unreadable filter is worse than one that wraps — which this bar already
-   * does. So the label yields space instead of vanishing.
-   *
-   * It yields it in the container's own units, which is the point of the
-   * exercise: `8rem` above is anchored to the document root, so it caps the
-   * label identically in a widget one column wide and one spanning the canvas.
-   * `cqi` is a share of THIS widget. Named `widget` after the container
-   * `WidgetShell` declares on `.ppp-widget-host`, so the rule cannot silently
-   * re-target whichever ancestor is nearest, and the threshold is in `em` —
-   * `rem` inside the condition would be root-anchored again, and would count
-   * against R0.16 from inside a media condition where nothing renders it.
-   */
+  /* #169/#166: in a narrow widget the label yields space in the widget's own
+     units (cqi of `widget`, threshold in em) instead of vanishing. */
   @container widget (max-width: 24em) {
     .ppp-t2-cb-pill-label {
       max-width: 40cqi;

@@ -1476,6 +1476,16 @@
                     "search": "Search records",
                     "search-placeholder": "Search…",
                     "searching": "Searching…",
+                    "search-hints": "Search suggestions",
+                    "search-tip": "Tip: field:value, field: for empty, field:* for filled",
+                    "readonly-reason": {
+                        "rollup-from": "Rollup from «{{source}}» — computed",
+                        "rollup": "Rollup — computed",
+                        "formula": "Formula — computed",
+                        "derived": "Computed field — read only",
+                        "source": "This source is read only",
+                        "list": "A list of values is not edited here yet — open the note"
+                    },
                     "invalid-number": "Enter a valid number; the stored value has not changed",
                     "invalid-date": "Complete the date; the stored value has not changed",
                     "list-add": "Add item",

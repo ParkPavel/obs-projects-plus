@@ -1,11 +1,13 @@
 <script lang="ts">
-  /**
-   * EditableCell — F2.2 (TABLE_V2_CANON §2/§3). Cell = typed property edited in place; display and
-   * editor live together, one source of truth. Editor dispatch is STRICTLY by DataFieldType (invariant #1).
-   * Commit on blur/Enter/option-click, revert on Esc. Boolean toggles instantly. Relation editing is
-   * #081 (RelationPickerPopover); derived types are read-only by contract.
-   */
+  /** EditableCell — F2.2 (TABLE_V2_CANON §2/§3): typed property edited in place; editor by DataFieldType (invariant #1).
+   * Commit on blur/Enter/option-click, Esc reverts, Boolean toggles. B3: a locked cell shows why; a tap edits, a drag scrolls. */
   import { createEventDispatcher } from "svelte";
+  import { i18n } from "src/lib/stores/i18n";
+  import { cellAccess } from "./tableCellAccess";
+  import { cellTouch, liftOnKeyboard } from "./tableTouch";
+  import type { ParsedSearch } from "./tableSearchQuery";
+  import CellLockReason from "./CellLockReason.svelte";
+  import HighlightText from "./HighlightText.svelte";
   import {
     DataFieldType,
     type DataField,
@@ -34,6 +36,7 @@
   export let api: ViewApi;
   export let frame: DataFrame;
   export let dateFormat: DateFormatConfig | undefined = undefined;
+  export let highlight: ParsedSearch | null = null;
 
   const dispatch = createEventDispatcher<{
     startEdit: void;
@@ -43,16 +46,13 @@
   }>();
 
   $: cell = cellDisplay(field, value);
-  $: editable = !readonly && !field.derived &&
-    field.type !== DataFieldType.Formula &&
-    field.type !== DataFieldType.Rollup &&
-    !field.typeConfig?.rollup &&
-    (!Array.isArray(value) || field.type === DataFieldType.String || field.type === DataFieldType.List || field.type === DataFieldType.Relation);
+  $: access = cellAccess(field, value, readonly);
+  $: editable = access.editable;
+  $: reason = access.editable ? "" : $i18n.t(access.reason.key, { defaultValue: access.reason.defaultValue, ...access.reason.params });
+  let reasonOpen = false;
   $: isChoice = field.type === DataFieldType.Select || field.type === DataFieldType.Status;
   let draft = "";
-  let committed = false;
-  let wasEditing = false;
-  let invalid = false;
+  let committed = false, wasEditing = false, invalid = false;
 
   // Seeded on the turn INTO editing, inside a function: `draft` is bound, and a `$:` that assigns it re-seeds per keystroke (R0.34).
   function onEditing(on: boolean) {
@@ -67,6 +67,7 @@
 
   // The cell's Enter handler takes only its own Enter: the editor's bubbles up after the browser flushed `editing = false`, reopening the cell.
   function handleCellClick() {
+    if (!editable) reasonOpen = true;
     if (!editable || editing) return;
     if (field.type === DataFieldType.Boolean) {
       dispatch("commit", value !== true);
@@ -86,13 +87,11 @@
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
   class="ppp-t2-cell"
-  class:ppp-t2-cell--number={cell.kind === "number"}
-  class:ppp-t2-cell--editable={editable}
-  class:ppp-t2-cell--editing={editing}
-  class:ppp-t2-cell--invalid={invalid}
-  role="gridcell"
-  tabindex={editable ? 0 : -1}
-  on:click={handleCellClick}
+  class:ppp-t2-cell--number={cell.kind === "number"} class:ppp-t2-cell--editable={editable}
+  class:ppp-t2-cell--editing={editing} class:ppp-t2-cell--invalid={invalid}
+  role="gridcell" tabindex="0" aria-readonly={editable ? undefined : "true"} title={reason || undefined}
+  use:cellTouch={handleCellClick} use:liftOnKeyboard={editing}
+  on:focus={() => { reasonOpen = !editable; }} on:blur={() => { reasonOpen = false; }}
   on:keydown={(e) => { if (e.target === e.currentTarget && e.key === "Enter" && !editing) { e.preventDefault(); handleCellClick(); } }}
 >
   {#if editing && field.type === DataFieldType.Relation}
@@ -131,8 +130,9 @@
   {:else if cell.kind === "number"}
     {cell.text}
   {:else}
-    <span class="ppp-t2-text">{cell.text}</span>
+    <span class="ppp-t2-text"><HighlightText text={cell.text} search={highlight} field={field.name} /></span>
   {/if}
+  {#if reasonOpen && reason}<CellLockReason text={reason} />{/if}
 </div>
 
 <style>

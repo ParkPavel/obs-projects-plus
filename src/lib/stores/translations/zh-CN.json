@@ -1532,6 +1532,16 @@
                     "search": "搜索记录",
                     "search-placeholder": "搜索…",
                     "searching": "正在搜索…",
+                    "search-hints": "搜索建议",
+                    "search-tip": "提示：字段:值，字段: 为空，字段:* 为已填写",
+                    "readonly-reason": {
+                        "rollup-from": "来自「{{source}}」的汇总 — 自动计算",
+                        "rollup": "汇总 — 自动计算",
+                        "formula": "公式 — 自动计算",
+                        "derived": "计算字段 — 只读",
+                        "source": "外部来源为只读",
+                        "list": "此处暂不支持编辑值列表 — 请打开记录"
+                    },
                     "invalid-number": "请输入有效数字；已保存的值未更改",
                     "invalid-date": "请完成日期输入；已保存的值未更改",
                     "list-add": "添加项",

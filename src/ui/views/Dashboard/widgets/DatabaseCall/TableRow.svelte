@@ -12,6 +12,8 @@
   import type { ViewApi } from "src/lib/viewApi";
   import { cellDisplay, type TableColumn } from "./tableCanon";
   import EditableCell from "./EditableCell.svelte";
+  import HighlightText from "./HighlightText.svelte";
+  import type { ParsedSearch } from "./tableSearchQuery";
 
   type DateFormatConfig = import("src/settings/v3/settings").DateFormatConfig;
 
@@ -27,6 +29,7 @@
   export let editingField: string | null = null;
   /** Unique value lists for Select/Status dropdowns, keyed by field name. */
   export let optionsByField: ReadonlyMap<string, string[]> = new Map();
+  export let highlight: ParsedSearch | null = null;
 
   const dispatch = createEventDispatcher<{
     // #189: the originating event travels with the record, or the modifier the
@@ -61,7 +64,7 @@
       <div class="ppp-t2-cell ppp-t2-cell--primary" role="gridcell">
         <button type="button" class="ppp-t2-name"
           on:click|stopPropagation={(e) => dispatch("openRecord", { record, event: e })}
-        >{nameText()}</button>
+        ><HighlightText text={nameText()} search={highlight} /></button>
         <button
           class="ppp-t2-rowbtn clickable-icon"
           on:click|stopPropagation={(e) => dispatch("openRecord", { record, event: e })}
@@ -88,7 +91,7 @@
         {frame}
         {dateFormat}
         editing={editingField === col.field.name}
-        options={optionsByField.get(col.field.name) ?? []}
+        options={optionsByField.get(col.field.name) ?? []} {highlight}
         on:startEdit={() => dispatch("startEdit", { recordId: record.id, field: col.field.name })}
         on:commit={(e) => dispatch("commitEdit", { record, field: col.field.name, value: e.detail })}
         on:cancel={() => dispatch("cancelEdit")}
@@ -102,7 +105,7 @@
   .ppp-t2-row {
     display: grid;
     grid-template-columns: var(--ppp-dt-columns);
-    min-height: var(--ppp-t2-row-height, 2.25rem);
+    height: var(--ppp-t2-row-height, 2.25rem); /* B3: fixed — the render window counts rows by it */
     border-bottom: 0.0625rem solid var(--background-modifier-border);
   }
 
@@ -181,12 +184,12 @@
 
   /* A finger has no hover to find them: both actions stay shown, each in its
      own finger-sized box side by side, so the two targets never overlap. The
-     row grows to fit them; the name keeps its ellipsis. */
+     row keeps its fixed height; the name keeps its ellipsis. */
   @media (pointer: coarse) {
     .ppp-t2-rowbtn {
       opacity: 1;
       width: var(--ppp-touch-target-min);
-      height: var(--ppp-touch-target-min);
+      height: 100%;
     }
 
     .ppp-t2-cell--primary {

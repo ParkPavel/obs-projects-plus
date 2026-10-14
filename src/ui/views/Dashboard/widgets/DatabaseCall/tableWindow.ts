@@ -41,13 +41,13 @@ function clippers(node: HTMLElement): HTMLElement[] {
 }
 
 /** The visible part of `node`'s content, or null while it has no box (hidden, detached). */
-export function measureViewport(node: HTMLElement): TableViewport | null {
+export function measureViewport(node: HTMLElement, clipping?: readonly HTMLElement[]): TableViewport | null {
   const view = node.ownerDocument.defaultView;
   const rect = node.getBoundingClientRect();
   if (!view || (rect.width === 0 && rect.height === 0)) return null;
   let top = 0;
   let bottom = view.innerHeight;
-  for (const el of clippers(node)) {
+  for (const el of clipping ?? clippers(node)) { // B3: watched set, no style reads per frame
     const box = el === node ? rect : el.getBoundingClientRect();
     top = Math.max(top, box.top);
     bottom = Math.min(bottom, box.bottom);
@@ -76,12 +76,12 @@ export function trackViewport(
   const win: Window & { ResizeObserver?: typeof ResizeObserver } = view;
   let frame = 0;
   let watched: HTMLElement[] = [];
-  let observer: ResizeObserver | null = null;
-
+  let observer: ResizeObserver | null = null, last: TableViewport | null = null;
   function run(): void {
     frame = 0;
-    const viewport = measureViewport(node);
-    if (viewport) onChange(viewport);
+    const viewport = measureViewport(node, watched.length ? watched : undefined);
+    if (!viewport || (last?.scrollTop === viewport.scrollTop && last.viewportPx === viewport.viewportPx)) return;
+    onChange(last = viewport);
   }
   function schedule(): void {
     if (!frame) frame = win.requestAnimationFrame(run);
