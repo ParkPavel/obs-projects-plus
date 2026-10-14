@@ -9,6 +9,7 @@
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
+  import TextField from "src/ui/components/fields/TextField.svelte";
   import WidgetConfigShell from "../_shared/WidgetConfigShell.svelte";
   import ComboField from "src/ui/components/fields/ComboField.svelte";
   import { namesToOptions } from "src/ui/components/fields/comboOptions";
@@ -63,9 +64,6 @@
     emit({ tabs: seeded });
   }
 
-  function inputVal(e: Event): string {
-    return (e.currentTarget as HTMLInputElement).value;
-  }
   function checkVal(e: Event): boolean {
     return (e.currentTarget as HTMLInputElement).checked;
   }
@@ -128,18 +126,16 @@
         <div class="ppp-cfg-item">
           <label>
             {$i18n.t("views.dashboard.filter-tabs.config.tab-label", { defaultValue: "Label" })}
-            <input
-              type="text"
+            <TextField
               value={t.label}
-              on:input={(e) => updateTab(idx, { label: inputVal(e) })}
+              on:input={(e) => updateTab(idx, { label: e.detail })}
             />
           </label>
           <label>
             {$i18n.t("views.dashboard.filter-tabs.config.tab-value", { defaultValue: "Value" })}
-            <input
-              type="text"
+            <TextField
               value={t.value}
-              on:input={(e) => updateTab(idx, { value: inputVal(e) })}
+              on:input={(e) => updateTab(idx, { value: e.detail })}
             />
           </label>
           <button

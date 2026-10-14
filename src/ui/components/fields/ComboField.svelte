@@ -27,6 +27,7 @@
   import { createEventDispatcher, onDestroy, onMount, tick } from "svelte";
   import { setIcon } from "obsidian";
   import { portal } from "src/ui/portal";
+  import { keepInView } from "./keepInView";
   import { remAt, rootFontPx } from "src/ui/utils/cssLength";
   import { createDraftController, type CommitReason } from "./draftController";
   import { filterOptions, optionDomId, stepActive, type ComboOption } from "./comboOptions";
@@ -336,6 +337,7 @@
 <div class="ppp-combo" bind:this={rootEl}>
   <input
     bind:this={inputEl}
+    use:keepInView
     {id}
     class="ppp-combo-input {inputClass}"
     type="text"

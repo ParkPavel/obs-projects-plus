@@ -1,6 +1,7 @@
 <script lang="ts">
   import { i18n } from "src/lib/stores/i18n";
   import { createEventDispatcher, tick } from "svelte";
+  import TextField from "src/ui/components/fields/TextField.svelte";
 
   export let config: Record<string, unknown>;
   export let readonly: boolean = false;
@@ -10,7 +11,7 @@
   $: label = typeof config?.["label"] === "string" ? config["label"] : "";
   let editing = false;
   let editValue = "";
-  let inputEl: HTMLInputElement;
+  let inputEl: TextField | undefined;
 
   async function startEdit() {
     if (readonly) return;
@@ -20,19 +21,16 @@
     inputEl?.select();
   }
 
-  function commitEdit() {
+  function commitEdit(next: string) {
     editing = false;
-    dispatch("change", { ...config, label: editValue });
+    editValue = next;
+    dispatch("change", { ...config, label: next });
   }
 
   function cancelEdit() {
     editing = false;
   }
 
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === "Escape") { e.preventDefault(); cancelEdit(); }
-    if (e.key === "Enter") { e.preventDefault(); commitEdit(); }
-  }
 </script>
 
 <div class="ppp-divider-widget">
@@ -40,12 +38,13 @@
     <div class="ppp-divider-widget__line-row">
       <div class="ppp-divider-widget__line" />
       {#if editing}
-        <input
+        <TextField
           bind:this={inputEl}
-          bind:value={editValue}
-          class="ppp-divider-widget__input"
-          on:keydown={handleKeydown}
-          on:blur={commitEdit}
+          value={editValue}
+          inputClass="ppp-divider-widget__input"
+          commitUnchanged
+          on:commit={(e) => commitEdit(e.detail.value)}
+          on:cancel={cancelEdit}
           placeholder={$i18n.t("views.dashboard.divider.label-placeholder")}
         />
       {:else}
@@ -120,7 +119,7 @@
     font-weight: 400;
   }
 
-  .ppp-divider-widget__input {
+  .ppp-divider-widget :global(.ppp-divider-widget__input) {
     flex-shrink: 0;
     width: 8rem;
     font-size: 0.75rem;

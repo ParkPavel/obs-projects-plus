@@ -2,6 +2,8 @@
   import { createEventDispatcher } from "svelte";
   import type { ViewDefinition } from "../../../../../settings/settings";
   import { i18n } from "src/lib/stores/i18n";
+  import TextField from "src/ui/components/fields/TextField.svelte";
+  import NumberField from "src/ui/components/fields/NumberField.svelte";
   import FieldComboInput from "./FieldComboInput.svelte";
   import SettingsSection from "./SettingsSection.svelte";
   import { Icon } from "obsidian-svelte";
@@ -18,8 +20,6 @@
   } from "src/ui/views/Gallery/galleryOptions";
   import { BOARD_THUMBNAIL_LAYOUTS, normalizeThumbnailLayout } from "src/ui/views/Board/types";
   import {
-    CARD_FRAME_BOUNDS,
-    HEIGHT_STEP_REM,
     normalizeCardFrames,
     normalizeHeightRem,
     resetAllFrames,
@@ -264,12 +264,11 @@
 
         <label>
           {$i18n.t('settings-menu.view-config.calendar.timezone')}
-          <input
-            type="text"
+          <TextField
             data-calendar-option="timezone"
             value={timezone}
             placeholder={$i18n.t('settings-menu.view-config.calendar.hints.timezone')}
-            on:change={(e) => emitUpdate({ timezone: e.currentTarget.value })}
+            on:commit={(e) => emitUpdate({ timezone: e.detail.value })}
           />
         </label>
         
@@ -297,11 +296,10 @@
             
             <label>
               {$i18n.t('settings-menu.view-config.calendar.timeline.event-color-field')}
-              <input
-                type="text"
+              <TextField
                 value={eventColorField}
                 placeholder={$i18n.t('settings-menu.view-config.calendar.timeline.hints.event-color-placeholder')}
-                on:change={(e) => emitUpdate({ eventColorField: e.currentTarget.value })}
+                on:commit={(e) => emitUpdate({ eventColorField: e.detail.value })}
               />
               <span class="hint">{$i18n.t('settings-menu.view-config.calendar.timeline.hints.event-color-field')}</span>
             </label>
@@ -433,22 +431,21 @@
       <div class="group">
         <label>
           {$i18n.t('settings-menu.view-config.board.column-width')}
-          <input
-            type="number"
+          <NumberField
             data-board-option="column-width"
             value={columnWidth}
             placeholder="270"
-            on:change={(e) => {
-              // settings-binds: read the field itself. An emptied field resets
-              // the width to the default (as the old bind did); a value that is
-              // not a positive number writes nothing.
-              if (e.currentTarget.value.trim() === "") {
+            allowEmpty
+            on:commit={(e) => {
+              // settings-binds: an emptied field resets the width to the
+              // default (as the old bind did); a value that is not a positive
+              // number writes nothing.
+              if (e.detail === null) {
                 emitUpdate({ columnWidth: undefined });
                 return;
               }
-              const width = e.currentTarget.valueAsNumber;
-              if (!Number.isFinite(width) || width <= 0) return;
-              emitUpdate({ columnWidth: width });
+              if (e.detail <= 0) return;
+              emitUpdate({ columnWidth: e.detail });
             }}
           />
           <span class="hint">{$i18n.t('settings-menu.view-config.board.hints.column-width')}</span>
@@ -568,15 +565,14 @@
 
         <label>
           {$i18n.t("settings-menu.view-config.gallery.card-width")}
-          <input
-            type="number"
+          <NumberField
+            data-gallery-option="card-width"
             value={cardWidth}
             placeholder="300"
-            on:change={(e) => {
-              // cards-g3: read the field itself, as the presets do; a bind to
-              // the normalised width did not reach the preset state.
-              const width = e.currentTarget.valueAsNumber;
-              if (!Number.isFinite(width) || width <= 0) return;
+            on:commit={(e) => {
+              // cards-g3: the typed width reaches the preset state too.
+              const width = e.detail;
+              if (width === null || width <= 0) return;
               cardWidth = width;
               emitUpdate({ cardWidth: width });
             }}
@@ -726,15 +722,12 @@
       <div class="group">
         <label>
           {$i18n.t("settings-menu.view-config.card-frames.height")}
-          <input
-            type="number"
+          <NumberField
             data-card-frame-option="height"
-            min={CARD_FRAME_BOUNDS.heightRem.min}
-            max={CARD_FRAME_BOUNDS.heightRem.max}
-            step={HEIGHT_STEP_REM}
-            value={frameHeight ?? ""}
+            value={frameHeight ?? null}
             placeholder={$i18n.t("settings-menu.view-config.card-frames.auto")}
-            on:change={(e) => handleFrameHeightChange(e.currentTarget.value)}
+            allowEmpty
+            on:commit={(e) => handleFrameHeightChange(e.detail === null ? "" : String(e.detail))}
           />
           <span class="hint">{$i18n.t("settings-menu.view-config.card-frames.height-hint")}</span>
         </label>
@@ -911,7 +904,7 @@
     min-width: 6rem;
   }
   label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.875rem; }
-  select, input[type="text"] {
+  select, .section :global(input.ppp-text-field) {
     padding: 0.5rem 0.625rem;
     border-radius: 0.625rem;
     border: 0.0625rem solid var(--background-modifier-border);
@@ -1088,7 +1081,7 @@
       text-decoration: underline;
       color: var(--text-accent-hover, var(--text-accent));
     }
-    select:hover, input[type="text"]:hover {
+    select:hover, .section :global(input.ppp-text-field):hover {
       border-color: var(--interactive-accent);
     }
     .field-item:hover {

@@ -113,6 +113,12 @@ export interface DraftController {
    * during focus is adopted when the user touched nothing.
    */
   blur(options?: CommitOptions): CommitResult | null;
+  /**
+   * The consumer replaces the text outright (a form cleared after its value
+   * was applied). Baseline, draft and committed all become `next`; focus is
+   * kept, and nothing is reported.
+   */
+  reset(next: string): void;
 }
 
 /** A controller for one text field, starting from `initial`. */
@@ -223,6 +229,15 @@ export function createDraftController(initial = ""): DraftController {
       }
       pending = null;
       return result;
+    },
+
+    reset(next) {
+      baseline = next;
+      draft = next;
+      committed = next;
+      pending = null;
+      touched = false;
+      done = false;
     },
   };
 }
