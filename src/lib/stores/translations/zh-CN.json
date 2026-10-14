@@ -932,6 +932,16 @@
             },
             "gallery": {
                 "name": "画册",
+                "card-panel": {
+                    "open": "卡片选项",
+                    "title": "卡片",
+                    "cover": "封面",
+                    "fields": "属性",
+                    "close": "关闭"
+                },
+                "card-more": "“{{name}}”的更多操作",
+                "cover-broken": "未找到图片",
+                "cover-broken-hint": "请修正“{{field}}”中的路径：{{path}}",
                 "fields": {
                     "cover": "图片源",
                     "none": "未选择"

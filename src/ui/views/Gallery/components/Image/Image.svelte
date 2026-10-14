@@ -4,4 +4,5 @@
   export let fit: string;
 </script>
 
-<img {alt} {src} style:object-fit={fit} />
+<!-- B9: `error` is forwarded so the gallery can show its broken-cover fallback. -->
+<img {alt} {src} style:object-fit={fit} on:error />

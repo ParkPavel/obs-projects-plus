@@ -96,6 +96,9 @@
 <style>
   .field-label {
     margin-bottom: 0.5rem;
+    /* B9: a long value wraps inside the card instead of pushing the grid. */
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .field-label:last-child {
@@ -111,6 +114,11 @@
     font-size: var(--font-ui-smaller, 0.75rem);
     line-height: 1.4;
     white-space: nowrap;
+    /* B9: a long chip ends in an ellipsis inside the card, never widens it. */
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: top;
   }
 
   .ppp-card-meta-chip--relation {

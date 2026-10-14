@@ -953,6 +953,16 @@
             },
             "gallery": {
                 "name": "Галерея",
+                "card-panel": {
+                    "open": "Налаштування картки",
+                    "title": "Картка",
+                    "cover": "Обкладинка",
+                    "fields": "Властивості",
+                    "close": "Закрити"
+                },
+                "card-more": "Дії для «{{name}}»",
+                "cover-broken": "Зображення не знайдено",
+                "cover-broken-hint": "Виправте шлях у полі «{{field}}»: {{path}}",
                 "fields": {
                     "cover": "Обкладинка",
                     "none": "Нічого"
