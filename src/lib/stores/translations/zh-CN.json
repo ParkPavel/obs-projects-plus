@@ -661,7 +661,12 @@
                 "unfreeze-all": "取消冻结所有列",
                 "records_other": "条记录",
                 "drag-column": "拖动以重新排序列",
-                "reset-zoom": "重置缩放"
+                "reset-zoom": "重置缩放",
+                "drag-blocked": {
+                    "pinned": "列已固定：取消固定后才能移动卡片",
+                    "readonly": "数据为只读：无法移动卡片",
+                    "editing": "请先完成列名编辑"
+                }
             },
             "calendar": {
                 "name": "日历",

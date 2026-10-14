@@ -35,6 +35,8 @@
   /** cards-g5 — saved card frames and their change route, passed through to the card list. */
   export let cardFrames: NormalizedCardFrames = { view: {}, byRecord: {} };
   export let onCardFrameChange: ((recordId: string, frame: CardFrame | undefined) => void) | undefined = undefined;
+  /** p372-b8 — board zoom, for the mouse drag's clone (CardList). */
+  export let zoom: number = 1;
   export let pinned: boolean;
   export let collapse: boolean;
   export let persisted: boolean;
@@ -144,6 +146,7 @@
       {boardEditing}
       disableDnd={pinned || dataReadOnly}
       readOnly={dataReadOnly}
+      {zoom}
       {customHeader}
       {iconField}
       {thumbnailLayout}
