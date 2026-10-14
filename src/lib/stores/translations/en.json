@@ -926,6 +926,16 @@
             },
             "gallery": {
                 "name": "Gallery",
+                "card-panel": {
+                    "open": "Card options",
+                    "title": "Card",
+                    "cover": "Cover",
+                    "fields": "Properties",
+                    "close": "Close"
+                },
+                "card-more": "More actions for \"{{name}}\"",
+                "cover-broken": "Image not found",
+                "cover-broken-hint": "Fix the path in \"{{field}}\": {{path}}",
                 "fields": {
                     "cover": "Cover",
                     "none": "None"

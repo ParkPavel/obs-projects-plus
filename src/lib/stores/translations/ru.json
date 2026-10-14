@@ -986,6 +986,16 @@
             },
             "gallery": {
                 "name": "Галерея",
+                "card-panel": {
+                    "open": "Настройки карточки",
+                    "title": "Карточка",
+                    "cover": "Обложка",
+                    "fields": "Свойства",
+                    "close": "Закрыть"
+                },
+                "card-more": "Действия для «{{name}}»",
+                "cover-broken": "Изображение не найдено",
+                "cover-broken-hint": "Исправьте путь в поле «{{field}}»: {{path}}",
                 "fields": {
                     "cover": "Обложка",
                     "none": "Не выбрано"
