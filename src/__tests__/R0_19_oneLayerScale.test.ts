@@ -53,7 +53,8 @@ import { collectStyled, SRC_ROOT } from "./support/cssScan";
  */
 // 66 → 65 (3.7.2 B1): DatetimeInput's time-picker overlay left with the native field.
 // 65 → 64 (3.7.2 B4): month cell +N no longer floats over the last card.
-const RAW_Z_BUDGET = 64;
+// 64 → 63 (3.7.2 B10): DayPopup's private layer left for FloatingPopup.
+const RAW_Z_BUDGET = 63;
 
 const RAW_Z = /z-index:\s*-?\d+\s*;/g;
 const TOKEN_WITH_FALLBACK = /z-index:\s*var\(\s*(--[a-z0-9-]+)\s*,\s*([^)]*)\)/gi;
