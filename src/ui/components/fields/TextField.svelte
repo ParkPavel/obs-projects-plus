@@ -9,6 +9,7 @@
    */
   import { createEventDispatcher } from "svelte";
   import { createDraftController, isImeKey } from "./draftController";
+  import { keepInView } from "./keepInView";
 
   export let value = "";
   export let placeholder = "";
@@ -19,6 +20,8 @@
   export let id: string | undefined = undefined;
   export let ariaLabel: string | undefined = undefined;
   export let inputClass = "";
+  /** The consumer's own verdict on the value (a name already taken). */
+  export let error = false;
   /** Report a blur that changed nothing (a cell editor that must leave edit mode). */
   export let commitUnchanged = false;
 
@@ -41,9 +44,22 @@
   }
   $: adopt(value);
 
+  /** Replace the text outright, without a commit (a form cleared after use). */
+  export function reset(next: string): void {
+    ctl.reset(next);
+    pull();
+    invalid = false;
+  }
+
   /** Move focus into the field. */
   export function focus(): void {
     inputEl?.focus();
+  }
+
+  /** Focus the field with its whole text selected (a rename). */
+  export function select(): void {
+    inputEl?.focus();
+    inputEl?.select();
   }
 
   function accepts(text: string): boolean {
@@ -89,27 +105,32 @@
 
 <input
   bind:this={inputEl}
+  use:keepInView
   {id}
   class="ppp-text-field {inputClass}"
-  class:ppp-text-field--invalid={invalid}
+  class:ppp-text-field--invalid={invalid || error}
   type="text"
   inputmode={inputMode}
   value={draft}
   {placeholder}
   {disabled}
   aria-label={ariaLabel}
-  aria-invalid={invalid ? "true" : undefined}
+  aria-invalid={invalid || error ? "true" : undefined}
   on:focus={onFocus}
   on:blur={() => emit("blur")}
   on:input={onInput}
   on:keydown={onKeydown}
   on:compositionstart={() => ctl.compositionStart()}
   on:compositionend={() => ctl.compositionEnd()}
+  {...$$restProps}
 />
 
 <style>
   .ppp-text-field {
     min-width: 0;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    text-overflow: ellipsis;
     color: var(--text-normal);
   }
   .ppp-text-field--invalid {

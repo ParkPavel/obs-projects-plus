@@ -2,6 +2,7 @@
   import { createEventDispatcher } from "svelte";
   import type { DataField } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
+  import NumberField from "src/ui/components/fields/NumberField.svelte";
   import ComboField from "src/ui/components/fields/ComboField.svelte";
   import { namesToOptions } from "src/ui/components/fields/comboOptions";
 
@@ -22,9 +23,6 @@
 
   $: fieldOptions = namesToOptions(fields.map((f) => f.name));
 
-  function inputVal(e: Event): string {
-    return (e.currentTarget as HTMLInputElement).value;
-  }
 
   function selectVal(e: Event): string {
     return (e.currentTarget as HTMLSelectElement).value;
@@ -91,14 +89,16 @@
     </label>
   </div>
 
+  <!-- svelte-ignore a11y-label-has-associated-control -->
   <label>
     {$i18n.t("views.dashboard.checklist.config.limit", { defaultValue: "Limit" })}
-    <input
-      type="number"
-      min="0"
+    <NumberField
+      min={0}
+      integer
+      allowEmpty
       value={limit}
       placeholder={$i18n.t("views.dashboard.checklist.config.limit-placeholder", { defaultValue: "0 = no limit" })}
-      on:input={(e) => emit({ limit: Math.max(0, /* coercion-exempt: a number input's own value, min=0 above — a widget setting, not record data */ Number(inputVal(e)) || 0) })}
+      on:input={(e) => emit({ limit: e.detail ?? 0 })}
     />
   </label>
 
@@ -128,7 +128,7 @@
     color: var(--text-muted);
   }
 
-  input,
+  .ppp-checklist-config :global(input.ppp-text-field),
   select,
   .ppp-checklist-config :global(.ppp-combo-input) {
     min-height: 2rem;

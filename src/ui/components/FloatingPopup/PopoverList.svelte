@@ -17,7 +17,7 @@
 
   Items are chosen by pointer, touch or keyboard. A pointer press selects on
   `mousedown` with `preventDefault` so the originating focused element (e.g.
-  a `<input>` triggering a type-ahead popover) keeps focus and keystrokes
+  a text field triggering a type-ahead popover) keeps focus and keystrokes
   continue to flow into it; the `click` that ends the same tap is ignored.
   A click with no press before it (Enter or Space on a focused item, an
   assistive-technology activation) selects too. In the search field

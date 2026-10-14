@@ -10,6 +10,7 @@
   import { createEventDispatcher, onMount, tick } from "svelte";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
+  import { keepInView } from "./keepInView";
 
   export let query = "";
   export let placeholder = "";
@@ -60,6 +61,7 @@
   <!-- svelte-ignore a11y-role-supports-aria-props -->
   <input
     bind:this={inputEl}
+    use:keepInView
     class="ppp-search-field-input {inputClass}"
     type="text"
     role={controls ? "combobox" : "searchbox"}

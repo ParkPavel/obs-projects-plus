@@ -72,7 +72,12 @@ async function edit(input: HTMLInputElement, value: string, inputType = "insertT
   await tick();
 }
 
-const change = (el: HTMLElement) => el.dispatchEvent(new Event("change", { bubbles: true }));
+// B1b: a select commits on change; a text or number field (TextField) when
+// the user leaves it, which is where the native change fired too.
+const change = (el: HTMLElement) => {
+  el.dispatchEvent(new Event("change", { bubbles: true }));
+  el.dispatchEvent(new FocusEvent("blur"));
+};
 const enter = (el: HTMLElement) => el.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
 
 afterEach(() => {

@@ -49,7 +49,7 @@ function mount(config: Record<string, unknown> = {}) {
     fit: () => q<HTMLSelectElement>('select[data-gallery-option="fit"]'),
     labels: () => q<HTMLInputElement>('input[data-gallery-option="labels"]'),
     preset: (size: string) => q<HTMLButtonElement>(`button[data-gallery-size="${size}"]`),
-    width: () => q<HTMLInputElement>('input[type="number"]'),
+    width: () => q<HTMLInputElement>('input[data-gallery-option="card-width"]'),
     destroy() {
       component.$destroy();
       target.remove();
@@ -115,7 +115,7 @@ describe("cards-g3 — each gallery control emits a partial update", () => {
     const m = mount();
     m.width().value = "250";
     m.width().dispatchEvent(new Event("input", { bubbles: true }));
-    m.width().dispatchEvent(new Event("change", { bubbles: true }));
+    m.width().dispatchEvent(new FocusEvent("blur"));
     await tick();
     expect(m.updates).toEqual([{ cardWidth: 250 }]);
     for (const size of ["s", "m", "l"]) expect(m.preset(size)).toHaveAttribute("aria-pressed", "false");

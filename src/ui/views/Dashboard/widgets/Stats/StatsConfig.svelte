@@ -17,6 +17,7 @@
   } from "src/lib/dashboard-engine/aggregationOptions";
   import type { StatsConfig, StatsCardConfig, ColumnAggregation } from "../../types";
   import { createEventDispatcher } from "svelte";
+  import TextField from "src/ui/components/fields/TextField.svelte";
   import { i18n } from "src/lib/stores/i18n";
   import WidgetConfigShell from "../_shared/WidgetConfigShell.svelte";
   import ComboField from "src/ui/components/fields/ComboField.svelte";
@@ -108,9 +109,6 @@
     emit({ cards: cards.filter((_, i) => i !== idx) });
   }
 
-  function inputVal(e: Event): string {
-    return (e.currentTarget as HTMLInputElement).value;
-  }
   function selectVal(e: Event): string {
     return (e.currentTarget as HTMLSelectElement).value;
   }
@@ -176,12 +174,12 @@
   <div class="ppp-cfg-list">
     {#each cards as card, idx (card.id)}
       <div class="ppp-cfg-item ppp-stats-config-item">
+        <!-- svelte-ignore a11y-label-has-associated-control -->
         <label>
           {$i18n.t("views.dashboard.stats.config.label", { defaultValue: "Label" })}
-          <input
-            type="text"
+          <TextField
             value={card.label}
-            on:input={(e) => updateCard(idx, { label: inputVal(e) })}
+            on:input={(e) => updateCard(idx, { label: e.detail })}
           />
         </label>
 
@@ -234,13 +232,13 @@
         </label>
 
         {#if card.format === "currency"}
+          <!-- svelte-ignore a11y-label-has-associated-control -->
           <label class="ppp-stats-currency">
             {$i18n.t("views.dashboard.stats.config.currency", { defaultValue: "Symbol" })}
-            <input
-              type="text"
+            <TextField
               value={card.currencySymbol ?? "$"}
               maxlength="3"
-              on:input={(e) => updateCard(idx, { currencySymbol: inputVal(e) })}
+              on:input={(e) => updateCard(idx, { currencySymbol: e.detail })}
             />
           </label>
         {/if}

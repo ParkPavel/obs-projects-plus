@@ -64,6 +64,8 @@ async function type(input: HTMLInputElement, value: string): Promise<void> {
   input.value = value;
   input.dispatchEvent(new Event("input", { bubbles: true }));
   input.dispatchEvent(new Event("change", { bubbles: true }));
+  // B1b: text and number fields commit when the user leaves them (TextField).
+  input.dispatchEvent(new FocusEvent("blur"));
   await tick();
 }
 
