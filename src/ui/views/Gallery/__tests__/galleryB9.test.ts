@@ -112,7 +112,8 @@ const status: DataField = {
   identifier: false,
   derived: false,
 };
-const owner: DataField = { ...status, name: "owner", type: DataFieldType.String };
+// A Select, not a String: a Text cell needs the real obsidian Component.
+const owner: DataField = { ...status, name: "owner" };
 const cover: DataField = { ...status, name: "cover", type: DataFieldType.String };
 
 const records: DataRecord[] = [
@@ -290,8 +291,9 @@ describe("B9 — a broken cover says so and where to fix it", () => {
     const broken = media.querySelector("[data-cover-broken]");
     expect(broken).not.toBeNull();
     expect(media.querySelector("img")).toBeNull();
-    expect(broken?.textContent).toContain("cover");
-    expect(broken?.textContent).toContain("images/missing.png");
+    // The test i18n renders keys: the hint is there, and the path is on the node.
+    expect(broken?.textContent).toContain("cover-broken-hint");
+    expect(broken).toHaveAttribute("title", "images/missing.png");
     // A record with no cover value keeps the plain placeholder.
     expect(m.card(2).querySelector("[data-cover-broken]")).toBeNull();
     m.component.$destroy();
