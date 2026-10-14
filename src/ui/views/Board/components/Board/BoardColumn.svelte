@@ -43,6 +43,7 @@
 
   export let onDrop: OnRecordDrop;
   export let onRecordClick: OnRecordClick;
+  export let onRecordEdit: OnRecordClick | undefined = undefined;
   export let onRecordCheck: OnRecordCheck;
   export let onRecordAdd: () => void;
   export let onColumnPin: (name: string) => void;
@@ -154,6 +155,7 @@
       {cardFrames}
       {onCardFrameChange}
       {onRecordClick}
+      {onRecordEdit}
       {checkField}
       {onRecordCheck}
       {onDrop}

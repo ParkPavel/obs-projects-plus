@@ -10,7 +10,7 @@
   import { notUndefined } from "src/lib/helpers";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
-  import { openRecord, modeFromNewLeaf, PLAIN_MODE } from "src/lib/record/openRecord";
+  import { activateRecord, openRecord, modeFromNewLeaf, PLAIN_MODE } from "src/lib/record/openRecord";
   import { Notice } from "obsidian";
   import type { ViewApi } from "src/lib/viewApi";
   import type { ProjectDefinition } from "src/settings/settings";
@@ -99,7 +99,17 @@
     hasSort ? sortRecords(records) : [...records]
   );
 
+  /**
+   * B10 — a tap on a card opens the record in the peek, like the gallery and
+   * the calendar (decision 2026-10-14 in `openRecord.ts`); the card handles
+   * Shift/Ctrl itself. A read-only source opens a read-only peek.
+   */
   const handleRecordClick: OnRecordClick = (record) => {
+    void activateRecord({ id: record.id, readonly: dataReadOnly || readonly }, undefined, { app: $app });
+  };
+
+  /** The note editor, one explicit entry away: the card's pencil. */
+  const handleRecordEdit: OnRecordClick = (record) => {
     if (dataReadOnly) {
       void openRecord({ id: record.id }, PLAIN_MODE, { app: $app });
       return;
@@ -588,6 +598,7 @@
     {cardFrames}
     onCardFrameChange={handleCardFrameChange}
     onRecordClick={handleRecordClick}
+    onRecordEdit={handleRecordEdit}
     onRecordCheck={handleRecordCheck(checkField)}
     onRecordAdd={handleRecordAdd(groupByField)}
     onRecordUpdate={handleRecordUpdate(groupByField)}

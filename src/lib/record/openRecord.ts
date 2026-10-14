@@ -59,10 +59,21 @@ export type RecordOpenMode = "peek" | "same" | "tab" | "window";
  * The adversarial review of 2026-09-04 was right that naming this asymmetry is
  * not the same as deciding it, and the user decided on 2026-09-05: **the peek
  * is a capability of the dashboard table, not a property of opening a record.**
- * So `PLAIN_MODE` above is the contract for every surface — a click opens the
- * note, everywhere — while `"peek"` is a mode those surfaces simply never ask
- * for. Spreading it is a separate ticket with its own architect pass, because
- * each surface has a different activation model.
+ *
+ * ## Revised 2026-10-14: one record opens the same way everywhere
+ *
+ * The owner revised the 2026-09-05 decision for 3.7.2 ("behave like Notion"):
+ * a record opens the same way on every screen. A plain activation of a record
+ * CARD — gallery card (B9), board card, calendar event in any scale, agenda
+ * row, the day window's list (B10) — opens the peek, through `activateRecord`
+ * below. Shift → window and Ctrl/Meta → tab are unchanged; a read-only source
+ * opens a read-only peek; the peek keeps its consumer's save mode. The old
+ * note editor (EditNoteModal) stays one explicit entry away in each surface's
+ * record menu (board pencil, day-window settings, gallery "⋯").
+ *
+ * `PLAIN_MODE` keeps meaning "a plain click on a LINK to the note" — title
+ * links and the editor's own "open note" still navigate to the note, and the
+ * table keeps its own `alt`/row-menu entrances.
  */
 export const PLAIN_MODE: RecordOpenMode = "same";
 
@@ -167,4 +178,23 @@ export function openRecord(
 
   const newLeaf: PaneType | false = mode === "same" ? false : mode;
   return deps.app.workspace.openLinkText(target.id, sourcePath, newLeaf);
+}
+
+/** The modifier keys a record activation is read from. */
+export type ActivationModifiers = Pick<MouseEvent, "shiftKey" | "ctrlKey" | "metaKey">;
+
+/**
+ * B10 — what activating a record CARD does, on every surface (decision
+ * 2026-10-14 above): Shift → window, Ctrl/Meta → tab, anything else → peek.
+ * No event (a touch handed up without one) is a plain activation. `readonly`
+ * on the target only reaches the peek; a window or tab opens the note itself.
+ */
+export function activateRecord(
+  target: OpenRecordTarget,
+  event: ActivationModifiers | undefined,
+  deps: OpenRecordDeps,
+): Promise<void> {
+  if (event?.shiftKey) return openRecord(target, "window", deps);
+  if (event?.ctrlKey || event?.metaKey) return openRecord(target, "tab", deps);
+  return openRecord(target, "peek", deps);
 }

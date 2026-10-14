@@ -45,7 +45,7 @@
   export let colorField: string | undefined = undefined;
   export let checkField: string | undefined = undefined;
   export let timezone: string = 'local';
-  export let onRecordClick: ((id: string) => void) | undefined = undefined;
+  export let onRecordClick: ((id: string, event?: MouseEvent) => void) | undefined = undefined;
   export let onCreateRecord: ((date: dayjs.Dayjs) => void) | undefined = undefined;
   export let visible: boolean = true;  // New: controls visibility on mobile
   export let collapsed: boolean = false;  // Desktop: collapsed sidebar
@@ -438,13 +438,10 @@
     saveState();
   }
   
+  // B10: the event goes up with the id, so Shift (window) and Ctrl/Meta (tab)
+  // reach the view's one activation rule; a plain click opens the peek.
   function handleClick(event: MouseEvent, id: string) {
-    // Ctrl+Click (Windows/Linux) or Cmd+Click (Mac) = open in new window
-    if (event.ctrlKey || event.metaKey) {
-      dispatch('openInNewWindow', { id });
-      return;
-    }
-    onRecordClick?.(id);
+    onRecordClick?.(id, event);
   }
   
   function handleAdd() {

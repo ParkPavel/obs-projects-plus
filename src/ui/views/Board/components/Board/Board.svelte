@@ -53,6 +53,8 @@
   export let dataReadOnly: boolean = false;
   export let richText: boolean;
   export let onRecordClick: OnRecordClick;
+  /** B10 — the note editor (the card's pencil); the card itself opens the peek. */
+  export let onRecordEdit: OnRecordClick | undefined = undefined;
   export let onRecordCheck: OnRecordCheck;
   export let onRecordUpdate: OnRecordUpdate;
   export let onRecordAdd: OnRecordAdd;
@@ -348,6 +350,7 @@
               name={column.id}
               records={column.records}
               {onRecordClick}
+              {onRecordEdit}
               {checkField}
               {onRecordCheck}
               onRecordAdd={() => onRecordAdd(column.id)}
@@ -459,6 +462,7 @@
               name={column.id}
               records={column.records}
               {onRecordClick}
+              {onRecordEdit}
               {checkField}
               {onRecordCheck}
               onRecordAdd={() => onRecordAdd(column.id)}

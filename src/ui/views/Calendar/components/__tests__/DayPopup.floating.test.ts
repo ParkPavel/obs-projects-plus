@@ -86,6 +86,9 @@ describe("B10 — DayPopup on FloatingPopup", () => {
     const onRecord = jest.fn();
     component.$on("recordClick", (e) => onRecord(e.detail));
     await flush();
+    // A tap on the row shows its actions; "Open" is the first of them.
+    document.querySelector<HTMLElement>(".ppp-day-popup .record-item")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await flush();
     const row = document.querySelector<HTMLElement>(".ppp-day-popup .action-button.primary");
     expect(row).not.toBeNull();
     row?.dispatchEvent(new MouseEvent("click", { bubbles: true }));

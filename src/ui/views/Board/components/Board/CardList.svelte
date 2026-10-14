@@ -186,6 +186,8 @@
 
   export let items: DataRecord[];
   export let onRecordClick: OnRecordClick;
+  /** B10 — the note editor behind the pencil; without one the pencil opens the record. */
+  export let onRecordEdit: OnRecordClick | undefined = undefined;
   export let onRecordCheck: OnRecordCheck;
   export let onDrop: OnRecordDrop;
   export let includeFields: DataField[];
@@ -364,7 +366,11 @@
         mediaSize={thumbnail?.layout === "left" ? frameHeight : undefined}
         on:keypress
         on:click={(e) => {
-          if (!isGripTarget(e)) onRecordClick(item);
+          if (isGripTarget(e)) return;
+          // B10: the body carries the same modifiers as the title link.
+          if (e.shiftKey) void openRecord({ id: item.id }, "window", { app: $app });
+          else if (e.ctrlKey || e.metaKey) void openRecord({ id: item.id }, "tab", { app: $app });
+          else onRecordClick(item);
         }}
       >
         <span slot="grip" class="board-card-grip" use:dragHandle aria-label={$i18n.t("common.drag-to-reorder")}>
@@ -437,7 +443,7 @@
                 onClick={(event) => {
                   // The card itself opens the record on click; open it once.
                   event.stopPropagation();
-                  onRecordClick(item);
+                  (onRecordEdit ?? onRecordClick)(item);
                 }}
               />
             </span>

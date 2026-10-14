@@ -15,7 +15,7 @@
   import { formatDateForProject, getFilterValuesFromConditions } from "src/lib/helpers";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
-  import { openRecord, modeFromNewLeaf, PLAIN_MODE } from "src/lib/record/openRecord";
+  import { activateRecord, openRecord, modeFromNewLeaf, PLAIN_MODE } from "src/lib/record/openRecord";
   import { settings } from "src/lib/stores/settings";
   import { isMobileDevice } from "src/lib/stores/ui";
   import { agendaDrawer, close as closeAgendaDrawer } from "src/lib/stores/agendaDrawer";
@@ -953,7 +953,7 @@
   
   function handleDayPopupRecordClick(record: DataRecord) {
     showDayPopup = false;
-    // v3.0.8: Open modal (intermediate step) instead of direct note open
+    // B10: the day window's "Open" opens the peek, like every other surface.
     handleRecordClick(record);
   }
   
@@ -1530,63 +1530,17 @@
     }
   }
 
-  function handleRecordClick(entry: DataRecord) {
-    if (!entry) {
-      calendarLogger.warn('No entry provided for record click', { component: 'CalendarView' });
-      return;
-    }
-
-    if (dataReadOnly) {
-      void openRecord({ id: entry.id }, PLAIN_MODE, { app: get(app) });
-      return;
-    }
-
-    try {
-      const app_instance = get(app);
-      new EditNoteModal(
-        app_instance,
-        fields,
-        async (record) => {
-          try {
-            await api.updateRecord(record, fields);
-            // Force local update to trigger calendar re-render
-            frame = {
-              ...frame,
-              records: frame.records.map(r => r.id === record.id ? record : r)
-            };
-          } catch (error) {
-            calendarLogger.error('Error updating record in modal', error, { component: 'CalendarView', action: 'modalUpdate' });
-            new Notice(noticeFor(EDITOR_SAVE_FAILED));
-          }
-        },
-        entry,
-        records,
-        // v3.0.8: Unified note open with modifier-based navigation
-        (openMode) => {
-          void openRecord({ id: entry.id }, modeFromNewLeaf(openMode), { app: app_instance });
-        },
-        // v3.0.1: Rename note callback
-        async (newName: string) => {
-          try {
-            const file = app_instance.vault.getAbstractFileByPath(entry.id);
-            if (file && 'parent' in file) {
-              const newPath = file.parent?.path 
-                ? `${file.parent.path}/${newName}.md`
-                : `${newName}.md`;
-              await app_instance.fileManager.renameFile(file as any, newPath);
-              new Notice(get(i18n).t("views.calendar.notices.renamed", { defaultValue: "Note renamed: {{name}}", name: newName }));
-            }
-          } catch (e) {
-            calendarLogger.error('Failed to rename note', e);
-            new Notice(noticeFor(RENAME_FAILED));
-          }
-        },
-        // v3.0.4: Autosave setting from project
-        project.autosave ?? true
-      ).open();
-    } catch (error) {
-      calendarLogger.error('Error opening edit modal', error, { component: 'CalendarView', action: 'openModal' });
-    }
+  /**
+   * B10 — every plain activation of a record in the calendar (an event in any
+   * scale, an agenda row, the day window's "Open") opens the peek, like the
+   * table and the gallery (decision 2026-10-14 in `openRecord.ts`). The leaves
+   * resolve Shift/Ctrl themselves; the agenda hands its event up. A read-only
+   * source opens a read-only peek. The editor stays in the day window's
+   * settings entry (`handleDayPopupRecordSettings`).
+   */
+  function handleRecordClick(entry: DataRecord, event?: MouseEvent) {
+    if (!entry) return;
+    void activateRecord({ id: entry.id, readonly: dataReadOnly || readonly }, event, { app: get(app) });
   }
 
   /**
@@ -1697,22 +1651,9 @@
     ? drawerOpen  // Mobile: session store
     : true;  // Desktop: always mounted; collapsed via config.agendaOpen
 
-  function handleAgendaRecordClick(id: string) {
+  function handleAgendaRecordClick(id: string, event?: MouseEvent) {
     const record = records.find((r: DataRecord) => r.id === id);
-    if (record) {
-      handleRecordClick(record);
-    }
-  }
-  
-  /**
-   * v3.0.8: Open record in new window from AgendaSidebar
-   */
-  function handleAgendaOpenInNewWindow(event: CustomEvent<{id: string}>) {
-    const { id } = event.detail;
-    const app_instance = get(app);
-    // On mobile use 'tab' (window not supported), on desktop use 'window'
-    const openMode = isMobile ? 'tab' : 'window';
-    void openRecord({ id }, modeFromNewLeaf(openMode), { app: app_instance });
+    if (record) void activateRecord({ id: record.id, readonly: dataReadOnly || readonly }, event, { app: get(app) });
   }
   
   /**
@@ -2021,7 +1962,6 @@
         visible={agendaVisible}
         collapsed={isAgendaCollapsed(isMobile, config?.agendaOpen)}
         on:toggle={handleAgendaToggle}
-        on:openInNewWindow={handleAgendaOpenInNewWindow}
         on:saveList={handleAgendaSaveList}
         on:deleteList={handleAgendaDeleteList}
         on:reorderLists={handleAgendaReorderLists}
