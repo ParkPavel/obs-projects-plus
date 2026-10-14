@@ -214,7 +214,7 @@ export function panelFields(c: Pick<WidgetRenderContext, "transformedFrame">): D
  * branch in WidgetHost. Archived types have no panels (F3).
  */
 export const WIDGET_PANELS: Partial<Record<WidgetType, { component: ComponentType; props: (ctx: WidgetRenderContext) => Props }>> = {
-  chart: { component: ChartConfigPanel, props: (c) => ({ config: c.chartConfig, fields: panelFields(c), availableSources: c.availableSources, seriesFrames: c.chartSeriesFrames, availableWidgets: c.availableWidgets }) },
+  chart: { component: ChartConfigPanel, props: (c) => ({ config: c.chartConfig, fields: panelFields(c), records: c.transformedFrame.records, availableSources: c.availableSources, seriesFrames: c.chartSeriesFrames, availableWidgets: c.availableWidgets }) },
   checklist: { component: ChecklistConfigPanel, props: (c) => ({ config: c.widget.config, fields: c.transformedFrame.fields }) },
   stats: { component: StatsConfigPanel, props: (c) => ({ config: c.statsConfig, fields: c.transformedFrame.fields, availableSources: c.availableSources, availableWidgets: c.availableWidgets }) },
   "filter-tabs": { component: FilterTabsConfigPanel, props: (c) => ({ config: c.widget.config, fields: c.transformedFrame.fields, source: c.transformedFrame }) },

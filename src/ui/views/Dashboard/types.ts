@@ -443,6 +443,8 @@ export interface ChartConfig {
   readonly series?: readonly ChartSeriesConfig[];
   /** 3.6.0 — narrowed to the record picked in another block, through a relation (selectionFollow.ts). */
   readonly linkedSelection?: LinkedSelectionConfig;
+  /** 3.7.2 B6 — a caption drawn above the chart; none when absent. */
+  readonly title?: string;
 }
 
 /** One extra series of a chart (3.6.0). */

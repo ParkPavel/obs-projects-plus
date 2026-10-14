@@ -1,6 +1,7 @@
-import type { DataField } from "src/lib/dataframe/dataframe";
+import type { DataField, DataRecord } from "src/lib/dataframe/dataframe";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
-import type { WidgetType, ChartConfig } from "../types";
+import type { WidgetType } from "../types";
+import { suggestChart } from "./Chart/chartSuggest";
 import { defaultStatsConfig } from "./Stats/statsDefaults";
 import { defaultTableTabLabel } from "./legacyMigration";
 
@@ -20,23 +21,9 @@ export interface ConfigPanelDescriptor {
   readonly hasCog: boolean;
   /** Returns true when widget.config already carries a usable config. */
   isConfigured(config: Record<string, unknown>): boolean;
-  /** Build a default config keyed on available fields. */
-  initDefaults(fields: DataField[]): Record<string, unknown>;
+  /** Build a default config keyed on available fields (and, when given, their records). */
+  initDefaults(fields: DataField[], records?: readonly DataRecord[]): Record<string, unknown>;
 }
-
-const DEFAULT_CHART_CONFIG: ChartConfig = {
-  chartType: "bar",
-  xAxis: { property: "", sortBy: "label", sortOrder: "asc", omitZero: false },
-  yAxis: { property: "count", aggregation: "count_total" },
-  style: {
-    colorScheme: "auto",
-    height: "medium",
-    showGrid: true,
-    showLabels: true,
-    showLegend: false,
-    showValues: true,
-  },
-};
 
 const PANELS = {
   "data-table": {
@@ -49,10 +36,8 @@ const PANELS = {
     hasCog: true,
     isConfigured: (c) =>
       !!c && typeof c === "object" && "chartType" in c && "xAxis" in c,
-    initDefaults: (fields) => ({
-      ...DEFAULT_CHART_CONFIG,
-      xAxis: { ...DEFAULT_CHART_CONFIG.xAxis, property: fields[0]?.name ?? "" },
-    }),
+    // 3.7.2 B6: a new chart starts from the chart its data suggests (chartSuggest.ts).
+    initDefaults: (fields, records) => ({ ...suggestChart(fields, records) }),
   },
   stats: {
     hasCog: true,
