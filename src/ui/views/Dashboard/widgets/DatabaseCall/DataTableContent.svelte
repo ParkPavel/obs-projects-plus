@@ -28,8 +28,10 @@
   import { updateRecordValues } from "src/lib/datasources/helpers";
   import { emitCommand } from "src/lib/stores/commandBus";
   import { rootFontPx, toRem } from "src/ui/utils/cssLength";
-  import { trackViewport, rowWindow, type TableViewport } from "./tableWindow";
+  import { rowWindow, type TableViewport } from "./tableWindow";
   import { createTableSearch } from "./tableSearch";
+  import { parseSearchQuery } from "./tableSearchQuery";
+  import TableScrollFrame from "./TableScrollFrame.svelte";
   import { createNamedRecord, isRowDriving } from "./tableRowOps";
   import { openTableRowMenu, setupTableRelation } from "./tableInteractions";
   import { applySortPatch, applyHidePatch, applyCalculatePatch, applyWidthPatch, applyGroupPatch, toggleGroupCollapsed, optionPools } from "./tableHeaderOps";
@@ -69,7 +71,6 @@
 
   // F2.4+ consumers; accepted so the DatabaseCallBlock bridge stays stable.
   $: void getRecordColor; $: void fieldPresets; $: void activeFieldPresetId;
-
   // ── Selection Bus (driver) ───────────────────────────────────
   const selectionStore: SelectionStore | undefined = getContext(SELECTION_CONTEXT_KEY);
   let selection: SelectionState = EMPTY_SELECTION;
@@ -98,17 +99,19 @@
   );
   $: sortCriteria = activeSortCriteria(config);
   $: sorted = applySort(frame.records, config);
-  $: search.update(sorted, searchQuery, bodyEl?.ownerDocument.defaultView ?? window);
+  $: fieldNames = fields.map((f) => f.name);
+  $: search.update(sorted, searchQuery, bodyEl?.ownerDocument.defaultView ?? window, fieldNames);
+  $: highlight = searching ? null : parseSearchQuery(searchQuery, fieldNames);
   // F2.5: grouping flattens into the render list (group headers + records).
   $: renderRows = buildRenderRows(visibleRecords, config);
-
   $: rowHeightRem = config?.rowHeight === "compact" ? 1.75 : config?.rowHeight === "expanded" ? 3 : 2.25;
-
   $: optionsByField = optionPools(fields, frame.records);
 
   // ── Windowing (canon: simple overscan, no framework) ─────────
   let bodyEl: HTMLDivElement | null = null;
   let viewport: TableViewport = { scrollTop: 0, viewportPx: 600 };
+  // B3: a scroll that keeps the same rows in the window is not handed to Svelte.
+  const onViewport = (v: TableViewport) => { const w = rowWindow(renderRows.length, rowPx, v); if (w.start !== start || w.end !== end) viewport = v; };
   // Visible part: measured against the scrolling ancestors (in a tile, the page), see tableWindow.
   $: rowPx = rowHeightRem * rootFontPx(bodyEl?.ownerDocument);
   $: ({ start, end } = rowWindow(renderRows.length, rowPx, viewport));
@@ -171,12 +174,13 @@
     recordCount={visibleRecords.length}
     {searching}
     {readonly}
+    {fieldNames}
+    records={sorted}
     on:search={(e) => (searchQuery = e.detail)}
     on:removeSort={handleRemoveSort}
   />
-  <!-- UT-R2 #083: ONE scroll container for header+rows+footer — horizontal
-       scroll moves them as a unit; header/footer stay sticky vertically. -->
-  <div class="ppp-t2-scroll" bind:this={bodyEl} use:trackViewport={(v) => { viewport = v; }} role="rowgroup">
+  <!-- UT-R2 #083 + B3: ONE scroll owner for header+rows+footer, both axes. -->
+  <TableScrollFrame bind:scroller={bodyEl} {onViewport} firstColRem={columns[0]?.widthRem ?? 0}>
     <div class="ppp-t2-table">
       <TableHeader
         {columns}
@@ -217,6 +221,7 @@
             driving={widgetId ? isRowDriving(selection, widgetId, row.record) : false}
             editingField={editingCell?.recordId === row.record.id ? editingCell.field : null}
             {optionsByField}
+            {highlight}
             on:openRecord={handleOpenRecord}
             on:rowMenu={handleRowMenu}
             on:startEdit={(e) => (editingCell = e.detail)}
@@ -235,7 +240,7 @@
         <TableFooter {columns} {aggregations} />
       {/if}
     </div>
-  </div>
+  </TableScrollFrame>
 </div>
 
 <style>
@@ -249,11 +254,6 @@
        queried, and the containment still cost a `position: fixed` containing
        block and a nearest-ancestor shift. The queried rungs are R0.13's
        CONTAINER_ROOTS, which excludes `.ppp-dt-content` by design. */
-  }
-
-  .ppp-t2-scroll {
-    flex: 1;
-    overflow: auto;
   }
 
   /* Width = widest grid row (fixed tracks), so sticky header/footer and

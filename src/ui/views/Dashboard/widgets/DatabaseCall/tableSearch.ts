@@ -1,5 +1,5 @@
 import type { DataRecord } from "src/lib/dataframe/dataframe";
-import { applySearch, matchesSearch } from "./tableSearchMatch";
+import { matchesParsed, parseSearchQuery } from "./tableSearchMatch";
 
 const CHUNK_SIZE = 128;
 const TIME_BUDGET_MS = 4;
@@ -25,13 +25,13 @@ export function createTableSearch(
   }
 
   return {
-    update(records: readonly DataRecord[], query: string, ownerWindow: Window = window): void {
+    update(records: readonly DataRecord[], query: string, ownerWindow: Window = window, fieldNames: readonly string[] = []): void {
       cancel();
       if (destroyed) return;
       timerWindow = ownerWindow;
-      const normalized = query.trim().toLowerCase();
-      if (!normalized || records.length <= CHUNK_SIZE) {
-        onResult(applySearch(records, normalized));
+      const parsed = parseSearchQuery(query, fieldNames);
+      if (!parsed.terms.length || records.length <= CHUNK_SIZE) {
+        onResult(parsed.terms.length ? records.filter((r) => matchesParsed(r, parsed)) : [...records]);
         onPending(false);
         return;
       }
@@ -47,7 +47,7 @@ export function createTableSearch(
         let scanned = 0;
         do {
           const record = records[index++];
-          if (record && matchesSearch(record, normalized)) result.push(record);
+          if (record && matchesParsed(record, parsed)) result.push(record);
           scanned++;
         } while (index < records.length && scanned < CHUNK_SIZE && ownerWindow.performance.now() - started < TIME_BUDGET_MS);
         if (index < records.length) {
