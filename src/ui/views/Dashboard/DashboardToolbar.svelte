@@ -1,24 +1,20 @@
 <script lang="ts">
-  import type { WidgetDefinition, WidgetType } from "./types";
-  import WidgetToolbar from "./widgets/WidgetToolbar.svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { Icon } from "obsidian-svelte";
   import { createEventDispatcher } from "svelte";
 
   export let readonly: boolean;
   export let showFormulaBar: boolean;
-  export let currentWidgets: WidgetDefinition[];
 
   const dispatch = createEventDispatcher<{
     openSchema: void;
     toggleFormulaBar: void;
-    addWidget: WidgetType;
   }>();
 </script>
 
 <div class="ppp-database-toolbar">
   {#if !readonly}
-    <WidgetToolbar {currentWidgets} on:addWidget={(e) => dispatch("addWidget", e.detail)} />
+    <!-- B7: no «Add widget» here — blocks are added with the «+» on the page itself. -->
     <button
       class="ppp-toolbar-btn clickable-icon"
       on:click={() => dispatch("openSchema")}
