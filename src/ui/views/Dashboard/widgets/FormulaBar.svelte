@@ -80,7 +80,7 @@
   let debugDismissed = false;
   let cursorPosition = 0;
 
-  // DG-9: debounce live preview 300ms so formula evaluation doesn't fire on every keystroke
+  // DG-9 / B5: preview waits for a 150 ms pause in typing; hints do not wait
   let previewTimer: ReturnType<typeof setTimeout> | undefined;
 
   function schedulePreview(expr: string) {
@@ -96,7 +96,7 @@
         previewValue = null;
         runtimeError = null;
       }
-    }, 300);
+    }, 150);
   }
 
   $: schedulePreview(inputValue);
