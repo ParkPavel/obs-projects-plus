@@ -176,6 +176,7 @@
   import { getCoverRealPath } from "src/ui/views/Gallery/gallery";
   import type { BoardThumbnailLayout } from "../../types";
   import { excludeHeaderField, getDisplayName } from "./boardHelpers";
+  import { blockLibraryTouchGrip, scaleDraggedClone } from "./touchCardDrag";
   import type {
     DropTrigger,
     OnRecordClick,
@@ -198,6 +199,8 @@
   export let disableDnd: boolean = false;
   /** The data is read-only (a source block): the pencil opens the note, and says so. */
   export let readOnly: boolean = false;
+  /** p372-b8 — board zoom: the mouse drag's clone is scaled to match the card. */
+  export let zoom: number = 1;
   /**
    * cards-g5 — saved card frames (BoardView reads them from the config) and
    * the one route a frame change takes back to it. A board frame sets a
@@ -319,6 +322,10 @@
     // Overwritten by `dragHandleZone`; `gateDisabledGrip` below enforces it.
     dragDisabled: disableDnd || zoneDisabled,
     morphDisabled: true,
+    // p372-b8: on a zoomed board the library's clone is the scaled rect
+    // filled with unscaled content (a cropped strip); give it the card's
+    // logical size at the board's scale, so preview and hit-test agree.
+    transformDraggedElement: (element) => scaleDraggedClone(element, zoom),
     // ios-d1: the library picks the drop zone from the CLONE's centre. The grip
     // sits at the card's left edge, so on a phone the centre of a card dragged
     // by it hangs a card-half right of the finger, past the viewport, and the
@@ -328,6 +335,7 @@
   }}
   use:disarmAfterGripTap={".board-card-grip"}
   use:gateDisabledGrip={{ grip: ".board-card-grip", disabled: zoneDisabled }}
+  use:blockLibraryTouchGrip
 >
   {#each items as item (item.id)}
     {@const color = getRecordColor(item)}
@@ -336,6 +344,7 @@
 
     <div
       class="ppp-board-card-slot"
+      data-record-id={item.id}
       class:projects--board--card-placeholder={isPlaceholder(item)}
     >
       <!-- cards-g2: the zone's item is this plain wrapper (an element directly

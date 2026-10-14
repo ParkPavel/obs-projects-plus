@@ -649,7 +649,12 @@
                 "records_one": "record",
                 "records_other": "records",
                 "drag-column": "Drag to reorder column",
-                "reset-zoom": "Reset zoom"
+                "reset-zoom": "Reset zoom",
+                "drag-blocked": {
+                    "pinned": "Pinned column: unpin it to move its cards",
+                    "readonly": "This data is read-only: cards cannot be moved",
+                    "editing": "Finish editing the column name first"
+                }
             },
             "calendar": {
                 "name": "Calendar",

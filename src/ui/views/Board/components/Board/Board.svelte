@@ -11,7 +11,16 @@
     TRIGGERS,
   } from "svelte-dnd-action";
   import { Icon } from "obsidian-svelte";
-  import { onDestroy } from "svelte";
+  import { onDestroy, onMount } from "svelte";
+  import { Notice } from "obsidian";
+  import { sortRecordsContext } from "src/ui/views/helpers";
+  import {
+    computeDropWrites,
+    createTouchCardDrag,
+    type DragBlockReason,
+    type TouchCardDragHandle,
+    type TouchCardDropDetail,
+  } from "./touchCardDrag";
   import { ignoreHostSwipe } from "src/ui/actions/ignoreHostSwipe";
   import { remAt, rootFontPx, toRem } from "src/ui/utils/cssLength";
 
@@ -193,6 +202,9 @@
     }
 
     function touchStartHandler(e: TouchEvent) {
+      // p372-b8: a second finger cancels a card drag (touchCardDrag); while
+      // one is under way, a pinch never starts.
+      if (touchDrag?.isActive()) return;
       if (e.touches.length === 2) {
         initialPinchDistance = getPinchDistance(e.touches);
         initialZoom = zoom;
@@ -251,6 +263,59 @@
     };
   }
 
+  // ── p372-b8: touch and pen drag cards here, not through the library ──
+  const sortRecords = sortRecordsContext.get();
+  let containerEl: HTMLElement;
+  let viewportEl: HTMLElement;
+  let touchDrag: TouchCardDragHandle | undefined;
+  let lastBlockedNotice = 0;
+
+  function touchBlockReason(columnEl: HTMLElement): DragBlockReason | null {
+    if (boardEditing) return "editing";
+    if (dataReadOnly) return "readonly";
+    if (columnEl.classList.contains("pinned")) return "pinned";
+    return null;
+  }
+
+  function onTouchBlocked(reason: DragBlockReason) {
+    const now = Date.now();
+    if (now - lastBlockedNotice < 2000) return;
+    lastBlockedNotice = now;
+    const text =
+      reason === "pinned"
+        ? $i18n.t("views.board.drag-blocked.pinned")
+        : reason === "readonly"
+          ? $i18n.t("views.board.drag-blocked.readonly")
+          : $i18n.t("views.board.drag-blocked.editing");
+    new Notice(text);
+  }
+
+  /** The same writer as the library's drop: target `addToColumn`, then source `removeFromColumn`. */
+  function onTouchDrop({ recordId, fromColumnId, toColumnId, index }: TouchCardDropDetail) {
+    if (dataReadOnly) return;
+    const writes = computeDropWrites(columns, recordId, fromColumnId, toColumnId, index);
+    const record = columns.find((c) => c.id === fromColumnId)?.records.find((r) => r.id === recordId);
+    if (!record) return;
+    for (const write of writes) {
+      const column = columns.find((c) => c.id === write.columnId);
+      if (!column) continue;
+      const records = write.trigger === "addToColumn" ? sortRecords(write.records) : write.records;
+      onRecordUpdate(record, { ...column, records }, write.trigger);
+    }
+  }
+
+  onMount(() => {
+    touchDrag = createTouchCardDrag({
+      container: containerEl,
+      viewport: viewportEl,
+      getScale: () => zoom,
+      blockReason: touchBlockReason,
+      onBlocked: onTouchBlocked,
+      onDrop: onTouchDrop,
+    });
+    return () => touchDrag?.destroy();
+  });
+
   function handleResetZoom() {
     zoom = 1;
     onZoomChange(1);
@@ -259,8 +324,9 @@
 
 <!-- ios-g1 G2: interior swipes pan the board instead of opening Obsidian's
      drawer at the board's scroll boundary; edge swipes still reach the host. -->
-<div class="projects--board--container" use:wheelZoom use:ignoreHostSwipe>
+<div class="projects--board--container" bind:this={containerEl} use:wheelZoom use:ignoreHostSwipe>
   <div
+    bind:this={viewportEl}
     class="projects--board--viewport"
     style={zoom !== 1 ? `transform: scale(${zoom}); transform-origin: top left; width: ${100 / zoom}%; height: ${100 / zoom}%` : ""}
   >
@@ -271,6 +337,7 @@
             <BoardColumn
               {readonly}
               {dataReadOnly}
+              {zoom}
               {richText}
               {boardEditing}
               {onEdit}
@@ -381,6 +448,7 @@
             <BoardColumn
               {readonly}
               {dataReadOnly}
+              {zoom}
               {richText}
               {boardEditing}
               {onEdit}
@@ -503,8 +571,58 @@
   }
 
   .projects--board--viewport {
+    /* p372-b8: the touch drag's preview and line are placed in it. */
+    position: relative;
     display: flex;
     min-height: 100%;
+  }
+
+  /* p372-b8: the touch drag (touchCardDrag.ts). The preview is a copy of
+     the card in the scaled viewport, moved by transform only; the line marks
+     where it will land; the source stays in place, dimmed, so nothing in the
+     lists moves under the finger. */
+  .projects--board--container:global(.ppp-board-touch-dragging) {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .projects--board--viewport :global(.ppp-board-touch-preview) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: var(--ppp-z-overlay);
+    pointer-events: none;
+    min-height: 0;
+    background: none;
+    will-change: transform;
+    filter: drop-shadow(var(--shadow-s));
+  }
+  .projects--board--viewport :global(.ppp-board-touch-line) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: var(--ppp-z-overlay);
+    height: var(--ppp-border-width-thick, 0.125rem);
+    margin-top: calc(-0.5 * var(--ppp-border-width-thick, 0.125rem));
+    border-radius: var(--radius-s);
+    background: var(--interactive-accent);
+    pointer-events: none;
+  }
+  .projects--board--viewport :global(.ppp-board-touch-line.is-hidden) {
+    display: none;
+  }
+  .projects--board--viewport :global(.ppp-board-touch-source) {
+    opacity: 0.35;
+  }
+  /* p372-b8: the library's mouse clone on a zoomed board (scaleDraggedClone). */
+  :global(.ppp-board-scaled-clone) {
+    box-sizing: border-box;
+    transform-origin: top left;
+  }
+  @media (pointer: coarse) {
+    .projects--board--viewport :global(.ppp-board-card-slot) {
+      -webkit-touch-callout: none;
+    }
   }
 
   .projects--board--zoom-badge {
