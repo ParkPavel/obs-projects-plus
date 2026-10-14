@@ -70,15 +70,9 @@ import {
  *   200 — 3.7.2 B7: the widget header's hover-only icon cluster and the
  *     toolbar «Add widget» left for the one «⋯» menu and the «+» insert point.
  */
-<<<<<<< HEAD
-<<<<<<< HEAD
-const UNGATED_HOVER_BUDGET = 208;
-=======
-const UNGATED_HOVER_BUDGET = 202;
->>>>>>> borshkit/p372-b2
-=======
-const UNGATED_HOVER_BUDGET = 200;
->>>>>>> borshkit/p372-b7
+// 3.7.2: B1b 208, B2 202 (visualizer pane removed), B7 200 (shell toolbar removed);
+// integration p372-rc re-measured on the merged tree.
+const UNGATED_HOVER_BUDGET = 192;
 
 /**
  * Components ios-t1 migrated. Each must carry no ungated `:hover` at all: a
