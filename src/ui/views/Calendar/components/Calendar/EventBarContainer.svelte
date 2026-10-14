@@ -7,6 +7,7 @@
   import { barDragView, type TimelineDragManager } from '../../dnd/TimelineDragManager';
   import { app } from 'src/lib/stores/obsidian';
   import { openRecord } from "src/lib/record/openRecord";
+  import { layoutOverlapClusters } from '../../utils/eventLayout';
   
   /**
    * EventBarContainer - Manages overlapping event bars with collision detection
@@ -66,105 +67,22 @@
   }
   
   /**
-   * layoutTimelineEvents - Proper collision detection algorithm
-   * 
-   * Creates columns where events don't overlap within the same column.
-   * Events are placed in the first available column (greedy).
-   * Each event knows its column index and total columns for width calculation.
+   * layoutTimelineEvents - cluster-of-overlaps → columns (shared with month bars).
+   * Width is per overlap cluster; short events collide by their 20-minute
+   * minimum visual height (synced with EventBar.svelte MIN_VISUAL_MINUTES).
    */
+  const MIN_VISUAL_MS = 20 * 60 * 1000;
   function layoutTimelineEvents(inputEvents: EventInput[]): EventWithColumn[] {
-    if (inputEvents.length === 0) return [];
-    
-    // Sort by start time, then by duration (longer first for visual consistency)
-    const sorted = [...inputEvents].sort((a, b) => {
-      const startDiff = a.startDate.valueOf() - b.startDate.valueOf();
-      if (startDiff !== 0) return startDiff;
-      
-      // Longer events first (they anchor the visual layout)
-      const aEnd = a.endDate || a.startDate.add(1, 'hour');
-      const bEnd = b.endDate || b.startDate.add(1, 'hour');
-      const aDuration = aEnd.valueOf() - a.startDate.valueOf();
-      const bDuration = bEnd.valueOf() - b.startDate.valueOf();
-      return bDuration - aDuration;
-    });
-    
-    // Columns: each column is array of events that don't overlap
-    // columns[i] contains events in column i
-    // columnEndTimes[i] = end time of last event in column i
-    const columns: EventInput[][] = [];
-    const columnEndTimes: dayjs.Dayjs[] = [];
-    const eventColumnMap = new Map<EventInput, number>();
-    
-    // Pass 1: Assign columns (greedy)
-    for (const event of sorted) {
-      const eventStart = event.startDate;
-      const eventEndRaw = event.endDate || event.startDate.add(1, 'hour');
-      
-      // v8.2: Min visual duration = 20 minutes (synced with EventBar.svelte MIN_VISUAL_MINUTES)
-      // Short events are rendered with min-height, collision detection MUST use the same value
-      const MIN_VISUAL_DURATION_MINUTES = 20;
-      const minEnd = eventStart.add(MIN_VISUAL_DURATION_MINUTES, 'minute');
-      const eventEnd = eventEndRaw.isBefore(minEnd) ? minEnd : eventEndRaw;
-      
-      // Find first column where event fits (starts AFTER column's last event ends)
-      // v8.3: Use isAfter (not isSameOrAfter) because eventEnd already includes visual min-height
-      // If event A visually ends at 09:20 and event B starts at 09:00, they MUST be in different columns
-      let assignedColumn = -1;
-      for (let i = 0; i < columns.length; i++) {
-        // Event fits ONLY if it starts AFTER the visual end of previous event
-        if (eventStart.isAfter(columnEndTimes[i])) {
-          assignedColumn = i;
-          break;
-        }
-      }
-      
-      if (assignedColumn === -1) {
-        // No available column, create new one
-        assignedColumn = columns.length;
-        columns.push([]);
-        columnEndTimes.push(eventEnd);
-      } else {
-        // Update column end time
-        columnEndTimes[assignedColumn] = eventEnd;
-      }
-      
-      columns[assignedColumn]!.push(event);
-      eventColumnMap.set(event, assignedColumn);
-    }
-    
-    // Pass 2: Per-group totalColumns — only actually-overlapping events share width.
-    // For each event, find the maximum column index among all events that overlap with
-    // it (i.e., share at least one minute of time). totalColumns = max_overlap_col + 1.
-    // This prevents non-overlapping events from inheriting a narrow width.
-    const MIN_VISUAL_MINUTES = 20;
-    const result: EventWithColumn[] = [];
-    for (const event of sorted) {
-      const column = eventColumnMap.get(event) ?? 0;
-      const evStart = event.startDate;
-      const evEndRaw = event.endDate || event.startDate.add(1, 'hour');
-      const evEnd = evEndRaw.isBefore(evStart.add(MIN_VISUAL_MINUTES, 'minute'))
-        ? evStart.add(MIN_VISUAL_MINUTES, 'minute') : evEndRaw;
-
-      let maxCol = column;
-      for (const other of sorted) {
-        if (other === event) continue;
-        const otherStart = other.startDate;
-        const otherEndRaw = other.endDate || other.startDate.add(1, 'hour');
-        const otherEnd = otherEndRaw.isBefore(otherStart.add(MIN_VISUAL_MINUTES, 'minute'))
-          ? otherStart.add(MIN_VISUAL_MINUTES, 'minute') : otherEndRaw;
-        // Events overlap when neither ends before the other starts
-        if (evStart.isBefore(otherEnd) && evEnd.isAfter(otherStart)) {
-          const otherCol = eventColumnMap.get(other) ?? 0;
-          if (otherCol > maxCol) maxCol = otherCol;
-        }
-      }
-
-      result.push({ ...event, column, totalColumns: maxCol + 1 });
-    }
-    
-    return result;
+    const slots = layoutOverlapClusters(
+      inputEvents.map((e) => ({
+        start: e.startDate.valueOf(),
+        end: (e.endDate ?? e.startDate.add(1, 'hour')).valueOf(),
+      })),
+      MIN_VISUAL_MS,
+    );
+    return inputEvents.map((e, i) => ({ ...e, ...(slots[i] ?? { column: 0, totalColumns: 1 }) }));
   }
-  
+
   // v7.1: Data fingerprint for reactivity - changes when events content changes
   $: eventsFingerprint = events.length + 
     events.map(e => e.record.id + e.startDate.valueOf() + (e.endDate?.valueOf() ?? 0) + e.color).join('|');

@@ -45,7 +45,7 @@
   $: displayMode = (view?.config?.["displayMode"] as string) ?? "headers";
   $: timeFormat = (view?.config?.["timeFormat"] as string) ?? "24h";
   $: timezone = (view?.config?.["timezone"] as string) ?? "local";
-  $: agendaOpen = (view?.config?.["agendaOpen"] as boolean) ?? false;
+  $: agendaOpen = (view?.config?.["agendaOpen"] as boolean | undefined) !== false;
   $: freezeAll = (view?.config?.["freezeAll"] as boolean) ?? (view?.config?.["freezeColumns"] as boolean) ?? false;
   
   // Timeline-specific settings

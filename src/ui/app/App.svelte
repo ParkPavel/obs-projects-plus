@@ -381,7 +381,8 @@
       dispatch("toggleAgenda", { projectId: project?.id, viewId: view?.id, open });
       return;
     }
-    const current = view?.config?.["agendaOpen"] ?? false;
+    // Desktop agenda is open unless explicitly collapsed (agendaOpen === false)
+    const current = view?.config?.["agendaOpen"] !== false;
     mergeViewConfig({ agendaOpen: !current });
     dispatch("toggleAgenda", { projectId: project?.id, viewId: view?.id, open: !current });
   }

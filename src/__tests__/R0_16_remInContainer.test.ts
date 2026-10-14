@@ -132,7 +132,8 @@ const WINDOW_ANCHORED = [
  *     hand-written in those widgets. Re-measured.
  */
 // Wave 2: Stats grid breakpoint sizes now follow the container font scale.
-const REM_IN_CONTAINER_BUDGET = 777;
+// 777 → 775 (3.7.2 B4): month +N row and duplicate time fields re-measured.
+const REM_IN_CONTAINER_BUDGET = 775;
 
 /** A length in `rem`. `0.5rem`, `.5rem` and `1.5rem` all count once. */
 const REM_LENGTH = /\b\d*\.?\d+rem\b/g;
