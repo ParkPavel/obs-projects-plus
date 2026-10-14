@@ -138,10 +138,9 @@
   <ViewContent>
     <div class="ppp-database-root" bind:this={rootEl} role="region" aria-label={$i18n.t("views.dashboard.name")}>
       <div class="ppp-toolbar-row">
-        <DashboardToolbar {readonly} {showFormulaBar} currentWidgets={widgets}
+        <DashboardToolbar {readonly} {showFormulaBar}
           on:openSchema={() => schemaController.openSchema()}
-          on:toggleFormulaBar={() => (showFormulaBar = !showFormulaBar)}
-          on:addWidget={(e) => widgetController.addWidget(e.detail)} />
+          on:toggleFormulaBar={() => (showFormulaBar = !showFormulaBar)} />
         {#if isRecalculating}<span class="ppp-recalc-dot" aria-label={$i18n.t("views.dashboard.canvas.recalculating", { defaultValue: "Recalculating…" })} aria-live="polite" />{/if}
       </div>
       {#if !readonly && quickActions.length > 0}
@@ -162,22 +161,22 @@
       {/if}
       <FilterBridge {activeFilterTab} {readonly}
         canPromote={!!onViewFilterChange} on:promote={promoteLocalToGlobal} on:clear={() => (activeFilterTab = null)} />
-      {#if !readonly && widgets.length > 0}
-        <SmartSuggestionBus fields={frame.fields} {widgets} dismissed={effectiveConfig?.dismissedSuggestions ?? []} context={{ hostProjectId: project.id, projects: $settings.projects ?? [], hostViewFiltered: narrowsFrame(globalFilter) }}
-          on:accept={suggest.accept} on:dismissForever={suggest.dismiss} />
-      {/if}
       <WidgetGrid
         {widgets} {dndWidgets} canDnd={!readonly} {frame} {displayFrame} {api} {readonly} {getRecordColor}
         fields={frame.fields} tableConfig={effectiveConfig?.table} {primaryDataTableId}
         fieldPresets={effectiveConfig?.fieldPresets ?? []} activeFieldPresetId={effectiveConfig?.activeFieldPresetId}
         {availableSources} {availableWidgets} {rightFrames} sourceStates={$sourceStatesStore} {project}
         on:consider={handleDndConsider} on:finalize={handleDndFinalize} on:filter={handleFilterTab}
-        on:addWidget={(e) => widgetController.addWidget(e.detail)}
+        on:insert={(e) => widgetController.addWidget(e.detail.type, undefined, e.detail.index)}
+        on:duplicateWidget={(e) => widgetController.duplicateWidget(e.detail)}
         on:configChange={widgetController.handleWidgetConfigChange}
         on:tableConfigChange={widgetController.handleTableConfigChange}
         on:fieldPresetsChange={handleFieldPresetsChange}
         on:removeWidget={(e) => widgetController.removeWidget(e.detail)}
-      />
+      ><!-- B7: suggestions only as a quiet offer on an empty page, never above blocks; a linked block needs a block to link to. -->
+        <svelte:fragment slot="empty-extra">{#if !readonly}<SmartSuggestionBus fields={frame.fields} {widgets} dismissed={[...(effectiveConfig?.dismissedSuggestions ?? []), "relation-block"]} context={{ hostProjectId: project.id, projects: $settings.projects ?? [], hostViewFiltered: narrowsFrame(globalFilter) }}
+          on:accept={suggest.accept} on:dismissForever={suggest.dismiss} />{/if}</svelte:fragment>
+      </WidgetGrid>
     </div>
   </ViewContent>
 </ViewLayout>

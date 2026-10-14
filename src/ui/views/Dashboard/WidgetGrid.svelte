@@ -3,9 +3,9 @@
    * WidgetGrid — stack-mode renderer for the dashboard widget list.
    *
    * Owns three render branches: empty state, DnD-enabled stack and read-only
-   * stack. Free-positioning is handled by `FreeCanvas` + `WindowShell` mounted
-   * directly from `DashboardCanvas`; this component is invoked only when the
-   * canvas is in stack mode.
+   * stack. B7: the dashboard is a page — blocks top to bottom, whatever the
+   * stored `layoutMode` says ("free" configs keep their JSON and render here
+   * too). The one way in is the «+» before each block and at the end.
    */
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import type { ExternalSourceState } from "./dashboardPreload";
@@ -26,8 +26,7 @@
   import EmptyState from "src/ui/components/EmptyState/EmptyState.svelte";
 
   const dispatch = createEventDispatcher<{
-    showToolbar: void;
-    addWidget: WidgetType;
+    insert: { type: WidgetType; index: number };
     consider: DndEvent<WidgetDefinition>;
     finalize: DndEvent<WidgetDefinition>;
   }>();
@@ -149,13 +148,14 @@
   >
     <svelte:fragment slot="actions">
       {#if !readonly}
-        <button on:click={() => dispatch("addWidget", "database-call")}>
+        <button class="mod-cta" on:click={() => dispatch("insert", { type: "database-call", index: 0 })}>
           <Icon name="database" />
-          {$i18n.t("views.dashboard.canvas.empty-add-block", { defaultValue: "Add data block" })}
+          {$i18n.t("views.dashboard.canvas.empty-add-block", { defaultValue: "Add a database" })}
         </button>
       {/if}
     </svelte:fragment>
   </EmptyState>
+  <slot name="empty-extra" />
 {:else if canDnd}
   <!-- ios-g1: G1 grip-only drag (see the script), G2 interior swipes stay in
        the dashboard instead of opening Obsidian's drawers. -->
@@ -168,7 +168,9 @@
     on:consider={forwardConsider}
     on:finalize={onFinalize}
   >
-    {#each dndWidgets as widget (widget.id)}
+    {#each dndWidgets as widget, index (widget.id)}
+      <div class="ppp-block-slot">
+      <DashboardBlockPalette variant="between" {index} currentWidgets={dndWidgets} on:insert />
       <WidgetHost
         reorderable={!widget.layout?.locked}
         {widget}
@@ -191,14 +193,13 @@
         on:tableConfigChange
         on:fieldPresetsChange
         on:removeWidget
+        on:duplicateWidget
       />
+      </div>
     {/each}
   </div>
   <div class="ppp-canvas-stack-add">
-    <DashboardBlockPalette
-      currentWidgets={dndWidgets}
-      on:addWidget={(e) => dispatch("addWidget", e.detail)}
-    />
+    <DashboardBlockPalette index={dndWidgets.length} currentWidgets={dndWidgets} on:insert />
   </div>
 {:else}
   <div class="ppp-database-canvas ppp-database-canvas--stack" use:ignoreHostSwipe>
@@ -224,6 +225,7 @@
         on:tableConfigChange
         on:fieldPresetsChange
         on:removeWidget
+        on:duplicateWidget
       />
     {/each}
   </div>

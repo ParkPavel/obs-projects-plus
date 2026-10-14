@@ -24,6 +24,8 @@
   import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import { detectArrayFields } from "./_shared/arrayFieldDetection";
+  import type { PipelineIntent } from "./widgetMenu";
+  import { INTENT_COPY, missingIntentSteps } from "./pipelineIntent";
   import {
     updateStep as applyStepUpdate,
     toggleDisableStep as toggleStepDisabled,
@@ -47,6 +49,16 @@
    * than offering the parent project's fields — which is what it used to do.
    */
   export let sourceState: BlockSource = { kind: "parent", frame: { fields: [], records: [] } as unknown as DataFrame };
+
+  /** B7: opened from a plain-words «⋯» entry — one hint and one button for that step. */
+  export let intent: PipelineIntent | null = null;
+  $: intentCopy = intent ? INTENT_COPY[intent] : null;
+  $: intentMissing = intent ? missingIntentSteps(intent, steps) : [];
+  function addIntentSteps() {
+    const first = steps.length;
+    for (const type of intentMissing) addStep(type);
+    expandedStep = steps.length > first ? first : expandedStep;
+  }
 
   const dispatch = createEventDispatcher<{
     save: TransformPipeline;
@@ -468,10 +480,19 @@
       {$i18n.t("views.dashboard.pipeline.live", { defaultValue: "Changes apply instantly" })}
     </span>
   </div>
-  <!-- #118: pipeline is the advanced surface; ordinary scope/grouping is view-level. -->
-  <p class="ppp-pipeline-advanced-hint">
-    {$i18n.t("views.dashboard.pipeline.advanced-hint")}
-  </p>
+  {#if intentCopy}
+    <div class="ppp-pipeline-intent" role="note">
+      <p class="ppp-pipeline-intent-hint">{$i18n.t(intentCopy.hintKey, { defaultValue: intentCopy.hintDefault })}</p>
+      {#if intentMissing.length > 0}
+        <button class="mod-cta ppp-pipeline-intent-add" on:click={addIntentSteps}>{$i18n.t(intentCopy.actionKey, { defaultValue: intentCopy.actionDefault })}</button>
+      {/if}
+    </div>
+  {:else}
+    <!-- #118: pipeline is the advanced surface; ordinary scope/grouping is view-level. -->
+    <p class="ppp-pipeline-advanced-hint">
+      {$i18n.t("views.dashboard.pipeline.advanced-hint")}
+    </p>
+  {/if}
 
   <!--
     #137: with no resolved source there is no schema to configure against. The
@@ -946,6 +967,8 @@
 </div>
 
 <style>
+  .ppp-pipeline-intent { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; padding: 0.5rem; border-radius: var(--radius-s, 0.25rem); background: var(--background-secondary); }
+  .ppp-pipeline-intent-hint { margin: 0; flex: 1 1 12rem; font-size: var(--font-ui-small); color: var(--text-normal); }
   .ppp-pipeline-editor {
     display: flex;
     flex-direction: column;

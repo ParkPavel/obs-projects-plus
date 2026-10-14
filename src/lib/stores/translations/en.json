@@ -965,6 +965,26 @@
                         "rollup-mode": "Rollup mode"
                     }
                 },
+                "insert": {
+                    "here": "Add a block here",
+                    "add": "Add block",
+                    "database": "Database",
+                    "database-desc": "Table, board or calendar built from notes",
+                    "chart": "Chart",
+                    "chart-desc": "Bars, lines or a pie from a field's values",
+                    "stats": "Numbers",
+                    "stats-desc": "Counts, sums and averages at a glance",
+                    "text": "Text",
+                    "text-desc": "A note, heading or explanation",
+                    "checklist": "Checklist",
+                    "checklist-desc": "Tick off notes as done",
+                    "filter-tabs": "Filter tabs",
+                    "filter-tabs-desc": "Tabs that narrow every block on the page",
+                    "cover": "Cover",
+                    "cover-desc": "An image across the top of the page",
+                    "divider": "Divider",
+                    "divider-desc": "A line between sections"
+                },
                 "canvas": {
                     "widgets": "Widgets",
                     "hide-toolbar": "Hide widget toolbar",
@@ -981,9 +1001,9 @@
                     "filter-bridge-local": "Local: {{field}} = {{value}}",
                     "filter-bridge-clear": "Clear local filter",
                     "filter-bridge-promote": "Save as global filter",
-                    "empty-title": "Empty canvas",
-                    "empty-hint": "Start with a data block",
-                    "empty-add-block": "Add data block",
+                    "empty-title": "Nothing on this page yet",
+                    "empty-hint": "A dashboard is a page of blocks. Start with a database — a table, board or calendar of this project's notes.",
+                    "empty-add-block": "Add a database",
                     "error-add-field": "Failed to add field. Please try again.",
                     "error-reopen-schema": "Failed to reopen schema."
                 },
@@ -1085,7 +1105,15 @@
                     "confirm-delete": "Delete this layout preset?"
                 },
                 "widget": {
-                    "expand": "Expand widget",
+                    "menu-source": "Source and settings…",
+                    "menu-filter": "Filter for all views of this block…",
+                    "menu-summarize": "Group and count…",
+                    "menu-pivot": "Pivot table…",
+                    "menu-join": "Combine with another source…",
+                    "menu-collapse": "Collapse",
+                    "menu-duplicate": "Duplicate",
+                    "locked": "Position pinned",
+                    "expand": "Expand",
                     "collapse": "Collapse widget",
                     "drag-handle": "Drag to reorder the widget",
                     "chart-settings": "Chart settings",
@@ -1094,14 +1122,14 @@
                     "not-configured": "Widget type \"{{type}}\" — not configured",
                     "add": "Add widget",
                     "add-aria": "Add widget",
-                    "lock": "Lock widget position",
-                    "menu": "Widget menu",
+                    "lock": "Pin position",
+                    "menu": "Block menu",
                     "menu-configure": "Configure widget…",
-                    "menu-pipeline": "Data pipeline — filter, group, compute…",
-                    "menu-pipeline-active": "Data pipeline ({{count}})",
-                    "menu-remove": "Remove widget",
+                    "menu-pipeline": "Group, count, combine…",
+                    "menu-pipeline-active": "Data steps ({{count}})…",
+                    "menu-remove": "Delete block",
                     "menu-rename": "Rename",
-                    "unlock": "Unlock widget",
+                    "unlock": "Unpin position",
                     "removed": "Block \"{{title}}\" removed",
                     "undo": "Undo",
                     "primary": {
@@ -1185,6 +1213,14 @@
                     "runtime-error": "Runtime error"
                 },
                 "pipeline": {
+                    "intent": {
+                        "summarize-hint": "One row per group with its count or sum — e.g. how many tasks each person has.",
+                        "summarize-add": "Add grouping and count",
+                        "pivot-hint": "Values of one field become columns — a summary table, like a spreadsheet pivot.",
+                        "pivot-add": "Add pivot table",
+                        "join-hint": "Adds columns from another project by a shared value — e.g. a client's city next to each order.",
+                        "join-add": "Add another source"
+                    },
                     "title": "Advanced transforms",
                     "advanced-hint": "Ordinary filtering and grouping now live on the view itself — these steps reshape the data.",
                     "steps": "step(s)",

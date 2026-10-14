@@ -35,7 +35,9 @@ export interface WidgetController {
    * made (Svelte's `$:` block that refreshes it runs on the next tick, not
    * synchronously). Every other caller ignores the return value.
    */
-  addWidget(type: WidgetType, initialConfig?: Partial<Omit<WidgetDefinition, "id" | "type">>): DatabaseViewConfig | undefined;
+  addWidget(type: WidgetType, initialConfig?: Partial<Omit<WidgetDefinition, "id" | "type">>, index?: number): DatabaseViewConfig | undefined;
+  /** B7: a copy with a fresh id, right after the original. */
+  duplicateWidget(id: string): void;
   removeWidget(id: string): void;
   /** CustomEvent handler: widget's own config changed (title, layout, type-specific options). */
   handleWidgetConfigChange(e: CustomEvent<{ id: string; changes: Partial<WidgetDefinition> }>): void;
@@ -57,7 +59,8 @@ export function createWidgetController({
 
   function addWidget(
     type: WidgetType,
-    initialConfig?: Partial<Omit<WidgetDefinition, "id" | "type">>
+    initialConfig?: Partial<Omit<WidgetDefinition, "id" | "type">>,
+    index?: number
   ): DatabaseViewConfig | undefined {
     const config = cfg();
     if (!config) return undefined;
@@ -74,10 +77,22 @@ export function createWidgetController({
       config: {},
       ...initialConfig,
     };
-    const next: DatabaseViewConfig = { ...config, widgets: [...config.widgets, newWidget] };
+    const next: DatabaseViewConfig = { ...config, widgets: insertAt(config.widgets, newWidget, index) };
     saveConfig(next);
     onAdded?.(id);
     return next;
+  }
+
+  function duplicateWidget(id: string): void {
+    const config = cfg();
+    if (!config) return;
+    const index = config.widgets.findIndex((w) => w.id === id);
+    const source = config.widgets[index];
+    if (!source) return;
+    // A structured copy: nested config/transform must not be shared with the original.
+    const copy: WidgetDefinition = { ...(JSON.parse(JSON.stringify(source)) as WidgetDefinition), id: `w-${crypto.randomUUID().slice(0, 8)}` };
+    saveConfig({ ...config, widgets: insertAt(config.widgets, copy, index + 1) });
+    onAdded?.(copy.id);
   }
 
   function removeWidget(id: string): void {
@@ -120,5 +135,11 @@ export function createWidgetController({
     saveConfig({ ...config, formulaFields: updated });
   }
 
-  return { addWidget, removeWidget, handleWidgetConfigChange, handleTableConfigChange, applyFormulaField };
+  return { addWidget, duplicateWidget, removeWidget, handleWidgetConfigChange, handleTableConfigChange, applyFormulaField };
+}
+
+/** B7: insert at `index` (clamped); no index means "at the end", as before. */
+function insertAt(list: readonly WidgetDefinition[], item: WidgetDefinition, index?: number): WidgetDefinition[] {
+  const at = index === undefined ? list.length : Math.max(0, Math.min(index, list.length));
+  return [...list.slice(0, at), item, ...list.slice(at)];
 }

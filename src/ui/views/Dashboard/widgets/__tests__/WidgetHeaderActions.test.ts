@@ -1,5 +1,7 @@
 /**
- * WidgetHeaderActions.test.ts — #067 F1 header action cluster.
+ * WidgetHeaderActions.test.ts — B7: the block header has ONE control, «⋯»,
+ * and every block action is an entry in it that dispatches the host's
+ * existing command.
  */
 
 import "@testing-library/jest-dom";
@@ -14,6 +16,9 @@ jest.mock("src/lib/stores/i18n", () => {
   };
 });
 
+jest.mock("src/lib/contextMenu", () => ({ openContextMenu: jest.fn() }));
+
+const { openContextMenu } = require("src/lib/contextMenu");
 const WidgetHeaderActions = require("../WidgetHeaderActions.svelte").default;
 
 function mount(props: Record<string, unknown>) {
@@ -39,22 +44,28 @@ function click(target: HTMLElement, selector: string) {
   el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 }
 
-describe("WidgetHeaderActions (#067 F1)", () => {
+type Entry = { title?: string; separator?: boolean; danger?: boolean; onClick?: () => void };
+
+function openMenu(target: HTMLElement): Entry[] {
+  (openContextMenu as jest.Mock).mockClear();
+  click(target, ".ppp-widget-menu-btn");
+  return (openContextMenu as jest.Mock).mock.calls[0][0] as Entry[];
+}
+
+const titles = (entries: Entry[]) => entries.filter((e) => !e.separator).map((e) => e.title);
+
+describe("WidgetHeaderActions — B7 one block menu", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
   });
 
-  it("dispatches one semantic event per button", () => {
-    const { component, target, destroy } = mount({});
-    const events: string[] = [];
-    for (const name of ["toggleConfig", "togglePipeline", "toggleLock", "remove"]) {
-      component.$on(name, () => events.push(name));
+  it("renders the «⋯» button and no other header action buttons", () => {
+    const { target, destroy } = mount({});
+    expect(target.querySelectorAll("button")).toHaveLength(1);
+    expect(target.querySelector(".ppp-widget-menu-btn")).not.toBeNull();
+    for (const gone of [".ppp-widget-settings-btn", ".ppp-widget-pipeline-btn", ".ppp-widget-lock-btn", ".ppp-widget-remove-btn"]) {
+      expect(target.querySelector(gone)).toBeNull();
     }
-    click(target, ".ppp-widget-settings-btn");
-    click(target, ".ppp-widget-pipeline-btn");
-    click(target, ".ppp-widget-lock-btn");
-    click(target, ".ppp-widget-remove-btn");
-    expect(events).toEqual(["toggleConfig", "togglePipeline", "toggleLock", "remove"]);
     destroy();
   });
 
@@ -64,25 +75,63 @@ describe("WidgetHeaderActions (#067 F1)", () => {
     destroy();
   });
 
-  it("hides cog and pipeline when the type opts out", () => {
-    const { target, destroy } = mount({ hasCog: false, hasPipeline: false });
-    expect(target.querySelector(".ppp-widget-settings-btn")).toBeNull();
-    expect(target.querySelector(".ppp-widget-pipeline-btn")).toBeNull();
-    expect(target.querySelector(".ppp-widget-lock-btn")).not.toBeNull();
-    expect(target.querySelector(".ppp-widget-remove-btn")).not.toBeNull();
+  it("a database block menu holds every block action, in plain words", () => {
+    const { target, destroy } = mount({ isDatabase: true });
+    expect(titles(openMenu(target))).toEqual([
+      "Rename",
+      "Source and settings…",
+      "Filter for all views of this block…",
+      "Group and count…",
+      "Pivot table…",
+      "Combine with another source…",
+      "Collapse",
+      "Pin position",
+      "Duplicate",
+      "Delete block",
+    ]);
     destroy();
   });
 
-  it("shows the step-count badge when the pipeline is active", () => {
-    const { target, destroy } = mount({ pipelineStepCount: 3 });
-    expect(target.querySelector(".ppp-widget-pipeline-count")).toHaveTextContent("3");
-    expect(target.querySelector(".ppp-widget-pipeline-btn--active")).not.toBeNull();
+  it("each entry dispatches the host's existing command", () => {
+    const { component, target, destroy } = mount({ isDatabase: true });
+    const events: string[] = [];
+    for (const name of ["rename", "toggleConfig", "filter", "togglePipeline", "toggleCollapse", "toggleLock", "duplicate", "remove"]) {
+      component.$on(name, (e: CustomEvent) => events.push(e.detail ? `${name}:${String(e.detail)}` : name));
+    }
+    for (const entry of openMenu(target)) entry.onClick?.();
+    expect(events).toEqual([
+      "rename", "toggleConfig", "filter",
+      "togglePipeline:summarize", "togglePipeline:pivot", "togglePipeline:join",
+      "toggleCollapse", "toggleLock", "duplicate", "remove",
+    ]);
     destroy();
   });
 
-  it("reflects the locked state on the lock button", () => {
-    const { target, destroy } = mount({ locked: true });
-    expect(target.querySelector(".ppp-widget-lock-btn--locked")).not.toBeNull();
+  it("a stored pipeline stays reachable on any block, under its step count", () => {
+    const { component, target, destroy } = mount({ isDatabase: false, hasCog: false, pipelineStepCount: 2 });
+    const events: unknown[] = [];
+    component.$on("togglePipeline", (e: CustomEvent) => events.push(e.detail));
+    const entry = openMenu(target).find((e) => e.title === "Data steps (2)…");
+    expect(entry).toBeDefined();
+    entry!.onClick!();
+    expect(events).toEqual([null]);
+    destroy();
+  });
+
+  it("collapsed and pinned states read as their opposite action, and a pin is marked", () => {
+    const { target, destroy } = mount({ locked: true, collapsed: true });
+    const t = titles(openMenu(target));
+    expect(t).toContain("Expand");
+    expect(t).toContain("Unpin position");
+    expect(target.querySelector(".ppp-widget-locked-mark")).not.toBeNull();
+    destroy();
+  });
+
+  it("delete is the last entry and is marked dangerous", () => {
+    const { target, destroy } = mount({});
+    const last = openMenu(target).at(-1)!;
+    expect(last.title).toBe("Delete block");
+    expect(last.danger).toBe(true);
     destroy();
   });
 });
