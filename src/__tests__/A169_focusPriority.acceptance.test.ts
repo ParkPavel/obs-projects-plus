@@ -141,27 +141,14 @@ describeIfChrome("A169 — a surface that calls itself modal keeps the keyboard"
 describeIfChrome("A169 — an invisible action is not a tab stop", () => {
   const actions = unscope(svelteStyle("ui/views/Dashboard/widgets/WidgetHeaderActions.svelte"));
 
-  it("a widget's hover-only buttons are unreachable until the widget is focused", () => {
-    const r = renderProbe({
-      css: [actions, ".ppp-widget-host{width:400px}"],
-      html: [
-        "<div class='ppp-widget-host' id='host'>",
-        "  <button class='ppp-widget-settings-btn' id='cog'>c</button>",
-        "  <button class='ppp-widget-remove-btn' id='rm'>x</button>",
-        "</div>",
-      ].join("\n"),
-      measure: [
-        { id: "cog", props: ["visibility", "opacity"] },
-        { id: "rm", props: ["visibility"] },
-      ],
-    });
-    // `opacity: 0` alone leaves an element focusable; `visibility: hidden` does
-    // not. That is the whole fix, and this is the assertion that says so.
-    expect(r["cog"]!["visibility"]).toBe("hidden");
-    expect(r["rm"]!["visibility"]).toBe("hidden");
+  it("B7: the header has no hover-only buttons at all — every action is in the menu", () => {
+    // The #169 fix hid four buttons from the tab order. B7 removed them: the
+    // stylesheet declares no hidden action, so nothing invisible can be a tab stop.
+    expect(actions).not.toContain("visibility: hidden");
+    expect(actions).not.toContain("ppp-widget-settings-btn");
   });
 
-  it("a hidden action cannot take focus, and the always-visible menu button can", () => {
+  it("the always-visible menu button takes focus", () => {
     // The keyboard path is not these four buttons — it is the menu button,
     // which the component's own comment calls the one discoverable entry.
     //
@@ -175,18 +162,14 @@ describeIfChrome("A169 — an invisible action is not a tab stop", () => {
       html: [
         "<div class='ppp-widget-host' id='host'>",
         "  <button class='ppp-widget-menu-btn' id='menu'>m</button>",
-        "  <button class='ppp-widget-settings-btn' id='cog'>c</button>",
         "</div>",
       ].join("\n"),
       evaluate: [
-        "document.getElementById('cog').focus();",
-        "probe.afterCog = document.activeElement ? document.activeElement.id : '(body)';",
         "document.getElementById('menu').focus();",
         "probe.afterMenu = document.activeElement ? document.activeElement.id : '(body)';",
       ].join("\n"),
       measure: [{ id: "menu", props: ["visibility"] }],
     });
-    expect(r["__probe"]!["afterCog"]).not.toBe("cog");
     expect(r["__probe"]!["afterMenu"]).toBe("menu");
     expect(r["menu"]!["visibility"]).toBe("visible");
   });
