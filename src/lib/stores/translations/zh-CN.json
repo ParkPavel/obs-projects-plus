@@ -47,10 +47,10 @@
                 "name": "添加字段"
             },
             "toggle-visualizer-pane": {
-                "name": "切换 YAML 可视化器面板"
+                "name": "切换笔记顶部的属性块"
             },
             "open-visualizer-for-file": {
-                "name": "在 YAML 可视化器中打开当前笔记"
+                "name": "显示当前笔记的属性"
             },
             "add-relation": {
                 "name": "为当前笔记添加关系"
@@ -65,7 +65,6 @@
                 "repaired": "演示已存在；缺失的笔记已恢复。",
                 "repair-failed": "演示项目已存在。有 {{count}} 篇缺失的笔记无法写入 — 详见控制台。"
             }
-
         },
         "menus": {
             "project": {
@@ -75,7 +74,7 @@
             },
             "file": {
                 "open-in-visualizer": {
-                    "title": "在 YAML 可视化器中打开"
+                    "title": "显示属性"
                 },
                 "add-relation": {
                     "title": "添加为关系…"
@@ -605,6 +604,21 @@
                         "empty": "还没有笔记链接到这里。",
                         "via": "通过"
                     }
+                },
+                "block": {
+                    "title": "属性",
+                    "add": "+ 属性",
+                    "name-placeholder": "属性名称",
+                    "options": "属性选项",
+                    "more": "属性操作",
+                    "empty": "空",
+                    "read-only": "计算值，只读",
+                    "type": "属性类型",
+                    "errors": {
+                        "exists": "已存在同名属性",
+                        "reserved": "以 pp_ 或 $ 开头的名称为保留名称",
+                        "empty": "请输入名称"
+                    }
                 }
             },
             "developer": {
@@ -962,7 +976,6 @@
             "dashboard": {
                 "name": "数据库",
                 "add-row": "新建笔记",
-
                 "table": {
                     "header-hint": "右击列标题可重命名、更改类型、隐藏、固定或重新排序。拖动边缘可调整宽度。",
                     "row-height": "行高",
@@ -1907,8 +1920,8 @@
                     "desc": "在移动设备拖放操作时关闭振动反馈"
                 },
                 "replace-properties": {
-                    "name": "替换 Obsidian 属性面板",
-                    "desc": "关闭内置的文件属性面板，改为显示 YAML Visualizer 面板。"
+                    "name": "笔记顶部的属性",
+                    "desc": "在每篇笔记顶部显示 Projects Plus 属性（置顶、隐藏、排序、类型、关系），替代 Obsidian 内置的属性块。"
                 }
             },
             "front-matter": {
@@ -2043,17 +2056,17 @@
                 "notice": "Projects+：设置未能写入磁盘。更改仍在，但重新加载后会丢失。可在工具栏的「未保存」标记处重试。"
             },
             "diverged": {
-                "label": "\u5916\u90e8\u5df2\u66f4\u6539",
-                "tooltip": "data.json \u5df2\u5728\u6b64\u7a97\u53e3\u4e4b\u5916\u88ab\u66ff\u6362\u3002\u60a8\u7684\u66f4\u6539\u4ecd\u5728\uff1b\u91cd\u8bd5\u5199\u5165\u4f1a\u8986\u76d6\u5bf9\u65b9\u7684\u7248\u672c\uff0c\u56e0\u6b64\u4e0d\u63d0\u4f9b\u91cd\u8bd5\u3002"
+                "label": "外部已更改",
+                "tooltip": "data.json 已在此窗口之外被替换。您的更改仍在；重试写入会覆盖对方的版本，因此不提供重试。"
             },
             "superseded": {
                 "notice": "Projects+：data.json 已在此窗口之外被修改。您最近的更改可能未保存 — 请先重新打开仓库再继续。"
             },
             "conflict": {
-                "notice": "Projects+\uff1adata.json \u5df2\u5728\u6b64\u7a97\u53e3\u4e4b\u5916\u88ab\u4fee\u6539\uff0c\u65e0\u6cd5\u76f4\u63a5\u91c7\u7528\u3002\u5df2\u4fdd\u7559\u60a8\u7684\u7248\u672c\uff0c\u78c1\u76d8\u4e0a\u7684\u7248\u672c\u53e6\u5b58\u4e3a {{path}}\u3002"
+                "notice": "Projects+：data.json 已在此窗口之外被修改，无法直接采用。已保留您的版本，磁盘上的版本另存为 {{path}}。"
             },
             "conflict-uncopied": {
-                "notice": "Projects+\uff1adata.json \u5df2\u5728\u6b64\u7a97\u53e3\u4e4b\u5916\u88ab\u4fee\u6539\uff0c\u4e14\u5bf9\u65b9\u7684\u7248\u672c\u65e0\u5904\u4fdd\u5b58 \u2014 \u65e2\u65e0\u6cd5\u5b58\u653e\u5728\u8be5\u6587\u4ef6\u65c1\uff0c\u4e5f\u65e0\u6cd5\u4f5c\u4e3a\u5e93\u4e2d\u7684\u7b14\u8bb0\u3002\u5b83\u73b0\u5728\u53ea\u5b58\u5728\u4e8e\u4e24\u5904\uff1a\u5f00\u53d1\u8005\u63a7\u5236\u53f0\uff0c\u4ee5\u53ca data.json \u672c\u8eab\uff1b\u5728\u60a8\u81ea\u884c\u66f4\u6539\u8bbe\u7f6e\u4e4b\u524d\uff0c\u4e0d\u4f1a\u6709\u4efb\u4f55\u5185\u5bb9\u8986\u76d6\u5b83\u3002"
+                "notice": "Projects+：data.json 已在此窗口之外被修改，且对方的版本无处保存 — 既无法存放在该文件旁，也无法作为库中的笔记。它现在只存在于两处：开发者控制台，以及 data.json 本身；在您自行更改设置之前，不会有任何内容覆盖它。"
             }
         },
         "settings-menu": {

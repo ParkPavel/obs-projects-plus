@@ -45,10 +45,10 @@
                 "name": "Add field"
             },
             "toggle-visualizer-pane": {
-                "name": "Toggle YAML Visualizer pane"
+                "name": "Toggle properties block in note header"
             },
             "open-visualizer-for-file": {
-                "name": "Open active note in YAML Visualizer"
+                "name": "Show properties of the active note"
             },
             "add-relation": {
                 "name": "Add relation to active note"
@@ -72,7 +72,7 @@
             },
             "file": {
                 "open-in-visualizer": {
-                    "title": "Open in YAML Visualizer"
+                    "title": "Show properties"
                 },
                 "add-relation": {
                     "title": "Add as relation…"
@@ -574,6 +574,21 @@
                         "title": "Linked from",
                         "empty": "No notes link here yet.",
                         "via": "via"
+                    }
+                },
+                "block": {
+                    "title": "Properties",
+                    "add": "+ Property",
+                    "name-placeholder": "Property name",
+                    "options": "Properties options",
+                    "more": "Property actions",
+                    "empty": "Empty",
+                    "read-only": "Calculated, read only",
+                    "type": "Property type",
+                    "errors": {
+                        "exists": "A property with this name already exists",
+                        "reserved": "Names starting with pp_ or $ are reserved",
+                        "empty": "Enter a name"
                     }
                 }
             },
@@ -1811,8 +1826,8 @@
                     "desc": "Turn off vibration feedback during drag-and-drop on mobile devices"
                 },
                 "replace-properties": {
-                    "name": "Replace Obsidian Properties pane",
-                    "desc": "Close the built-in file-properties leaves and surface the YAML Visualizer pane instead."
+                    "name": "Properties in the note header",
+                    "desc": "Show Projects Plus properties at the top of every note (pin, hide, order, types, relations) instead of Obsidian's built-in Properties block."
                 }
             },
             "front-matter": {

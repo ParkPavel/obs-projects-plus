@@ -26,8 +26,10 @@ import { hasCanvasCommandTarget } from "src/ui/views/Dashboard/dashboardCommands
 import { commandBus, emitCommand } from "src/lib/stores/commandBus";
 import {
   VIEW_TYPE_VISUALIZER_PANE,
-  VisualizerPaneView,
+  RetiredVisualizerPaneView,
 } from "src/ui/views/VisualizerPane/visualizerPaneView";
+import { NotePropertiesManager } from "src/ui/properties/notePropertiesManager";
+import NotePropertiesBlock from "src/ui/properties/NotePropertiesBlock.svelte";
 import {
   RelationPickerModal,
   pathFromFile,
@@ -133,6 +135,7 @@ export default class ProjectsPlusPlugin extends Plugin {
   unsubscribeCommandBus?: Unsubscriber;
   unsubscribeSaveStatus?: Unsubscriber;
   inverseIndexStore?: InverseIndexStore;
+  propertiesManager?: NotePropertiesManager;
   /** REFACTOR-008: command registration is delegated to a dedicated manager. */
   private commandManager?: CommandManager;
   /** REFACTOR-205: stored so the lifecycle is explicit and reload-safe. */
@@ -202,12 +205,11 @@ export default class ProjectsPlusPlugin extends Plugin {
       (leaf) => new ProjectsView(leaf, this)
     );
 
-    // R1.1 — Visualizer sidebar leaf. Default OFF (per Revision 3 §5.6),
-    // available via command palette (`toggle-visualizer-pane`) and file menu
-    // (`Open in YAML Visualizer`).
+    // 3.7.2 B2 — the Visualizer side pane is retired; a leaf restored from a
+    // saved workspace closes itself. Properties live in the note header.
     this.registerView(
       VIEW_TYPE_VISUALIZER_PANE,
-      (leaf) => new VisualizerPaneView(leaf, this),
+      (leaf) => new RetiredVisualizerPaneView(leaf),
     );
 
     // R2.4 — single shared inverse-relation index for all Visualizer panes
@@ -502,7 +504,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       if (!msg || msg.ts <= lastBusTs) return;
       lastBusTs = msg.ts;
       if (msg.action === "toggle-visualizer-pane") {
-        void this.toggleVisualizerPane();
+        this.toggleVisualizerPane();
       } else if (msg.action === "open-visualizer-for-file") {
         const payload = msg.payload as { filePath?: string } | undefined;
         void this.revealVisualizerPane(payload?.filePath);
@@ -516,16 +518,34 @@ export default class ProjectsPlusPlugin extends Plugin {
 
     registerFileEvents(this.fileSystemWatcher);
 
-    // R5-012 — When the user has opted to replace Obsidian's built-in
-    // Properties pane, detach any `file-properties` leaves on every
-    // active-leaf-change and surface our YAML Visualizer pane in the
-    // right sidebar instead. Default flag is false; toggling lives in
-    // the plugin Settings tab.
-    this.registerEvent(
-      this.app.workspace.on("active-leaf-change", () => {
-        void this.maybeReplacePropertiesPane();
-      }),
+    // 3.7.2 B2 — properties block in the header of every Markdown note.
+    const inverseIndexStore = this.inverseIndexStore;
+    const propertiesManager = new NotePropertiesManager(
+      this.app,
+      () => get(settings).preferences.propertiesInNoteHeader !== false,
+      (target, file) => {
+        const block = new NotePropertiesBlock({
+          target,
+          props: { app: this.app, file, inverseIndexStore },
+        });
+        return {
+          setFile: (next) => block.$set({ file: next }),
+          destroy: () => block.$destroy(),
+        };
+      },
     );
+    this.propertiesManager = propertiesManager;
+    this.app.workspace.onLayoutReady(() => propertiesManager.start());
+    // Reading mode re-renders sections; re-place the block after it does.
+    this.registerMarkdownPostProcessor(() => propertiesManager.schedule());
+    let lastPropsSetting: boolean | null = null;
+    const unsubscribeProps = settings.subscribe((value) => {
+      const next = value.preferences.propertiesInNoteHeader !== false;
+      if (next === lastPropsSetting) return;
+      lastPropsSetting = next;
+      propertiesManager.schedule();
+    });
+    this.register(unsubscribeProps);
   }
 
   /**
@@ -562,6 +582,10 @@ export default class ProjectsPlusPlugin extends Plugin {
     if (this.unsubscribeCommandBus) {
       this.unsubscribeCommandBus();
     }
+    if (this.propertiesManager) {
+      this.propertiesManager.dispose();
+      delete this.propertiesManager;
+    }
     if (this.inverseIndexStore) {
       this.inverseIndexStore.destroy();
       delete this.inverseIndexStore;
@@ -576,59 +600,41 @@ export default class ProjectsPlusPlugin extends Plugin {
   }
 
   /**
-   * R5-012 — Hide Obsidian's built-in Properties pane (`file-properties`
-   * leaves) and reveal the YAML Visualizer pane when the
-   * `replaceObsidianProperties` preference is on. No-op when the
-   * preference is off, so users can switch the behavior at runtime
-   * without restarting the plugin.
+   * 3.7.2 B2 — `toggle-visualizer-pane`: turn the properties block in the
+   * note header on or off (the setting "Properties in the note header").
    */
-  async maybeReplacePropertiesPane(): Promise<void> {
+  toggleVisualizerPane(): void {
     const prefs = get(settings).preferences;
-    if (!prefs.replaceObsidianProperties) return;
-    const propsLeaves = this.app.workspace.getLeavesOfType("file-properties");
-    if (propsLeaves.length === 0) return;
-    for (const leaf of propsLeaves) {
-      leaf.detach();
-    }
-    if (this.app.workspace.getLeavesOfType(VIEW_TYPE_VISUALIZER_PANE).length === 0) {
-      await this.revealVisualizerPane();
-    }
+    settings.updatePreferences({
+      ...prefs,
+      propertiesInNoteHeader: prefs.propertiesInNoteHeader === false,
+    });
   }
 
   /**
-   * R1.1 — Toggle the Visualizer sidebar pane. Reveals when hidden,
-   * detaches when already open. Bound to `toggle-visualizer-pane` action.
-   */
-  async toggleVisualizerPane(): Promise<void> {
-    const existing = this.app.workspace.getLeavesOfType(VIEW_TYPE_VISUALIZER_PANE);
-    if (existing.length > 0) {
-      // Already open — hide all and return.
-      for (const leaf of existing) {
-        leaf.detach();
-      }
-      return;
-    }
-    await this.revealVisualizerPane();
-  }
-
-  /**
-   * R1.1 — Reveal the Visualizer pane in the right sidebar, optionally
-   * focusing the workspace on a given file first so the pane reflects it.
+   * 3.7.2 B2 — `open-visualizer-for-file`: open the note (when given) and
+   * bring its properties block into view. Turns the block on if it was off.
    */
   async revealVisualizerPane(filePath?: string): Promise<void> {
+    const prefs = get(settings).preferences;
+    if (prefs.propertiesInNoteHeader === false) {
+      settings.updatePreferences({ ...prefs, propertiesInNoteHeader: true });
+    }
     if (filePath) {
       const file = this.app.vault.getAbstractFileByPath(filePath);
       if (file instanceof TFile) {
-        await this.app.workspace.getLeaf("tab").openFile(file);
+        const active = this.app.workspace.getActiveFile();
+        if (active?.path !== file.path) {
+          await this.app.workspace.getLeaf("tab").openFile(file);
+        }
       }
     }
-    const right = this.app.workspace.getRightLeaf(false);
-    if (!right) return;
-    await right.setViewState({
-      type: VIEW_TYPE_VISUALIZER_PANE,
-      active: true,
-    });
-    await this.app.workspace.revealLeaf(right);
+    this.propertiesManager?.sync();
+    const leaf = this.app.workspace.getMostRecentLeaf();
+    const host = leaf?.view.containerEl.querySelector<HTMLElement>(
+      ".ppp-note-props-host",
+    );
+    host?.scrollIntoView({ block: "start" });
   }
 
   /**

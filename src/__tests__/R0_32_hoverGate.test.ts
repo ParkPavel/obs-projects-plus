@@ -68,7 +68,11 @@ import {
  *     DateField; their ungated hover rules (input, time toggle) left with the
  *     native field.
  */
+<<<<<<< HEAD
 const UNGATED_HOVER_BUDGET = 208;
+=======
+const UNGATED_HOVER_BUDGET = 202;
+>>>>>>> borshkit/p372-b2
 
 /**
  * Components ios-t1 migrated. Each must carry no ungated `:hover` at all: a

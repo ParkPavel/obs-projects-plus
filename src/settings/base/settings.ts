@@ -402,12 +402,12 @@ export type ProjectsPluginPreferences = {
   /** v4.0.3: Disable haptic (vibration) feedback on mobile devices */
   readonly disableHapticFeedback: boolean;
   /**
-   * R5-012 — When true, the plugin closes Obsidian's built-in
-   * `file-properties` leaves on every active-leaf-change and surfaces
-   * the YAML Visualizer pane instead. Default false to keep the native
-   * pane available out of the box.
+   * 3.7.2 B2 — show the plugin's properties block in the header of every
+   * Markdown note and hide Obsidian's built-in Properties block there.
+   * Default true. (Replaces R5-012 `replaceObsidianProperties`, which swapped
+   * the sidebar pane; a stored value of that key is ignored.)
    */
-  readonly replaceObsidianProperties: boolean;
+  readonly propertiesInNoteHeader: boolean;
 };
 
 export type UnsavedViewDefinition = Omit<

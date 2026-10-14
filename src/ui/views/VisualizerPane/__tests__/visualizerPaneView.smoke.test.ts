@@ -38,3 +38,18 @@ describe("readFrontmatter", () => {
     expect(result).toBeNull();
   });
 });
+
+describe("B2 retired Visualizer pane", () => {
+  it("a restored pane leaf closes itself instead of breaking the workspace", async () => {
+    jest.useFakeTimers();
+    const { RetiredVisualizerPaneView } = require("src/ui/views/VisualizerPane/visualizerPaneView");
+    const leaf = { detach: jest.fn() };
+    const view = new RetiredVisualizerPaneView(leaf);
+    expect(view.getViewType()).toBe("obs-projects-plus-visualizer");
+    await view.onOpen();
+    expect(leaf.detach).not.toHaveBeenCalled();
+    jest.runAllTimers();
+    expect(leaf.detach).toHaveBeenCalledTimes(1);
+    jest.useRealTimers();
+  });
+});
