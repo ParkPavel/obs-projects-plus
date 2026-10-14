@@ -81,7 +81,7 @@ export function valueTexts(v: unknown): string[] {
     const s = String(v);
     return s.includes(".") ? [s, s.replace(".", ",")] : [s];
   }
-  const s = normalizeSearchText(typeof v === "string" ? v : typeof v === "object" ? JSON.stringify(v) : String(v as boolean | bigint));
+  const s = normalizeSearchText(typeof v === "string" ? v : typeof v === "boolean" ? (v ? "true" : "false") : JSON.stringify(v) ?? "");
   const day = typeof v === "string" ? valueDay(v) : undefined;
   if (day && /^\d{4}-/.test(s)) {
     const [y, mo, d] = day.split("-");
