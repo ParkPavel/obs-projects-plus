@@ -229,3 +229,26 @@ describe("cards-g2 — the title link keeps its modifiers", () => {
     }
   });
 });
+
+describe("B10 — a card body activation carries its modifiers", () => {
+  it("Shift on the body opens a window, Ctrl or Meta a tab, and none opens the card", () => {
+    const m = mountCards();
+    m.card(0).dispatchEvent(click({ shiftKey: true }));
+    expect(openRecord).toHaveBeenLastCalledWith({ id: "a.md" }, "window", expect.anything());
+    m.card(0).dispatchEvent(click({ ctrlKey: true }));
+    expect(openRecord).toHaveBeenLastCalledWith({ id: "a.md" }, "tab", expect.anything());
+    m.card(0).dispatchEvent(click({ metaKey: true }));
+    expect(openRecord).toHaveBeenLastCalledWith({ id: "a.md" }, "tab", expect.anything());
+    expect(m.onRecordClick).not.toHaveBeenCalled();
+    m.destroy();
+  });
+
+  it("the pencil opens the editor when the board hands one in, not the peek", () => {
+    const onRecordEdit = jest.fn();
+    const m = mountCards({ onRecordEdit });
+    m.card(0).querySelector<HTMLElement>(".edit-hint .clickable-icon")?.dispatchEvent(click());
+    expect(onRecordEdit).toHaveBeenCalledWith(m.items[0]);
+    expect(m.onRecordClick).not.toHaveBeenCalled();
+    m.destroy();
+  });
+});
