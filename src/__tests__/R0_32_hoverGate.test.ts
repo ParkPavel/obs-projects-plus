@@ -67,8 +67,10 @@ import {
  *   209 — 3.7.2 B1: DateInput/DatetimeInput became wrappers of the typed
  *     DateField; their ungated hover rules (input, time toggle) left with the
  *     native field.
+ *   200 — 3.7.2 B7: the widget header's hover-only icon cluster and the
+ *     toolbar «Add widget» left for the one «⋯» menu and the «+» insert point.
  */
-const UNGATED_HOVER_BUDGET = 209;
+const UNGATED_HOVER_BUDGET = 200;
 
 /**
  * Components ios-t1 migrated. Each must carry no ungated `:hover` at all: a

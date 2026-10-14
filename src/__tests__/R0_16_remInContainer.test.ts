@@ -130,9 +130,11 @@ const WINDOW_ANCHORED = [
  *   778 — stab-forms moved the dashboard table search, choice and relation
  *     inputs onto the shared field primitives, whose sizes are not
  *     hand-written in those widgets. Re-measured.
+ *   B7 — the header icon cluster, WidgetToolbar and the old palette were
+ *     replaced by one menu and one insert point. Re-measured.
  */
 // Wave 2: Stats grid breakpoint sizes now follow the container font scale.
-const REM_IN_CONTAINER_BUDGET = 777;
+const REM_IN_CONTAINER_BUDGET = 763;
 
 /** A length in `rem`. `0.5rem`, `.5rem` and `1.5rem` all count once. */
 const REM_LENGTH = /\b\d*\.?\d+rem\b/g;

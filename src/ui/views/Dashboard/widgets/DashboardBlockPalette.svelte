@@ -68,7 +68,7 @@
 
 <style>
   .ppp-block-insert { display: flex; justify-content: center; position: relative; }
-  .ppp-block-insert--between { height: 0; z-index: 1; }
+  .ppp-block-insert--between { height: 0; }
   .ppp-block-insert__list { max-height: 60vh; overflow-y: auto; min-width: 15rem; }
 
   .ppp-block-insert__trigger {
@@ -80,7 +80,7 @@
     font-size: var(--font-ui-small); cursor: pointer;
     transition: opacity 120ms ease, border-color 120ms ease, color 120ms ease;
   }
-  .ppp-block-insert--between .ppp-block-insert__trigger { transform: translateY(-50%); }
+  .ppp-block-insert--between .ppp-block-insert__trigger { position: relative; transform: translateY(-50%); }
 
   /* Mouse: the in-between «+» shows on hover of the gap or on keyboard focus.
      `opacity`, not `visibility`: a hidden control could never receive focus. */
