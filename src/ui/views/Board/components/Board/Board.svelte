@@ -590,7 +590,7 @@
     position: absolute;
     top: 0;
     left: 0;
-    z-index: 40;
+    z-index: var(--ppp-z-overlay);
     pointer-events: none;
     min-height: 0;
     background: none;
@@ -601,15 +601,23 @@
     position: absolute;
     top: 0;
     left: 0;
-    z-index: 39;
+    z-index: var(--ppp-z-overlay);
     height: var(--ppp-border-width-thick, 0.125rem);
     margin-top: calc(-0.5 * var(--ppp-border-width-thick, 0.125rem));
     border-radius: var(--radius-s);
     background: var(--interactive-accent);
     pointer-events: none;
   }
+  .projects--board--viewport :global(.ppp-board-touch-line.is-hidden) {
+    display: none;
+  }
   .projects--board--viewport :global(.ppp-board-touch-source) {
     opacity: 0.35;
+  }
+  /* p372-b8: the library's mouse clone on a zoomed board (scaleDraggedClone). */
+  :global(.ppp-board-scaled-clone) {
+    box-sizing: border-box;
+    transform-origin: top left;
   }
   @media (pointer: coarse) {
     .projects--board--viewport :global(.ppp-board-card-slot) {

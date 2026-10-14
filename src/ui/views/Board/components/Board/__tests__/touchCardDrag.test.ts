@@ -103,16 +103,17 @@ describe("scaleDraggedClone", () => {
     const el = document.createElement("div");
     el.getBoundingClientRect = () => ({ width: 135, height: 27, left: 0, top: 0, right: 135, bottom: 27, x: 0, y: 0, toJSON: () => ({}) });
     scaleDraggedClone(el, 0.54);
-    expect(parseFloat(el.style.width)).toBeCloseTo(250, 0);
-    expect(parseFloat(el.style.height)).toBeCloseTo(50, 0);
+    expect(parseFloat(el.style.width) * 16).toBeCloseTo(250, 0);
+    expect(parseFloat(el.style.height) * 16).toBeCloseTo(50, 0);
     // jsdom drops the CSS `scale` property; the size and origin carry the check.
-    expect(el.style.transformOrigin).toBe("top left");
+    expect(el.classList.contains("ppp-board-scaled-clone")).toBe(true);
   });
 
   it("leaves a clone at 100% alone", () => {
     const el = document.createElement("div");
     scaleDraggedClone(el, 1);
     expect(el.getAttribute("style")).toBeNull();
+    expect(el.classList.length).toBe(0);
   });
 });
 
@@ -202,7 +203,7 @@ describe("createTouchCardDrag", () => {
     const preview = b.viewport.querySelector(".ppp-board-touch-preview") as HTMLElement;
     expect(preview).not.toBeNull();
     // The copy has the card's LOGICAL width: the viewport scales it.
-    expect(parseFloat(preview.style.width)).toBeCloseTo(270, 4);
+    expect(parseFloat(preview.style.width) * 16).toBeCloseTo(270, 2);
     expect(b.slot("1").classList.contains("ppp-board-touch-source")).toBe(true);
 
     // Into column B, above card 4 (logical y 50 < its middle 70).
@@ -225,7 +226,7 @@ describe("createTouchCardDrag", () => {
     b.flush();
     const preview = b.viewport.querySelector(".ppp-board-touch-preview") as HTMLElement;
     // Grab at logical (100, 120) on a card at (0, 110): offset (100, 10); finger now at logical (200, 260).
-    expect(preview.style.transform).toBe("translate3d(100px, 250px, 0)");
+    expect(preview.style.transform).toBe("translate3d(6.25rem, 15.625rem, 0)");
   });
 
   it("starts at once when the grip moves before its timer", () => {

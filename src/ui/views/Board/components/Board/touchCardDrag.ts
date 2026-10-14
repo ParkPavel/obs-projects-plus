@@ -23,6 +23,8 @@
  *   Escape, a drop outside the board, a second finger, blur) calls nothing.
  */
 
+import { remAt, rootFontPx } from "src/ui/utils/cssLength";
+
 export interface Point {
   x: number;
   y: number;
@@ -217,7 +219,7 @@ type State =
       onGrip: boolean;
       slot: HTMLElement;
       column: HTMLElement;
-      timer: ReturnType<typeof setTimeout>;
+      timer: number;
     }
   | {
       kind: "active";
@@ -226,6 +228,7 @@ type State =
       fromColumnId: string;
       slot: HTMLElement;
       scale: number;
+      rootPx: number;
       containerBox: Box;
       originStart: Point;
       scrollStart: Point;
@@ -273,7 +276,7 @@ export function createTouchCardDrag(options: TouchCardDragOptions): TouchCardDra
     if (!column) return;
     const start = pointOf(e);
     const pointerId = e.pointerId;
-    const timer = setTimeout(() => fire(), onGrip ? gripPressMs : longPressMs);
+    const timer = window.setTimeout(() => fire(), onGrip ? gripPressMs : longPressMs);
     state = { kind: "pending", pointerId, start, onGrip, slot, column, timer };
     addWindowListeners();
   }
@@ -319,6 +322,7 @@ export function createTouchCardDrag(options: TouchCardDragOptions): TouchCardDra
       return;
     }
     const scale = options.getScale() || 1;
+    const rootPx = rootFontPx(viewport.ownerDocument);
     const vBox = rectBox(viewport);
     const origin = { x: vBox.left, y: vBox.top };
     const columns = readColumns(origin, scale);
@@ -326,17 +330,14 @@ export function createTouchCardDrag(options: TouchCardDragOptions): TouchCardDra
     const p = screenToBoard(pointer, origin, scale);
 
     // The copy lives in the scaled viewport: it is the card, at the board's scale.
-    const preview = document.createElement("div");
-    preview.className = "projects--board--card-list ppp-board-touch-preview";
+    const line = viewport.createDiv({ cls: "ppp-board-touch-line" });
+    line.setAttribute("aria-hidden", "true");
+    const preview = viewport.createDiv({ cls: "projects--board--card-list ppp-board-touch-preview" });
     preview.setAttribute("aria-hidden", "true");
-    preview.style.width = `${slotBox.right - slotBox.left}px`;
+    preview.style.width = remAt(slotBox.right - slotBox.left, rootPx);
     const copy = slot.cloneNode(true) as HTMLElement;
     copy.removeAttribute("data-record-id");
     preview.append(copy);
-    const line = document.createElement("div");
-    line.className = "ppp-board-touch-line";
-    line.setAttribute("aria-hidden", "true");
-    viewport.append(preview, line);
 
     slot.classList.add("ppp-board-touch-source");
     container.classList.add("ppp-board-touch-dragging");
@@ -348,6 +349,7 @@ export function createTouchCardDrag(options: TouchCardDragOptions): TouchCardDra
       fromColumnId,
       slot,
       scale,
+      rootPx,
       containerBox: rectBox(container),
       originStart: origin,
       scrollStart: { x: container.scrollLeft, y: container.scrollTop },
@@ -393,7 +395,7 @@ export function createTouchCardDrag(options: TouchCardDragOptions): TouchCardDra
       };
     }
     const p = screenToBoard(s.pointer, s.origin, s.scale);
-    s.preview.style.transform = `translate3d(${p.x - s.grab.x}px, ${p.y - s.grab.y}px, 0)`;
+    s.preview.style.transform = `translate3d(${remAt(p.x - s.grab.x, s.rootPx)}, ${remAt(p.y - s.grab.y, s.rootPx)}, 0)`;
     const inside =
       s.pointer.x >= s.containerBox.left &&
       s.pointer.x <= s.containerBox.right &&
@@ -402,11 +404,11 @@ export function createTouchCardDrag(options: TouchCardDragOptions): TouchCardDra
     s.target = inside ? pickDropTarget(s.columns, p, s.recordId) : null;
     if (s.target) {
       const column = s.columns.find((c) => c.id === s.target?.columnId) as ColumnGeom;
-      s.line.style.display = "";
-      s.line.style.width = `${column.right - column.left}px`;
-      s.line.style.transform = `translate3d(${column.left}px, ${s.target.lineY}px, 0)`;
+      s.line.classList.remove("is-hidden");
+      s.line.style.width = remAt(column.right - column.left, s.rootPx);
+      s.line.style.transform = `translate3d(${remAt(column.left, s.rootPx)}, ${remAt(s.target.lineY, s.rootPx)}, 0)`;
     } else {
-      s.line.style.display = "none";
+      s.line.classList.add("is-hidden");
     }
     if (scrolling) schedule();
   }
@@ -416,7 +418,7 @@ export function createTouchCardDrag(options: TouchCardDragOptions): TouchCardDra
       if (e.pointerId !== state.pointerId) return;
       const dist = Math.hypot(e.clientX - state.start.x, e.clientY - state.start.y);
       if (state.onGrip && dist > GRIP_SLOP) {
-        clearTimeout(state.timer);
+        window.clearTimeout(state.timer);
         fire();
         const after = state as State;
         if (after.kind === "active") {
@@ -457,7 +459,7 @@ export function createTouchCardDrag(options: TouchCardDragOptions): TouchCardDra
   }
 
   function reset() {
-    if (state.kind === "pending") clearTimeout(state.timer);
+    if (state.kind === "pending") window.clearTimeout(state.timer);
     if (state.kind === "active") {
       if (state.frame !== null) caf(state.frame);
       state.preview.remove();
@@ -577,9 +579,10 @@ export function scaleDraggedClone(element: HTMLElement | undefined, zoom: number
   if (element.dataset["pppScaled"] === String(zoom)) return;
   const rect = element.getBoundingClientRect();
   element.dataset["pppScaled"] = String(zoom);
-  element.style.width = `${rect.width / zoom}px`;
-  element.style.height = `${rect.height / zoom}px`;
-  element.style.boxSizing = "border-box";
-  element.style.transformOrigin = "top left";
-  element.style.setProperty("scale", String(zoom));
+  const rootPx = rootFontPx(element.ownerDocument);
+  element.style.width = remAt(rect.width / zoom, rootPx);
+  element.style.height = remAt(rect.height / zoom, rootPx);
+  // box-sizing and origin: `.ppp-board-scaled-clone` (Board.svelte).
+  element.classList.add("ppp-board-scaled-clone");
+  element.style.scale = String(zoom);
 }
