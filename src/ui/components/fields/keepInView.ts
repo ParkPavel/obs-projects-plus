@@ -20,7 +20,7 @@ export function keepInView(node: HTMLElement, boundsOf: (view: Window) => Viewpo
     const bounds = boundsOf(view);
     const rect = node.getBoundingClientRect();
     if (rect.top < bounds.top || rect.bottom > bounds.bottom) {
-      node.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "auto" });
+      node.scrollIntoView?.({ block: "nearest", inline: "nearest", behavior: "auto" });
     }
   }
   function start(): void {
