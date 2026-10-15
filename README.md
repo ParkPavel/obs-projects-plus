@@ -2,9 +2,56 @@
 
 [Русский](README-RU.md) · [User guide](docs/user-guide-EN.md) · [Documentation](docs/README.md) · [Roadmap](ROADMAP.md)
 
+<p align="center">
+  <a href="https://github.com/ParkPavel/obs-projects-plus/releases"><img alt="Release" src="https://img.shields.io/github/v/release/ParkPavel/obs-projects-plus?label=release&color=7c3aed"></a>
+  <img alt="Obsidian 1.8.7+" src="https://img.shields.io/badge/Obsidian-1.8.7%2B-7c3aed?logo=obsidian&logoColor=white">
+  <img alt="Desktop and mobile" src="https://img.shields.io/badge/desktop%20%2B%20mobile-supported-2ea44f">
+  <a href="https://github.com/ParkPavel/obs-projects-plus/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/ParkPavel/obs-projects-plus/total?color=0969da"></a>
+</p>
+
+<p align="center">
+  <a href="https://web.tribute.tg/d/Sh6"><img alt="Support the project" src="https://img.shields.io/badge/%E2%9D%A4%20Support%20the%20project-Tribute-ff5c8a?style=for-the-badge"></a>
+</p>
+
 Projects Plus helps you work with Obsidian notes as a project: compare records in a table, arrange them on a board, plan events in a calendar, and build an overview on a Dashboard.
 
 Each record remains a Markdown file. Fields such as status, date, and assignee live in note properties — the YAML block at the beginning of the file. Editing an ordinary writable field in the plugin updates the note.
+
+
+## Current work
+
+Projects Plus is being reshaped around one idea: **every function sits where you look for it, the way Notion does it — but with your notes staying local Markdown**.
+
+```mermaid
+flowchart LR
+  A["3.7.0<br/>released"] --> B["3.7.1<br/>stability fixes<br/><i>candidate</i>"]
+  B --> C["3.7.2<br/>behaviour rework<br/><i>iteration 1 tested</i>"]
+  C --> D["3.7.2<br/>iteration 2"]
+```
+
+<details open>
+<summary><b>3.7.2 — the threads in progress</b></summary>
+
+| Thread | Goal | State after the first device test |
+| --- | --- | --- |
+| Note properties | Properties live in the note header instead of a side pane | Works; two blocks on mobile, date shortcuts and the calendar button still to fix |
+| One field kit | Every field and pop-up behaves the same with the on-screen keyboard; dates can be typed | Partly confirmed |
+| Dashboard as a page | Blocks top to bottom, one “+”, one “⋯” menu | Confirmed |
+| Tables | Smooth scrolling, tap-to-edit on phones, a reason on read-only cells, search | Confirmed; date format to fix |
+| Relations, rollups, formulas | Set up from scratch without documentation | Not yet: data sources and formulas need rework |
+| Charts | Set up like a spreadsheet chart | Waiting for the data work above |
+| Calendar, board, gallery | No overlapping events, no sagging cards on phones, card preview | Not yet solved — next iteration |
+
+</details>
+
+<details>
+<summary><b>How the work is done</b></summary>
+
+Each package is a separate task with written acceptance criteria, automatic checks (types, Svelte, lint, the full test suite, an isolated build) and a manual scenario on a real phone. A package counts as done only after the manual test passes. Iteration branches are kept on GitHub for history: `iteration/3.7.2-1`.
+
+</details>
+
+If Projects Plus helps you, you can [support its development](https://web.tribute.tg/d/Sh6).
 
 ## What you can do
 
