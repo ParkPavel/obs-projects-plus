@@ -74,6 +74,6 @@ Projects Plus works only with your vault through the Obsidian API. It makes no n
 - [Changelog](CHANGELOG.md) and [issue tracker](https://github.com/ParkPavel/obs-projects-plus/issues).
 - [Contributing](CONTRIBUTING.md) and [custom view API](docs/api.md).
 
-Development is managed through [Claudex](https://github.com/ParkPavel/claudex). AI configuration and instructions are maintained in that separate project.
+Development in the maintainer workspace is managed through Borshkit. See [Contributing](CONTRIBUTING.md) and the [3.7.1 completion baseline](docs/development-3.7.1.md); private task configuration is kept outside plugin history.
 
 Projects Plus is based on Marcus Olsson's [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects). The current maintainer is Park Pavel. Licensed under [Apache 2.0](https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE); see [NOTICE](https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE) for attribution.

@@ -90,6 +90,8 @@ export function computeChartData(
   config: ChartConfig,
   semanticLabels: SemanticLabels = DEFAULT_SEMANTIC_LABELS
 ): ChartData {
+  // 3.7.2 B6 — a KPI without an X field is one total over every record.
+  if (!config.xAxis.property && config.chartType === "number") return computeTotal(source, config);
   // Guard: no x-axis field selected → empty chart (not "__empty__" bar)
   if (!config.xAxis.property) {
     return { labels: [], series: [{ name: "", values: [] }] };
@@ -210,6 +212,20 @@ export function computeChartData(
   }];
 
   return { labels, series };
+}
+
+/** One value over the whole frame: the record count, or the Y operation over all records. */
+function computeTotal(source: DataFrame, config: ChartConfig): ChartData {
+  const name = config.yAxis.label || (config.yAxis.property === "count" ? "Count" : config.yAxis.property);
+  if (config.yAxis.property === "count") return { labels: [""], series: [{ name, values: [source.records.length] }] };
+  const result = executeTransformCached(source, {
+    steps: [{
+      type: "aggregate",
+      columns: [{ sourceField: config.yAxis.property, outputName: "__chart_value__", function: toAggFn(config.yAxis.aggregation) }],
+    }],
+  });
+  const value = toNumber(result.data.records[0]?.values["__chart_value__"]);
+  return { labels: [""], series: [{ name, values: [value] }] };
 }
 
 /**

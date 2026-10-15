@@ -173,10 +173,10 @@
     dragHandleZone,
     dragHandle,
   } from "svelte-dnd-action";
-  import { flip } from "svelte/animate";
   import { getCoverRealPath } from "src/ui/views/Gallery/gallery";
   import type { BoardThumbnailLayout } from "../../types";
   import { excludeHeaderField, getDisplayName } from "./boardHelpers";
+  import { blockLibraryTouchGrip, scaleDraggedClone } from "./touchCardDrag";
   import type {
     DropTrigger,
     OnRecordClick,
@@ -186,6 +186,8 @@
 
   export let items: DataRecord[];
   export let onRecordClick: OnRecordClick;
+  /** B10 — the note editor behind the pencil; without one the pencil opens the record. */
+  export let onRecordEdit: OnRecordClick | undefined = undefined;
   export let onRecordCheck: OnRecordCheck;
   export let onDrop: OnRecordDrop;
   export let includeFields: DataField[];
@@ -199,6 +201,8 @@
   export let disableDnd: boolean = false;
   /** The data is read-only (a source block): the pencil opens the note, and says so. */
   export let readOnly: boolean = false;
+  /** p372-b8 — board zoom: the mouse drag's clone is scaled to match the card. */
+  export let zoom: number = 1;
   /**
    * cards-g5 — saved card frames (BoardView reads them from the config) and
    * the one route a frame change takes back to it. A board frame sets a
@@ -216,10 +220,15 @@
   const sortRecords = sortRecordsContext.get();
 
   // cards-g1: `getAnimationDuration` is 0 under reduced motion (or the
-  // plugin's instant setting), so the flip and the library's drop animation
-  // stop together. Measured later, live, on 20/100/300-card boards with reduced
+  // plugin's instant setting), so the library's drop animation stops with it.
+  // Measured later, live, on 20/100/300-card boards with reduced
   // motion off and on: pointer-down on a grip to the first drag frame, and frame
   // time during repeated drags (p50/p95 of each, Performance panel).
+  // stab-board: the list has no per-item `animate:flip`. Svelte measures every
+  // keyed item before and after each reorder whatever the duration (a zero
+  // duration still reads the rects), and svelte-dnd-action reorders on every
+  // `consider`: 178 cards cost ~34 ms of layout per pointer move. The library
+  // reads this value for the drop animation of the dragged clone only.
   const flipDurationMs = getAnimationDuration(150);
 
   /** cards-g1: whether a click landed on the grip lane, which drags rather than opens the card. */
@@ -315,6 +324,10 @@
     // Overwritten by `dragHandleZone`; `gateDisabledGrip` below enforces it.
     dragDisabled: disableDnd || zoneDisabled,
     morphDisabled: true,
+    // p372-b8: on a zoomed board the library's clone is the scaled rect
+    // filled with unscaled content (a cropped strip); give it the card's
+    // logical size at the board's scale, so preview and hit-test agree.
+    transformDraggedElement: (element) => scaleDraggedClone(element, zoom),
     // ios-d1: the library picks the drop zone from the CLONE's centre. The grip
     // sits at the card's left edge, so on a phone the centre of a card dragged
     // by it hangs a card-half right of the finger, past the viewport, and the
@@ -324,6 +337,7 @@
   }}
   use:disarmAfterGripTap={".board-card-grip"}
   use:gateDisabledGrip={{ grip: ".board-card-grip", disabled: zoneDisabled }}
+  use:blockLibraryTouchGrip
 >
   {#each items as item (item.id)}
     {@const color = getRecordColor(item)}
@@ -332,12 +346,11 @@
 
     <div
       class="ppp-board-card-slot"
+      data-record-id={item.id}
       class:projects--board--card-placeholder={isPlaceholder(item)}
-      animate:flip={{ duration: flipDurationMs }}
     >
-      <!-- cards-g2: the zone's item is this plain wrapper, because `animate:flip`
-           may only sit on an element directly in the keyed each, never on a
-           component. svelte-dnd-action reads the zone's direct children: it
+      <!-- cards-g2: the zone's item is this plain wrapper (an element directly
+           in the keyed each, not a component). svelte-dnd-action reads the zone's direct children: it
            arms, clones, hides and marks the shadow on this element, and the
            card inside moves with it. The placeholder class lives here too; the
            column and list find it with `:has()`, at any depth.
@@ -349,11 +362,15 @@
         {color}
         interactive
         mediaLayout={thumbnail?.layout}
-        minHeight={thumbnail ? undefined : frameHeight}
+        minHeight={thumbnail?.layout === "top" ? undefined : frameHeight}
         mediaSize={thumbnail?.layout === "left" ? frameHeight : undefined}
         on:keypress
         on:click={(e) => {
-          if (!isGripTarget(e)) onRecordClick(item);
+          if (isGripTarget(e)) return;
+          // B10: the body carries the same modifiers as the title link.
+          if (e.shiftKey) void openRecord({ id: item.id }, "window", { app: $app });
+          else if (e.ctrlKey || e.metaKey) void openRecord({ id: item.id }, "tab", { app: $app });
+          else onRecordClick(item);
         }}
       >
         <span slot="grip" class="board-card-grip" use:dragHandle aria-label={$i18n.t("common.drag-to-reorder")}>
@@ -426,7 +443,7 @@
                 onClick={(event) => {
                   // The card itself opens the record on click; open it once.
                   event.stopPropagation();
-                  onRecordClick(item);
+                  (onRecordEdit ?? onRecordClick)(item);
                 }}
               />
             </span>

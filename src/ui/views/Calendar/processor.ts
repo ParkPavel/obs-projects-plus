@@ -48,7 +48,8 @@ export class CalendarDataProcessor {
 
   constructor(
     config: CalendarConfig,
-    getRecordColor?: (record: DataRecord) => string | null
+    getRecordColor?: (record: DataRecord) => string | null,
+    private readonly writeFormat?: string
   ) {
     this.config = config;
     this.timezone = config.timezone ?? "local";
@@ -154,14 +155,14 @@ export class CalendarDataProcessor {
 
     // Try startDateField first (from config)
     if (this.config.startDateField && record.values[this.config.startDateField] !== undefined) {
-      startDate = parseDateInTimezone(record.values[this.config.startDateField], this.timezone);
+      startDate = parseDateInTimezone(record.values[this.config.startDateField], this.timezone, this.writeFormat);
     }
     // Try common field names in priority order
     else {
       const commonDateFields = ["startDate", "date", "deadline", "dueDate", "scheduled"];
       for (const fieldName of commonDateFields) {
         if (record.values[fieldName] !== undefined) {
-          startDate = parseDateInTimezone(record.values[fieldName], this.timezone);
+          startDate = parseDateInTimezone(record.values[fieldName], this.timezone, this.writeFormat);
           if (startDate) break;
         }
       }
@@ -174,14 +175,14 @@ export class CalendarDataProcessor {
 
     // Extract end date
     if (record.values[endFieldName] !== undefined) {
-      endDate = parseDateInTimezone(record.values[endFieldName], this.timezone);
+      endDate = parseDateInTimezone(record.values[endFieldName], this.timezone, this.writeFormat);
     }
     // Also try common end date field names
     else {
       const commonEndFields = ["endDate", "end", "due"];
       for (const fieldName of commonEndFields) {
         if (record.values[fieldName] !== undefined) {
-          endDate = parseDateInTimezone(record.values[fieldName], this.timezone);
+          endDate = parseDateInTimezone(record.values[fieldName], this.timezone, this.writeFormat);
           if (endDate) break;
         }
       }
@@ -537,9 +538,10 @@ export class CalendarDataProcessor {
 export function processCalendarData(
   frame: DataFrame,
   config: CalendarConfig,
-  getRecordColor?: (record: DataRecord) => string | null
+  getRecordColor?: (record: DataRecord) => string | null,
+  writeFormat?: string
 ): ProcessedCalendarData {
-  const processor = new CalendarDataProcessor(config, getRecordColor);
+  const processor = new CalendarDataProcessor(config, getRecordColor, writeFormat);
   return processor.process(frame);
 }
 

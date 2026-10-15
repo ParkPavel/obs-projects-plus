@@ -132,7 +132,7 @@ const v1demo: v1.ProjectsPluginSettings<
     showViewTitles: true,
     animationBehavior: "smooth",
     disableHapticFeedback: false,
-    replaceObsidianProperties: false,
+    propertiesInNoteHeader: true,
   },
 };
 
@@ -266,6 +266,6 @@ const v3demo: v3.ProjectsPluginSettings<
     showViewTitles: true,
     animationBehavior: "smooth",
     disableHapticFeedback: false,
-    replaceObsidianProperties: false,
+    propertiesInNoteHeader: true,
   },
 };

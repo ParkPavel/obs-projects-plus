@@ -19,6 +19,7 @@
   import { isTouchDevice } from "src/lib/stores/ui";
   import { dataFrame } from "src/lib/stores/dataframe";
   import { mergeExternal } from "./editNoteMerge";
+  import { OVERLAY_KEY } from "src/lib/visualizer/overlay";
   import { onMount, onDestroy } from "svelte";
   import { Notice } from "obsidian";
   import { openContextMenu } from "src/lib/contextMenu";
@@ -301,7 +302,11 @@
     return categoryPriority[category] ?? 99;
   }
 
-  $: editableFields = fields
+  // M03 (S05): the structured overlay arrives as a JSON string; typing into it
+  // would replace the object in frontmatter. Only this exact key is withheld.
+  $: noteFields = fields.filter((field) => field.name !== OVERLAY_KEY);
+
+  $: editableFields = noteFields
     .filter((field) => !field.derived)
     .sort((a, b) => {
       const priorityDiff = getFieldPriority(a) - getFieldPriority(b);
@@ -309,7 +314,7 @@
       return a.name.localeCompare(b.name);
     });
 
-  $: readonlyFields = fields.filter((field) => field.derived);
+  $: readonlyFields = noteFields.filter((field) => field.derived);
 
   // R3 (UT-R3): the Colors section must exist even when the note has no
   // color field yet — picking a color CREATES the `color` frontmatter key.

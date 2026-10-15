@@ -3,6 +3,7 @@
   import type { ProcessedRecord } from '../../types';
   import type { TimelineDragManager } from '../../dnd/TimelineDragManager';
   import type { DragMode } from '../../dnd/types';
+  import { pressMode, handleHitFromTarget } from '../../dnd/pressMode';
   import { getDisplayName, cleanWikiLink } from "src/ui/views/Board/components/Board/boardHelpers";
   import dayjs from 'dayjs';
   
@@ -119,21 +120,20 @@
    * making it impossible to drag small events (move mode) via class detection.
    * Using clientY÷barHeight ratio gives exact control regardless of pseudo-element zones.
    */
-  function getBarMode(clientY: number): DragMode {
+  function getBarMode(clientY: number, target: EventTarget | null, coarse: boolean): DragMode {
     if (!barElement) return 'move';
     const rect = barElement.getBoundingClientRect();
-    const relY = clientY - rect.top;
-    const barH = rect.height;
-    // v4.0.2: Resize zone: 1rem (desktop) / 1.25rem (touch) or 35% of bar height.
-    // Larger zones make it easier to "catch" the resize edge on mobile.
     // coercion-exempt: Class C - a computed CSS length read back from the DOM, not record data
     const remPx = parseFloat(getComputedStyle(barElement).fontSize) || 16;
-    const isTouchDevice = 'ontouchstart' in window;
-    const zoneRem = isTouchDevice ? 1.25 : 1;
-    const zone = Math.min(zoneRem * remPx, barH * 0.35);
-    if (relY <= zone) return 'resize-top';
-    if (relY >= barH - zone) return 'resize-bottom';
-    return 'move';
+    // One shared decision (dnd/pressMode.ts), made once at pointerDown. A press
+    // on a visible handle in its half of the bar resizes; otherwise the edge band.
+    return pressMode({
+      relY: clientY - rect.top,
+      barH: rect.height,
+      remPx,
+      coarse,
+      handleHit: handleHitFromTarget(target, barElement),
+    });
   }
 
   function handleMouseDown(event: MouseEvent) {
@@ -144,7 +144,7 @@
     // Don't interfere with modifier-key clicks (open in new tab etc.)
     if (event.ctrlKey || event.metaKey || event.shiftKey) return;
 
-    const mode = getBarMode(event.clientY);
+    const mode = getBarMode(event.clientY, event.target, false);
 
     // Prevent default to avoid text selection
     event.preventDefault();
@@ -161,7 +161,7 @@
     const touch = event.touches[0];
     if (!touch) return;
 
-    const mode = getBarMode(touch.clientY);
+    const mode = getBarMode(touch.clientY, event.target, true);
 
     // Do NOT preventDefault here — allow page scroll if long-press fails
     dragManager.initiate(record, processedRecord, event, mode, barElement);

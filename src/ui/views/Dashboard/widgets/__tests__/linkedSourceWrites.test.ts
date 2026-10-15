@@ -150,7 +150,10 @@ describe("#C4 Board and Calendar consume the guard, not just receive it", () => 
 
   it("Calendar declares the prop and guards click, check and drag-change", () => {
     expect(calendarView).toMatch(/export let dataReadOnly: boolean = false;/);
-    expect(calendarView).toMatch(/if \(dataReadOnly\) \{[\s\S]*?openRecord\(\{ id: entry\.id \}, PLAIN_MODE/);
+    // B10: a click opens a read-only peek on a read-only source; the editor
+    // (day window settings) still falls back to opening the note.
+    expect(calendarView).toMatch(/activateRecord\(\{ id: entry\.id, readonly: dataReadOnly \|\| readonly \}/);
+    expect(calendarView).toMatch(/if \(dataReadOnly\) \{[\s\S]*?openRecord\(\{ id: record\.id \}, PLAIN_MODE/);
   });
 
   it("Calendar's infinite views lose onRecordChange/onRecordAdd, not just gain a Notice", () => {

@@ -153,11 +153,11 @@ export class ProjectsSettingTab extends PluginSettingTab {
       .setDesc(get(i18n).t("settings.general.replace-properties.desc"))
       .addToggle((toggle) =>
         toggle
-          .setValue(preferences.replaceObsidianProperties ?? false)
+          .setValue(preferences.propertiesInNoteHeader ?? true)
           .onChange((value) => {
             save({
               ...preferences,
-              replaceObsidianProperties: value,
+              propertiesInNoteHeader: value,
             });
           })
       );

@@ -18,7 +18,7 @@
   import { dragHandleZone, SHADOW_PLACEHOLDER_ITEM_ID } from 'svelte-dnd-action';
   import { Icon } from 'obsidian-svelte';
   import { portal } from "src/ui/portal";
-  import { remAt, rootFontPx, toRem } from "src/ui/utils/cssLength";
+  import { toRem } from "src/ui/utils/cssLength";
   import { i18n } from '../../../../../lib/stores/i18n';
   import type { DataRecord, DataField } from '../../../../../lib/dataframe/dataframe';
   import type { ProjectDefinition } from '../../../../../settings/settings';
@@ -30,6 +30,7 @@
   import AgendaListEditor from '../../agenda/AgendaListEditor.svelte';
   import { applyDragFeedback } from '../../agenda/TouchDndCoordinator';
   import { pauseGestures, resumeGestures } from '../../gestures/GestureCoordinator';
+  import { fitAgendaOverlay } from '../../agenda/fitAgendaOverlay';
   
   const dispatch = createEventDispatcher();
   
@@ -44,7 +45,7 @@
   export let colorField: string | undefined = undefined;
   export let checkField: string | undefined = undefined;
   export let timezone: string = 'local';
-  export let onRecordClick: ((id: string) => void) | undefined = undefined;
+  export let onRecordClick: ((id: string, event?: MouseEvent) => void) | undefined = undefined;
   export let onCreateRecord: ((date: dayjs.Dayjs) => void) | undefined = undefined;
   export let visible: boolean = true;  // New: controls visibility on mobile
   export let collapsed: boolean = false;  // Desktop: collapsed sidebar
@@ -133,6 +134,8 @@
     allDayTime: agendaT('all-day-time'),
     todayBtn: agendaT('today-btn'),
     addNote: agendaT('add-note'),
+    expand: agendaT('expand'),
+    collapse: agendaT('collapse'),
   };
   
   // LIFECYCLE
@@ -252,17 +255,17 @@
   }
   
   // DATA PROCESSING
-  function getRecordDate(record: DataRecord): dayjs.Dayjs | null {
+  function getRecordDate(record: DataRecord, writeFormat?: string): dayjs.Dayjs | null {
     const fieldName = dateField ?? 'startDate';
     const value = record.values[fieldName] ?? record.values['date'] ?? record.values['deadline'];
     if (!value) return null;
-    return parseDateInTimezone(value, timezone);
+    return parseDateInTimezone(value, timezone, writeFormat);
   }
   
-  function getEndDate(record: DataRecord): dayjs.Dayjs | null {
+  function getEndDate(record: DataRecord, writeFormat?: string): dayjs.Dayjs | null {
     const value = record.values['endDate'] ?? record.values['end'];
     if (!value) return null;
-    return parseDateInTimezone(value, timezone);
+    return parseDateInTimezone(value, timezone, writeFormat);
   }
   
   function categorize(
@@ -318,7 +321,7 @@
     });
   }
 
-  function buildAgenda(recs: DataRecord[], baseDate: dayjs.Dayjs): AgendaEvent[] {
+  function buildAgenda(recs: DataRecord[], baseDate: dayjs.Dayjs, writeFormat?: string): AgendaEvent[] {
     const result: AgendaEvent[] = [];
     
     for (const record of recs) {
@@ -327,8 +330,8 @@
         : record.id.split('/').pop()?.replace('.md', '') ?? record.id;
       const title = stripWikilinks(rawTitle);
       
-      const date = getRecordDate(record);
-      const endDate = getEndDate(record);
+      const date = getRecordDate(record, writeFormat);
+      const endDate = getEndDate(record, writeFormat);
       
       // Check if task is completed
       const isCompleted = checkField 
@@ -402,7 +405,7 @@
     });
   }
   
-  $: agenda = buildAgenda(records, selectedDate);
+  $: agenda = buildAgenda(records, selectedDate, project.dateFormat?.writeFormat);
   
   $: grouped = CATEGORY_ORDER.reduce((acc, cat) => {
     acc[cat] = agenda.filter(e => e.category === cat);
@@ -435,13 +438,10 @@
     saveState();
   }
   
+  // B10: the event goes up with the id, so Shift (window) and Ctrl/Meta (tab)
+  // reach the view's one activation rule; a plain click opens the peek.
   function handleClick(event: MouseEvent, id: string) {
-    // Ctrl+Click (Windows/Linux) or Cmd+Click (Mac) = open in new window
-    if (event.ctrlKey || event.metaKey) {
-      dispatch('openInNewWindow', { id });
-      return;
-    }
-    onRecordClick?.(id);
+    onRecordClick?.(id, event);
   }
   
   function handleAdd() {
@@ -501,23 +501,11 @@
     // Codex review of 125c617); only the container's measured bounds are inline.
     node.classList.add('obsidian-projects-agenda-overlay');
     node.classList.toggle('obsidian-projects-agenda-overlay--viewport', !container);
-    function update() {
-      if (!container) return;
-      const rect = container.getBoundingClientRect();
-      const root = rootFontPx(node.ownerDocument);
-      node.style.top = remAt(rect.top, root);
-      node.style.left = remAt(rect.left, root);
-      node.style.width = remAt(rect.width, root);
-      node.style.height = remAt(rect.height, root);
-    }
-
-    update();
-    const ro = container ? new ResizeObserver(update) : null;
-    if (container) ro!.observe(container);
+    const fitted = fitAgendaOverlay(node, container);
 
     return {
       destroy() {
-        ro?.disconnect();
+        fitted.destroy();
         // #192: the restore branch that used to live here was dead code, and
         // that is measured rather than argued -- `A192_portalContract.test.ts`
         // shows Svelte 3.59.2 detaching the element BEFORE running an action's
@@ -654,6 +642,19 @@
   {/if}
   
   <header class="header">
+    {#if !isMobile}
+      <!-- Desktop handle: collapsing keeps the panel as a strip, so it can always be reopened -->
+      <button
+        class="collapse-handle"
+        type="button"
+        aria-expanded={!collapsed}
+        aria-label={collapsed ? labels.expand : labels.collapse}
+        title={collapsed ? labels.expand : labels.collapse}
+        on:click={() => dispatch('toggle')}
+      >
+        <Icon name={collapsed ? 'chevron-left' : 'chevron-right'} size="sm" />
+      </button>
+    {/if}
     {#if !collapsed}
       <div class="date-picker-container">
         <button class="date-btn" on:click={toggleDatePicker}>
@@ -927,6 +928,35 @@
   }
   
   .agenda.resizing { transition: none; }
+
+  .collapse-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-width: var(--agenda-touch-min);
+    min-height: var(--agenda-touch-min);
+    padding: 0;
+    border: none;
+    border-radius: var(--ppp-radius-sm, var(--radius-s));
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    box-shadow: none;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .collapse-handle:hover {
+      background: var(--background-modifier-hover);
+      color: var(--text-normal);
+    }
+  }
+  .agenda.collapsed .collapse-handle { min-width: 100%; }
+  .agenda.collapsed .header {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+    border-bottom: none;
+  }
   
   /* Mobile: Full drawer from right (no collapsed state, just show/hide) */
   .agenda.mobile {

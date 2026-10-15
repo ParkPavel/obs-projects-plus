@@ -3,9 +3,9 @@
    * WidgetGrid — stack-mode renderer for the dashboard widget list.
    *
    * Owns three render branches: empty state, DnD-enabled stack and read-only
-   * stack. Free-positioning is handled by `FreeCanvas` + `WindowShell` mounted
-   * directly from `DashboardCanvas`; this component is invoked only when the
-   * canvas is in stack mode.
+   * stack. B7: the dashboard is a page — blocks top to bottom, whatever the
+   * stored `layoutMode` says ("free" configs keep their JSON and render here
+   * too). The one way in is the «+» before each block and at the end.
    */
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import type { ExternalSourceState } from "./dashboardPreload";
@@ -19,14 +19,14 @@
   import { dragHandleZone, SOURCES, TRIGGERS, type DndEvent } from "svelte-dnd-action";
   import { Icon } from "obsidian-svelte";
   import { ignoreHostSwipe } from "src/ui/actions/ignoreHostSwipe";
+  import { createReorderCollapse, type ReorderCollapse } from "./reorderCollapse";
 
   import WidgetHost from "./widgets/WidgetHost.svelte";
   import DashboardBlockPalette from "./widgets/DashboardBlockPalette.svelte";
   import EmptyState from "src/ui/components/EmptyState/EmptyState.svelte";
 
   const dispatch = createEventDispatcher<{
-    showToolbar: void;
-    addWidget: WidgetType;
+    insert: { type: WidgetType; index: number };
     consider: DndEvent<WidgetDefinition>;
     finalize: DndEvent<WidgetDefinition>;
   }>();
@@ -63,17 +63,27 @@
   // that started no drag, this disarms the zone through the one public route
   // the library listens to: a `consider` it reads as "keyboard drag stopped".
   // That event is ours, never a reorder, and the forwarding handlers drop it.
+  //
+  // The same press collapses every tile to its header (reorderCollapse.ts), so
+  // a tall tile cannot block the drag. It runs in the capture phase, before the
+  // library measures on the first move, and ends on `finalize` or on that same
+  // tap release.
   const GRIP_SELECTOR = ".ppp-widget-grip";
   const disarmEvents = new WeakSet<Event>();
+  let reordering = false;
+  let collapse: ReorderCollapse | null = null;
 
   function disarmAfterGripTap(node: HTMLElement) {
     let pressed = false;
     let dragStarted = false;
+    const tiles = createReorderCollapse(node, (on) => (reordering = on));
+    collapse = tiles;
 
     function onPress(e: Event) {
       if (!(e.target instanceof Element) || !e.target.closest(GRIP_SELECTOR)) return;
       pressed = true;
       dragStarted = false;
+      tiles.begin(e.target);
     }
     function onConsider(e: Event) {
       // A real `consider` means a drag is under way; the library itself
@@ -84,6 +94,7 @@
       if (!pressed) return;
       pressed = false;
       if (dragStarted) return;
+      tiles.end(false);
       const detail: DndEvent<WidgetDefinition> = {
         items: dndWidgets,
         info: { trigger: TRIGGERS.DRAG_STOPPED, id: "", source: SOURCES.KEYBOARD },
@@ -97,19 +108,28 @@
     node.addEventListener("mousedown", onPress, true);
     node.addEventListener("touchstart", onPress, { capture: true, passive: true });
     node.addEventListener("consider", onConsider);
-    window.addEventListener("mouseup", onRelease);
-    window.addEventListener("touchend", onRelease);
-    window.addEventListener("touchcancel", onRelease);
+    // The canvas's own window: in a popout the release never reaches the main one.
+    const win = node.ownerDocument.defaultView ?? window;
+    win.addEventListener("mouseup", onRelease);
+    win.addEventListener("touchend", onRelease);
+    win.addEventListener("touchcancel", onRelease);
     return {
       destroy() {
         node.removeEventListener("mousedown", onPress, true);
         node.removeEventListener("touchstart", onPress, true);
         node.removeEventListener("consider", onConsider);
-        window.removeEventListener("mouseup", onRelease);
-        window.removeEventListener("touchend", onRelease);
-        window.removeEventListener("touchcancel", onRelease);
+        win.removeEventListener("mouseup", onRelease);
+        win.removeEventListener("touchend", onRelease);
+        win.removeEventListener("touchcancel", onRelease);
+        tiles.dispose();
+        if (collapse === tiles) collapse = null;
       },
     };
+  }
+
+  function onFinalize(e: CustomEvent<DndEvent<WidgetDefinition>>) {
+    dispatch("finalize", e.detail);
+    collapse?.end(true);
   }
 
   function forwardConsider(e: CustomEvent<DndEvent<WidgetDefinition>>) {
@@ -128,27 +148,31 @@
   >
     <svelte:fragment slot="actions">
       {#if !readonly}
-        <button on:click={() => dispatch("addWidget", "database-call")}>
+        <button class="mod-cta" on:click={() => dispatch("insert", { type: "database-call", index: 0 })}>
           <Icon name="database" />
-          {$i18n.t("views.dashboard.canvas.empty-add-block", { defaultValue: "Add data block" })}
+          {$i18n.t("views.dashboard.canvas.empty-add-block", { defaultValue: "Add a database" })}
         </button>
       {/if}
     </svelte:fragment>
   </EmptyState>
+  <slot name="empty-extra" />
 {:else if canDnd}
   <!-- ios-g1: G1 grip-only drag (see the script), G2 interior swipes stay in
        the dashboard instead of opening Obsidian's drawers. -->
   <div
     class="ppp-database-canvas ppp-database-canvas--stack"
+    class:ppp-database-canvas--reordering={reordering}
     use:dragHandleZone={{ items: dndWidgets, flipDurationMs: 200, type: "widgets" }}
     use:disarmAfterGripTap
     use:ignoreHostSwipe
     on:consider={forwardConsider}
-    on:finalize={(e) => dispatch("finalize", e.detail)}
+    on:finalize={onFinalize}
   >
-    {#each dndWidgets as widget (widget.id)}
+    {#each dndWidgets as widget, index (widget.id)}
+      <div class="ppp-block-slot">
+      <DashboardBlockPalette variant="between" {index} currentWidgets={dndWidgets} on:insert />
       <WidgetHost
-        reorderable
+        reorderable={!widget.layout?.locked}
         {widget}
         frame={widget.type === "filter-tabs" ? frame : displayFrame}
         {api}
@@ -169,14 +193,13 @@
         on:tableConfigChange
         on:fieldPresetsChange
         on:removeWidget
+        on:duplicateWidget
       />
+      </div>
     {/each}
   </div>
   <div class="ppp-canvas-stack-add">
-    <DashboardBlockPalette
-      currentWidgets={dndWidgets}
-      on:addWidget={(e) => dispatch("addWidget", e.detail)}
-    />
+    <DashboardBlockPalette index={dndWidgets.length} currentWidgets={dndWidgets} on:insert />
   </div>
 {:else}
   <div class="ppp-database-canvas ppp-database-canvas--stack" use:ignoreHostSwipe>
@@ -202,6 +225,7 @@
         on:tableConfigChange
         on:fieldPresetsChange
         on:removeWidget
+        on:duplicateWidget
       />
     {/each}
   </div>
@@ -229,6 +253,18 @@
     display: flex;
     justify-content: center;
     padding: var(--ppp-space-2, 0.25rem);
+  }
+
+  /* Reorder state: a held grip leaves every tile as its header, so the list
+     fits the viewport. Hidden, not unmounted — nothing is rebuilt on release. */
+  .ppp-database-canvas--reordering :global(.ppp-widget-host > :not(.ppp-widget-header)) {
+    display: none;
+  }
+  /* …and the canvas keeps its height meanwhile (reorderCollapse HOLD_VAR), so
+     the page does not shorten under the scroll position and the pressed tile
+     stays where the finger is. */
+  .ppp-database-canvas--reordering {
+    min-height: var(--ppp-reorder-hold, 100%);
   }
 
   /* DG-8 drop target: dashed outline + subtle fill on svelte-dnd-action placeholder */

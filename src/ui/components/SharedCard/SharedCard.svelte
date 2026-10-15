@@ -45,7 +45,8 @@
   /**
    * cards-g5: a saved frame, as the view resolved it. `span` is the number of
    * grid columns the card takes (the gallery grid caps it to the columns there
-   * are); `minHeight` is a length for a card whose frame has no media to size.
+   * are); `minHeight` is a length for a card whose frame has no top media to size
+   * (a left thumbnail's card takes it too; its square is capped at 40%).
    * Both unset (no frame) write nothing, so the card renders as before. The
    * resize handle, when a view offers one, arrives through `controls`.
    */

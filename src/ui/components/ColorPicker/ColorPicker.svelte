@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, createEventDispatcher } from 'svelte';
   import { Icon } from "obsidian-svelte";
+  import TextField from '../fields/TextField.svelte';
   import { i18n } from '../../../lib/stores/i18n';
   import { hexToHsv, hsvToHex } from '../../../lib/colors/math';
   import { favoritesStore, DEFAULT_COLOR } from 'src/lib/stores/palettes';
@@ -34,6 +35,7 @@
   
   // Hex input
   let customHexInput = '';
+  let hexField: TextField | null = null;
   let hexInputError = false;
 
   // Deduplicated, normalized project palette — strips empties and
@@ -206,18 +208,13 @@
       parseHex(hex);
       hexInputError = false;
       customHexInput = '';
+      hexField?.reset('');
       applyColor();
     } else {
       hexInputError = true;
     }
   }
   
-  function handleHexKeydown(e: KeyboardEvent) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      applyCustomHex();
-    }
-  }
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -366,16 +363,20 @@
     <span class="palette-label">{$i18n.t('components.color.hex-code')}</span>
     <div class="hex-row">
       <div class="hex-preview" style:--preview-color={customHexInput || currentHex}></div>
-      <input
-        type="text"
-        class="hex-input"
-        class:error={hexInputError}
-        placeholder="#RRGGBB"
-        bind:value={customHexInput}
-        on:keydown={handleHexKeydown}
-        on:click|stopPropagation={() => {}}
-        maxlength="9"
-      />
+      <!-- svelte-ignore a11y-click-events-have-key-events -->
+      <!-- svelte-ignore a11y-no-static-element-interactions -->
+      <span class="hex-field" on:click|stopPropagation={() => {}}>
+        <TextField
+          bind:this={hexField}
+          value=""
+          placeholder="#RRGGBB"
+          ariaLabel={$i18n.t('components.color.hex-code')}
+          inputClass="hex-input"
+          error={hexInputError}
+          on:input={(e) => (customHexInput = e.detail.slice(0, 9))}
+          on:commit={(e) => { if (e.detail.reason === 'enter') applyCustomHex(); }}
+        />
+      </span>
       <button 
         class="action-btn apply-btn"
         on:click|stopPropagation={applyCustomHex}
@@ -691,7 +692,13 @@
     flex-shrink: 0;
   }
   
-  .hex-input {
+  .hex-field {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .hex-field :global(.hex-input) {
     flex: 1;
     min-width: 0;
     padding: calc(var(--cp-base) * 0.25) calc(var(--cp-base) * 0.375);
@@ -704,13 +711,13 @@
     transition: all 0.15s ease;
   }
   
-  .hex-input:focus {
+  .hex-field :global(.hex-input):focus {
     outline: none;
     border-color: var(--interactive-accent);
     box-shadow: 0 0 0 0.125rem rgba(var(--interactive-accent-rgb), 0.2);
   }
   
-  .hex-input.error {
+  .hex-field :global(.hex-input.ppp-text-field--invalid) {
     border-color: var(--text-error);
     animation: shake 0.3s ease;
   }
@@ -751,7 +758,7 @@
       min-height: calc(var(--cp-base) * 2);
     }
     
-    .hex-input {
+    .hex-field :global(.hex-input) {
       font-size: var(--cp-base);
       padding: calc(var(--cp-base) * 0.5);
     }

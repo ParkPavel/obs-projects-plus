@@ -48,8 +48,13 @@ import { collectStyled, SRC_ROOT } from "./support/cssScan";
  *   68 — D1.3 removed YamlVisualizer/RelationListView.svelte, dead code that
  *     carried a raw `z-index: 50`. Read from this suite (total 68), not
  *     decremented.
+ *   66 — stab-dup removed DayPopup/DuplicatePopup.svelte, an unused second
+ *     duplicate window. Read from this suite (total 66).
  */
-const RAW_Z_BUDGET = 68;
+// 66 → 65 (3.7.2 B1): DatetimeInput's time-picker overlay left with the native field.
+// 65 → 64 (3.7.2 B4): month cell +N no longer floats over the last card.
+// 64 → 63 (3.7.2 B10): DayPopup's private layer left for FloatingPopup.
+const RAW_Z_BUDGET = 63;
 
 const RAW_Z = /z-index:\s*-?\d+\s*;/g;
 const TOKEN_WITH_FALLBACK = /z-index:\s*var\(\s*(--[a-z0-9-]+)\s*,\s*([^)]*)\)/gi;

@@ -199,7 +199,9 @@ describe("cards-g5 — board height", () => {
     expect(prop(media, "height")).toBe("");
     expect(prop(media, "--ppp-card-media-ratio")).toBe("");
     expect(media).toHaveAttribute("data-ppp-frame-target");
-    expect(prop(m.card("a.md"), "min-height")).toBe("");
+    // stab-board: the lane is capped at 40% of the card, so the frame is also
+    // the card's minimum height; without it the resize would change nothing.
+    expect(prop(m.card("a.md"), "min-height")).toBe("9rem");
     // b.md has no cover: no side, and its frame is the card's minimum.
     expect(prop(m.card("b.md"), "--ppp-board-card-thumb")).toBe("");
     expect(prop(m.card("b.md"), "min-height")).toBe("9rem");
@@ -213,9 +215,21 @@ describe("cards-g5 — board height", () => {
     handle.dispatchEvent(pointer("pointermove", 100, 132));
     await tick();
     expect(prop(m.card("a.md"), "--ppp-board-card-thumb")).toBe("12rem");
+    expect(prop(m.card("a.md"), "min-height")).toBe("12rem");
     expect(prop(m.card("a.md").querySelector<HTMLElement>(".ppp-board-card-media"), "height")).toBe("");
     handle.dispatchEvent(pointer("pointerup", 100, 132));
     expect(m.onCardFrameChange).toHaveBeenCalledWith("a.md", { heightRem: 12 });
+    m.destroy();
+  });
+
+  it("left thumbnail: a per-card override sets that card's minimum, the view frame the rest", () => {
+    const m = mountCards({
+      thumbnailLayout: "left",
+      cardFrames: { view: { heightRem: 9 }, byRecord: { "a.md": { heightRem: 15 } } },
+    });
+    expect(prop(m.card("a.md"), "min-height")).toBe("15rem");
+    expect(prop(m.card("a.md"), "--ppp-board-card-thumb")).toBe("15rem");
+    expect(prop(m.card("b.md"), "min-height")).toBe("9rem");
     m.destroy();
   });
 

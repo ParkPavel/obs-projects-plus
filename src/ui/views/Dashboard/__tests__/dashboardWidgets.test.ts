@@ -168,3 +168,35 @@ describe("makeI18nStore double", () => {
     expect(get(store).t("nowhere.at.all", { defaultValue: "fallback" })).toBe("fallback");
   });
 });
+
+describe("B7 — insert at a position, duplicate after the original", () => {
+  let config: DatabaseViewConfig;
+  const saveConfig = (cfg: DatabaseViewConfig) => { config = cfg; };
+  const ctrl = (onAdded?: (id: string) => void) =>
+    createWidgetController({ getConfig: () => config, saveConfig, i18nStore: makeI18nStore(), onAdded });
+
+  test("addWidget with an index lands there and appears exactly once", () => {
+    config = makeConfig([widget("a"), widget("b")]);
+    const added: string[] = [];
+    ctrl((id) => added.push(id)).addWidget("chart" as WidgetType, undefined, 1);
+    expect(config.widgets.map((w) => w.id)).toEqual(["a", added[0], "b"]);
+    expect(config.widgets.filter((w) => w.id === added[0])).toHaveLength(1);
+  });
+
+  test("an out-of-range index clamps; no index appends as before", () => {
+    config = makeConfig([widget("a")]);
+    ctrl().addWidget("text" as WidgetType, undefined, 99);
+    ctrl().addWidget("text" as WidgetType, undefined, -3);
+    expect(config.widgets.map((w) => w.type)).toEqual(["text", "stats", "text"]);
+  });
+
+  test("duplicate copies deeply, with a new id, right after the original", () => {
+    config = makeConfig([{ ...widget("a"), transform: { steps: [{ type: "group-by", fields: ["x"] }] } } as WidgetDefinition, widget("b")]);
+    ctrl().duplicateWidget("a");
+    const [orig, copy, b] = config.widgets;
+    expect(b!.id).toBe("b");
+    expect(copy!.id).not.toBe("a");
+    expect(copy!.transform).toEqual(orig!.transform);
+    expect(copy!.transform).not.toBe(orig!.transform);
+  });
+});

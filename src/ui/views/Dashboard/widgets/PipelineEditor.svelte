@@ -17,11 +17,15 @@
   import { aggregationLabel, type AggregationName } from "src/lib/dashboard-engine/aggregationOptions";
   import { get } from "svelte/store";
   import { Icon } from "obsidian-svelte";
+  import ComboField from "src/ui/components/fields/ComboField.svelte";
+  import { namesToOptions } from "src/ui/components/fields/comboOptions";
   import { getOperatorsForField, getOperatorLabel } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
   import { operatorNeedsValue } from "src/settings/base/settings";
   import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import { detectArrayFields } from "./_shared/arrayFieldDetection";
+  import type { PipelineIntent } from "./widgetMenu";
+  import { INTENT_COPY, missingIntentSteps } from "./pipelineIntent";
   import {
     updateStep as applyStepUpdate,
     toggleDisableStep as toggleStepDisabled,
@@ -45,6 +49,16 @@
    * than offering the parent project's fields — which is what it used to do.
    */
   export let sourceState: BlockSource = { kind: "parent", frame: { fields: [], records: [] } as unknown as DataFrame };
+
+  /** B7: opened from a plain-words «⋯» entry — one hint and one button for that step. */
+  export let intent: PipelineIntent | null = null;
+  $: intentCopy = intent ? INTENT_COPY[intent] : null;
+  $: intentMissing = intent ? missingIntentSteps(intent, steps) : [];
+  function addIntentSteps() {
+    const first = steps.length;
+    for (const type of intentMissing) addStep(type);
+    expandedStep = steps.length > first ? first : expandedStep;
+  }
 
   const dispatch = createEventDispatcher<{
     save: TransformPipeline;
@@ -107,6 +121,12 @@
     "SUM(", "AVG(", "COUNT(", "MIN(", "MAX(", "MEDIAN(",
     "IF(", "IFBLANK(", "ROUND(", "CONCAT(", "LEFT(", "RIGHT(", "DATE(",
   ];
+
+  // The suggestion lists the inputs above choose from (they were native datalists).
+  // A function is chosen from its list only; a field or a formula is free text.
+  const AGG_OPTIONS = namesToOptions(AGG_FUNCTIONS);
+  const FORMULA_OPTIONS = namesToOptions(FORMULA_SUGGESTIONS);
+  $: fieldOptions = namesToOptions(fieldNames);
 
   function normalizeAggFunction(value: string, fallback: AggregationFunction): AggregationFunction {
     const normalized = value.trim().toUpperCase() as AggregationFunction;
@@ -460,10 +480,19 @@
       {$i18n.t("views.dashboard.pipeline.live", { defaultValue: "Changes apply instantly" })}
     </span>
   </div>
-  <!-- #118: pipeline is the advanced surface; ordinary scope/grouping is view-level. -->
-  <p class="ppp-pipeline-advanced-hint">
-    {$i18n.t("views.dashboard.pipeline.advanced-hint")}
-  </p>
+  {#if intentCopy}
+    <div class="ppp-pipeline-intent" role="note">
+      <p class="ppp-pipeline-intent-hint">{$i18n.t(intentCopy.hintKey, { defaultValue: intentCopy.hintDefault })}</p>
+      {#if intentMissing.length > 0}
+        <button class="mod-cta ppp-pipeline-intent-add" on:click={addIntentSteps}>{$i18n.t(intentCopy.actionKey, { defaultValue: intentCopy.actionDefault })}</button>
+      {/if}
+    </div>
+  {:else}
+    <!-- #118: pipeline is the advanced surface; ordinary scope/grouping is view-level. -->
+    <p class="ppp-pipeline-advanced-hint">
+      {$i18n.t("views.dashboard.pipeline.advanced-hint")}
+    </p>
+  {/if}
 
   <!--
     #137: with no resolved source there is no schema to configure against. The
@@ -616,13 +645,14 @@
                 {@const fieldType = (fieldMap.get(cond.field)?.type ?? "string")}
                 {@const operators = getOperatorsForField(fieldType)}
                 <div class="ppp-filter-row">
-                  <input
-                    class="ppp-filter-field-select"
-                    type="text"
-                    list="ppp-pipeline-fields"
+                  <ComboField
+                    inputClass="ppp-filter-field-select"
                     value={cond.field}
+                    options={fieldOptions}
+                    allowCustom
                     placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Field…" })}
-                    on:input={(e) => updateFilterField(i, ci, inputVal(e))}
+                    ariaLabel={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Field…" })}
+                    on:commit={(e) => updateFilterField(i, ci, e.detail.value)}
                   />
                   <select
                     class="ppp-filter-op-select"
@@ -652,17 +682,15 @@
 
             <!-- === GROUP-BY === -->
             {:else if step.type === "group-by"}
+              <!-- svelte-ignore a11y-label-has-associated-control -->
               <label class="ppp-step-field">
                 <span>{$i18n.t("views.dashboard.pipeline.group-field", { defaultValue: "Group by field" })}</span>
-                <input
-                  type="text"
-                  list="ppp-pipeline-fields"
+                <ComboField
                   value={step.fields[0] ?? ""}
+                  options={fieldOptions}
+                  allowCustom
                   placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Select field…" })}
-                  on:input={(e) => {
-                    const val = inputVal(e);
-                    updateStep(i, { ...step, fields: val ? [val] : [] });
-                  }}
+                  on:commit={(e) => updateStep(i, { ...step, fields: e.detail.value ? [e.detail.value] : [] })}
                 />
               </label>
 
@@ -670,21 +698,22 @@
             {:else if step.type === "aggregate"}
               {#each step.columns as col, ci}
                 <div class="ppp-agg-row">
-                  <input
-                    class="ppp-agg-field-select"
-                    type="text"
-                    list="ppp-pipeline-fields"
+                  <ComboField
+                    inputClass="ppp-agg-field-select"
                     value={col.sourceField}
+                    options={fieldOptions}
+                    allowCustom
                     placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Field…" })}
-                    on:input={(e) => updateAggColumn(i, ci, inputVal(e), col.function)}
+                    ariaLabel={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Field…" })}
+                    on:commit={(e) => updateAggColumn(i, ci, e.detail.value, col.function)}
                   />
-                  <input
-                    class="ppp-agg-fn-select"
-                    type="text"
-                    list="ppp-pipeline-agg-functions"
+                  <ComboField
+                    inputClass="ppp-agg-fn-select"
                     value={col.function}
+                    options={AGG_OPTIONS}
                     placeholder="SUM"
-                    on:input={(e) => updateAggColumn(i, ci, col.sourceField, inputVal(e))}
+                    ariaLabel={$i18n.t("views.dashboard.pipeline.aggregation-fn", { defaultValue: "Aggregation function" })}
+                    on:commit={(e) => updateAggColumn(i, ci, col.sourceField, e.detail.value)}
                   />
                   <button class="ppp-step-btn ppp-step-btn--danger" on:click={() => removeAggColumn(i, ci)}>?</button>
                 </div>
@@ -704,13 +733,14 @@
                     value={col.name}
                     on:change={(e) => updateComputeColumn(i, ci, e.currentTarget.value, col.expression)}
                   />
-                  <input
-                    class="ppp-compute-expr"
-                    type="text"
-                    list="ppp-pipeline-formula-hints"
-                    placeholder={$i18n.t("views.dashboard.pipeline.formula-placeholder")}
+                  <ComboField
+                    inputClass="ppp-compute-expr"
                     value={col.expression}
-                    on:input={(e) => updateComputeColumn(i, ci, col.name, inputVal(e))}
+                    options={FORMULA_OPTIONS}
+                    allowCustom
+                    placeholder={$i18n.t("views.dashboard.pipeline.formula-placeholder")}
+                    ariaLabel={$i18n.t("views.dashboard.pipeline.formula-placeholder")}
+                    on:commit={(e) => updateComputeColumn(i, ci, col.name, e.detail.value)}
                   />
                   <button class="ppp-step-btn ppp-step-btn--danger" on:click={() => removeComputeColumn(i, ci)}>?</button>
                 </div>
@@ -721,34 +751,36 @@
 
             <!-- === PIVOT === -->
             {:else if step.type === "pivot"}
+              <!-- svelte-ignore a11y-label-has-associated-control -->
               <label class="ppp-step-field">
                 <span>{$i18n.t("views.dashboard.pipeline.category-field", { defaultValue: "Category field" })}</span>
-                <input
-                  type="text"
-                  list="ppp-pipeline-fields"
+                <ComboField
                   value={step.categoryField}
+                  options={fieldOptions}
+                  allowCustom
                   placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Select field…" })}
-                  on:input={(e) => updateStep(i, { ...step, categoryField: inputVal(e) })}
+                  on:commit={(e) => updateStep(i, { ...step, categoryField: e.detail.value })}
                 />
               </label>
+              <!-- svelte-ignore a11y-label-has-associated-control -->
               <label class="ppp-step-field">
                 <span>{$i18n.t("views.dashboard.pipeline.value-field", { defaultValue: "Value field" })}</span>
-                <input
-                  type="text"
-                  list="ppp-pipeline-fields"
+                <ComboField
                   value={step.valueField}
+                  options={fieldOptions}
+                  allowCustom
                   placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Select field…" })}
-                  on:input={(e) => updateStep(i, { ...step, valueField: inputVal(e) })}
+                  on:commit={(e) => updateStep(i, { ...step, valueField: e.detail.value })}
                 />
               </label>
+              <!-- svelte-ignore a11y-label-has-associated-control -->
               <label class="ppp-step-field">
                 <span>{$i18n.t("views.dashboard.pipeline.aggregation-fn", { defaultValue: "Aggregation function" })}</span>
-                <input
-                  type="text"
-                  list="ppp-pipeline-agg-functions"
+                <ComboField
                   value={step.aggregation}
+                  options={AGG_OPTIONS}
                   placeholder="SUM"
-                  on:input={(e) => updatePivotAggregation(i, inputVal(e).toUpperCase())}
+                  on:commit={(e) => updatePivotAggregation(i, e.detail.value.toUpperCase())}
                 />
               </label>
 
@@ -793,14 +825,15 @@
 
             <!-- === UNNEST === -->
             {:else if step.type === "unnest"}
+              <!-- svelte-ignore a11y-label-has-associated-control -->
               <label class="ppp-step-field">
                 <span>{$i18n.t("views.dashboard.pipeline.source-field", { defaultValue: "Array field to expand" })}</span>
-                <input
-                  type="text"
-                  list="ppp-pipeline-fields"
+                <ComboField
                   value={step.field}
+                  options={fieldOptions}
+                  allowCustom
                   placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Select field…" })}
-                  on:input={(e) => updateStep(i, { ...step, field: inputVal(e) })}
+                  on:commit={(e) => updateStep(i, { ...step, field: e.detail.value })}
                 />
               </label>
               <label class="ppp-step-field">
@@ -920,24 +953,6 @@
     {/each}
   </div>
 
-  <datalist id="ppp-pipeline-fields">
-    {#each fieldNames as name}
-      <option value={name} />
-    {/each}
-  </datalist>
-
-  <datalist id="ppp-pipeline-agg-functions">
-    {#each AGG_FUNCTIONS as fn}
-      <option value={fn} />
-    {/each}
-  </datalist>
-
-  <datalist id="ppp-pipeline-formula-hints">
-    {#each FORMULA_SUGGESTIONS as fnHint}
-      <option value={fnHint} />
-    {/each}
-  </datalist>
-
   <div class="ppp-pipeline-footer">
     {#if steps.length > 0}
       <button class="ppp-btn ppp-btn--ghost" on:click={handleClearPipeline}>
@@ -952,6 +967,8 @@
 </div>
 
 <style>
+  .ppp-pipeline-intent { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; padding: 0.5rem; border-radius: var(--radius-s, 0.25rem); background: var(--background-secondary); }
+  .ppp-pipeline-intent-hint { margin: 0; flex: 1 1 12rem; font-size: var(--font-ui-small); color: var(--text-normal); }
   .ppp-pipeline-editor {
     display: flex;
     flex-direction: column;
@@ -1224,7 +1241,7 @@
     gap: 0.375rem;
   }
 
-  .ppp-step-field input[type="text"] {
+  .ppp-step-field :global(input[type="text"]) {
     padding: 0.25rem 0.375rem;
     font-size: var(--font-ui-small);
     background: var(--background-primary);
@@ -1334,8 +1351,12 @@
     flex-wrap: wrap;
   }
 
-  .ppp-filter-field-select {
+  /* The field box is a ComboField: its wrapper takes the room, its input the look. */
+  .ppp-filter-row > :global(.ppp-combo) {
     min-width: 7rem;
+  }
+
+  .ppp-filter-row :global(.ppp-filter-field-select) {
     padding: 0.25rem 0.375rem;
     font-size: var(--font-ui-smaller);
     background: var(--background-primary);
@@ -1372,8 +1393,8 @@
     gap: 0.25rem;
   }
 
-  .ppp-agg-field-select,
-  .ppp-agg-fn-select {
+  .ppp-agg-row :global(.ppp-agg-field-select),
+  .ppp-agg-row :global(.ppp-agg-fn-select) {
     padding: 0.25rem 0.375rem;
     font-size: var(--font-ui-smaller);
     background: var(--background-primary);
@@ -1382,12 +1403,13 @@
     color: var(--text-normal);
   }
 
-  .ppp-agg-field-select {
+  /* Both boxes are ComboFields: the wrapper takes the room, the input the look. */
+  .ppp-agg-row > :global(.ppp-combo:nth-child(1)) {
     flex: 1;
     min-width: 7rem;
   }
 
-  .ppp-agg-fn-select {
+  .ppp-agg-row > :global(.ppp-combo:nth-child(2)) {
     min-width: 6rem;
   }
 
@@ -1408,9 +1430,13 @@
     color: var(--text-normal);
   }
 
-  .ppp-compute-expr {
+  /* The formula box is a ComboField: its wrapper takes the room, its input the look. */
+  .ppp-compute-row > :global(.ppp-combo) {
     flex: 1;
     min-width: 8rem;
+  }
+
+  .ppp-compute-row :global(.ppp-compute-expr) {
     padding: 0.25rem 0.375rem;
     font-size: var(--font-ui-smaller);
     background: var(--background-primary);

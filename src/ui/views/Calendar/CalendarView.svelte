@@ -1,8 +1,10 @@
 <script lang="ts">
   import { loadAppLocal, saveAppLocal } from "src/lib/appStorage";
+  import { isAgendaCollapsed, isAgendaExpanded, shouldMountAgenda } from "./agenda/agendaVisibility";
   import dayjs from "dayjs";
-  import { Notice } from "obsidian";
+  import { Notice, TFile } from "obsidian";
   import { createDataRecord } from "src/lib/dataApi";
+  import { buildDuplicateValues, extractNoteBody } from "src/lib/duplicate/duplicateValues";
   import {
     DataFieldType,
     type DataField,
@@ -13,7 +15,7 @@
   import { formatDateForProject, getFilterValuesFromConditions } from "src/lib/helpers";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
-  import { openRecord, modeFromNewLeaf, PLAIN_MODE } from "src/lib/record/openRecord";
+  import { activateRecord, openRecord, modeFromNewLeaf, PLAIN_MODE } from "src/lib/record/openRecord";
   import { settings } from "src/lib/stores/settings";
   import { isMobileDevice } from "src/lib/stores/ui";
   import { agendaDrawer, close as closeAgendaDrawer } from "src/lib/stores/agendaDrawer";
@@ -30,7 +32,7 @@
     getRecordColorContext,
   } from "src/ui/views/helpers";
   import { get } from "svelte/store";
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import {
     getFirstDayOfWeek,
     parseDateInTimezone,
@@ -42,12 +44,14 @@
   import { ErrorBoundary } from "src/ui/components/ErrorBoundary";
   import AgendaSidebar from "./components/Timeline/AgendaSidebar.svelte";
   import { DayPopup } from "./components/DayPopup";
-  import type { CalendarConfig, ProcessedCalendarData } from "./types";
+  import { DuplicatePopup } from "./components/DuplicatePopup";
+  import type { CalendarConfig, ProcessedCalendarData, ProcessedRecord } from "./types";
   import type { CalendarInterval } from "./calendar";
   import { processCalendarData } from "./processor";
   import { calendarLogger } from "./logger";
   import { ZOOM_LEVELS, TIMING } from "./constants";
   import type { RecordChangeOptions } from "./dnd/types";
+  import { buildRecordChangeUpdates, detectTimeModel } from "./dnd/recordChangeUpdates";
   import { setHapticEnabled } from "./dnd/HapticManager";
   
   // Navigation & Animation Controllers (v3.0.0)
@@ -895,41 +899,47 @@
   let showDayPopup = false;
   let dayPopupDate: dayjs.Dayjs = dayjs();
   let dayPopupRecords: DataRecord[] = [];
-  let dayPopupAnchorX: number | undefined = undefined;
-  let dayPopupAnchorY: number | undefined = undefined;
-  
+  // B10: the day window anchors at the tapped day (FloatingPopup); a day opened
+  // without a tap anchors at the calendar itself.
+  let calendarRootEl: HTMLElement | null = null;
+  // The element the day was tapped on: where focus goes back to when the
+  // duplicate window opened from that day's popup closes.
+  let dayTapOrigin: HTMLElement | null = null;
+
+  // Duplicate window state. It lives HERE, not in DayPopup: the day popup
+  // closes the moment the window opens, and a window owned by it would be
+  // destroyed with it.
+  type DuplicateRequest = {
+    record: DataRecord;
+    processed: ProcessedRecord;
+    // The data as it was when the window opened: the window re-reads its
+    // source on every change of this, and a note created meanwhile must not
+    // reset the selection.
+    existing: ProcessedCalendarData;
+  };
+  let duplicateRequest: DuplicateRequest | null = null;
+
   /**
    * Handle day tap/click - opens popup with day's events
    * v6.0: Works on both mobile AND desktop
    * @param date - The date that was tapped/clicked
    * @param records - Records for that date
-   * @param event - Optional mouse/touch event for positioning
+   * @param event - Optional mouse/touch event: its target anchors the window
    */
   function handleDayTap(date: dayjs.Dayjs, records: DataRecord[], event?: MouseEvent | TouchEvent) {
     dayPopupDate = date;
     dayPopupRecords = records;
-    
-    // Extract click position for desktop popup positioning
-    if (event) {
-      if ('clientX' in event) {
-        dayPopupAnchorX = event.clientX;
-        dayPopupAnchorY = event.clientY;
-      } else if (event.changedTouches?.[0]) {
-        dayPopupAnchorX = event.changedTouches[0].clientX;
-        dayPopupAnchorY = event.changedTouches[0].clientY;
-      }
-    } else {
-      // No event - use center of screen
-      dayPopupAnchorX = undefined;
-      dayPopupAnchorY = undefined;
-    }
-    
+    // Duck-typed: in a popout window the target is not an instance of THIS
+    // bundle's HTMLElement.
+    const tapTarget = event?.target;
+    dayTapOrigin = tapTarget && "closest" in tapTarget ? (tapTarget as HTMLElement) : null;
+
     showDayPopup = true;
   }
   
   function handleDayPopupRecordClick(record: DataRecord) {
     showDayPopup = false;
-    // v3.0.8: Open modal (intermediate step) instead of direct note open
+    // B10: the day window's "Open" opens the peek, like every other surface.
     handleRecordClick(record);
   }
   
@@ -1028,35 +1038,34 @@
     try {
       const startFieldName = dateField.name;
       const endFieldName = endDateField?.name;
-      const startDate = parseDateInTimezone(record.values[startFieldName], timezoneValue);
-      const endDate = endFieldName
-        ? parseDateInTimezone(record.values[endFieldName], timezoneValue)
+      const sourceStart = parseDateInTimezone(record.values[startFieldName], timezoneValue, project.dateFormat?.writeFormat);
+      const sourceEnd = endFieldName
+        ? parseDateInTimezone(record.values[endFieldName], timezoneValue, project.dateFormat?.writeFormat)
         : null;
-
-      const spanDays = startDate && endDate
-        ? Math.max(0, endDate.startOf('day').diff(startDate.startOf('day'), 'day'))
-        : 0;
+      // The copy keeps the note's text. Read before anything is created, so a
+      // note that cannot be read fails the whole duplicate instead of leaving
+      // copies without their body.
+      const body = await readSourceBody(record);
 
       for (const targetDate of targetDates) {
         // Create a new record with the same content but different date
         const baseName = record.id.split('/').pop()?.replace('.md', '') || 'note';
-        
-        // Build new date value - use customTime if provided, otherwise use targetDate
-        const hasTimeInField = dateField.typeConfig?.time ?? false;
-        let newStartValue: string;
-        if (customTime && hasTimeInField) {
-          // Apply custom time to target date (only if field supports time)
-          const newStart = targetDate
-            .hour(customTime.startTime.hour())
-            .minute(customTime.startTime.minute());
-          newStartValue = formatDateForProject(newStart, project) ?? newStart.format('YYYY-MM-DD HH:mm');
-        } else {
-          newStartValue = formatDateForProject(targetDate, project) ?? targetDate.format('YYYY-MM-DD');
-        }
-        
-        const newValues: Record<string, unknown> = {
-          ...record.values,
-        };
+
+        // The values of the copy: stored ones only, the chosen time in the
+        // note's own time model, the date in the source's shape, the span kept.
+        const newValues = buildDuplicateValues({
+          values: record.values,
+          fields,
+          dateFieldName: startFieldName,
+          endDateFieldName: endFieldName,
+          startTimeFieldName: config?.startTimeField || 'startTime',
+          endTimeFieldName: config?.endTimeField || 'endTime',
+          sourceStart,
+          sourceEnd,
+          targetDate,
+          customTime: customTime ?? null,
+          dateFormat: project.dateFormat?.writeFormat,
+        });
 
         // When dateField is "name", the date goes into the filename, not frontmatter
         let effectiveName: string;
@@ -1068,30 +1077,15 @@
             ? `${datePrefix} ${nameWithoutDate}_copy`
             : `${datePrefix}_copy`;
         } else {
-          newValues[startFieldName] = newStartValue;
           effectiveName = baseName + '_copy_' + (formatDateForProject(targetDate, project) ?? targetDate.format('YYYY-MM-DD'));
         }
-        
-        // Handle end date
-        if (endFieldName && spanDays > 0) {
-          const hasTimeInEnd = endDateField?.typeConfig?.time ?? false;
-          if (customTime && hasTimeInEnd) {
-            const newEnd = targetDate
-              .add(spanDays, 'day')
-              .hour(customTime.endTime.hour())
-              .minute(customTime.endTime.minute());
-            newValues[endFieldName] = formatDateForProject(newEnd, project) ?? newEnd.format('YYYY-MM-DD HH:mm');
-          } else {
-            newValues[endFieldName] = formatDateForProject(targetDate.add(spanDays, 'day'), project) ?? targetDate.add(spanDays, 'day').format('YYYY-MM-DD');
-          }
-        }
-        
+
         const newRecord = createDataRecord(
           effectiveName,
           project,
           newValues as Record<string, import('src/lib/dataframe/dataframe').Optional<import('src/lib/dataframe/dataframe').DataValue>>
         );
-        await api.addRecord(newRecord, fields, "");
+        await api.addRecord(newRecord, fields, "", body);
       }
       new Notice(get(i18n).t("views.calendar.notices.duplicated", { defaultValue: "Note duplicated to {{count}} date(s)", count: targetDates.length }));
     } catch (error) {
@@ -1100,6 +1094,56 @@
     }
   }
   
+  /**
+   * The text of the source note under its frontmatter. Empty when the record is
+   * not a note in the vault, so a virtual record still duplicates.
+   */
+  async function readSourceBody(record: DataRecord): Promise<string> {
+    const app_instance = get(app);
+    const file = app_instance.vault.getAbstractFileByPath(record.id);
+    if (!(file instanceof TFile)) return "";
+    return extractNoteBody(await app_instance.vault.read(file));
+  }
+
+  /**
+   * The day popup asked for the duplicate window. The popup closes and the
+   * window opens as a layer of its own: it is owned by this view, so closing
+   * the popup cannot take it down.
+   */
+  function handleDayPopupRecordDuplicateRequest(record: DataRecord) {
+    if (dataReadOnly || !processedData) return;
+    const processed = processedData.processed.find((pr) => pr.record.id === record.id);
+    if (!processed) return;
+    duplicateRequest = { record, processed, existing: processedData };
+    showDayPopup = false;
+  }
+
+  function handleDuplicateConfirm(detail: {
+    targetDates: dayjs.Dayjs[];
+    customTime: { startTime: dayjs.Dayjs; endTime: dayjs.Dayjs } | null;
+  }) {
+    if (!duplicateRequest) return;
+    void handleDayPopupRecordDuplicate({
+      record: duplicateRequest.record,
+      targetDates: detail.targetDates,
+      customTime: detail.customTime,
+    });
+  }
+
+  /**
+   * The window closed, by confirm, cancel, Escape or backdrop. Focus goes back
+   * to the control the day was opened from: the popup it would have returned to
+   * is gone, and the trap only restores focus to a control that still exists.
+   */
+  function handleDuplicateClose() {
+    duplicateRequest = null;
+    const origin = dayTapOrigin?.closest<HTMLElement>("button, a[href], input, select, textarea, [tabindex]") ?? null;
+    dayTapOrigin = null;
+    void tick().then(() => {
+      if (origin?.isConnected) origin.focus({ preventScroll: true });
+    });
+  }
+
   async function handleDayPopupRecordCheck(record: DataRecord, checked: boolean) {
     if (dataReadOnly) return;
     if (!booleanField) return;
@@ -1211,26 +1255,27 @@
   //   → $: block runs → writes -1/'' (even same values) → $$invalidate → component dirty
   //   → flush() sees dirty[0] === -1 (reset before fragment.p runs) → pushes back → re-runs → ∞
   // Function body is NOT analyzed for $: dependencies — only the explicit arguments are tracked.
-  $: updateProcessedData(dateField, config, records, dataVersion, frame, getRecordColor);
+  $: updateProcessedData(dateField, config, records, dataVersion, frame, getRecordColor, project.dateFormat?.writeFormat);
   function updateProcessedData(
     df: typeof dateField,
     cfg: typeof config,
     recs: typeof records,
     dv: typeof dataVersion,
     fr: typeof frame,
-    getColor: typeof getRecordColor
+    getColor: typeof getRecordColor,
+    writeFormat?: string
   ): void {
     const startField = df?.name;
     
     if (startField && cfg && recs && recs.length > 0) {
       // Cheap change detection: dataVersion increments on every data update,
       // configKey only includes fields that affect processing
-      const configKey = `${cfg.startDateField}|${cfg.endDateField}|${cfg.startTimeField}|${cfg.endTimeField}|${cfg.eventColorField}|${cfg.timezone}|${cfg.startHour}|${cfg.endHour}`;
+      const configKey = `${cfg.startDateField}|${cfg.endDateField}|${cfg.startTimeField}|${cfg.endTimeField}|${cfg.eventColorField}|${cfg.timezone}|${cfg.startHour}|${cfg.endHour}|${writeFormat}`;
       
       if (dv !== lastProcessedVersion || configKey !== lastProcessedConfigKey) {
         lastProcessedVersion = dv;
         lastProcessedConfigKey = configKey;
-        cachedProcessedData = processCalendarData(fr, cfg, getColor);
+        cachedProcessedData = processCalendarData(fr, cfg, getColor, writeFormat);
         calendarLogger.debug('[Perf] processCalendarData called', { data: { dataVersion: dv, records: recs.length } });
       }
     } else {
@@ -1332,7 +1377,8 @@
         startDateField?.name,
         undefined, // creation date field is not used for event start
         endDateField?.name,
-        timezoneValue
+        timezoneValue,
+        project.dateFormat?.writeFormat
       );
       const targetDate = date.startOf('day');
 
@@ -1341,21 +1387,15 @@
       //   - If date field has embedded time (e.g. "2026-03-12T14:30:00") → embedded model
       //   - If date field has NO embedded time but startTime/endTime fields exist → separate model
       // Writing to the wrong model corrupts the data permanently.
-      const rawStartValue = record.values[dateField.name];
-      // v3.3.6: Detect embedded time ONLY from actual raw value format, not typeConfig.
-      // Using typeConfig?.time caused date-only records to get T00:00:00 corruption
-      // when the project had time support enabled but the record had no time.
-      // The /T\d{2}:\d{2}/ pattern requires the ISO "T" separator — won't match plain "YYYY-MM-DD".
-      const startHasEmbeddedTime = typeof rawStartValue === 'string' && /T\d{2}:\d{2}/.test(rawStartValue);
-
+      // v3.3.6: Embedded time is detected ONLY from the raw value format, not typeConfig
+      // (detectTimeModel in dnd/recordChangeUpdates.ts).
       const startTimeFieldName = config?.startTimeField || 'startTime';
       const endTimeFieldName = config?.endTimeField || 'endTime';
-      const hasSeparateStartTime = !startHasEmbeddedTime
-        && typeof record.values[startTimeFieldName] === 'string'
-        && /^\d{2}:\d{2}$/.test(record.values[startTimeFieldName] as string);
-
-      // useSeparateTimeFields: true when the record uses the "date + startTime/endTime" model
-      const useSeparateTimeFields = hasSeparateStartTime;
+      const { startHasEmbeddedTime, hasSeparateStartTime } = detectTimeModel(
+        record.values,
+        dateField.name,
+        startTimeFieldName
+      );
 
       // Validate target date
       const hasAnyTime = startHasEmbeddedTime || hasSeparateStartTime || !!options?.startTime;
@@ -1366,23 +1406,25 @@
         return;
       }
 
-      // Build the new start datetime (used for validation and embedded-time writes)
-      let newStartDate: dayjs.Dayjs;
-      if (options?.startTime) {
-        const [h, m] = options.startTime.split(':').map(Number);
-        newStartDate = targetDate.hour(h ?? 0).minute(m ?? 0).second(0);
-      } else if (startHasEmbeddedTime && originalStart) {
-        // Embedded time model: preserve original hours/minutes
-        newStartDate = targetDate
-          .hour(originalStart.hour())
-          .minute(originalStart.minute())
-          .second(originalStart.second());
-      } else if (hasSeparateStartTime) {
-        // Separate time model: combine date + startTime for validation
-        const timeParts = (record.values[startTimeFieldName] as string).split(':').map(Number);
-        newStartDate = targetDate.hour(timeParts[0] ?? 0).minute(timeParts[1] ?? 0).second(0);
-      } else {
-        newStartDate = targetDate;
+      // Which fields change and to what is decided by the pure builder
+      // (dnd/recordChangeUpdates.ts): it respects the time model, keeps the
+      // duration on a move and writes the end time with or without an end-date field.
+      const endRawValue = endDateField?.name ? record.values[endDateField.name] : undefined;
+      const built = buildRecordChangeUpdates({
+        values: record.values,
+        dateFieldName: dateField.name,
+        endDateFieldName: endDateField?.name,
+        startTimeFieldName,
+        endTimeFieldName,
+        targetDate,
+        options,
+        originalStart,
+        originalEnd: endDateField?.name ? parseDateInTimezone(endRawValue, timezoneValue, project.dateFormat?.writeFormat) : null,
+        validateEndShift: (orig, next, hasTime) => validateDateUpdate(orig, next, hasTime, timezoneValue),
+      });
+      const newStartDate = built.newStartDate;
+      for (const warning of built.warnings) {
+        calendarLogger.warn(warning, { component: 'CalendarView' });
       }
 
       // When dateField is "name", the date is stored in the filename — rename the file
@@ -1408,92 +1450,9 @@
         return;
       }
 
-      // ── Build updates object ──────────────────────────────────────────────
-      // v3.2.2: Respect the time model — write to the correct fields.
-      const updates: Record<string, string> = {};
-
-      if (useSeparateTimeFields || (!startHasEmbeddedTime && options?.startTime)) {
-        // ── Separate time model (or date-only field with DnD-provided time):
-        // v3.3.6: date field stays YYYY-MM-DD. Any time goes to startTime field.
-        // This prevents T00:00:00 corruption when options.startTime is provided
-        // for a record that doesn't use embedded time format.
-        updates[dateField.name] = targetDate.format("YYYY-MM-DD");
-
-        if (options?.startTime) {
-          // DnD provided explicit start time → write to startTime field
-          updates[startTimeFieldName] = options.startTime;
-        }
-        // If no explicit startTime from DnD, leave the existing startTime field untouched
-      } else if (startHasEmbeddedTime) {
-        // ── Embedded time model: date field is YYYY-MM-DDTHH:mm:ss ──
-        updates[dateField.name] = newStartDate.format("YYYY-MM-DDTHH:mm:ss");
-      } else {
-        // ── No time at all: date field is YYYY-MM-DD ──
-        updates[dateField.name] = targetDate.format("YYYY-MM-DD");
-      }
-
-      // Handle end date with delta shift and time preservation
-      if (endDateField?.name) {
-        const endRaw = record.values[endDateField.name];
-        const originalEnd = parseDateInTimezone(endRaw, timezoneValue);
-        // v3.3.6: Detect embedded time from actual value only (same fix as startDate)
-        const endHasEmbeddedTime = typeof endRaw === 'string' && /T\d{2}:\d{2}/.test(endRaw);
-        const hasSeparateEndTime = !endHasEmbeddedTime
-          && typeof record.values[endTimeFieldName] === 'string'
-          && /^\d{2}:\d{2}$/.test(record.values[endTimeFieldName] as string);
-        
-        if (options?.endTime) {
-          if (useSeparateTimeFields || hasSeparateEndTime || !endHasEmbeddedTime) {
-            // v3.3.6: Separate model or date-only end field — write time to separate field
-            updates[endTimeFieldName] = options.endTime;
-            const endDateDay = options.endDate ?? targetDate;
-            updates[endDateField.name] = endDateDay.format("YYYY-MM-DD");
-          } else {
-            // Embedded model: combine date+time into endDate field
-            const [eh, em] = options.endTime.split(':').map(Number);
-            let newEndDate = (options.endDate ?? targetDate).hour(eh ?? 0).minute(em ?? 0).second(0);
-            if (newEndDate.isBefore(newStartDate)) {
-              newEndDate = newStartDate;
-            }
-            updates[endDateField.name] = newEndDate.format(
-              endHasEmbeddedTime ? "YYYY-MM-DDTHH:mm:ss" : "YYYY-MM-DD"
-            );
-          }
-        } else if (options?.endDate) {
-          // Strip DnD — explicit end date without time change
-          let newEndDate = options.endDate;
-          if (endHasEmbeddedTime && originalEnd) {
-            newEndDate = newEndDate.hour(originalEnd.hour()).minute(originalEnd.minute()).second(originalEnd.second());
-          }
-          if (newEndDate.isBefore(newStartDate)) {
-            newEndDate = newStartDate;
-          }
-          updates[endDateField.name] = newEndDate.format(
-            endHasEmbeddedTime ? "YYYY-MM-DDTHH:mm:ss" : "YYYY-MM-DD"
-          );
-        } else if (originalStart && originalEnd) {
-          // Calculate day delta (how many days we moved)
-          const deltaDays = targetDate.diff(originalStart.startOf('day'), 'day');
-          
-          if (deltaDays !== 0) {
-            let newEndDate = originalEnd.add(deltaDays, 'day');
-            
-            const endValidation = validateDateUpdate(originalEnd, newEndDate, endHasEmbeddedTime, timezoneValue);
-            if (!endValidation.isValid) {
-              calendarLogger.warn('End date validation failed, skipping end date update', { component: 'CalendarView', data: { error: endValidation.error } });
-            } else {
-              if (newEndDate.isBefore(newStartDate)) {
-                calendarLogger.warn('End date would be before start date, adjusting to match start', { component: 'CalendarView' });
-                newEndDate = newStartDate;
-              }
-              
-              updates[endDateField.name] = newEndDate.format(
-                endHasEmbeddedTime ? "YYYY-MM-DDTHH:mm:ss" : "YYYY-MM-DD"
-              );
-            }
-          }
-        }
-      }
+      // Start/end writes (end date delta shift, time preservation, end time with or
+      // without an end-date field) come from buildRecordChangeUpdates above.
+      const updates = built.updates;
 
       // Apply update with validated data
       const updatedRecord = updateRecordValues(record, updates);
@@ -1557,63 +1516,17 @@
     }
   }
 
-  function handleRecordClick(entry: DataRecord) {
-    if (!entry) {
-      calendarLogger.warn('No entry provided for record click', { component: 'CalendarView' });
-      return;
-    }
-
-    if (dataReadOnly) {
-      void openRecord({ id: entry.id }, PLAIN_MODE, { app: get(app) });
-      return;
-    }
-
-    try {
-      const app_instance = get(app);
-      new EditNoteModal(
-        app_instance,
-        fields,
-        async (record) => {
-          try {
-            await api.updateRecord(record, fields);
-            // Force local update to trigger calendar re-render
-            frame = {
-              ...frame,
-              records: frame.records.map(r => r.id === record.id ? record : r)
-            };
-          } catch (error) {
-            calendarLogger.error('Error updating record in modal', error, { component: 'CalendarView', action: 'modalUpdate' });
-            new Notice(noticeFor(EDITOR_SAVE_FAILED));
-          }
-        },
-        entry,
-        records,
-        // v3.0.8: Unified note open with modifier-based navigation
-        (openMode) => {
-          void openRecord({ id: entry.id }, modeFromNewLeaf(openMode), { app: app_instance });
-        },
-        // v3.0.1: Rename note callback
-        async (newName: string) => {
-          try {
-            const file = app_instance.vault.getAbstractFileByPath(entry.id);
-            if (file && 'parent' in file) {
-              const newPath = file.parent?.path 
-                ? `${file.parent.path}/${newName}.md`
-                : `${newName}.md`;
-              await app_instance.fileManager.renameFile(file as any, newPath);
-              new Notice(get(i18n).t("views.calendar.notices.renamed", { defaultValue: "Note renamed: {{name}}", name: newName }));
-            }
-          } catch (e) {
-            calendarLogger.error('Failed to rename note', e);
-            new Notice(noticeFor(RENAME_FAILED));
-          }
-        },
-        // v3.0.4: Autosave setting from project
-        project.autosave ?? true
-      ).open();
-    } catch (error) {
-      calendarLogger.error('Error opening edit modal', error, { component: 'CalendarView', action: 'openModal' });
-    }
+  /**
+   * B10 — every plain activation of a record in the calendar (an event in any
+   * scale, an agenda row, the day window's "Open") opens the peek, like the
+   * table and the gallery (decision 2026-10-14 in `openRecord.ts`). The leaves
+   * resolve Shift/Ctrl themselves; the agenda hands its event up. A read-only
+   * source opens a read-only peek. The editor stays in the day window's
+   * settings entry (`handleDayPopupRecordSettings`).
+   */
+  function handleRecordClick(entry: DataRecord, event?: MouseEvent) {
+    if (!entry) return;
+    void activateRecord({ id: entry.id, readonly: dataReadOnly || readonly }, event, { app: get(app) });
   }
 
   /**
@@ -1711,8 +1624,6 @@
 
   // Agenda Logic
   $: agendaDate = focusedDate ?? dayjs();
-  // Desktop uses local visibility state, mobile uses config
-  let desktopAgendaVisible = true;
   // Sync agendaVisible with config for mobile in day scale
   // On mobile day scale, agendaOpen controls visibility directly
   // Mobile drawer is local state that always starts closed on mount: persisted
@@ -1724,24 +1635,11 @@
   $: drawerOpen = drawerKey ? $agendaDrawer[drawerKey] === true : false;
   $: agendaVisible = isMobile
     ? drawerOpen  // Mobile: session store
-    : desktopAgendaVisible;  // Desktop: use local state
+    : true;  // Desktop: always mounted; collapsed via config.agendaOpen
 
-  function handleAgendaRecordClick(id: string) {
+  function handleAgendaRecordClick(id: string, event?: MouseEvent) {
     const record = records.find((r: DataRecord) => r.id === id);
-    if (record) {
-      handleRecordClick(record);
-    }
-  }
-  
-  /**
-   * v3.0.8: Open record in new window from AgendaSidebar
-   */
-  function handleAgendaOpenInNewWindow(event: CustomEvent<{id: string}>) {
-    const { id } = event.detail;
-    const app_instance = get(app);
-    // On mobile use 'tab' (window not supported), on desktop use 'window'
-    const openMode = isMobile ? 'tab' : 'window';
-    void openRecord({ id }, modeFromNewLeaf(openMode), { app: app_instance });
+    if (record) void activateRecord({ id: record.id, readonly: dataReadOnly || readonly }, event, { app: get(app) });
   }
   
   /**
@@ -1770,7 +1668,7 @@
       ...latest,
       agenda: {
         ...latest.agenda,
-        mode: latest.agenda?.mode ?? 'standard',
+        mode: latest.agenda?.mode ?? 'custom',
         standard: {
           inheritCalendarFilters: latest.agenda?.standard?.inheritCalendarFilters ?? true,
         },
@@ -1801,7 +1699,7 @@
       ...latest,
       agenda: {
         ...latest.agenda,
-        mode: latest.agenda?.mode ?? 'standard',
+        mode: latest.agenda?.mode ?? 'custom',
         standard: {
           inheritCalendarFilters: latest.agenda?.standard?.inheritCalendarFilters ?? true,
         },
@@ -1839,7 +1737,7 @@
       ...latest,
       agenda: {
         ...latest.agenda,
-        mode: latest.agenda?.mode ?? 'standard',
+        mode: latest.agenda?.mode ?? 'custom',
         standard: {
           inheritCalendarFilters: latest.agenda?.standard?.inheritCalendarFilters ?? true,
         },
@@ -1867,8 +1765,8 @@
       closeAgendaDrawer(drawerKey);
       return;
     }
-    // Desktop: toggle local state
-    desktopAgendaVisible = !desktopAgendaVisible;
+    // Desktop: collapse/expand the panel, persisted through the view config
+    if (config) saveConfig({ ...config, agendaOpen: !isAgendaExpanded(config.agendaOpen) });
   }
   
   getRecordColorContext.set(getRecordColor);
@@ -1903,6 +1801,7 @@
 <ViewLayout>
 
   <div 
+    bind:this={calendarRootEl}
     class="calendar-zoom-container"
     use:gestureAction={{ handlers: _gestureHandlers }}
     use:ignoreHostSwipe
@@ -2033,7 +1932,7 @@
 
     <!-- Agenda sidebar: Available on ALL devices (matryoshka principle) -->
     <!-- Desktop: Side panel with collapse, Mobile: Full drawer show/hide -->
-    {#if interval === 'day' || config?.agendaOpen || (isMobile && drawerOpen)}
+    {#if shouldMountAgenda({ isMobile, interval, drawerOpen })}
       <AgendaSidebar 
         project={project}
         records={agendaSidebarRecords}
@@ -2048,9 +1947,8 @@
         onRecordClick={handleAgendaRecordClick}
         onCreateRecord={(date) => handleRecordAdd(date)}
         visible={agendaVisible}
-        collapsed={!isMobile && config?.agendaOpen === false}
+        collapsed={isAgendaCollapsed(isMobile, config?.agendaOpen)}
         on:toggle={handleAgendaToggle}
-        on:openInNewWindow={handleAgendaOpenInNewWindow}
         on:saveList={handleAgendaSaveList}
         on:deleteList={handleAgendaDeleteList}
         on:reorderLists={handleAgendaReorderLists}
@@ -2125,21 +2023,35 @@
     checkField={booleanField?.name}
     {getRecordColor}
     eventColorField={config?.eventColorField}
-    processedData={processedData}
-    {firstDayOfWeek}
     visible={showDayPopup}
-    anchorX={dayPopupAnchorX}
-    anchorY={dayPopupAnchorY}
+    anchorEl={dayTapOrigin?.isConnected ? dayTapOrigin : calendarRootEl}
     on:close={() => showDayPopup = false}
     on:recordClick={({ detail }) => handleDayPopupRecordClick(detail)}
     on:recordOpenInNewWindow={({ detail }) => handleDayPopupRecordOpenInNewWindow(detail)}
     on:recordSettings={({ detail }) => handleDayPopupRecordSettings(detail)}
     on:recordDelete={({ detail }) => handleDayPopupRecordDelete(detail)}
-    on:recordDuplicate={({ detail }) => handleDayPopupRecordDuplicate(detail)}
+    on:recordDuplicateRequest={({ detail }) => handleDayPopupRecordDuplicateRequest(detail)}
     on:recordCheck={({ detail }) => handleDayPopupRecordCheck(detail.record, detail.checked)}
     on:recordColorChange={({ detail }) => handleDayPopupRecordColorChange(detail.record, detail.color)}
     on:createNote={({ detail }) => handleDayPopupCreateNote(detail)}
   />
+
+  <!-- Duplicate window: owned by this view so it outlives the day popup, and
+       portalled to the body by the component so nothing covers it. -->
+  {#if duplicateRequest}
+    <DuplicatePopup
+      visible={true}
+      sourceRecord={duplicateRequest.processed}
+      existingData={duplicateRequest.existing}
+      {firstDayOfWeek}
+      displayMode="bars"
+      startHour={7}
+      endHour={21}
+      timezone={timezoneValue}
+      on:confirm={({ detail }) => handleDuplicateConfirm(detail)}
+      on:close={handleDuplicateClose}
+    />
+  {/if}
 </ViewLayout>
 </ErrorBoundary>
 

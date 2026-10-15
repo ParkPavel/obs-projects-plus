@@ -14,12 +14,10 @@
   import type { DataTableConfig, FieldPreset } from "../../types";
   import type { ProjectDefinition } from "src/settings/settings";
   import { createEventDispatcher, getContext, onDestroy } from "svelte";
-  import { get } from "svelte/store";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
   import { openRecord, modeFromEvent } from "src/lib/record/openRecord";
   import { settings as settingsStore } from "src/lib/stores/settings";
-  import { createRelationSetupController } from "src/ui/views/Dashboard/relationSetupController";
   import {
     SELECTION_CONTEXT_KEY,
     EMPTY_SELECTION,
@@ -28,16 +26,19 @@
   } from "../../canvasSelectionStore";
   import { computeAggregations } from "src/lib/dashboard-engine/aggregation";
   import { updateRecordValues } from "src/lib/datasources/helpers";
-  import { openContextMenu } from "src/lib/contextMenu";
   import { emitCommand } from "src/lib/stores/commandBus";
-  import { toRem } from "src/ui/utils/cssLength";
-  import { buildRowMenuEntries, createNamedRecord, isRowDriving, toggleRowSelection } from "./tableRowOps";
+  import { rootFontPx, toRem } from "src/ui/utils/cssLength";
+  import { rowWindow, type TableViewport } from "./tableWindow";
+  import { createTableSearch } from "./tableSearch";
+  import { parseSearchQuery } from "./tableSearchQuery";
+  import TableScrollFrame from "./TableScrollFrame.svelte";
+  import { createNamedRecord, isRowDriving } from "./tableRowOps";
+  import { openTableRowMenu, setupTableRelation } from "./tableInteractions";
   import { applySortPatch, applyHidePatch, applyCalculatePatch, applyWidthPatch, applyGroupPatch, toggleGroupCollapsed, optionPools } from "./tableHeaderOps";
   import {
     buildColumns,
     gridTemplate,
     applySort,
-    applySearch,
     activeSortCriteria,
     buildRenderRows,
   } from "./tableCanon";
@@ -70,7 +71,6 @@
 
   // F2.4+ consumers; accepted so the DatabaseCallBlock bridge stays stable.
   $: void getRecordColor; $: void fieldPresets; $: void activeFieldPresetId;
-
   // ── Selection Bus (driver) ───────────────────────────────────
   const selectionStore: SelectionStore | undefined = getContext(SELECTION_CONTEXT_KEY);
   let selection: SelectionState = EMPTY_SELECTION;
@@ -83,6 +83,13 @@
   }>();
 
   let searchQuery = "";
+  let visibleRecords: DataRecord[] = [];
+  let searching = false;
+  const search = createTableSearch(
+    (records) => { visibleRecords = records; },
+    (pending) => { searching = pending; },
+  );
+  onDestroy(search.destroy);
 
   $: columns = buildColumns(fields, config);
   // F2.4: live resize preview overrides one column width until commit.
@@ -92,29 +99,23 @@
   );
   $: sortCriteria = activeSortCriteria(config);
   $: sorted = applySort(frame.records, config);
-  $: visibleRecords = applySearch(sorted, searchQuery);
+  $: fieldNames = fields.map((f) => f.name);
+  $: search.update(sorted, searchQuery, bodyEl?.ownerDocument.defaultView ?? window, fieldNames);
+  $: highlight = searching ? null : parseSearchQuery(searchQuery, fieldNames);
   // F2.5: grouping flattens into the render list (group headers + records).
   $: renderRows = buildRenderRows(visibleRecords, config);
-
   $: rowHeightRem = config?.rowHeight === "compact" ? 1.75 : config?.rowHeight === "expanded" ? 3 : 2.25;
-
   $: optionsByField = optionPools(fields, frame.records);
 
   // ── Windowing (canon: simple overscan, no framework) ─────────
-  const OVERSCAN = 12;
   let bodyEl: HTMLDivElement | null = null;
-  let scrollTop = 0;
-  let viewportPx = 600;
-  $: rowPx = rowHeightRem * 16;
-  $: start = Math.max(0, Math.floor(scrollTop / rowPx) - OVERSCAN);
-  $: end = Math.min(renderRows.length, Math.ceil((scrollTop + viewportPx) / rowPx) + OVERSCAN);
+  let viewport: TableViewport = { scrollTop: 0, viewportPx: 600 };
+  // B3: a scroll that keeps the same rows in the window is not handed to Svelte.
+  const onViewport = (v: TableViewport) => { const w = rowWindow(renderRows.length, rowPx, v); if (w.start !== start || w.end !== end) viewport = v; };
+  // Visible part: measured against the scrolling ancestors (in a tile, the page), see tableWindow.
+  $: rowPx = rowHeightRem * rootFontPx(bodyEl?.ownerDocument);
+  $: ({ start, end } = rowWindow(renderRows.length, rowPx, viewport));
   $: windowed = renderRows.slice(start, end);
-
-  function onScroll() {
-    if (!bodyEl) return;
-    scrollTop = bodyEl.scrollTop;
-    viewportPx = bodyEl.clientHeight;
-  }
 
   // ── Editing (F2.2): one in-place editor per table ────────────
   let editingCell: { recordId: string; field: string } | null = null;
@@ -135,19 +136,12 @@
   }
 
   function handleRowMenu(e: CustomEvent<{ record: DataRecord; event: MouseEvent }>) {
-    const record = e.detail.record;
-    const primaryField = columns.find((c) => c.isPrimary)?.field.name ?? "name";
-    const entries = buildRowMenuEntries({
-      record, project, fields, api, readonly, sourceProjectId, app: $app ?? undefined,
+    openTableRowMenu(e.detail, {
+      project, fields, api, readonly, sourceProjectId, app: $app ?? undefined,
+      primaryField: columns.find((c) => c.isPrimary)?.field.name ?? "name",
+      selectionStore, selection, widgetId,
       t: (k, d) => $i18n.t(k, { defaultValue: d }),
-      selectionEntry: selectionStore && widgetId
-        ? {
-            driving: isRowDriving(selection, widgetId, record),
-            onToggle: () => toggleRowSelection({ store: selectionStore, selection, widgetId: widgetId!, primaryField, record }),
-          }
-        : undefined,
     });
-    openContextMenu(entries, e.detail.event);
   }
 
   // ── Aggregation footer ───────────────────────────────────────
@@ -170,25 +164,23 @@
   }
 
   function handleSetupRelation(field: DataField): void {
-    if (!project?.id) return;
-    const rel = (field.typeConfig as { relation?: { targetProjectId?: string; displayField?: string } } | undefined)?.relation;
-    const displayField = rel?.displayField;
-    void createRelationSetupController({ app: $app, api, getProjectId: () => project.id, getFrame: () => frame, getProjects: () => get(settingsStore).projects, t: (k, o) => o ? $i18n.t(k, o) : $i18n.t(k) })
-      .open({ fieldName: field.name, targetProjectId: rel?.targetProjectId ?? "", createSourceField: false, ...(displayField !== undefined ? { displayField } : {}) });
+    setupTableRelation(field, { app: $app, api, project, frame, t: (k, o) => o ? $i18n.t(k, o) : $i18n.t(k) });
   }
 </script>
 
-<div class="ppp-dt-content" style:--ppp-dt-columns={template} style:--ppp-t2-row-height={`${rowHeightRem}rem`}>
+<div class="ppp-dt-content" aria-busy={searching} style:--ppp-dt-columns={template} style:--ppp-t2-row-height={`${rowHeightRem}rem`}>
   <TableControlBar
     {sortCriteria}
     recordCount={visibleRecords.length}
+    {searching}
     {readonly}
+    {fieldNames}
+    records={sorted}
     on:search={(e) => (searchQuery = e.detail)}
     on:removeSort={handleRemoveSort}
   />
-  <!-- UT-R2 #083: ONE scroll container for header+rows+footer — horizontal
-       scroll moves them as a unit; header/footer stay sticky vertically. -->
-  <div class="ppp-t2-scroll" bind:this={bodyEl} on:scroll={onScroll} role="rowgroup">
+  <!-- UT-R2 #083 + B3: ONE scroll owner for header+rows+footer, both axes. -->
+  <TableScrollFrame bind:scroller={bodyEl} {onViewport} firstColRem={columns[0]?.widthRem ?? 0}>
     <div class="ppp-t2-table">
       <TableHeader
         {columns}
@@ -204,6 +196,11 @@
         on:resizeCommit={handleResizeCommit}
         on:addProperty={() => emitCommand("add-field")}
       />
+      {#if !searching && searchQuery.trim() !== "" && visibleRecords.length === 0}
+        <div class="ppp-t2-search-empty" role="status">
+          {$i18n.t("views.dashboard.database-call.no-matches", { defaultValue: "No matches" })}
+        </div>
+      {/if}
       {#if start > 0}<div style:height={toRem(start * rowPx)} aria-hidden="true" />{/if}
       {#each windowed as row (row.kind === "record" ? row.record.id : `g:${row.key}`)}
         {#if row.kind === "group"}
@@ -220,9 +217,11 @@
             {readonly}
             {api}
             {frame}
+            dateFormat={(sourceProjectId ? $settingsStore.projects.find(p => p.id === sourceProjectId) : project)?.dateFormat}
             driving={widgetId ? isRowDriving(selection, widgetId, row.record) : false}
             editingField={editingCell?.recordId === row.record.id ? editingCell.field : null}
             {optionsByField}
+            {highlight}
             on:openRecord={handleOpenRecord}
             on:rowMenu={handleRowMenu}
             on:startEdit={(e) => (editingCell = e.detail)}
@@ -241,7 +240,7 @@
         <TableFooter {columns} {aggregations} />
       {/if}
     </div>
-  </div>
+  </TableScrollFrame>
 </div>
 
 <style>
@@ -257,11 +256,6 @@
        CONTAINER_ROOTS, which excludes `.ppp-dt-content` by design. */
   }
 
-  .ppp-t2-scroll {
-    flex: 1;
-    overflow: auto;
-  }
-
   /* Width = widest grid row (fixed tracks), so sticky header/footer and
      rows share one horizontal coordinate system. */
   .ppp-t2-table {
@@ -273,5 +267,10 @@
 
   .ppp-t2-footer-spacer {
     flex: 1;
+  }
+
+  .ppp-t2-search-empty {
+    padding: var(--ppp-space-lg);
+    color: var(--text-muted);
   }
 </style>

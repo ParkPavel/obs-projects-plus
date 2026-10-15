@@ -22,6 +22,7 @@ views. Choose the guide that matches your task — each one exists in both langu
 | Задача / Task | Русский | English |
 |---|---|---|
 | Предложить изменение и соблюсти правила кода / Propose a change and follow the coding rules | [Как участвовать](../CONTRIBUTING-RU.md) | [Contributing](../CONTRIBUTING.md) |
+| Завершить стабилизацию 3.7.1 / Complete 3.7.1 stabilization | [Матрица завершения](development-3.7.1-RU.md) | [Completion baseline](development-3.7.1.md) |
 | Понять устройство кода / Understand the code | [Устройство кода](architecture.md) | [Code structure](architecture-EN.md) |
 | Сделать своё представление / Build a custom view | [API](api-RU.md) | [API](api.md) |
 | Подключить типы из npm / Use the npm types | [obsidian-projects-types](../obsidian-projects-types/README-RU.md) | [obsidian-projects-types](../obsidian-projects-types/README.md) |
@@ -51,10 +52,12 @@ for whoever reads it, not documentation pages, and the rule does not apply to th
 
 [License](https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE) and [attribution](https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE).
 
-Разработка проекта ведётся через [Claudex / Клаудекс](https://github.com/ParkPavel/claudex).
-Внутренние инструкции для ИИ, планы и отчёты удалены из текущего дерева. Их прежние версии
-сохранены в истории Git. Этот каталог содержит документацию самого плагина.
+Разработка в рабочем пространстве сопровождающего ведётся через Borshkit.
+Закрытые инструкции, контракты, материалы и отчёты находятся в базе знаний рабочего
+пространства, вне истории плагина. Прежние версии документов остаются в истории Git.
+Этот каталог содержит документацию плагина и публичную матрицу завершения кандидата.
 
-Development is managed with [Claudex](https://github.com/ParkPavel/claudex). Internal AI
-instructions, plans and reports are no longer part of the current tree. Earlier versions
-remain in Git history. This directory documents the plugin itself.
+Development in the maintainer workspace uses Borshkit. Private instructions, contracts,
+materials and reports are in its knowledge base, outside plugin history. Earlier document
+versions remain in Git history. This directory documents the plugin and the public
+candidate completion baseline.

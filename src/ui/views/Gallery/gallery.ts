@@ -48,3 +48,24 @@ function getResourcePathFromLinkText(app: App, text: string) {
 
   return null;
 }
+
+/**
+ * B9 — what a card's cover area shows. `none`: the record has no cover value
+ * (the plain image placeholder); `ok`: a resolved image; `broken`: a value that
+ * names no image the vault or the web can give (a moved file, a typo, a
+ * non-image), so the card can say so and where to fix it instead of looking
+ * exactly like a record that never had a cover.
+ */
+export type CoverState =
+  | { readonly kind: "none" }
+  | { readonly kind: "ok"; readonly src: string; readonly raw: string }
+  | { readonly kind: "broken"; readonly raw: string };
+
+export function coverOf(app: App, record: DataRecord, coverField?: DataField): CoverState {
+  if (!coverField) return { kind: "none" };
+  const value = record.values[coverField.name];
+  if (value === undefined || value === null || value === "") return { kind: "none" };
+  const raw = isString(value) ? value : String(value);
+  const src = isString(value) ? getResourcePathFromLinkText(app, value) : null;
+  return src ? { kind: "ok", src, raw } : { kind: "broken", raw };
+}

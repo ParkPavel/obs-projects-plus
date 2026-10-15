@@ -21,6 +21,7 @@
    */
   import { createEventDispatcher } from "svelte";
   import SlideInPanel from "src/ui/components/SlideInPanel/SlideInPanel.svelte";
+  import TextField from "src/ui/components/fields/TextField.svelte";
   import EditNote from "src/ui/modals/components/EditNote.svelte";
   import PageIcon from "src/ui/components/PageIcon/PageIcon.svelte";
   import { DataFieldType, type DataField, type DataRecord } from "src/lib/dataframe/dataframe";
@@ -128,10 +129,16 @@
 
   // #038: when the side panel closes, clear local picker state so the next
   // record doesn't open with a stuck-open picker or stale input value.
-  $: if (!open) {
+  // Assigned in a function the `$:` calls, never in the statement: the picker
+  // input is bound to `pickerInput`, and in Svelte 3 a binding to a variable
+  // assigned inside a `$:` statement re-runs that statement on the next flush
+  // (R0.34). The picker is seeded by `openPicker` alone.
+  function resetPickerWhenClosed(isOpen: boolean): void {
+    if (isOpen) return;
     pickerOpen = false;
     pickerInput = "";
   }
+  $: resetPickerWhenClosed(open);
 
   function openPicker() {
     pickerInput = typeof iconValue === "string" ? iconValue : "";
@@ -159,8 +166,8 @@
     if (e.key === "Escape") { e.stopPropagation(); closePicker(); }
   }
 
-  function focusInput(node: HTMLInputElement) {
-    requestAnimationFrame(() => node.focus());
+  function focusInput(node: HTMLElement) {
+    requestAnimationFrame(() => node.querySelector("input")?.focus());
   }
 
   // ── Save passthrough ───────────────────────────────────────
@@ -207,14 +214,18 @@
         {#if pickerOpen}
           <!-- svelte-ignore a11y-no-static-element-interactions -->
           <div class="ppp-rcv-icon-picker" on:keydown={handlePickerKeydown}>
-            <input
-              bind:value={pickerInput}
-              class="ppp-rcv-icon-input"
-              use:focusInput
-              placeholder={$i18n.t("components.record-card-view.icon-placeholder")}
-              aria-label={$i18n.t("views.dashboard.record-card.icon-input", { defaultValue: "Emoji or icon name" })}
-              on:keydown={handlePickerKeydown}
-            />
+            <!-- Enter (via the wrapper) confirms; Escape closes. A blur alone
+                 writes nothing: the picker has its own ✓ and ✕. -->
+            <span class="ppp-rcv-icon-field" use:focusInput>
+              <TextField
+                value={pickerInput}
+                inputClass="ppp-rcv-icon-input"
+                placeholder={$i18n.t("components.record-card-view.icon-placeholder")}
+                ariaLabel={$i18n.t("views.dashboard.record-card.icon-input", { defaultValue: "Emoji or icon name" })}
+                on:input={(e) => (pickerInput = e.detail)}
+                on:cancel={closePicker}
+              />
+            </span>
             <button class="ppp-rcv-icon-confirm" on:click={confirmPicker} aria-label={$i18n.t("common.confirm")}>✓</button>
             <button class="ppp-rcv-icon-cancel" on:click={closePicker} aria-label={$i18n.t("common.cancel")}>✕</button>
           </div>
@@ -409,7 +420,13 @@
     to   { opacity: 1; transform: translateY(0); }
   }
 
-  .ppp-rcv-icon-input {
+  .ppp-rcv-icon-field {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ppp-rcv-icon-field :global(.ppp-rcv-icon-input) {
     width: 9rem;
     padding: 0.25rem 0.375rem;
     font-size: var(--font-ui-small);
@@ -419,7 +436,7 @@
     color: var(--text-normal);
   }
 
-  .ppp-rcv-icon-input:focus {
+  .ppp-rcv-icon-field :global(.ppp-rcv-icon-input):focus {
     outline: 0.125rem solid var(--interactive-accent);
     outline-offset: -0.0625rem;
   }

@@ -11,6 +11,7 @@ import { DataFieldType } from "./dataframe/dataframe";
 import type { DataFrame } from "./dataframe/dataframe";
 import type { BulkFieldWriteOutcome, DataApi } from "./dataApi";
 import { dataFrame } from "./stores/dataframe";
+import { changedKeys, patchRecord, touchedKeys } from "./recordDiff";
 import { noticeFor } from "src/lib/errors/errorText";
 
 /**
@@ -70,11 +71,17 @@ export class ViewApi {
     readonly resolveExternalFrame?: (projectId: string) => Promise<DataFrame | null>
   ) {}
 
-  addRecord(record: DataRecord, fields: DataField[], templatePath: string) {
+  /**
+   * `body` is the text under the frontmatter of the new note; a duplicate
+   * passes the source's so the copy is not created empty.
+   */
+  addRecord(record: DataRecord, fields: DataField[], templatePath: string, body?: string): Promise<void> {
     if (this.dataSource.includes(record.id)) {
       dataFrame.addRecord(record);
     }
-    void this.dataApi.createNote(record, fields ?? [], templatePath);
+    // Returned, not voided: a caller that awaits (the calendar duplicate) must
+    // see a failed create instead of reporting a copy that does not exist.
+    return this.dataApi.createNote(record, fields ?? [], templatePath, body);
   }
 
   /**
@@ -84,16 +91,23 @@ export class ViewApi {
    */
   async updateRecord(record: DataRecord, fields: DataField[]): Promise<boolean> {
     const oldRecord = get(dataFrame).records.find((candidate) => candidate.id === record.id);
+    // Only what the caller changed reaches the file: an edit of one field must
+    // not rewrite, reformat or overwrite the others. The keys a record was
+    // built with win over a diff against the store, which would also revert a
+    // field another edit wrote meanwhile. Unknown previous record: everything.
+    const keys = oldRecord ? touchedKeys(record) ?? changedKeys(oldRecord, record) : undefined;
+    // The store shows the change on top of its current copy, not the caller's.
+    const shown = oldRecord && keys ? patchRecord(oldRecord, record, keys) : record;
     const optimistic = this.dataSource.includes(record.id);
     if (optimistic) {
-      dataFrame.updateRecord(record);
+      dataFrame.updateRecord(shown);
     }
     try {
-      const written = await this.dataApi.updateRecord(fields, record);
+      const written = await this.dataApi.updateRecord(fields, record, keys);
       if (!written) {
         // The note is gone. Silently keeping the optimistic value would show a
         // number that exists nowhere on disk.
-        this.revertOptimistic(optimistic, record, oldRecord);
+        this.revertOptimistic(optimistic, shown, oldRecord);
         new Notice(noticeFor(RECORD_FILE_MISSING, { path: record.id }));
         return false;
       }
@@ -103,7 +117,7 @@ export class ViewApi {
       // Put the record back and say so. Not rethrown on purpose: several call
       // sites do not await this, and an unhandled rejection would replace a
       // visible message with a console entry.
-      this.revertOptimistic(optimistic, record, oldRecord);
+      this.revertOptimistic(optimistic, shown, oldRecord);
       new Notice(noticeFor(RECORD_WRITE_FAILED, { path: record.id }));
       console.error("[Projects+] record write failed:", record.id, error);
       return false;
@@ -111,7 +125,7 @@ export class ViewApi {
 
     const obsApp = get(app);
     if (obsApp && oldRecord) {
-      await fireInverseRelations(oldRecord, record, fields, obsApp);
+      await fireInverseRelations(oldRecord, shown, fields, obsApp);
     }
     return true;
   }
@@ -148,20 +162,37 @@ export class ViewApi {
    */
   async updateRecords(records: DataRecord[], fields: DataField[]): Promise<boolean> {
     const rs = records.filter((r) => this.dataSource.includes(r.id));
-    const previous = get(dataFrame).records.filter((candidate) =>
+    const frameRecords = get(dataFrame).records;
+    const previous = frameRecords.filter((candidate) =>
       rs.some((r) => r.id === candidate.id)
     );
-    if (rs.length > 0) dataFrame.updateRecords(rs);
+    // Per record, the keys that differ from the copy in the frame as it was
+    // before the optimistic update below.
+    // A record the frame does not hold is written whole, as before.
+    const keys = records.map((record) => {
+      const base = frameRecords.find((candidate) => candidate.id === record.id);
+      return base ? touchedKeys(record) ?? changedKeys(base, record) : undefined;
+    });
+    // Each record is shown on top of the store's current copy, as in updateRecord.
+    const shownById = new Map(
+      records.map((record, index) => {
+        const base = frameRecords.find((candidate) => candidate.id === record.id);
+        const k = keys[index];
+        return [record.id, base && k ? patchRecord(base, record, k) : record] as const;
+      })
+    );
+    const shownRs = rs.map((r) => shownById.get(r.id) ?? r);
+    if (shownRs.length > 0) dataFrame.updateRecords(shownRs);
 
     try {
-      await this.dataApi.updateRecords(fields, records);
+      await this.dataApi.updateRecords(fields, records, keys);
       return true;
     } catch (error) {
       // Put back only the records this call actually wrote, and only where the
       // store still holds what we put there — same rule as `revertOptimistic`.
       const current = get(dataFrame).records;
       const untouched = previous.filter((old) => {
-        const attempted = rs.find((r) => r.id === old.id);
+        const attempted = shownRs.find((r) => r.id === old.id);
         return attempted !== undefined && current.includes(attempted);
       });
       if (untouched.length > 0) dataFrame.updateRecords(untouched);
@@ -185,6 +216,15 @@ export class ViewApi {
    * failures are surfaced. The in-memory field is still added first, so the
    * column appears immediately.
    */
+  /**
+   * M03 (C8): the notes a schema write (add field) goes through — every record
+   * of the project frame, not the filtered rows a view shows. The create-field
+   * form states this count before the write.
+   */
+  fieldWriteTargets(): string[] {
+    return get(dataFrame).records.map((record) => record.id);
+  }
+
   async addField(
     field: DataField,
     value: Optional<DataValue>,
@@ -192,11 +232,7 @@ export class ViewApi {
   ): Promise<BulkFieldWriteOutcome> {
     dataFrame.addField(field, position);
 
-    const outcome = await this.dataApi.addField(
-      get(dataFrame).records.map((record) => record.id),
-      field,
-      value
-    );
+    const outcome = await this.dataApi.addField(this.fieldWriteTargets(), field, value);
     reportBulkFieldWrite(outcome, field.name);
     return outcome;
   }

@@ -47,10 +47,10 @@
                 "name": "添加字段"
             },
             "toggle-visualizer-pane": {
-                "name": "切换 YAML 可视化器面板"
+                "name": "切换笔记顶部的属性块"
             },
             "open-visualizer-for-file": {
-                "name": "在 YAML 可视化器中打开当前笔记"
+                "name": "显示当前笔记的属性"
             },
             "add-relation": {
                 "name": "为当前笔记添加关系"
@@ -65,7 +65,6 @@
                 "repaired": "演示已存在；缺失的笔记已恢复。",
                 "repair-failed": "演示项目已存在。有 {{count}} 篇缺失的笔记无法写入 — 详见控制台。"
             }
-
         },
         "menus": {
             "project": {
@@ -75,7 +74,7 @@
             },
             "file": {
                 "open-in-visualizer": {
-                    "title": "在 YAML 可视化器中打开"
+                    "title": "显示属性"
                 },
                 "add-relation": {
                     "title": "添加为关系…"
@@ -484,6 +483,20 @@
                     "no-default-stage-a": "该类型为计算或关联字段 — 无需设置默认值。",
                     "empty-name-error": "字段名不能为空。",
                     "existing-name-error": "字段名称重复。",
+                    "flow": {
+                        "group-basic": "基础",
+                        "group-linked": "关联与计算",
+                        "create-relation-option": "新建与 {{project}} 的关联",
+                        "new-relation-note": "同时创建关联“{{name}}”到 {{project}}。",
+                        "example": "基于 {{n}} 条记录的示例：{{values}} → {{result}}",
+                        "example-empty": "关联项目暂无记录——有记录后会显示示例。",
+                        "relation-failed": "关联未创建，因此属性未添加。请重试。",
+                        "choose-property": "选择属性…",
+                        "formula-name": "公式",
+                        "formula-description": "输入字段或函数名称——提示会立即出现。",
+                        "all-calculations": "更多计算"
+                    },
+                    "write-failed": "字段未能添加到所有笔记。已保留您的输入，请重试。",
                     "type": {
                         "name": "字段类型",
                         "description": ""
@@ -604,6 +617,21 @@
                         "empty": "还没有笔记链接到这里。",
                         "via": "通过"
                     }
+                },
+                "block": {
+                    "title": "属性",
+                    "add": "+ 属性",
+                    "name-placeholder": "属性名称",
+                    "options": "属性选项",
+                    "more": "属性操作",
+                    "empty": "空",
+                    "read-only": "计算值，只读",
+                    "type": "属性类型",
+                    "errors": {
+                        "exists": "已存在同名属性",
+                        "reserved": "以 pp_ 或 $ 开头的名称为保留名称",
+                        "empty": "请输入名称"
+                    }
                 }
             },
             "developer": {
@@ -660,7 +688,12 @@
                 "unfreeze-all": "取消冻结所有列",
                 "records_other": "条记录",
                 "drag-column": "拖动以重新排序列",
-                "reset-zoom": "重置缩放"
+                "reset-zoom": "重置缩放",
+                "drag-blocked": {
+                    "pinned": "列已固定：取消固定后才能移动卡片",
+                    "readonly": "数据为只读：无法移动卡片",
+                    "editing": "请先完成列名编辑"
+                }
             },
             "calendar": {
                 "name": "日历",
@@ -931,6 +964,16 @@
             },
             "gallery": {
                 "name": "画册",
+                "card-panel": {
+                    "open": "卡片选项",
+                    "title": "卡片",
+                    "cover": "封面",
+                    "fields": "属性",
+                    "close": "关闭"
+                },
+                "card-more": "“{{name}}”的更多操作",
+                "cover-broken": "未找到图片",
+                "cover-broken-hint": "请修正“{{field}}”中的路径：{{path}}",
                 "fields": {
                     "cover": "图片源",
                     "none": "未选择"
@@ -961,7 +1004,6 @@
             "dashboard": {
                 "name": "数据库",
                 "add-row": "新建笔记",
-
                 "table": {
                     "header-hint": "右击列标题可重命名、更改类型、隐藏、固定或重新排序。拖动边缘可调整宽度。",
                     "row-height": "行高",
@@ -976,6 +1018,26 @@
                         "property-type-auto": "自动",
                         "rollup-mode": "Rollup 模式"
                     }
+                },
+                "insert": {
+                    "here": "在此添加区块",
+                    "add": "添加区块",
+                    "database": "数据库",
+                    "database-desc": "由笔记生成的表格、看板或日历",
+                    "chart": "图表",
+                    "chart-desc": "按属性值绘制柱状、折线或饼图",
+                    "stats": "统计",
+                    "stats-desc": "一眼看到数量、总和与平均值",
+                    "text": "文本",
+                    "text-desc": "备注、标题或说明",
+                    "checklist": "清单",
+                    "checklist-desc": "将笔记勾选为已完成",
+                    "filter-tabs": "筛选标签",
+                    "filter-tabs-desc": "缩小页面上所有区块范围的标签",
+                    "cover": "封面",
+                    "cover-desc": "页面顶部的通栏图片",
+                    "divider": "分隔线",
+                    "divider-desc": "章节之间的线"
                 },
                 "canvas": {
                     "widgets": "组件",
@@ -993,9 +1055,9 @@
                     "filter-bridge-local": "本地：{{field}} = {{value}}",
                     "filter-bridge-clear": "清除本地筛选器",
                     "filter-bridge-promote": "保存为全局筛选器",
-                    "empty-title": "空画布",
-                    "empty-hint": "从数据块开始",
-                    "empty-add-block": "添加数据块",
+                    "empty-title": "此页面暂无内容",
+                    "empty-hint": "仪表板是由区块组成的页面。从数据库开始：用本项目的笔记生成表格、看板或日历。",
+                    "empty-add-block": "添加数据库",
                     "recalculating": "正在重新计算…",
                     "show-formula-bar-tip": "显示公式编辑器 — 提示、实时预览、语法检查",
                     "add-widget": "添加组件",
@@ -1016,7 +1078,15 @@
                     "confirm-delete": "删除此布局预设？"
                 },
                 "widget": {
-                    "expand": "展开组件",
+                    "menu-source": "数据源与设置…",
+                    "menu-filter": "对此区块所有视图筛选…",
+                    "menu-summarize": "分组并计数…",
+                    "menu-pivot": "数据透视表…",
+                    "menu-join": "与其他数据源合并…",
+                    "menu-collapse": "折叠",
+                    "menu-duplicate": "复制",
+                    "locked": "位置已固定",
+                    "expand": "展开",
                     "collapse": "折叠组件",
                     "drag-handle": "拖动以重新排列组件",
                     "chart-settings": "图表设置",
@@ -1035,14 +1105,14 @@
                         "missing": "{{id}} — 已不在本项目中",
                         "single": "本项目只从一个来源收集记录，因此暂时无从缩小范围。"
                     },
-                    "menu": "组件菜单 — 配置、管道、重命名、删除",
+                    "menu": "区块菜单",
                     "menu-configure": "配置组件…",
-                    "menu-pipeline": "数据管道 — 筛选、分组、计算…",
-                    "menu-pipeline-active": "数据管道（{{count}}）",
+                    "menu-pipeline": "分组、计数、合并…",
+                    "menu-pipeline-active": "数据步骤（{{count}}）…",
                     "menu-rename": "重命名",
-                    "menu-remove": "移除组件",
-                    "lock": "锁定组件位置",
-                    "unlock": "解锁组件",
+                    "menu-remove": "删除区块",
+                    "lock": "固定位置",
+                    "unlock": "取消固定位置",
                     "removed": "块“{{title}}”已移除",
                     "undo": "撤销",
                     "chart-not-configured": "图表尚未配置",
@@ -1128,6 +1198,14 @@
                     "scope": "此区块 — 其所有视图"
                 },
                 "pipeline": {
+                    "intent": {
+                        "summarize-hint": "每组一行，附带数量或总和——例如每个人有多少任务。",
+                        "summarize-add": "添加分组与计数",
+                        "pivot-hint": "某个属性的值变成列——类似电子表格的数据透视表。",
+                        "pivot-add": "添加数据透视表",
+                        "join-hint": "按共同值从另一个项目添加列——例如在每个订单旁显示客户所在城市。",
+                        "join-add": "添加其他数据源"
+                    },
                     "title": "高级转换",
                     "advanced-hint": "普通的筛选和分组现在位于视图本身——这些步骤用于重塑数据。",
                     "steps": "个步骤",
@@ -1276,11 +1354,37 @@
                     "empty": "（空）"
                 },
                 "chart": {
+                    "tabs": {
+                        "setup": "设置",
+                        "customize": "自定义"
+                    },
+                    "repick": "按数据重新选择",
+                    "repick-hint": "根据数据源的字段选择图表类型和坐标轴。",
+                    "x-none": "全部记录（一个总计）",
+                    "title": "图表标题",
+                    "title-placeholder": "无标题",
+                    "colors": "颜色",
+                    "color-schemes": {
+                        "auto": "自动",
+                        "accent": "强调色",
+                        "categorical": "不同颜色",
+                        "sequential": "同一颜色的深浅"
+                    },
+                    "empty": {
+                        "no-records": "数据源中还没有记录——请添加笔记或放宽筛选条件。",
+                        "no-x": "请在“设置”中为 X 轴选择字段。",
+                        "missing-field": "数据源中已没有字段“{{field}}”——请在“设置”中选择其他字段。",
+                        "no-numeric": "没有可用于“{{operation}}”的数字字段——请选择“全部计数”。",
+                        "not-numeric": "“{{field}}”不是数字，无法进行“{{operation}}”——请选择数字字段或“全部计数”。",
+                        "scatter-needs-numbers": "散点图需要两个数字字段：一个用于 X，一个用于 Y。",
+                        "x-all-empty": "所有记录的“{{field}}”均为空——请填写或为 X 轴选择其他字段。"
+                    },
                     "no-data": "暂无数据",
                     "type": "图表类型",
                     "x-axis": "X 轴",
                     "y-axis": "Y 轴",
                     "aggregation": "汇总方式",
+                    "unsupported-aggregation": "所选字段不支持此汇总操作。请选择兼容的操作。",
                     "sort-by": "排序方式",
                     "height": "高度",
                     "granularity": "日期分组方式",
@@ -1417,6 +1521,8 @@
                         "fmt-currency": "货币",
                         "fmt-duration": "时长"
                     },
+                    "summary-hint": "数值摘要 — 每张卡片的字段和聚合方式均在设置中指定。如需图表，请添加“图表”组件。",
+                    "empty-cards": "请在组件设置中添加卡片。",
                     "field-not-found": "未找到字段",
                     "filtered-title": "已按画布选择筛选",
                     "filtered-aria": "{{value}} — 已按画布选择筛选",
@@ -1514,6 +1620,21 @@
                     "new-name": "笔记名称…",
                     "search": "搜索记录",
                     "search-placeholder": "搜索…",
+                    "searching": "正在搜索…",
+                    "search-hints": "搜索建议",
+                    "search-tip": "提示：字段:值，字段: 为空，字段:* 为已填写",
+                    "readonly-reason": {
+                        "rollup-from": "来自「{{source}}」的汇总 — 自动计算",
+                        "rollup": "汇总 — 自动计算",
+                        "formula": "公式 — 自动计算",
+                        "derived": "计算字段 — 只读",
+                        "source": "外部来源为只读",
+                        "list": "此处暂不支持编辑值列表 — 请打开记录"
+                    },
+                    "invalid-number": "请输入有效数字；已保存的值未更改",
+                    "invalid-date": "请完成日期输入；已保存的值未更改",
+                    "list-add": "添加项",
+                    "list-remove": "移除第 {{index}} 项",
                     "remove-sort": "移除排序",
                     "controls": "表格控件",
                     "sort-asc": "升序排序",
@@ -1898,8 +2019,8 @@
                     "desc": "在移动设备拖放操作时关闭振动反馈"
                 },
                 "replace-properties": {
-                    "name": "替换 Obsidian 属性面板",
-                    "desc": "关闭内置的文件属性面板，改为显示 YAML Visualizer 面板。"
+                    "name": "笔记顶部的属性",
+                    "desc": "在每篇笔记顶部显示 Projects Plus 属性（置顶、隐藏、排序、类型、关系），替代 Obsidian 内置的属性块。"
                 }
             },
             "front-matter": {
@@ -2034,17 +2155,17 @@
                 "notice": "Projects+：设置未能写入磁盘。更改仍在，但重新加载后会丢失。可在工具栏的「未保存」标记处重试。"
             },
             "diverged": {
-                "label": "\u5916\u90e8\u5df2\u66f4\u6539",
-                "tooltip": "data.json \u5df2\u5728\u6b64\u7a97\u53e3\u4e4b\u5916\u88ab\u66ff\u6362\u3002\u60a8\u7684\u66f4\u6539\u4ecd\u5728\uff1b\u91cd\u8bd5\u5199\u5165\u4f1a\u8986\u76d6\u5bf9\u65b9\u7684\u7248\u672c\uff0c\u56e0\u6b64\u4e0d\u63d0\u4f9b\u91cd\u8bd5\u3002"
+                "label": "外部已更改",
+                "tooltip": "data.json 已在此窗口之外被替换。您的更改仍在；重试写入会覆盖对方的版本，因此不提供重试。"
             },
             "superseded": {
                 "notice": "Projects+：data.json 已在此窗口之外被修改。您最近的更改可能未保存 — 请先重新打开仓库再继续。"
             },
             "conflict": {
-                "notice": "Projects+\uff1adata.json \u5df2\u5728\u6b64\u7a97\u53e3\u4e4b\u5916\u88ab\u4fee\u6539\uff0c\u65e0\u6cd5\u76f4\u63a5\u91c7\u7528\u3002\u5df2\u4fdd\u7559\u60a8\u7684\u7248\u672c\uff0c\u78c1\u76d8\u4e0a\u7684\u7248\u672c\u53e6\u5b58\u4e3a {{path}}\u3002"
+                "notice": "Projects+：data.json 已在此窗口之外被修改，无法直接采用。已保留您的版本，磁盘上的版本另存为 {{path}}。"
             },
             "conflict-uncopied": {
-                "notice": "Projects+\uff1adata.json \u5df2\u5728\u6b64\u7a97\u53e3\u4e4b\u5916\u88ab\u4fee\u6539\uff0c\u4e14\u5bf9\u65b9\u7684\u7248\u672c\u65e0\u5904\u4fdd\u5b58 \u2014 \u65e2\u65e0\u6cd5\u5b58\u653e\u5728\u8be5\u6587\u4ef6\u65c1\uff0c\u4e5f\u65e0\u6cd5\u4f5c\u4e3a\u5e93\u4e2d\u7684\u7b14\u8bb0\u3002\u5b83\u73b0\u5728\u53ea\u5b58\u5728\u4e8e\u4e24\u5904\uff1a\u5f00\u53d1\u8005\u63a7\u5236\u53f0\uff0c\u4ee5\u53ca data.json \u672c\u8eab\uff1b\u5728\u60a8\u81ea\u884c\u66f4\u6539\u8bbe\u7f6e\u4e4b\u524d\uff0c\u4e0d\u4f1a\u6709\u4efb\u4f55\u5185\u5bb9\u8986\u76d6\u5b83\u3002"
+                "notice": "Projects+：data.json 已在此窗口之外被修改，且对方的版本无处保存 — 既无法存放在该文件旁，也无法作为库中的笔记。它现在只存在于两处：开发者控制台，以及 data.json 本身；在您自行更改设置之前，不会有任何内容覆盖它。"
             }
         },
         "settings-menu": {
@@ -2249,6 +2370,8 @@
             "intro": "从演示开始——三个相互关联的项目展示表格、看板、日历、图表以及跨项目计算——或创建你自己的项目。"
         },
         "common": {
+            "clear": "清除",
+            "search": "搜索",
             "yesterday": "昨天",
             "tomorrow": "明天",
             "close": "关闭",
@@ -2271,6 +2394,8 @@
             "select-project": "选择项目",
             "syntax-help": "语法帮助",
             "date-placeholder": "YYYY-MM-DD",
+            "date-typed-placeholder": "日.月.年",
+            "datetime-typed-placeholder": "日.月.年 时:分",
             "datetime-placeholder": "YYYY-MM-DD HH:MM",
             "field": "字段",
             "projects": "项目",

@@ -52,14 +52,37 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   // deletion freed is not a ceiling.
   { file: "ui/views/Dashboard/DashboardCanvas.svelte", maxLines: 195 },
   { file: "ui/views/Dashboard/dashboardSuggest.ts", maxLines: 60 },
+  // Wave 2 mechanisms enter at measured sizes, existing ceilings never rise.
+  { file: "ui/views/Dashboard/dashboardReorder.ts", maxLines: 15 },
+  { file: "ui/views/Dashboard/dashboardReveal.ts", maxLines: 19 },
+  { file: "ui/views/Dashboard/widgets/Stats/statsDefaults.ts", maxLines: 18 },
+  { file: "ui/views/Dashboard/widgets/Stats/statsSparkline.ts", maxLines: 35 },
+  { file: "ui/views/Dashboard/widgets/Stats/StatsWidget.svelte", maxLines: 100 },
+  { file: "ui/views/Dashboard/widgets/Stats/StatsCard.svelte", maxLines: 124 },
+  { file: "ui/actions/fitVisibleViewport.ts", maxLines: 33 },
+  { file: "ui/utils/visibleViewport.ts", maxLines: 11 },
+  { file: "ui/views/Dashboard/widgets/Chart/chartAggregations.ts", maxLines: 18 },
+  // Additional-series and agenda viewport fixes enter at their measured sizes.
+  { file: "ui/views/Dashboard/widgets/Chart/ChartSeriesEditor.svelte", maxLines: 180 },
+  { file: "ui/views/Calendar/agenda/fitAgendaOverlay.ts", maxLines: 21 },
+  { file: "ui/views/Calendar/agenda/FilterRow.svelte", maxLines: 528 },
   // F2 (#074) — TABLE_V2_CANON §5 budgets
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/DataTableContent.svelte", maxLines: 280 },
+  // 3.7.1 feedback: search/windowing and typed editing gained guards. Their
+  // mechanisms are extracted, not paid for by raising component limits.
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/DataTableContent.svelte", maxLines: 277 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TableControlBar.svelte", maxLines: 200 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TableHeader.svelte", maxLines: 200 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TableRow.svelte", maxLines: 200 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TableFooter.svelte", maxLines: 120 },
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/tableCanon.ts", maxLines: 260 },
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/EditableCell.svelte", maxLines: 250 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/tableCanon.ts", maxLines: 248 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/EditableCell.svelte", maxLines: 221 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/TypedCellEditor.svelte", maxLines: 91 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/ListCellEditor.svelte", maxLines: 96 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/tableSearch.ts", maxLines: 68 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/tableSearchMatch.ts", maxLines: 13 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/tableInteractions.ts", maxLines: 51 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/editedCellValue.ts", maxLines: 13 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/tableWindow.ts", maxLines: 121 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/CellChoiceDropdown.svelte", maxLines: 130 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TableNewRow.svelte", maxLines: 100 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/tableRowOps.ts", maxLines: 170 },
@@ -67,6 +90,10 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   { file: "ui/views/Dashboard/widgets/ViewTabBar.svelte", maxLines: 260 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TableGroupSection.svelte", maxLines: 100 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/RelationPickerPopover.svelte", maxLines: 240 },
+  // B10: the calendar's day window moved onto FloatingPopup (1124 → 230 lines:
+  // its private layer, Escape, focus, scroll lock and swipe are the engine's
+  // now). Entered at its measured size so the room cannot grow back.
+  { file: "ui/views/Calendar/components/DayPopup/DayPopup.svelte", maxLines: 230 },
 ];
 
 describe("R0.6 component LOC budgets (#067)", () => {

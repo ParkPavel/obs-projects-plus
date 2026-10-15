@@ -31,11 +31,56 @@
   }>();
 
   let inputValue: string = expression;
-  let lastExpression: string = expression;
-  $: if (expression !== lastExpression) {
-    inputValue = expression;
-    lastExpression = expression;
+  let adopted: string = expression;
+  let rootEl: HTMLElement | null = null;
+
+  /**
+   * Adopt `expression` from the parent only when it really changed and the
+   * user is not typing in the formula. This lives in a function the `$:` below
+   * calls, never in the statement itself: `inputValue` is bound, and in
+   * Svelte 3 a binding to a variable assigned inside a `$:` statement re-runs
+   * that statement on the next flush (R0.34) — the trap that reset typed
+   * values in the 3.7.0 table cells.
+   */
+  function adoptExpression(next: string): void {
+    if (next === inputValue) {
+      // The parent echoing what is already shown is not a change to adopt.
+      adopted = next;
+      // A parent that comes back to what is shown cancels an earlier deferred change.
+      deferred = null;
+      return;
+    }
+    if (next === adopted) {
+      deferred = null;
+      return;
+    }
+    const active = rootEl?.ownerDocument.activeElement;
+    if (active instanceof HTMLTextAreaElement && rootEl?.contains(active)) {
+      deferred = next;
+      return;
+    }
+    deferred = null;
+    adopted = next;
+    inputValue = next;
   }
+
+  /** A parent change that arrived while the user was in the formula. */
+  let deferred: string | null = null;
+
+  /**
+   * On leaving the formula, take a deferred parent change if the user did not
+   * edit the text meanwhile; text the user typed wins over it.
+   */
+  function adoptDeferred(e: FocusEvent): void {
+    if (deferred === null) return;
+    if (e.relatedTarget instanceof Node && rootEl?.contains(e.relatedTarget)) return;
+    const next = deferred;
+    deferred = null;
+    if (inputValue !== adopted) return;
+    adopted = next;
+    inputValue = next;
+  }
+  $: adoptExpression(expression);
 
   // Adapt external `validate(expr)` to FormulaConstructor's `validate(expr, fields)` signature.
   // FormulaConstructor's default validator already uses `fields` — this wrapper
@@ -45,7 +90,7 @@
     : undefined;
 </script>
 
-<div class="formula-editor">
+<div class="formula-editor" bind:this={rootEl} on:focusout={adoptDeferred}>
   <slot name="header" />
 
   <FormulaConstructor

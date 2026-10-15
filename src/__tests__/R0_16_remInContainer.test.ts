@@ -127,8 +127,17 @@ const WINDOW_ANCHORED = [
  *     Obsidian's --shadow-s / --shadow-l and dims onto
  *     --background-modifier-cover, taking their rem offsets with them.
  *     Re-measured.
+ *   778 — stab-forms moved the dashboard table search, choice and relation
+ *     inputs onto the shared field primitives, whose sizes are not
+ *     hand-written in those widgets. Re-measured.
+ *   B7 — the header icon cluster, WidgetToolbar and the old palette were
+ *     replaced by one menu and one insert point. Re-measured.
  */
-const REM_IN_CONTAINER_BUDGET = 790;
+// Wave 2: Stats grid breakpoint sizes now follow the container font scale.
+// 777 → 775 (3.7.2 B4): month +N row and duplicate time fields re-measured.
+// → 763 (3.7.2 B7): dashboard shell lost its toolbar and palette rules.
+// Integration p372-rc: re-measured on the merged tree.
+const REM_IN_CONTAINER_BUDGET = 761;
 
 /** A length in `rem`. `0.5rem`, `.5rem` and `1.5rem` all count once. */
 const REM_LENGTH = /\b\d*\.?\d+rem\b/g;

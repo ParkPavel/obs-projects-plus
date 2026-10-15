@@ -45,10 +45,10 @@
                 "name": "Add field"
             },
             "toggle-visualizer-pane": {
-                "name": "Toggle YAML Visualizer pane"
+                "name": "Toggle properties block in note header"
             },
             "open-visualizer-for-file": {
-                "name": "Open active note in YAML Visualizer"
+                "name": "Show properties of the active note"
             },
             "add-relation": {
                 "name": "Add relation to active note"
@@ -72,7 +72,7 @@
             },
             "file": {
                 "open-in-visualizer": {
-                    "title": "Open in YAML Visualizer"
+                    "title": "Show properties"
                 },
                 "add-relation": {
                     "title": "Add as relation…"
@@ -455,6 +455,20 @@
                     "no-default-stage-a": "This type is computed or linked — no default value to set here.",
                     "empty-name-error": "Field name can't be empty.",
                     "existing-name-error": "A field with that name already exists.",
+                    "flow": {
+                        "group-basic": "Basic",
+                        "group-linked": "Relations and computations",
+                        "create-relation-option": "New relation to {{project}}",
+                        "new-relation-note": "Also creates the relation '{{name}}' to {{project}}.",
+                        "example": "Example on {{n}} records: {{values}} → {{result}}",
+                        "example-empty": "The linked project has no records yet — the example appears once it does.",
+                        "relation-failed": "The relation was not created, so the property was not added. Try again.",
+                        "choose-property": "Choose a property…",
+                        "formula-name": "Formula",
+                        "formula-description": "Type a field or function name — hints appear as you type.",
+                        "all-calculations": "More calculations"
+                    },
+                    "write-failed": "The field was not added to every note. Your entries are kept — try again.",
                     "type": {
                         "name": "Type",
                         "description": ""
@@ -574,6 +588,21 @@
                         "empty": "No notes link here yet.",
                         "via": "via"
                     }
+                },
+                "block": {
+                    "title": "Properties",
+                    "add": "+ Property",
+                    "name-placeholder": "Property name",
+                    "options": "Properties options",
+                    "more": "Property actions",
+                    "empty": "Empty",
+                    "read-only": "Calculated, read only",
+                    "type": "Property type",
+                    "errors": {
+                        "exists": "A property with this name already exists",
+                        "reserved": "Names starting with pp_ or $ are reserved",
+                        "empty": "Enter a name"
+                    }
                 }
             },
             "developer": {
@@ -620,7 +649,12 @@
                 "records_one": "record",
                 "records_other": "records",
                 "drag-column": "Drag to reorder column",
-                "reset-zoom": "Reset zoom"
+                "reset-zoom": "Reset zoom",
+                "drag-blocked": {
+                    "pinned": "Pinned column: unpin it to move its cards",
+                    "readonly": "This data is read-only: cards cannot be moved",
+                    "editing": "Finish editing the column name first"
+                }
             },
             "calendar": {
                 "name": "Calendar",
@@ -892,6 +926,16 @@
             },
             "gallery": {
                 "name": "Gallery",
+                "card-panel": {
+                    "open": "Card options",
+                    "title": "Card",
+                    "cover": "Cover",
+                    "fields": "Properties",
+                    "close": "Close"
+                },
+                "card-more": "More actions for \"{{name}}\"",
+                "cover-broken": "Image not found",
+                "cover-broken-hint": "Fix the path in \"{{field}}\": {{path}}",
                 "fields": {
                     "cover": "Cover",
                     "none": "None"
@@ -936,6 +980,26 @@
                         "rollup-mode": "Rollup mode"
                     }
                 },
+                "insert": {
+                    "here": "Add a block here",
+                    "add": "Add block",
+                    "database": "Database",
+                    "database-desc": "Table, board or calendar built from notes",
+                    "chart": "Chart",
+                    "chart-desc": "Bars, lines or a pie from a field's values",
+                    "stats": "Numbers",
+                    "stats-desc": "Counts, sums and averages at a glance",
+                    "text": "Text",
+                    "text-desc": "A note, heading or explanation",
+                    "checklist": "Checklist",
+                    "checklist-desc": "Tick off notes as done",
+                    "filter-tabs": "Filter tabs",
+                    "filter-tabs-desc": "Tabs that narrow every block on the page",
+                    "cover": "Cover",
+                    "cover-desc": "An image across the top of the page",
+                    "divider": "Divider",
+                    "divider-desc": "A line between sections"
+                },
                 "canvas": {
                     "widgets": "Widgets",
                     "hide-toolbar": "Hide widget toolbar",
@@ -952,9 +1016,9 @@
                     "filter-bridge-local": "Local: {{field}} = {{value}}",
                     "filter-bridge-clear": "Clear local filter",
                     "filter-bridge-promote": "Save as global filter",
-                    "empty-title": "Empty canvas",
-                    "empty-hint": "Start with a data block",
-                    "empty-add-block": "Add data block",
+                    "empty-title": "Nothing on this page yet",
+                    "empty-hint": "A dashboard is a page of blocks. Start with a database — a table, board or calendar of this project's notes.",
+                    "empty-add-block": "Add a database",
                     "error-add-field": "Failed to add field. Please try again.",
                     "error-reopen-schema": "Failed to reopen schema."
                 },
@@ -1056,7 +1120,15 @@
                     "confirm-delete": "Delete this layout preset?"
                 },
                 "widget": {
-                    "expand": "Expand widget",
+                    "menu-source": "Source and settings…",
+                    "menu-filter": "Filter for all views of this block…",
+                    "menu-summarize": "Group and count…",
+                    "menu-pivot": "Pivot table…",
+                    "menu-join": "Combine with another source…",
+                    "menu-collapse": "Collapse",
+                    "menu-duplicate": "Duplicate",
+                    "locked": "Position pinned",
+                    "expand": "Expand",
                     "collapse": "Collapse widget",
                     "drag-handle": "Drag to reorder the widget",
                     "chart-settings": "Chart settings",
@@ -1065,14 +1137,14 @@
                     "not-configured": "Widget type \"{{type}}\" — not configured",
                     "add": "Add widget",
                     "add-aria": "Add widget",
-                    "lock": "Lock widget position",
-                    "menu": "Widget menu",
+                    "lock": "Pin position",
+                    "menu": "Block menu",
                     "menu-configure": "Configure widget…",
-                    "menu-pipeline": "Data pipeline — filter, group, compute…",
-                    "menu-pipeline-active": "Data pipeline ({{count}})",
-                    "menu-remove": "Remove widget",
+                    "menu-pipeline": "Group, count, combine…",
+                    "menu-pipeline-active": "Data steps ({{count}})…",
+                    "menu-remove": "Delete block",
                     "menu-rename": "Rename",
-                    "unlock": "Unlock widget",
+                    "unlock": "Unpin position",
                     "removed": "Block \"{{title}}\" removed",
                     "undo": "Undo",
                     "primary": {
@@ -1156,6 +1228,14 @@
                     "runtime-error": "Runtime error"
                 },
                 "pipeline": {
+                    "intent": {
+                        "summarize-hint": "One row per group with its count or sum — e.g. how many tasks each person has.",
+                        "summarize-add": "Add grouping and count",
+                        "pivot-hint": "Values of one field become columns — a summary table, like a spreadsheet pivot.",
+                        "pivot-add": "Add pivot table",
+                        "join-hint": "Adds columns from another project by a shared value — e.g. a client's city next to each order.",
+                        "join-add": "Add another source"
+                    },
                     "title": "Advanced transforms",
                     "advanced-hint": "Ordinary filtering and grouping now live on the view itself — these steps reshape the data.",
                     "steps": "step(s)",
@@ -1229,11 +1309,37 @@
                     "empty": "(empty)"
                 },
                 "chart": {
+                    "tabs": {
+                        "setup": "Setup",
+                        "customize": "Customize"
+                    },
+                    "repick": "Re-pick from data",
+                    "repick-hint": "Type and axes are chosen from the source's fields.",
+                    "x-none": "All records (one total)",
+                    "title": "Chart title",
+                    "title-placeholder": "No title",
+                    "colors": "Colours",
+                    "color-schemes": {
+                        "auto": "Automatic",
+                        "accent": "Accent colour",
+                        "categorical": "Different colours",
+                        "sequential": "Shades of one colour"
+                    },
+                    "empty": {
+                        "no-records": "The source has no records yet — add notes or loosen the filter.",
+                        "no-x": "Choose a field for the X axis in Setup.",
+                        "missing-field": "The field “{{field}}” is not in the source any more — choose another one in Setup.",
+                        "no-numeric": "No numeric fields for “{{operation}}” — choose “Count all”.",
+                        "not-numeric": "“{{field}}” is not a number, so “{{operation}}” is impossible — pick a numeric field or “Count all”.",
+                        "scatter-needs-numbers": "A scatter chart needs two numeric fields: one for X and one for Y.",
+                        "x-all-empty": "Every record has an empty “{{field}}” — fill it in or choose another X field."
+                    },
                     "no-data": "No data",
                     "type": "Chart type",
                     "x-axis": "X axis",
                     "y-axis": "Y axis",
                     "aggregation": "Aggregation",
+                    "unsupported-aggregation": "This aggregation is not supported for the selected field. Choose a compatible operation.",
                     "sort-by": "Sort by",
                     "height": "Height",
                     "granularity": "Group dates by",
@@ -1366,6 +1472,8 @@
                         "fmt-currency": "Currency",
                         "fmt-duration": "Duration"
                     },
+                    "summary-hint": "Numeric summary — choose each card's field and aggregation in settings. For a diagram, add a Chart widget.",
+                    "empty-cards": "Add a card in the widget settings.",
                     "field-not-found": "Field not found",
                     "filtered-title": "Filtered by canvas selection",
                     "filtered-aria": "{{value}} — filtered by canvas selection",
@@ -1456,6 +1564,21 @@
                     "row-menu": "Row actions",
                     "search": "Search records",
                     "search-placeholder": "Search…",
+                    "searching": "Searching…",
+                    "search-hints": "Search suggestions",
+                    "search-tip": "Tip: field:value, field: for empty, field:* for filled",
+                    "readonly-reason": {
+                        "rollup-from": "Rollup from «{{source}}» — computed",
+                        "rollup": "Rollup — computed",
+                        "formula": "Formula — computed",
+                        "derived": "Computed field — read only",
+                        "source": "This source is read only",
+                        "list": "A list of values is not edited here yet — open the note"
+                    },
+                    "invalid-number": "Enter a valid number; the stored value has not changed",
+                    "invalid-date": "Complete the date; the stored value has not changed",
+                    "list-add": "Add item",
+                    "list-remove": "Remove item {{index}}",
                     "sort-asc": "Sort ascending",
                     "sort-clear": "Clear sort",
                     "sort-desc": "Sort descending",
@@ -1802,8 +1925,8 @@
                     "desc": "Turn off vibration feedback during drag-and-drop on mobile devices"
                 },
                 "replace-properties": {
-                    "name": "Replace Obsidian Properties pane",
-                    "desc": "Close the built-in file-properties leaves and surface the YAML Visualizer pane instead."
+                    "name": "Properties in the note header",
+                    "desc": "Show Projects Plus properties at the top of every note (pin, hide, order, types, relations) instead of Obsidian's built-in Properties block."
                 }
             },
             "front-matter": {
@@ -2150,6 +2273,8 @@
             "intro": "Start with the demo — three linked projects show tables, boards, calendars, charts and computation across them — or create your own project."
         },
         "common": {
+            "clear": "Clear",
+            "search": "Search",
             "yesterday": "Yesterday",
             "tomorrow": "Tomorrow",
             "close": "Close",
@@ -2172,6 +2297,8 @@
             "select-project": "Select project",
             "syntax-help": "Syntax help",
             "date-placeholder": "YYYY-MM-DD",
+            "date-typed-placeholder": "DD.MM.YYYY",
+            "datetime-typed-placeholder": "DD.MM.YYYY HH:MM",
             "datetime-placeholder": "YYYY-MM-DD HH:MM",
             "field": "Field",
             "projects": "Projects",

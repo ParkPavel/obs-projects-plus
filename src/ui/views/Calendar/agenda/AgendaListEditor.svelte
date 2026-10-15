@@ -9,7 +9,6 @@
   import AdvancedFilterEditor from './AdvancedFilterEditor.svelte';
   import AgendaIconPicker from './AgendaIconPicker.svelte';
   import { calendarLogger } from '../logger';
-  import { toRem } from 'src/ui/utils/cssLength';
   
   // Generate unique ID
   function generateId(): string {
@@ -150,32 +149,8 @@
     dispatch('cancel');
   }
 
-  // Keyboard-aware content padding: adds bottom padding to .editor-content
-  // so focused inputs scroll above the mobile keyboard.
-  import { onMount, onDestroy } from 'svelte';
-  let contentEl: HTMLElement | null = null;
-
-  function updateContentForKeyboard() {
-    if (!contentEl) return;
-    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
-    if (!vv) return;
-    const keyboardHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-    contentEl.style.paddingBottom = keyboardHeight > 0
-      ? toRem(keyboardHeight + 16, contentEl.ownerDocument)
-      : '';
-  }
-
-  onMount(() => {
-    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
-    vv?.addEventListener('resize', updateContentForKeyboard);
-    vv?.addEventListener('scroll', updateContentForKeyboard);
-  });
-
-  onDestroy(() => {
-    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
-    vv?.removeEventListener('resize', updateContentForKeyboard);
-    vv?.removeEventListener('scroll', updateContentForKeyboard);
-  });
+  // The outer editor overlay owns keyboard-visible sizing and focused scrolling.
+  // Do not add keyboard-height padding to an already-shrunken scroll container.
 </script>
 
 <div class="agenda-list-editor">
@@ -200,7 +175,7 @@
   </header>
   
   <!-- Content -->
-  <div class="editor-content" bind:this={contentEl}>
+  <div class="editor-content">
     <!-- Name Field -->
     <div class="field-group">
       <label class="field-label" for="list-name">{t('name-label')}</label>

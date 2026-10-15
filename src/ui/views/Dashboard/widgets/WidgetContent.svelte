@@ -38,7 +38,6 @@
   export let readonly: boolean;
 
   const dispatch = createEventDispatcher<{ patch: Partial<WidgetDefinition> }>();
-
   $: renderable = entry ? (entry.canRender?.(ctx) ?? true) : false;
   /**
    * #194. A named source that cannot be resolved makes `hostFrames` fall back
@@ -76,6 +75,7 @@
   />
 {:else if entry?.wizard}
   <WidgetSetupWizard
+    {readonly}
     icon={entry.wizard.icon}
     message={$i18n.t(entry.wizard.messageKey, { defaultValue: entry.wizard.messageDefault })}
     on:configure

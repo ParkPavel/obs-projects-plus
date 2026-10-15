@@ -51,35 +51,48 @@ export class DataApi {
    * originally treated that as success — the caller kept an optimistic value in
    * the store for a file that could not receive it. Found by cross-model review.
    */
-  async updateRecord(fields: DataField[], record: DataRecord): Promise<boolean> {
+  async updateRecord(
+    fields: DataField[],
+    record: DataRecord,
+    keys?: readonly string[]
+  ): Promise<boolean> {
     const file = this.fileSystem.getFile(record.id);
     if (!file) return false;
+    // An empty key list means nothing changed: no write, the note still exists.
+    if (keys?.length === 0) return true;
     // Phase 3 / F6: prefer Obsidian's processFrontMatter (body-safe,
     // lock-protected) over the legacy read-modify-write path.
     const processed = await file.processFrontMatter((fm) =>
-      applyRecordToFrontmatter(fm, fields, record),
+      applyRecordToFrontmatter(fm, fields, record, keys),
     );
     if (processed) return true;
     await this.updateFile(file, (data) =>
-      doUpdateRecord(data, fields, record),
+      doUpdateRecord(data, fields, record, keys),
     )();
     return true;
   }
 
+  /**
+   * `keys[i]` is the list of changed keys for `records[i]`; an entry (or the
+   * whole array) left undefined writes that record whole.
+   */
   async updateRecords(
     fields: DataField[],
-    records: DataRecord[]
+    records: DataRecord[],
+    keys?: ReadonlyArray<readonly string[] | undefined>
   ): Promise<void> {
     await Promise.all(
-      records.map(async (record) => {
+      records.map(async (record, index) => {
         const file = this.fileSystem.getFile(record.id);
         if (!file) return;
+        const recordKeys = keys?.[index];
+        if (recordKeys?.length === 0) return;
         const processed = await file.processFrontMatter((fm) =>
-          applyRecordToFrontmatter(fm, fields, record),
+          applyRecordToFrontmatter(fm, fields, record, recordKeys),
         );
         if (processed) return;
         await this.updateFile(file, (data) =>
-          doUpdateRecord(data, fields, record),
+          doUpdateRecord(data, fields, record, recordKeys),
         )();
       }),
     );
@@ -159,14 +172,20 @@ export class DataApi {
     });
   }
 
+  /**
+   * Creates the note for a record. `body` is the text that goes under the
+   * frontmatter: a copy passes the source's, so it is not created empty. When
+   * it is given the template is not read, the body is the whole text.
+   */
   async createNote(
     record: DataRecord,
     fields: DataField[],
-    templatePath: string
+    templatePath: string,
+    body?: string
   ): Promise<void> {
-    let content = "";
+    let content = body ?? "";
 
-    if (templatePath) {
+    if (templatePath && body === undefined) {
       const file = this.fileSystem.getFile(normalizePath(templatePath));
       if (file) {
         content = await file.read();
@@ -249,14 +268,23 @@ export class DataApi {
 export function doUpdateRecord(
   data: string,
   fields: DataField[],
-  record: DataRecord
+  record: DataRecord,
+  keys?: readonly string[]
 ): E.Either<Error, string> {
+  // encodeFrontMatter lays the given entries over the note's own, so a key list
+  // can hand it just the changed entries. Untouched keys are then neither
+  // re-read from `values` nor re-formatted.
+  const written = keys
+    ? Object.fromEntries(
+        Object.entries(record.values).filter(([key]) => keys.includes(key))
+      )
+    : record.values;
   return F.pipe(
     data,
     decodeFrontMatter,
     E.map((frontmatter) => {
       return Object.fromEntries(
-        Object.entries({ ...frontmatter, ...record.values })
+        Object.entries(keys ? written : { ...frontmatter, ...written })
           .map((entry) => {
             const value = entry[1];
             if (value instanceof Date) {
@@ -295,14 +323,19 @@ export function doUpdateRecord(
  * Mutate an Obsidian-frontmatter object in place so it reflects the given
  * record's values, using the same field-level rules as `doUpdateRecord`
  * (date formatting, derived-field exclusion). Intended for use inside
- * `app.fileManager.processFrontMatter` callbacks — closes F6.
+ * `app.fileManager.processFrontMatter` callbacks — closes F6. With `keys`,
+ * only those keys are written; every other frontmatter key keeps its bytes.
  */
 export function applyRecordToFrontmatter(
   frontmatter: Record<string, unknown>,
   fields: DataField[],
   record: DataRecord,
+  keys?: readonly string[],
 ): void {
   for (const [key, value] of Object.entries(record.values)) {
+    // A key list narrows the write to what changed. A listed key that is gone
+    // from `values` writes nothing, as an absent key never did.
+    if (keys && !keys.includes(key)) continue;
     const field = fields.find((f) => f.name === key);
     if (field?.derived) continue;
 

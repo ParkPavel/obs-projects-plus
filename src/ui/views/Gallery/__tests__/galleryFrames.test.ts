@@ -198,7 +198,7 @@ describe("cards-g5 — a config without frames renders as before", () => {
       expect(prop(m.media(r.id), "height")).toBe("");
       expect(prop(m.media(r.id), "--ppp-card-media-ratio")).toBe("16 / 10");
       const lanes = Array.from(card.children).map((c) => c.className.split(/\s+/)[0]);
-      expect(lanes).toEqual(["projects--gallery--card__media", "projects--gallery--card__body", "ppp-card-resize-handle"]);
+      expect(lanes).toEqual(["projects--gallery--card__media", "projects--gallery--card__body", "ppp-gallery-card-more", "ppp-card-resize-handle"]);
     }
     m.destroy();
   });

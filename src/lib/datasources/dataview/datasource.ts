@@ -115,7 +115,7 @@ export class DataviewDataSource extends DataSource {
       );
     }
 
-    const records = parseRecords(standardizedRecords, fields);
+    const records = parseRecords(standardizedRecords, fields, this.project.dateFormat?.writeFormat);
 
     const baseFrame: DataFrame = { fields, records };
 

@@ -23,6 +23,8 @@
   import { applyDataScope } from "./dataScope";
   import { buildRenderContext } from "./renderContext";
   import { withLinkedSelection } from "./linkedSourceState";
+  import { openBlockFilter } from "./blockFilterEntry";
+  import type { PipelineIntent } from "./widgetMenu";
   import { dataTableConfigChange } from "./legacyMigration";
   import WidgetShell from "./WidgetShell.svelte";
   import WidgetHeaderBadges from "./_shared/WidgetHeaderBadges.svelte";
@@ -56,9 +58,11 @@
     tableConfigChange: DataTableConfig;
     fieldPresetsChange: { fieldPresets: FieldPreset[]; activeFieldPresetId: string | undefined };
     removeWidget: string;
+    duplicateWidget: string;
   }>();
 
   let showConfig = false, showPipeline = false, renameSignal = 0, primaryActionSignal = 0;
+  let pipelineIntent: PipelineIntent | null = null;
 
   $: collapsed = widget.collapsed ?? false;
   $: currentPipeline = widget.transform ?? ({ steps: [] } as TransformPipeline);
@@ -94,12 +98,8 @@
   $: panelEntry = WIDGET_PANELS[widget.type];
   $: panelRenderable = (widget.type !== "chart" || chartConfig !== null) && (widget.type !== "stats" || statsConfig !== null);
 
-  function patchWidget(changes: Partial<WidgetDefinition>) {
-    dispatch("configChange", { id: widget.id, changes });
-  }
-  function handleWidgetConfigChange(newConfig: Record<string, unknown>) {
-    patchWidget({ config: newConfig });
-  }
+  function patchWidget(changes: Partial<WidgetDefinition>) { dispatch("configChange", { id: widget.id, changes }); }
+  function handleWidgetConfigChange(newConfig: Record<string, unknown>) { patchWidget({ config: newConfig }); }
   function handleContentConfigChange(e: CustomEvent<unknown>) {
     const detail = e.detail as Record<string, unknown>;
     if (widget.type !== "data-table") { handleWidgetConfigChange(detail); return; }
@@ -110,10 +110,10 @@
       patchWidget({ config: change.widgetConfig });
     } else handleWidgetConfigChange(change.widgetConfig);
   }
-  /** Toggle panel, seeding type defaults on first configure. */
   function toggleConfig() {
+    if (readonly) return;
     if (!panelDescriptor.isConfigured(widget.config ?? {})) {
-      handleWidgetConfigChange(panelDescriptor.initDefaults(panelFields(ctx)));
+      handleWidgetConfigChange(panelDescriptor.initDefaults(panelFields(ctx), ctx.transformedFrame.records));
       showConfig = true;
       return;
     }
@@ -123,12 +123,11 @@
     patchWidget({ transform: e.detail });
     showPipeline = false;
   }
+  function openPipeline(intent: PipelineIntent | null) { pipelineIntent = intent; showPipeline = !showPipeline || intent !== null; }
   function handleLinkedSelectionChange(e: CustomEvent<LinkedSelectionConfig | undefined>) {
     handleWidgetConfigChange(withLinkedSelection(widget.config, e.detail));
   }
-  function handleDbCallSourceChange(e: CustomEvent<WidgetSourceConfig>) {
-    patchWidget({ sourceConfig: e.detail });
-  }
+  function handleDbCallSourceChange(e: CustomEvent<WidgetSourceConfig>) { patchWidget({ sourceConfig: e.detail }); }
 </script>
 
 <WidgetShell
@@ -141,20 +140,16 @@
   <svelte:fragment slot="badges"><WidgetHeaderBadges {widget} frame={ctx.transformedFrame} tableConfig={ctx.effectiveTableConfig} /></svelte:fragment>
   <svelte:fragment slot="actions">
     <WidgetPrimaryAction action={primaryAction} on:primaryAction={handlePrimaryAction} />
-    <!-- #194 gives the cog a SECOND reason, not a registry edit: `hasCog` means
-         "this type owns a config panel" and stays false for `data-table`. -->
-    <WidgetHeaderActions
-      {readonly}
+    <!-- B7: one «⋯» menu. #194: `hasCog` stays false for `data-table`; data scope is the second reason. -->
+    <WidgetHeaderActions {readonly} {collapsed} isDatabase={widget.type === "database-call"}
       hasCog={(panelDescriptor.hasCog && (panelEntry !== undefined || widget.type === "database-call")) || hasDataScope(widget.type)}
-      hasPipeline={hasPipelineButton(widget.type)}
-      pipelineStepCount={currentPipeline.steps.length}
-      locked={widget.layout.locked ?? false}
-      on:toggleConfig={toggleConfig}
-      on:togglePipeline={() => (showPipeline = !showPipeline)}
+      hasPipeline={hasPipelineButton(widget.type)} pipelineStepCount={currentPipeline.steps.length} locked={widget.layout.locked ?? false}
+      on:toggleConfig={toggleConfig} on:togglePipeline={(e) => openPipeline(e.detail)}
+      on:toggleCollapse={() => { primaryActionSignal = 0; patchWidget({ collapsed: !collapsed }); }}
       on:toggleLock={() => patchWidget({ layout: { ...widget.layout, locked: !(widget.layout.locked ?? false) } })}
-      on:remove={() => dispatch("removeWidget", widget.id)}
-      on:rename={() => (renameSignal += 1)}
-    />
+      on:filter={() => { if (collapsed) patchWidget({ collapsed: false }); openBlockFilter(widget.id); }}
+      on:duplicate={() => dispatch("duplicateWidget", widget.id)}
+      on:remove={() => dispatch("removeWidget", widget.id)} on:rename={() => (renameSignal += 1)} />
   </svelte:fragment>
 
   <svelte:fragment slot="panels">
@@ -200,6 +195,7 @@
         {rightFrames}
         sourceState={dbCall.source}
         {availableSources}
+        intent={pipelineIntent}
         on:apply={(e) => patchWidget({ transform: e.detail })}
         on:save={handlePipelineSave}
       />
@@ -215,7 +211,7 @@
     on:change={(e) => handleWidgetConfigChange(e.detail)}
     on:filter
     on:fieldPresetsChange={(e) => dispatch("fieldPresetsChange", e.detail)}
-    on:openPipeline={() => (showPipeline = true)}
+    on:openPipeline={() => { pipelineIntent = null; showPipeline = true; }}
     on:clearPipeline={() => patchWidget({ transform: { steps: [] } })}
     on:configure={toggleConfig}
     on:patch={(e) => patchWidget(e.detail)}

@@ -1,1176 +1,229 @@
 <script lang="ts">
   /**
-   * DayPopup.svelte - v7.0.0 iOS-Style Complete Redesign
-   * 
-   * Premium iOS-style popup for day events with:
-   * - Adaptive layout: Bottom sheet (mobile) / Card (desktop)
-   * - Smooth spring animations
-   * - Gesture support (swipe to dismiss)
-   * - Safe area handling
-   * - Perfect touch targets (44 minimum)
-   * - Accessibility (ARIA, focus trap)
+   * DayPopup — the calendar's day window (B10).
+   *
+   * It runs on the shared popup engine, FloatingPopup, anchored at the day that
+   * was tapped. It used to build its own `position: fixed` layer with its own
+   * Escape, focus, scroll lock and swipe handling (~1100 lines); every one of
+   * those is now the engine's contract, the same as every other popup:
+   *   - the layer lives in the anchor's own document (#192 popout windows);
+   *   - desktop: anchored, flipped and clamped inside the visible viewport;
+   *   - mobile: a bottom sheet fitted above the on-screen keyboard;
+   *   - Escape closes the top layer only; focus returns to the day.
+   * The record list opens the peek through the view (`recordClick`); the
+   * editor stays behind each row's settings entry (`recordSettings`).
    */
   import dayjs from "dayjs";
-  import { createEventDispatcher, onMount, onDestroy, tick } from "svelte";
+  import { createEventDispatcher } from "svelte";
+  import { Icon } from "obsidian-svelte";
   import type { DataRecord } from "src/lib/dataframe/dataframe";
   import type { ProjectDefinition } from "src/settings/settings";
   import { formatDateForDisplay } from "src/lib/helpers";
   import { i18n } from "src/lib/stores/i18n";
+  import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
   import RecordItem from "./RecordItem.svelte";
-  import { toRem } from "src/ui/utils/cssLength";
-  import { DuplicatePopup } from "../DuplicatePopup";
-  import type { ProcessedRecord } from "../../types";
 
-  // ═══════════════════════════════════════════════════════════════
-  // PROPS
-  // ═══════════════════════════════════════════════════════════════
-  
   export let project: ProjectDefinition;
   export let date: dayjs.Dayjs;
   export let records: DataRecord[];
   export let checkField: string | undefined;
   export let visible: boolean = false;
+  /** The tapped day: where the window anchors and where focus goes back to. */
+  export let anchorEl: HTMLElement | null = null;
   export let getRecordColor: ((record: DataRecord) => string | null) | undefined = undefined;
   // v4.0.3: eventColorField for direct color reading from record.values
   export let eventColorField: string | undefined = undefined;
-  // v8.0.0: processedData for new DuplicatePopup
-  export let processedData: import('../../types').ProcessedCalendarData | null = null;
-  export let firstDayOfWeek: number = 1;
   // v8.1.0: config for timezone and other calendar config
   export let config: import('../../types').CalendarConfig | undefined = undefined;
-  // Note: anchorX and anchorY are preserved for API compatibility but not used in iOS-style popup
-  export const anchorX: number | undefined = undefined;
-  export const anchorY: number | undefined = undefined;
-  
-  // ═══════════════════════════════════════════════════════════════
-  // EVENTS
-  // ═══════════════════════════════════════════════════════════════
-  
+
   const dispatch = createEventDispatcher<{
     close: void;
     recordClick: DataRecord;
     recordOpenInNewWindow: DataRecord;
     recordSettings: DataRecord;
     recordDelete: DataRecord;
-    recordDuplicate: { 
-      record: DataRecord; 
-      targetDates: dayjs.Dayjs[];
-      customTime?: { startTime: dayjs.Dayjs; endTime: dayjs.Dayjs } | null;
-    };
+    // The duplicate window is not this popup's: it is opened by the view, and
+    // this popup closes. Only the record to copy is handed over.
+    recordDuplicateRequest: DataRecord;
     recordTimeChange: { record: DataRecord; newTime: string };
     recordCheck: { record: DataRecord; checked: boolean };
     recordColorChange: { record: DataRecord; color: string };
     createNote: dayjs.Dayjs;
   }>();
 
-  // ═══════════════════════════════════════════════════════════════
-  // STATE
-  // ═══════════════════════════════════════════════════════════════
-  
-  let showDuplicatePopup = false;
-  let duplicateRecord: DataRecord | null = null;
-  let duplicateProcessedRecord: ProcessedRecord | null = null;
-  let popupElement: HTMLDivElement | null = null;
-  let contentElement: HTMLDivElement | null = null;
-  let portalContainer: HTMLDivElement | null = null;
-  // #192: the window this popup actually lives in. Set when the portal builds
-  // its layer; until then the bundle's own, which is right for a leaf in the
-  // main window and is the only thing available before mount.
-  let ownView: Window = window;
-  let ownDoc: Document = document;
-  let listening = false;
-  /** Documents whose scroll this popup has locked. At most one at a time. */
-  const lockedDocs = new Set<Document>();
-  
-  // Layout mode
-  let isMobile = false;
-  let isClosing = false;
-  
-  // Gesture state for swipe-to-dismiss
-  let dragStartY = 0;
-  let isDragging = false;
-  let dragOffset = 0;
-  
-  // v4.0.3: Get color from record.values (eventColorField) with fallback to getRecordColor
+  // v4.0.3: Get color from record.values (eventColorField) with fallbacks
   function getColorForRecord(record: DataRecord): string | null {
-    // Priority 1: Direct from record.values using eventColorField
-    if (eventColorField && record.values[eventColorField]) {
-      const color = record.values[eventColorField];
-      if (typeof color === 'string') return color;
+    for (const key of [eventColorField, "eventColor", "color"]) {
+      const value = key ? record.values[key] : undefined;
+      if (typeof value === "string" && value) return value;
     }
-    // Priority 2: Check "eventColor" field as fallback
-    if (record.values['eventColor']) {
-      const color = record.values['eventColor'];
-      if (typeof color === 'string') return color;
-    }
-    // Priority 3: Check "color" field as fallback
-    if (record.values['color']) {
-      const color = record.values['color'];
-      if (typeof color === 'string') return color;
-    }
-    // Priority 4: Use getRecordColor callback if provided
     return getRecordColor?.(record) ?? null;
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // PORTAL - Mount popup inside workspace-leaf to respect plugin boundaries
-  // ═══════════════════════════════════════════════════════════════
-  
-  // #192: this one is NOT the shared `portal` primitive, and the difference is
-  // worth stating. The primitive moves a node into a target that already
-  // exists; this creates and owns a layer, sets pointer-events on it and
-  // promotes its host to `position: relative`. Folding that into the primitive
-  // would make it a layer manager for one caller's sake.
-  //
-  // What it DOES share is the lesson: the document comes from the node, never
-  // from the module. `activeDocument` is the FOCUSED document, so with a
-  // Projects leaf in a popout window and focus elsewhere, this used to build
-  // its layer in the wrong window.
-  function createPortal(node: HTMLElement) {
-    const doc = node.ownerDocument;
-    // The popup renders conditionally, so this action can run AFTER onMount.
-    // Rebinding here rather than only at mount is what keeps Escape working in
-    // a popout: whichever document turns out to be the real one, the listener
-    // ends up on it and never on both.
-    bindTo(doc);
-    // Find the plugin's workspace-leaf container - mount portal INSIDE it
-    // This respects Obsidian's sidebar boundaries
-    const workspaceLeaf = node.closest('.workspace-leaf-content') as HTMLElement || 
-                          node.closest('.workspace-leaf') as HTMLElement;
-    
-    if (workspaceLeaf) {
-      // Create portal container inside workspace-leaf (not body)
-      portalContainer = doc.createElement('div');
-      // Its layout is the class's (catalogue audit C6: no static inline styles).
-      portalContainer.className = 'obsidian-projects-popup-portal';
-      
-      // Ensure workspace-leaf has relative positioning for absolute child
-      const view = doc.defaultView ?? window;
-      const computedStyle = view.getComputedStyle(workspaceLeaf);
-      if (computedStyle.position === 'static') {
-        workspaceLeaf.classList.add('obsidian-projects-popup-host');
-      }
-      
-      workspaceLeaf.appendChild(portalContainer);
-    } else {
-      // Fallback to body if no workspace-leaf found
-      portalContainer = doc.createElement('div');
-      portalContainer.className = 'obsidian-projects-popup-portal obsidian-projects-popup-portal--fixed';
-      doc.body.appendChild(portalContainer);
-    }
-    
-    // Move node to portal
-    portalContainer.appendChild(node);
-    
-    return {
-      destroy() {
-        // Cleanup
-        if (portalContainer && portalContainer.parentNode) {
-          portalContainer.parentNode.removeChild(portalContainer);
-        }
-        portalContainer = null;
-      }
-    };
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // COMPUTED
-  // ═══════════════════════════════════════════════════════════════
-  
   $: formattedDate = formatDateForDisplay(date, project) ?? date.format('D MMMM YYYY');
   $: dayOfWeek = date.format('dddd');
   $: isToday = date.isSame(
     (config?.timezone && config.timezone !== "local" ? dayjs().tz(config.timezone) : dayjs()), 'day'
   );
-  
-  // Date badge
-  $: dateBadge = isToday 
-    ? ($i18n.t('views.calendar.popup.today'))
-    : '';
 
-  // ═══════════════════════════════════════════════════════════════
-  // LIFECYCLE - v5.0.0: Added orientation change handling
-  // ═══════════════════════════════════════════════════════════════
-  
-  function detectLayout() {
-    // Measured against the window the popup is in: in a popout, the main
-    // window's size says nothing about the space this popup has.
-    isMobile = ownView.innerWidth < 768 || ownView.innerHeight < 600;
-  }
-  
-  // v5.0.0: Handle orientation changes smoothly
-  function handleOrientationChange() {
-    // Recalculate layout after orientation change completes
-    setTimeout(() => {
-      detectLayout();
-      // Reset drag state to prevent stuck UI
-      dragOffset = 0;
-      isDragging = false;
-      // Force reflow of content
-      if (contentElement) {
-        contentElement.scrollTop = 0;
-      }
-    }, 100);
-  }
-  
-  /**
-   * Move EVERY listener to `doc`'s window, taking them off whatever held them.
-   *
-   * All of them, not just the key handler — the review caught that half-move:
-   * `onMount` had already put resize and orientation on the main window, and
-   * changing `ownView` without moving them meant resizing the popout stopped
-   * re-measuring, while teardown removed them from a window that never had
-   * them, leaking the originals.
-   */
-  function bindTo(doc: Document): void {
-    if (doc === ownDoc && listening) return;
-    if (listening) unbind();
-    ownDoc = doc;
-    ownView = doc.defaultView ?? window;
-    ownDoc.addEventListener('keydown', handleKeydown);
-    ownView.addEventListener('resize', detectLayout);
-    ownView.addEventListener('orientationchange', handleOrientationChange);
-    if (ownView.screen?.orientation) {
-      ownView.screen.orientation.addEventListener('change', handleOrientationChange);
-    }
-    listening = true;
-    detectLayout();
-    // The scroll lock belongs to a document too. Opening happens before the
-    // portal names the real one, so a lock taken on the bundle's document has
-    // to be released there and retaken here — otherwise a narrow popout shows
-    // the sheet with its scroll free, and the main window stays locked with
-    // nothing to unlock it.
-    syncScrollLock();
+  /** Every close path ends here: the close button, Escape, an outside press. */
+  function close() {
+    visible = false;
+    dispatch('close');
   }
 
-  /** Hold the lock on exactly one document: the one the popup is now in. */
-  function syncScrollLock(): void {
-    for (const doc of lockedDocs) {
-      if (doc !== ownDoc) doc.body.classList.remove('obsidian-projects-scroll-locked');
-    }
-    lockedDocs.clear();
-    if (visible && isMobile) {
-      ownDoc.body.classList.add('obsidian-projects-scroll-locked');
-      lockedDocs.add(ownDoc);
-    } else {
-      ownDoc.body.classList.remove('obsidian-projects-scroll-locked');
-    }
-  }
-
-  function unbind(): void {
-    if (!listening) return;
-    ownDoc.removeEventListener('keydown', handleKeydown);
-    ownView.removeEventListener('resize', detectLayout);
-    ownView.removeEventListener('orientationchange', handleOrientationChange);
-    if (ownView.screen?.orientation) {
-      ownView.screen.orientation.removeEventListener('change', handleOrientationChange);
-    }
-    listening = false;
-  }
-
-  onMount(() => {
-    // The portal may not have run yet, so this binds to the bundle's document
-    // and `bindTo` moves everything the moment the real one is known.
-    bindTo(ownDoc);
-  });
-  
-  onDestroy(() => {
-    unbind();
-    for (const doc of lockedDocs) doc.body.classList.remove('obsidian-projects-scroll-locked');
-    lockedDocs.clear();
-    ownDoc.body.classList.remove('obsidian-projects-scroll-locked');
-    // Cleanup portal if still exists
-    if (portalContainer && portalContainer.parentNode) {
-      portalContainer.parentNode.removeChild(portalContainer);
-    }
-  });
-  
-  // React to visibility changes
-  $: if (visible) {
-    openPopup();
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // OPEN / CLOSE LOGIC
-  // ═══════════════════════════════════════════════════════════════
-  
-  async function openPopup() {
-    isClosing = false;
-    dragOffset = 0;
-    
-    // Lock body scroll on mobile — through the same path as a rebind, so the
-    // lock is always recorded against the document that holds it.
-    syncScrollLock();
-    
-    await tick();
-    
-    // Focus first interactive element
-    setTimeout(() => {
-      popupElement?.querySelector<HTMLElement>('button, [tabindex="0"]')?.focus();
-    }, 300);
-  }
-  
-  function closePopup() {
-    if (isClosing) return;
-    
-    isClosing = true;
-    
-    // Unlock body scroll — every document this popup ever locked, not just the
-    // one it happens to be bound to now.
-    for (const doc of lockedDocs) doc.body.classList.remove('obsidian-projects-scroll-locked');
-    lockedDocs.clear();
-    ownDoc.body.classList.remove('obsidian-projects-scroll-locked');
-    
-    setTimeout(() => {
-      visible = false;
-      isClosing = false;
-      dispatch('close');
-    }, 200);
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // GESTURE HANDLERS (Swipe to dismiss on mobile)
-  // v5.0.0: Improved to not interfere with color palette interactions
-  // ═══════════════════════════════════════════════════════════════
-  
-  function handleTouchStart(e: TouchEvent) {
-    if (!isMobile) return;
-    
-    const touch = e.touches[0];
-    if (!touch) return;
-    
-    // v5.0.0: CRITICAL - Don't initiate drag if touch is inside color palette
-    const target = e.target as HTMLElement;
-    if (target.closest('[data-color-palette]') || 
-        target.closest('.color-palette') ||
-        target.closest('.sat-light-picker') ||
-        target.closest('.hue-slider')) {
-      return; // Let color palette handle its own touches
-    }
-    
-    // v3.0.1: FIXED - Only allow drag from header/drag-indicator
-    // Content should scroll natively without interference
-    const isHeader = target.closest('.ios-popup-header') || target.closest('.ios-popup-drag-indicator');
-    
-    // Only enable dragging for header - let content scroll naturally
-    if (!isHeader) return;
-    
-    dragStartY = touch.clientY;
-    isDragging = true;
-  }
-  
-  function handleTouchMove(e: TouchEvent) {
-    if (!isDragging || !isMobile) return;
-    
-    // v5.0.0: Double-check we're not in color palette
-    const target = e.target as HTMLElement;
-    if (target.closest('[data-color-palette]') || target.closest('.color-palette')) {
-      isDragging = false;
-      return;
-    }
-    
-    const touch = e.touches[0];
-    if (!touch) return;
-    
-    const delta = touch.clientY - dragStartY;
-    
-    // For top sheet: allow dragging UP (negative delta)
-    if (delta < 0) {
-      dragOffset = delta;
-      // v3.0.1: Only preventDefault if event is cancelable (scroll not in progress)
-      if (e.cancelable) {
-        e.preventDefault();
-      }
-    }
-  }
-  
-  function handleTouchEnd() {
-    if (!isDragging) return;
-    
-    isDragging = false;
-    
-    // Close if dragged up more than 6.25rem equivalent
-    // coercion-exempt: Class C - a computed CSS length read back from the DOM, not record data
-    const remPx = parseFloat(ownView.getComputedStyle(ownDoc.documentElement).fontSize) || 16;
-    if (dragOffset < -6.25 * remPx) {
-      closePopup();
-    } else {
-      // Spring back
-      dragOffset = 0;
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // EVENT HANDLERS
-  // ═══════════════════════════════════════════════════════════════
-  
-  function handleBackdropClick(e: MouseEvent) {
-    if (e.target === e.currentTarget) {
-      closePopup();
-    }
-  }
-  
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
-      closePopup();
-    }
-  }
-  
-  function handleRecordClick(record: DataRecord) {
-    dispatch('recordClick', record);
-  }
-  
-  function handleRecordOpenInNewWindow(record: DataRecord) {
-    dispatch('recordOpenInNewWindow', record);
-  }
-  
-  function handleRecordSettings(record: DataRecord) {
-    // Close popup first to prevent z-index conflict with Obsidian modal
-    closePopup();
-    // Slight delay to ensure popup is closed before modal opens
-    setTimeout(() => {
-      dispatch('recordSettings', record);
-    }, 50);
-  }
-  
-  function handleRecordDelete(record: DataRecord) {
-    dispatch('recordDelete', record);
-  }
-  
-  function handleRecordDuplicate(record: DataRecord) {
-    duplicateRecord = record;
-    
-    // Find corresponding ProcessedRecord
-    if (processedData) {
-      duplicateProcessedRecord = processedData.processed.find(pr => pr.record.id === record.id) ?? null;
-    }
-    
-    showDuplicatePopup = true;
-  }
-  
-  function handleDuplicateConfirm(event: CustomEvent<{ 
-    sourceRecord: ProcessedRecord; 
-    targetDates: dayjs.Dayjs[];
-    customTime: { startTime: dayjs.Dayjs; endTime: dayjs.Dayjs } | null;
-  }>) {
-    const { targetDates, customTime } = event.detail;
-    
-    if (duplicateRecord) {
-      dispatch('recordDuplicate', { 
-        record: duplicateRecord, 
-        targetDates,
-        customTime 
-      });
-    }
-    showDuplicatePopup = false;
-    duplicateRecord = null;
-    duplicateProcessedRecord = null;
-  }
-  
-  function handleRecordTimeChange(record: DataRecord, newTime: string) {
-    dispatch('recordTimeChange', { record, newTime });
-  }
-  
-  function handleRecordCheck(record: DataRecord, checked: boolean) {
-    dispatch('recordCheck', { record, checked });
-  }
-  
-  function handleRecordColorChange(record: DataRecord, color: string) {
-    dispatch('recordColorChange', { record, color });
-  }
-  
-  function handleCreateNote() {
-    dispatch('createNote', date);
-  }
+  // The view closes the window for the actions that leave it (open, settings,
+  // duplicate); the engine then hands focus back to the day.
 </script>
 
-<!--
-  #192: `<svelte:window>` binds to the bundle's window, so in a popout the
-  Escape key was being listened for in a window the popup is not in. The
-  listener moves to the popup's own document in `onMount` instead.
--->
-
-{#if visible}
-  <!-- iOS-style Backdrop - mounted to body via portal -->
-  <div 
-    use:createPortal
-    class="ios-popup-backdrop"
-    class:mobile={isMobile}
-    class:closing={isClosing}
-    on:click={handleBackdropClick}
-    on:keydown={(e) => e.key === 'Enter' && closePopup()}
-    role="presentation"
-    tabindex="-1"
-  >
-    <!-- Popup Container -->
-    <div 
-      bind:this={popupElement}
-      class="ios-popup"
-      class:mobile={isMobile}
-      class:desktop={!isMobile}
-      class:closing={isClosing}
-      class:dragging={isDragging}
-      style:--drag-offset={toRem(dragOffset, ownDoc)}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="ios-popup-title"
-      on:touchstart={handleTouchStart}
-      on:touchmove={handleTouchMove}
-      on:touchend={handleTouchEnd}
-      on:click|stopPropagation={() => {}}
-      on:keydown|stopPropagation={() => {}}
-    >
-      <!-- Header -->
-      <header class="ios-popup-header">
-        <div class="ios-popup-header-content">
-          <div class="ios-popup-date-section">
-            <h2 id="ios-popup-title" class="ios-popup-title">
-              {formattedDate}
-            </h2>
-            <div class="ios-popup-subtitle">
-              <span class="ios-popup-weekday">{dayOfWeek}</span>
-              {#if isToday}
-                <span class="ios-popup-badge today">{dateBadge}</span>
-              {/if}
-            </div>
-          </div>
-          
-          <button 
-            class="ios-popup-close-btn"
-            on:click={closePopup}
-            aria-label={$i18n.t('common.close')}
-            type="button"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
+<FloatingPopup
+  triggerEl={anchorEl}
+  open={visible}
+  placement="right-start"
+  role="dialog"
+  ariaLabel={formattedDate}
+  on:close={close}
+>
+  <div class="ppp-day-popup">
+    <header class="ppp-day-popup-header">
+      <div class="ppp-day-popup-date">
+        <h2 class="ppp-day-popup-title">{formattedDate}</h2>
+        <div class="ppp-day-popup-subtitle">
+          <span class="ppp-day-popup-weekday">{dayOfWeek}</span>
+          {#if isToday}
+            <span class="ppp-day-popup-badge">{$i18n.t('views.calendar.popup.today')}</span>
+          {/if}
         </div>
-      </header>
-      
-      <!-- Footer with Create button (moved to top on mobile) -->
-      <footer class="ios-popup-footer">
-        <button 
-          class="ios-popup-create-btn"
-          on:click={handleCreateNote}
-          type="button"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-          <span>{$i18n.t("views.calendar.new-note") ?? "Новая заметка"}</span>
-        </button>
-      </footer>
-      
-      <!-- Content -->
-      <div 
-        bind:this={contentElement}
-        class="ios-popup-content"
-      >
-        {#if records.length === 0}
-          <!-- Empty State -->
-          <div class="ios-popup-empty">
-            <div class="ios-popup-empty-icon">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="16" y1="2" x2="16" y2="6"></line>
-                <line x1="8" y1="2" x2="8" y2="6"></line>
-                <line x1="3" y1="10" x2="21" y2="10"></line>
-              </svg>
-            </div>
-            <p class="ios-popup-empty-text">
-              {$i18n.t("views.calendar.no-events") ?? "Нет событий"}
-            </p>
-            <p class="ios-popup-empty-hint">
-              {$i18n.t("views.calendar.popup.empty-hint") ?? "Нажмите кнопку выше, чтобы создать"}
-            </p>
-          </div>
-        {:else}
-          <!-- Records List -->
-          <div class="ios-popup-records">
-            {#each records as record (record.id)}
-              <RecordItem
-                {record}
-                {checkField}
-                currentColor={getColorForRecord(record) ?? undefined}
-                onColorChange={(color) => handleRecordColorChange(record, color)}
-                on:openNote={() => handleRecordClick(record)}
-                on:openInNewWindow={() => handleRecordOpenInNewWindow(record)}
-                on:settings={() => handleRecordSettings(record)}
-                on:delete={() => handleRecordDelete(record)}
-                on:duplicate={() => handleRecordDuplicate(record)}
-                on:timeChange={({ detail }) => handleRecordTimeChange(record, detail)}
-                on:check={({ detail }) => handleRecordCheck(record, detail)}
-                on:colorChange={({ detail }) => handleRecordColorChange(record, detail)}
-              />
-            {/each}
-          </div>
-        {/if}
       </div>
-      
-      <!-- Drag Indicator (mobile only) - at bottom for top sheet -->
-      {#if isMobile}
-        <div class="ios-popup-drag-indicator">
-          <div class="ios-popup-drag-handle"></div>
-        </div>
-      {/if}
-    </div>
-  </div>
-{/if}
+      <button class="ppp-day-popup-close clickable-icon" type="button" on:click={close} aria-label={$i18n.t('common.close')}>
+        <Icon name="x" size="sm" />
+      </button>
+    </header>
 
-{#if showDuplicatePopup && duplicateProcessedRecord && processedData}
-  <DuplicatePopup
-    visible={showDuplicatePopup}
-    sourceRecord={duplicateProcessedRecord}
-    existingData={processedData}
-    {firstDayOfWeek}
-    displayMode="bars"
-    startHour={7}
-    endHour={21}
-    timezone={config?.timezone || 'local'}
-    on:confirm={handleDuplicateConfirm}
-    on:close={() => { 
-      showDuplicatePopup = false; 
-      duplicateRecord = null;
-      duplicateProcessedRecord = null;
-    }}
-  />
-{/if}
+    <button class="ppp-day-popup-create mod-cta" type="button" on:click={() => dispatch('createNote', date)}>
+      <Icon name="plus" size="sm" />
+      <span>{$i18n.t("views.calendar.new-note")}</span>
+    </button>
+
+    {#if records.length === 0}
+      <div class="ppp-day-popup-empty">
+        <p class="ppp-day-popup-empty-text">{$i18n.t("views.calendar.no-events")}</p>
+        <p class="ppp-day-popup-empty-hint">{$i18n.t("views.calendar.popup.empty-hint")}</p>
+      </div>
+    {:else}
+      <div class="ppp-day-popup-records">
+        {#each records as record (record.id)}
+          <RecordItem
+            {record}
+            {checkField}
+            currentColor={getColorForRecord(record) ?? undefined}
+            onColorChange={(color) => dispatch('recordColorChange', { record, color })}
+            on:openNote={() => dispatch('recordClick', record)}
+            on:openInNewWindow={() => dispatch('recordOpenInNewWindow', record)}
+            on:settings={() => dispatch('recordSettings', record)}
+            on:delete={() => dispatch('recordDelete', record)}
+            on:duplicate={() => dispatch('recordDuplicateRequest', record)}
+            on:timeChange={({ detail }) => dispatch('recordTimeChange', { record, newTime: detail })}
+            on:check={({ detail }) => dispatch('recordCheck', { record, checked: detail })}
+            on:colorChange={({ detail }) => dispatch('recordColorChange', { record, color: detail })}
+          />
+        {/each}
+      </div>
+    {/if}
+  </div>
+</FloatingPopup>
 
 <style>
-  /* The portal layer and the scroll lock are set by script as classes
-     (catalogue audit C6), so their rules are global. */
-  :global(.obsidian-projects-popup-portal) {
-    position: absolute;
-    inset: 0;
-    /* 100, as the inline style had it: the scale token of that height. */
-    z-index: var(--ppp-db-z-dropdown, 100);
-    pointer-events: none;
-    overflow: hidden;
-  }
-  :global(.obsidian-projects-popup-portal--fixed) {
-    position: fixed;
-    overflow: visible;
-  }
-  :global(.obsidian-projects-popup-portal > *) {
-    pointer-events: auto;
-  }
-  :global(.obsidian-projects-popup-host) {
-    position: relative;
-  }
-  :global(body.obsidian-projects-scroll-locked) {
-    overflow: hidden;
-  }
-
-  /* ═══════════════════════════════════════════════════════════════
-     iOS POPUP - CSS VARIABLES
-     ═══════════════════════════════════════════════════════════════ */
-  .ios-popup-backdrop {
-    --ios-radius: 1.25rem;
-    --ios-bg: var(--background-primary);
-    --ios-border: var(--background-modifier-border);
-    --ios-shadow: var(--shadow-l);
-    --ios-accent: var(--interactive-accent);
-    --ios-touch: 2.75rem; /* 44 iOS minimum */
-  }
-
-  /* ═══════════════════════════════════════════════════════════════
-     BACKDROP
-     ═══════════════════════════════════════════════════════════════ */
-  .ios-popup-backdrop {
-    /* Use absolute positioning to stay within workspace-leaf bounds */
-    position: absolute;
-    inset: 0;
-    z-index: 100;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    background: transparent;
-    animation: ios-backdrop-in 0.3s ease forwards;
-    -webkit-tap-highlight-color: transparent;
-  }
-  
-  .ios-popup-backdrop.closing {
-    animation: ios-backdrop-out 0.2s ease forwards;
-  }
-  
-  .ios-popup-backdrop:not(.mobile) {
-    align-items: center;
-  }
-  
-  @keyframes ios-backdrop-in {
-    from { background: transparent; }
-    to { background: var(--background-modifier-cover); }
-  }
-
-  @keyframes ios-backdrop-out {
-    from { background: var(--background-modifier-cover); }
-    to { background: transparent; }
-  }
-
-  /* ═══════════════════════════════════════════════════════════════
-     POPUP CONTAINER
-     ═══════════════════════════════════════════════════════════════ */
-  .ios-popup {
+  .ppp-day-popup {
     display: flex;
     flex-direction: column;
-    background: var(--ios-bg);
-    overflow: hidden;
-    /* Use percentage of container instead of viewport */
-    max-height: 90%;
-    min-height: 12rem;
-    will-change: transform;
-    /* CRITICAL: Enable pointer events for popup content (parent has pointer-events: none) */
-    pointer-events: auto;
-  }
-  
-  /* Mobile: Top sheet (slides from top) */
-  .ios-popup.mobile {
-    width: 100%;
+    gap: var(--ppp-space-4, 0.5rem);
+    width: 20rem;
     max-width: 100%;
-    border-radius: 0 0 var(--ios-radius) var(--ios-radius);
-    box-shadow: var(--ios-shadow);
-    transform: translateY(calc(var(--drag-offset, 0rem)));
-    animation: ios-sheet-in-top 0.4s cubic-bezier(0.32, 0.72, 0, 1) forwards;
-    padding-top: env(safe-area-inset-top, 0);
-  }
-  
-  .ios-popup.mobile.closing {
-    animation: ios-sheet-out-top 0.25s cubic-bezier(0.32, 0.72, 0, 1) forwards;
-  }
-  
-  .ios-popup.mobile.dragging {
-    transition: none;
-  }
-  
-  /* Desktop: Centered card */
-  .ios-popup.desktop {
-    width: 24rem;
-    max-width: calc(100% - 2rem);
-    border-radius: var(--ios-radius);
-    box-shadow: 
-      var(--shadow-l),
-      0 0 0 0.0625rem var(--ios-border);
-    animation: ios-card-in 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
-  }
-  
-  .ios-popup.desktop.closing {
-    animation: ios-card-out 0.2s ease forwards;
-  }
-  
-  @keyframes ios-sheet-in-top {
-    from { transform: translateY(-100%); }
-    to { transform: translateY(0); }
-  }
-  
-  @keyframes ios-sheet-out-top {
-    from { transform: translateY(var(--drag-offset, 0)); }
-    to { transform: translateY(-100%); }
-  }
-  
-  @keyframes ios-card-in {
-    from { opacity: 0; transform: scale(0.9) translateY(1rem); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
-  }
-  
-  @keyframes ios-card-out {
-    from { opacity: 1; transform: scale(1); }
-    to { opacity: 0; transform: scale(0.95); }
   }
 
-  /* ═══════════════════════════════════════════════════════════════
-     DRAG INDICATOR
-     ═══════════════════════════════════════════════════════════════ */
-  .ios-popup-drag-indicator {
-    display: flex;
-    justify-content: center;
-    padding: 0.625rem 0 0.375rem;
-    cursor: grab;
-  }
-  
-  .ios-popup-drag-indicator:active {
-    cursor: grabbing;
-  }
-  
-  .ios-popup-drag-handle {
-    width: 2.25rem;
-    height: 0.3125rem;
-    border-radius: 0.25rem;
-    background: var(--ios-border);
-    opacity: 0.6;
-  }
-
-  /* ═══════════════════════════════════════════════════════════════
-     HEADER
-     ═══════════════════════════════════════════════════════════════ */
-  .ios-popup-header {
-    flex-shrink: 0;
-    border-bottom: 0.0625rem solid var(--ios-border);
-  }
-  
-  .ios-popup-header-content {
+  .ppp-day-popup-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem 1rem 1rem 1.25rem;
-    gap: 1rem;
+    gap: var(--ppp-space-4, 0.5rem);
+    padding: 0.25rem 0.25rem 0.5rem 0.5rem;
+    border-bottom: 0.0625rem solid var(--background-modifier-border);
   }
-  
-  .ios-popup-date-section {
+
+  .ppp-day-popup-date {
     flex: 1;
     min-width: 0;
   }
-  
-  .ios-popup-title {
+
+  .ppp-day-popup-title {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: var(--font-ui-large, 1.125rem);
     font-weight: 600;
-    color: var(--text-normal);
     line-height: 1.3;
+    color: var(--text-normal);
   }
-  
-  .ios-popup-subtitle {
+
+  .ppp-day-popup-subtitle {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin-top: 0.125rem;
   }
-  
-  .ios-popup-weekday {
-    font-size: 0.9375rem;
+
+  .ppp-day-popup-weekday {
+    font-size: var(--font-ui-small, 0.875rem);
     color: var(--text-muted);
     text-transform: capitalize;
   }
-  
-  .ios-popup-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.125rem 0.5rem;
-    border-radius: 0.375rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-  }
-  
-  .ios-popup-badge.today {
-    background: var(--ios-accent);
+
+  .ppp-day-popup-badge {
+    padding: 0.0625rem 0.5rem;
+    border-radius: var(--ppp-radius-md, 0.375rem);
+    background: var(--interactive-accent);
     color: var(--text-on-accent);
+    font-size: var(--font-ui-smaller, 0.75rem);
+    font-weight: 600;
   }
-  
-  /* Close Button */
-  .ios-popup-close-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: var(--ios-touch);
-    height: var(--ios-touch);
-    min-width: var(--ios-touch);
-    min-height: var(--ios-touch);
-    border: none;
-    border-radius: 50%;
-    background: var(--background-secondary);
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+
+  .ppp-day-popup-close {
     flex-shrink: 0;
-  }
-  
-  .ios-popup-close-btn:hover {
-    background: var(--background-modifier-hover);
-    color: var(--text-normal);
-  }
-  
-  .ios-popup-close-btn:active {
-    transform: scale(0.92);
-  }
-  
-  .ios-popup-close-btn svg {
-    width: 1.25rem;
-    height: 1.25rem;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
   }
 
-  /* ═══════════════════════════════════════════════════════════════
-     CONTENT
-     ═══════════════════════════════════════════════════════════════ */
-  .ios-popup-content {
-    flex: 1 1 auto;
-    overflow-y: auto;
-    overflow-x: hidden;
-    overscroll-behavior: contain;
-    min-height: 4rem;
-    /* v3.0.1: Enable native touch scrolling */
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-y;
-  }
-  
-  /* Small viewports need special handling */
-  @media (max-height: 25rem) { /* 400 at 16 base */
-    .ios-popup {
-      max-height: calc(100vh - 1rem);
-      max-height: calc(100dvh - 1rem);
-    }
-    
-    .ios-popup-content {
-      min-height: 2rem;
-    }
-    
-    .ios-popup-empty {
-      padding: 1rem;
-    }
-    
-    .ios-popup-empty-icon {
-      display: none;
-    }
-  }
-
-  /* ═══════════════════════════════════════════════════════════════
-     EMPTY STATE
-     ═══════════════════════════════════════════════════════════════ */
-  .ios-popup-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 2.5rem 1.5rem;
-    text-align: center;
-  }
-  
-  .ios-popup-empty-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 4.5rem;
-    height: 4.5rem;
-    margin-bottom: 1rem;
-    border-radius: 50%;
-    background: var(--background-secondary);
-    color: var(--text-faint);
-  }
-  
-  .ios-popup-empty-icon svg {
-    opacity: 0.6;
-  }
-  
-  .ios-popup-empty-text {
-    margin: 0 0 0.25rem;
-    font-size: 1rem;
-    font-weight: 500;
-    color: var(--text-muted);
-  }
-  
-  .ios-popup-empty-hint {
-    margin: 0;
-    font-size: 0.875rem;
-    color: var(--text-faint);
-  }
-
-  /* ═══════════════════════════════════════════════════════════════
-     RECORDS LIST
-     ═══════════════════════════════════════════════════════════════ */
-  .ios-popup-records {
-    display: flex;
-    flex-direction: column;
-    gap: 0.375rem;
-    padding: 0.75rem 1rem;
-  }
-
-  /* ═══════════════════════════════════════════════════════════════
-     FOOTER
-     ═══════════════════════════════════════════════════════════════ */
-  .ios-popup-footer {
-    flex-shrink: 0;
-    padding: 0.75rem 1rem 1rem;
-    border-top: 0.0625rem solid var(--ios-border);
-    background: var(--ios-bg);
-  }
-  
-  .ios-popup-create-btn {
+  .ppp-day-popup-create {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
     width: 100%;
-    height: var(--ios-touch);
-    min-height: var(--ios-touch);
-    padding: 0 1.25rem;
-    border: none;
-    border-radius: 0.75rem;
-    background: var(--ios-accent);
-    color: var(--text-on-accent);
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: filter 0.15s ease, transform 0.15s ease;
-  }
-  
-  .ios-popup-create-btn:hover {
-    filter: brightness(1.05);
-  }
-  
-  .ios-popup-create-btn:active {
-    transform: scale(0.98);
-    filter: brightness(0.95);
-  }
-  
-  .ios-popup-create-btn svg {
-    flex-shrink: 0;
+    min-height: 2.75rem;
   }
 
-  /* ═══════════════════════════════════════════════════════════════
-     SCROLLBAR
-     ═══════════════════════════════════════════════════════════════ */
-  .ios-popup-content::-webkit-scrollbar {
-    width: 0.5rem;
-  }
-  
-  .ios-popup-content::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  .ios-popup-content::-webkit-scrollbar-thumb {
-    background: var(--ios-border);
-    border-radius: 0.25rem;
-  }
-  
-  .ios-popup-content::-webkit-scrollbar-thumb:hover {
-    background: var(--background-modifier-border-hover);
+  .ppp-day-popup-empty {
+    padding: 1.5rem 1rem;
+    text-align: center;
   }
 
-  /* ═══════════════════════════════════════════════════════════════
-     RESPONSIVE
-     ═══════════════════════════════════════════════════════════════ */
-  @media (max-width: 30rem) { /* 480 at 16 base */
-    .ios-popup-header-content {
-      padding: 0.75rem 1rem;
-    }
-    
-    .ios-popup-title {
-      font-size: 1.125rem;
-    }
-    
-    .ios-popup-weekday {
-      font-size: 0.875rem;
-    }
-    
-    .ios-popup-records {
-      padding: 0.5rem 0.75rem;
-    }
-    
-    .ios-popup-footer {
-      padding: 0.5rem 0.75rem 0.75rem;
-    }
-  }
-  
-  /* Very small screens - compact everything */
-  @media (max-width: 20rem), (max-height: 30rem) { /* 320 / 480 at 16 base */
-    .ios-popup-header-content {
-      padding: 0.5rem 0.75rem;
-      gap: 0.5rem;
-    }
-    
-    .ios-popup-title {
-      font-size: 1rem;
-    }
-    
-    .ios-popup-subtitle {
-      font-size: 0.75rem;
-    }
-    
-    .ios-popup-close-btn {
-      width: 2.75rem;
-      height: 2.75rem;
-      min-width: 2.75rem;
-      min-height: 2.75rem;
-    }
-    
-    .ios-popup-footer {
-      padding: 0.5rem;
-    }
-    
-    .ios-popup-create-btn {
-      height: 2.5rem;
-      min-height: 2.5rem;
-      font-size: 0.875rem;
-    }
-    
-    .ios-popup-drag-indicator {
-      padding: 0.375rem 0 0.25rem;
-    }
+  .ppp-day-popup-empty-text {
+    margin: 0 0 0.25rem;
+    color: var(--text-muted);
   }
 
-  /* ═══════════════════════════════════════════════════════════════
-     v5.0.0: LANDSCAPE ORIENTATION SUPPORT
-     ═══════════════════════════════════════════════════════════════ */
-  @media (orientation: landscape) and (max-height: 31.25rem) {
-    /* In landscape on small devices, use side sheet instead of top sheet */
-    .ios-popup.mobile {
-      width: min(50vw, 24rem);
-      max-width: 50vw;
-      height: 100%;
-      max-height: 100%;
-      border-radius: var(--ios-radius) 0 0 var(--ios-radius);
-      animation: ios-sheet-in-right 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
-      /* Position on right side */
-      position: absolute;
-      right: 0;
-      top: 0;
-      bottom: 0;
-      left: auto;
-    }
-    
-    .ios-popup.mobile.closing {
-      animation: ios-sheet-out-right 0.2s ease forwards;
-    }
-    
-    /* Adjust layout for horizontal orientation */
-    .ios-popup-header {
-      padding: 0.5rem;
-    }
-    
-    .ios-popup-content {
-      flex: 1;
-      min-height: 0;
-    }
-    
-    .ios-popup-footer {
-      padding: 0.5rem;
-    }
-    
-    /* Hide drag indicator in landscape - doesn't make sense */
-    .ios-popup-drag-indicator {
-      display: none;
-    }
-    
-    /* Backdrop alignment for landscape */
-    .ios-popup-backdrop.mobile {
-      justify-content: flex-end;
-      align-items: stretch;
-    }
-  }
-  
-  @keyframes ios-sheet-in-right {
-    from { transform: translateX(100%); }
-    to { transform: translateX(0); }
-  }
-  
-  @keyframes ios-sheet-out-right {
-    from { transform: translateX(0); }
-    to { transform: translateX(100%); }
+  .ppp-day-popup-empty-hint {
+    margin: 0;
+    font-size: var(--font-ui-small, 0.875rem);
+    color: var(--text-faint);
   }
 
-  /* ═══════════════════════════════════════════════════════════════
-     REDUCED MOTION
-     ═══════════════════════════════════════════════════════════════ */
-  @media (prefers-reduced-motion: reduce) {
-    .ios-popup-backdrop,
-    .ios-popup,
-    .ios-popup-close-btn,
-    .ios-popup-create-btn {
-      animation-duration: 0.01ms !important;
-      transition-duration: 0.01ms !important;
-    }
+  .ppp-day-popup-records {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  /* On a phone the engine shows a bottom sheet; the window takes its width. */
+  :global(.ppp-popup--bottom-sheet) .ppp-day-popup {
+    width: 100%;
   }
 </style>

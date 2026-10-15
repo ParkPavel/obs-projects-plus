@@ -17,7 +17,6 @@ jest.mock("src/lib/stores/ui", () => {
 });
 
 jest.mock("../widgets/WidgetHost.svelte", () => require("./mocks/WidgetHost.mock.svelte"));
-jest.mock("../widgets/WidgetToolbar.svelte", () => require("./mocks/WidgetToolbar.mock.svelte"));
 jest.mock("../widgets/FormulaBar.svelte", () => require("./mocks/FormulaBar.mock.svelte"));
 
 // Stage A.9 — DatabaseViewCanvas now wires Schema-panel modals (Schema /
@@ -45,7 +44,7 @@ jest.mock("src/lib/stores/settings", () => {
   const { writable } = require("svelte/store");
   return {
     settings: {
-      ...writable({ projects: [] }),
+      ...writable({ projects: [], preferences: { animationBehavior: "instant" } }),
       updateFieldConfig: () => {},
       deleteFieldConfig: () => {},
     },
@@ -164,6 +163,98 @@ describe("DatabaseViewCanvas", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
     isMobile.set(false);
+    // jsdom has no scrollIntoView; every insertion reveals the new block.
+    if (typeof HTMLElement.prototype.scrollIntoView !== "function") HTMLElement.prototype.scrollIntoView = jest.fn();
+  });
+
+  test("locked stack widgets have no drag entrance and retain their index on reorder", async () => {
+    const first = createConfig().widgets[0]!;
+    const locked = { ...first, id: "locked", layout: { ...first.layout, locked: true } };
+    const last = { ...first, id: "last" };
+    const view = mountCanvas({ widgets: [first, locked, last] });
+    try {
+      expect(view.target.querySelector('[data-widget-id="locked"]')?.getAttribute("data-reorderable")).toBe("false");
+      const zone = view.target.querySelector(".ppp-database-canvas--stack");
+      const { SOURCES, TRIGGERS } = require("svelte-dnd-action");
+      zone?.dispatchEvent(new CustomEvent("finalize", { detail: { items: [last, first, locked], info: { source: SOURCES.POINTER, trigger: TRIGGERS.DROPPED_INTO_ZONE, id: last.id } } }));
+      await flush();
+      expect(view.onConfigChange.mock.calls.at(-1)?.[0].widgets.map((w: { id: string }) => w.id)).toEqual(["last", "locked", "existing-widget"]);
+    } finally { view.destroy(); }
+  });
+
+  test("B7: «+» before a block inserts there, once, and the new block is revealed and focused", async () => {
+    const scroll = jest.fn();
+    const previous = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = scroll;
+    const first = createConfig().widgets[0]!;
+    const view = mountCanvas({ widgets: [first, { ...first, id: "second", title: "Second" }] });
+    try {
+      // The old top-toolbar «Add widget» entrance is gone: one way in.
+      expect(view.target.querySelector(".ppp-toolbar-add")).toBeNull();
+      const plus = view.target.querySelector('.ppp-block-insert--between[data-insert-index="1"] .ppp-block-insert__trigger');
+      expect(plus).not.toBeNull();
+      click(plus);
+      await flush();
+      const item = document.querySelector('.ppp-block-insert__item[data-block-type="chart"]');
+      expect(item?.querySelector(".ppp-block-insert__desc")?.textContent).toBeTruthy();
+      click(item);
+      await flush(); await flush();
+      expect(view.onConfigChange).toHaveBeenCalledTimes(1);
+      const saved = view.onConfigChange.mock.calls[0]![0].widgets as Array<{ id: string; type: string }>;
+      expect(saved.map((w) => w.type)).toEqual(["stats", "chart", "stats"]);
+      expect(saved[0]!.id).toBe("existing-widget");
+      expect(saved[2]!.id).toBe("second");
+      const nodes = view.target.querySelectorAll(`[data-widget-id="${saved[1]!.id}"]`);
+      expect(nodes).toHaveLength(1);
+      expect(document.activeElement).toBe(nodes[0]);
+      expect(scroll).toHaveBeenCalledWith(expect.objectContaining({ block: "nearest" }));
+    } finally { view.destroy(); HTMLElement.prototype.scrollIntoView = previous; }
+  });
+
+  test("B7: the «+» at the end appends; there is one before every block and one at the end", async () => {
+    const view = mountCanvas();
+    try {
+      expect(view.target.querySelectorAll(".ppp-block-insert--between")).toHaveLength(1);
+      expect(view.target.querySelectorAll(".ppp-block-insert--end")).toHaveLength(1);
+      click(view.target.querySelector(".ppp-block-insert--end .ppp-block-insert__trigger"));
+      await flush();
+      click(document.querySelector('.ppp-block-insert__item[data-block-type="text"]'));
+      await flush();
+      const saved = view.onConfigChange.mock.calls.at(-1)?.[0].widgets as Array<{ type: string }>;
+      expect(saved.map((w) => w.type)).toEqual(["stats", "text"]);
+    } finally { view.destroy(); }
+  });
+
+  test("B7: an empty dashboard says what to do in one phrase and one button", async () => {
+    const view = mountCanvas({ widgets: [] });
+    try {
+      const empty = view.target.querySelector(".ppp-empty-state, [class*='empty']");
+      expect(empty).not.toBeNull();
+      const buttons = Array.from(view.target.querySelectorAll("button")).filter((b) => b.textContent?.includes("Add a database"));
+      expect(buttons).toHaveLength(1);
+      click(buttons[0]!);
+      await flush();
+      expect(view.onConfigChange.mock.calls.at(-1)?.[0].widgets.map((w: { type: string }) => w.type)).toEqual(["database-call"]);
+    } finally { view.destroy(); }
+  });
+
+  test("B7: a stored free-layout config with a pipeline opens without any write", async () => {
+    const first = createConfig().widgets[0]!;
+    const withPipeline = {
+      ...first, id: "piped", type: "database-call",
+      transform: { steps: [{ type: "group-by", fields: ["category"] }, { type: "aggregate", columns: [{ field: "amount", fn: "SUM", alias: "total" }] }] },
+    };
+    const stored = { ...createConfig(), layoutMode: "free", widgets: [withPipeline, { ...first, layout: { x: 6, y: 3, w: 4, h: 2, locked: true } }] };
+    const snapshot = JSON.stringify(stored);
+    const view = mountCanvas(stored);
+    try {
+      await flush(); await flush(10);
+      expect(view.onConfigChange).not.toHaveBeenCalled();
+      expect(JSON.stringify(stored)).toBe(snapshot);
+      // Rendered as the page — blocks top to bottom, in stored order.
+      const ids = Array.from(view.target.querySelectorAll("[data-testid='widget-host']")).map((n) => n.getAttribute("data-widget-id"));
+      expect(ids).toEqual(["piped", "existing-widget"]);
+    } finally { view.destroy(); }
   });
 
   test("#191 a stored apply-template action does not reach the screen", () => {

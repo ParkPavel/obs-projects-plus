@@ -272,11 +272,12 @@ describe("FloatingPopup", () => {
 
     await flush(10);
 
-    expect(view.target.querySelector(".ppp-popup-backdrop")).not.toBeNull();
-    expect(view.target.querySelector(".ppp-popup--bottom-sheet")).not.toBeNull();
+    expect(document.querySelector(".ppp-popup-backdrop")?.parentElement).toBe(document.body);
+    expect(document.querySelector(".ppp-popup--bottom-sheet")).not.toBeNull();
     expect(document.querySelector(".ppp-popup--floating")).toBeNull();
 
     view.destroy();
+    expect(document.querySelector(".ppp-popup-backdrop")).toBeNull();
     isMobile.set(false);
   });
 });

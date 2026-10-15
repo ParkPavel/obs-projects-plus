@@ -1,12 +1,15 @@
 <script lang="ts">
-  import { onMount, onDestroy, createEventDispatcher } from "svelte";
+  import { onDestroy, createEventDispatcher } from "svelte";
+  import DateField from "src/ui/components/fields/DateField.svelte";
   import dayjs from "dayjs";
   import type { ProcessedRecord, ProcessedCalendarData } from "../../types";
   import { duplicateStore } from "src/lib/stores/duplicateStore";
   import { i18n } from "src/lib/stores/i18n";
+  import { focusTrap } from "src/lib/a11y/focusTrap";
+  import { portal } from "src/ui/portal";
   import DuplicateCalendarView from "./DuplicateCalendarView.svelte";
   import { calendarLogger } from '../../logger';
-  
+
   export let visible: boolean = false;
   export let sourceRecord: ProcessedRecord;
   export let existingData: ProcessedCalendarData;
@@ -67,8 +70,12 @@
     }
   }
   
+  // Escape is heard on the window itself, not on the document: it closes this
+  // window and nothing behind it. The trap keeps focus inside, so the key
+  // always starts here; stopping it keeps Obsidian from also acting on it.
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape') {
+      e.stopPropagation();
       handleClose();
     }
   }
@@ -107,27 +114,37 @@
     }
   }
   
-  onMount(() => {
-    window.addEventListener('keydown', handleKeydown);
-  });
-  
   onDestroy(() => {
-    window.removeEventListener('keydown', handleKeydown);
     duplicateStore.reset();
   });
 </script>
 
 {#if visible}
-  <div 
-    class="duplicate-backdrop" 
+  <!-- `use:portal` is declared BEFORE `use:focusTrap`: the trap moves focus
+       inside on mount, and reparenting a subtree that holds focus drops it. The
+       window lives on the body of its own document, above every leaf layer, so
+       the day popup it was opened from cannot cover it. `ppp-modal` is the
+       shared plugin-modal root: the reduced-motion and coarse-pointer rules in
+       tokens.css reach a body-level surface through it. -->
+  <div
+    class="duplicate-backdrop ppp-modal"
     bind:this={backdropElement}
+    use:portal={{ to: "document-body" }}
+    use:focusTrap
     on:click={handleBackdropClick}
+    on:keydown={handleKeydown}
     role="presentation"
   >
-    <div class="duplicate-modal">
+    <div
+      class="duplicate-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="duplicate-modal-title"
+      tabindex="-1"
+    >
       <!-- HEADER: Title + Close button -->
       <header class="modal-header">
-        <h2 class="modal-title">{$i18n.t("views.calendar.duplicate.title")}</h2>
+        <h2 id="duplicate-modal-title" class="modal-title">{$i18n.t("views.calendar.duplicate.title")}</h2>
         <button 
           class="close-btn" 
           on:click={handleClose} 
@@ -170,35 +187,23 @@
         {@const editedTime = store.editedTime}
         <div class="time-row">
           <span class="time-label">{$i18n.t("views.calendar.duplicate.time") || "Время"}:</span>
-          <input 
-            type="time" 
-            value={editedTime.startTime.format('HH:mm')}
-            on:change={(e) => {
-              const input = e.target;
-              if (input instanceof HTMLInputElement) {
-                const [h, m] = input.value.split(':').map(Number);
-                if (h !== undefined && m !== undefined) {
-                  updateStartTime(h, m);
-                }
-              }
-            }}
-            class="time-input"
-          />
+          <div class="time-field">
+            <DateField
+              withTime
+              value={editedTime.startTime.toDate()}
+              ariaLabel={$i18n.t("views.calendar.duplicate.time") || "Время"}
+              on:change={(e) => { if (e.detail) updateStartTime(e.detail.getHours(), e.detail.getMinutes()); }}
+            />
+          </div>
           <span class="time-sep">—</span>
-          <input 
-            type="time" 
-            value={editedTime.endTime.format('HH:mm')}
-            on:change={(e) => {
-              const input = e.target;
-              if (input instanceof HTMLInputElement) {
-                const [h, m] = input.value.split(':').map(Number);
-                if (h !== undefined && m !== undefined) {
-                  updateEndTime(h, m);
-                }
-              }
-            }}
-            class="time-input"
-          />
+          <div class="time-field">
+            <DateField
+              withTime
+              value={editedTime.endTime.toDate()}
+              ariaLabel={$i18n.t("views.calendar.duplicate.time") || "Время"}
+              on:change={(e) => { if (e.detail) updateEndTime(e.detail.getHours(), e.detail.getMinutes()); }}
+            />
+          </div>
         </div>
       {/if}
       
@@ -231,7 +236,7 @@
   
   .duplicate-modal {
     background: var(--background-primary);
-    border-radius: 0.75rem;
+    border-radius: var(--ppp-radius-lg);
     width: 90%;
     max-width: 26rem;
     max-height: 85vh;
@@ -253,8 +258,8 @@
   }
   
   .modal-title {
-    font-size: 0.875rem;
-    font-weight: 600;
+    font-size: var(--ppp-font-size-md);
+    font-weight: var(--ppp-font-weight-semibold);
     margin: 0;
     color: var(--text-normal);
   }
@@ -295,9 +300,9 @@
     gap: 0.25rem;
     padding: 0.375rem 0.625rem;
     border: none;
-    border-radius: 0.375rem;
-    font-size: 0.75rem;
-    font-weight: 500;
+    border-radius: var(--ppp-radius-sm);
+    font-size: var(--ppp-font-size-sm);
+    font-weight: var(--ppp-font-weight-medium);
     cursor: pointer;
     white-space: nowrap;
   }
@@ -335,9 +340,9 @@
     background: var(--interactive-accent);
     color: var(--text-on-accent);
     padding: 0.125rem 0.5rem;
-    border-radius: 1rem;
-    font-size: 0.6875rem;
-    font-weight: 600;
+    border-radius: var(--ppp-radius-pill);
+    font-size: var(--ppp-font-size-xs);
+    font-weight: var(--ppp-font-weight-semibold);
   }
   
   .collision-warning {
@@ -362,14 +367,9 @@
     flex-shrink: 0;
   }
   
-  .time-input {
-    padding: 0.25rem 0.375rem;
-    border: 0.0625rem solid var(--background-modifier-border);
-    border-radius: 0.25rem;
-    background: var(--background-primary);
-    color: var(--text-normal);
-    font-size: 0.75rem;
-    width: 4.5rem;
+  .time-field {
+    flex: 1 1 0;
+    min-width: 0;
   }
   
   .time-sep {
@@ -422,10 +422,10 @@
       top: 50%;
       right: 0.75rem;
       transform: translateY(-50%);
-      width: 2.75rem;
-      height: 2.75rem;
-      min-width: 2.75rem;
-      min-height: 2.75rem;
+      width: var(--ppp-touch-target-min);
+      height: var(--ppp-touch-target-min);
+      min-width: var(--ppp-touch-target-min);
+      min-height: var(--ppp-touch-target-min);
       font-size: 1.25rem;
       background: var(--background-modifier-hover);
       border: 0.125rem solid var(--background-modifier-border);
@@ -435,14 +435,13 @@
     
     /* Larger toolbar buttons for mobile */
     .toolbar-btn {
-      min-height: 2.75rem;
+      min-height: var(--ppp-touch-target-min);
       padding: 0.5rem 0.75rem;
       font-size: 0.875rem;
     }
     
-    .time-input {
-      min-height: 2.75rem;
-      font-size: 0.875rem;
+    .time-row {
+      flex-wrap: wrap;
     }
   }
 </style>

@@ -1,10 +1,12 @@
 <script lang="ts">
   import {
-    Autocomplete,
     NumberInput,
     Switch,
     Icon,
   } from "obsidian-svelte";
+  import ComboField from "../fields/ComboField.svelte";
+  import TextField from "../fields/TextField.svelte";
+  import { namesToOptions } from "../fields/comboOptions";
   import DateInput from "../DateInput.svelte";
   import DatetimeInput from "../DatetimeInput.svelte";
   import { ColorPicker } from "src/ui/components/ColorPicker";
@@ -89,47 +91,21 @@
   // ========================================
   // TEXT INPUT STATE
   // ========================================
-  // textInputActive: true when user is focused on text input
-  // textInputBuffer: local buffer to prevent cursor jumping during typing
-  // typingTimer: debounce timer for onChange calls
-  
-  let textInputActive = false;
-  let textInputBuffer = '';
+  // The draft lives in TextField; this only debounces the live save and
+  // remembers what the field held when typing began, so Escape can undo a
+  // debounced write as well as the text.
+  let entryValue: string | null = null;
   let typingTimer: ReturnType<typeof setTimeout> | null = null;
-  
-  // ========================================
-  // REACTIVITY: localDisplayValue
-  // ========================================
-  // When NOT typing: derive from value prop (reactive)
-  // When typing: use textInputBuffer (local state)
-  // The template uses: value={textInputActive ? textInputBuffer : localDisplayValue}
-  
+
   $: localDisplayValue = isString(value) ? value : '';
   
   onDestroy(() => {
     if (typingTimer) clearTimeout(typingTimer);
   });
 
-  // Options for autocomplete - merge field options with suggestions
-  $: options = (() => {
-    // Если есть опции в typeConfig, используем их
-    if (field.typeConfig?.options?.length) {
-      return field.typeConfig.options.map((option) => ({
-        label: option,
-        description: "",
-        value: option,
-      }));
-    }
-    // Иначе используем динамические подсказки из существующих значений
-    if (suggestions.length > 0) {
-      return suggestions.map((suggestion) => ({
-        label: suggestion,
-        description: "📝", // индикатор что это существующее значение
-        value: suggestion,
-      }));
-    }
-    return [];
-  })();
+  // Options of the suggestion list: the field's own options when it has them,
+  // otherwise the values already used in the project.
+  $: options = namesToOptions(field.typeConfig?.options?.length ? field.typeConfig.options : suggestions);
     
   // Field type detection (color heuristic shared via UT2026-C contract)
   const IMAGE_FIELDS = ['cover', 'banner', 'image', 'thumbnail', 'icon'];
@@ -142,11 +118,6 @@
   // ========================================
   // TEXT INPUT HANDLERS (with typing buffer)
   // ========================================
-  function onTextFocus() {
-    textInputActive = true;
-    textInputBuffer = localDisplayValue;
-  }
-  
   // UT2026-C (#070): hand-typed colors are canonicalized (#RGB / case /
   // whitespace → #rrggbb) so the stored frontmatter matches what readers
   // resolve. Invalid text is stored as-is — the user sees their typo
@@ -155,26 +126,47 @@
     onChange(isColorField ? normalizeHexColor(raw) ?? raw : raw);
   }
 
-  function onTextInput(e: Event) {
-    const target = e.target as HTMLInputElement;
-    textInputBuffer = target.value;
-
-    // Debounce: save after 500ms of no typing
+  function clearTimer(): void {
     if (typingTimer) clearTimeout(typingTimer);
+    typingTimer = null;
+  }
+
+  function onTextInput(e: CustomEvent<string>) {
+    const text = e.detail;
+    if (entryValue === null) entryValue = localDisplayValue;
+    // Debounce: save after 500ms of no typing
+    clearTimer();
     typingTimer = setTimeout(() => {
-      commitTextBuffer(textInputBuffer);
+      typingTimer = null;
+      commitTextBuffer(text);
     }, 500);
   }
 
-  function onTextBlur() {
-    textInputActive = false;
-    if (typingTimer) clearTimeout(typingTimer);
-    // Save final value on blur
-    if (textInputBuffer !== localDisplayValue) {
-      commitTextBuffer(textInputBuffer);
-    }
+  function onTextCommit(e: CustomEvent<{ value: string }>) {
+    clearTimer();
+    entryValue = null;
+    // Save final value on Enter / blur (a debounced save may already have it)
+    if (e.detail.value !== localDisplayValue) commitTextBuffer(e.detail.value);
   }
-  
+
+  function onTextCancel() {
+    clearTimer();
+    // Escape restored the text; a debounced write is undone with it.
+    if (entryValue !== null && entryValue !== localDisplayValue) onChange(entryValue);
+    entryValue = null;
+  }
+
+  // A time is typed as HH:MM (the native time wheel was one of the "different
+  // problem in every window"); an empty field clears the value.
+  const TIME_RE = /^([01]?\d|2[0-3]):([0-5]\d)$/;
+  function validTime(text: string): boolean {
+    return text.trim() === "" || TIME_RE.test(text.trim());
+  }
+  function normalizeTime(text: string): string {
+    const m = TIME_RE.exec(text.trim());
+    return m ? `${(m[1] ?? "").padStart(2, "0")}:${m[2] ?? ""}` : "";
+  }
+
   // ========================================
   // COLOR PICKER - v5.1.0 INLINE MODE
   // Палитра встроена в форму, не popup
@@ -202,11 +194,11 @@
   // ========================================
   // TIME INPUT
   // ========================================
-  function handleTimeChange(e: Event) {
-    const target = e.target as HTMLInputElement;
-    onChange(target.value);
+  function handleTimeCommit(e: CustomEvent<{ value: string }>) {
+    const next = normalizeTime(e.detail.value);
+    if (next !== localDisplayValue) onChange(next);
   }
-  
+
   // ========================================
   // IMAGE REMOVE
   // ========================================
@@ -237,16 +229,15 @@
             style:background-color={localDisplayValue || '#888'}
           ></div>
           
-          <input
-            type="text"
-            class="color-hex-input"
-            value={textInputActive ? textInputBuffer : localDisplayValue}
+          <TextField
+            value={localDisplayValue}
             placeholder="#RRGGBB"
-            on:focus={onTextFocus}
-            on:input={onTextInput}
-            on:blur={onTextBlur}
+            inputClass="color-hex-input"
             disabled={readonly}
-            spellcheck="false"
+            ariaLabel={field.name}
+            on:input={onTextInput}
+            on:commit={onTextCommit}
+            on:cancel={onTextCancel}
           />
           
           {#if !readonly}
@@ -283,16 +274,16 @@
       </div>
       
     {:else if isImageField}
-      <input
-        type="text"
-        class="field-input"
-        value={textInputActive ? textInputBuffer : localDisplayValue}
-        placeholder={$i18n.t("components.field-control.image-placeholder")}
-        on:focus={onTextFocus}
-        on:input={onTextInput}
-        on:blur={onTextBlur}
-        disabled={readonly}
-      />
+      <TextField
+            value={localDisplayValue}
+            placeholder={$i18n.t("components.field-control.image-placeholder")}
+            inputClass="field-input"
+            disabled={readonly}
+            ariaLabel={field.name}
+            on:input={onTextInput}
+            on:commit={onTextCommit}
+            on:cancel={onTextCancel}
+          />
       {#if localDisplayValue}
         <ImagePreview 
           src={localDisplayValue}
@@ -303,33 +294,40 @@
       {/if}
       
     {:else if isTimeField}
-      <input
-        type="time"
-        class="field-input time-input"
+      <TextField
         value={localDisplayValue}
-        on:change={handleTimeChange}
+        placeholder="HH:MM"
+        inputClass="field-input time-input"
         disabled={readonly}
+        ariaLabel={field.name}
+        validate={validTime}
+        on:commit={handleTimeCommit}
       />
       
     {:else if options.length > 0}
-      <Autocomplete
+      <!-- The text is the field's own draft (ComboField); a value typed outside the
+           list is kept, as before. One commit per Enter, pick or blur. -->
+      <ComboField
         value={isString(value) ? value : ""}
         {options}
-        readonly={readonly}
-        on:change={({ detail }) => commitSelection(detail)}
+        allowCustom
+        disabled={readonly}
+        ariaLabel={field.name}
+        inputClass="field-combo-input"
+        on:commit={({ detail }) => commitSelection(detail.value)}
       />
       
     {:else}
-      <input
-        type="text"
-        class="field-input"
-        value={textInputActive ? textInputBuffer : localDisplayValue}
-        placeholder={field.name}
-        on:focus={onTextFocus}
-        on:input={onTextInput}
-        on:blur={onTextBlur}
-        disabled={readonly}
-      />
+      <TextField
+            value={localDisplayValue}
+            placeholder={field.name}
+            inputClass="field-input"
+            disabled={readonly}
+            ariaLabel={field.name}
+            on:input={onTextInput}
+            on:commit={onTextCommit}
+            on:cancel={onTextCancel}
+          />
     {/if}
     
   {:else if field.type === DataFieldType.Number}
@@ -413,7 +411,8 @@
   }
   
   /* === LEVEL 3: Generic field input === */
-  .field-input {
+  .field-control-wrapper :global(.field-input),
+  .field-control-wrapper :global(.field-combo-input) {
     width: 100%;
     padding: var(--fc-input-padding-v) var(--fc-input-padding-h);
     font-size: var(--fc-font-size);
@@ -423,12 +422,13 @@
     color: var(--text-normal);
   }
   
-  .field-input:focus {
+  .field-control-wrapper :global(.field-input):focus,
+  .field-control-wrapper :global(.field-combo-input):focus {
     outline: none;
     border-color: var(--interactive-accent);
   }
   
-  .time-input {
+  .field-control-wrapper :global(.time-input) {
     font-family: var(--font-monospace);
   }
   
@@ -452,7 +452,7 @@
   }
   
   /* === LEVEL 3: Color hex input === */
-  .color-hex-input {
+  .field-control-wrapper :global(.color-hex-input) {
     flex: 1;
     min-width: 0;
     padding: var(--fc-input-padding-v) var(--fc-input-padding-h);
@@ -464,7 +464,7 @@
     color: var(--text-normal);
   }
   
-  .color-hex-input:focus {
+  .field-control-wrapper :global(.color-hex-input):focus {
     outline: none;
     border-color: var(--interactive-accent);
   }
@@ -588,7 +588,8 @@
       --fc-font-size: var(--fc-base);                     /* 16 - prevents zoom */
     }
     
-    .field-input {
+    .field-control-wrapper :global(.field-input),
+    .field-control-wrapper :global(.field-combo-input) {
       padding: calc(var(--fc-base) * 0.75);
     }
   }

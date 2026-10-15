@@ -185,7 +185,7 @@ describe("TimelineDragManager — touch gesture on an event bar (ios-d1)", () =>
       const call = onCommit.mock.calls[0];
       expect(call?.[1]).toBe(record);
       expect(call?.[2]).toEqual(
-        expect.objectContaining({ startTime: "11:30", endTime: "12:30" })
+        expect.objectContaining({ startTime: "11:00", endTime: "12:00" }) // grabbed at its centre, moved one hour: the bar moves one hour
       );
 
       clickBar();
@@ -307,7 +307,7 @@ describe("TimelineDragManager — touch gesture on an event bar (ios-d1)", () =>
 
       expect(onCommit).toHaveBeenCalledTimes(1);
       expect(onCommit.mock.calls[0]?.[2]).toEqual(
-        expect.objectContaining({ startTime: "11:30", endTime: "12:30" })
+        expect.objectContaining({ startTime: "11:00", endTime: "12:00" }) // grabbed at its centre, moved one hour: the bar moves one hour
       );
       clickBar();
       expect(onClick).not.toHaveBeenCalled();

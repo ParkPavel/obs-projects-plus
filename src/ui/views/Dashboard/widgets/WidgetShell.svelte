@@ -15,6 +15,7 @@
   import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { ariaWidget } from "src/lib/dashboard-engine/accessibility";
+  import { isImeKey } from "src/ui/components/fields/draftController";
 
   export let widgetId: string;
   export let title: string;
@@ -29,6 +30,7 @@
 
   // ── Inline title rename (dblclick or menu signal) ──
   let editingTitle = false;
+  let composingTitle = false;
   let titleDraft = "";
   let titleEl: HTMLInputElement | null = null;
   let lastRenameSignal = 0;
@@ -39,6 +41,7 @@
   }
 
   async function startTitleEdit() {
+    composingTitle = false;
     editingTitle = true;
     titleDraft = title;
     await tick();
@@ -47,6 +50,7 @@
   }
 
   function commitTitle() {
+    if (!editingTitle || readonly || composingTitle) return;
     if (titleDraft.trim() && titleDraft.trim() !== title) {
       dispatch("titleChange", titleDraft.trim());
     }
@@ -95,6 +99,7 @@
 <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
 <div
   class="ppp-widget-host"
+  data-widget-id={widgetId}
   class:ppp-widget-host--collapsed={collapsed}
   bind:this={hostEl}
   role={widgetAria.role}
@@ -126,9 +131,11 @@
         class="ppp-widget-title-input"
         type="text"
         bind:value={titleDraft}
+        on:compositionstart={() => { composingTitle = true; }} on:compositionend={() => { composingTitle = false; }}
         on:keydown={(e) => {
-          if (e.key === "Enter") commitTitle();
-          else if (e.key === "Escape") editingTitle = false;
+          if (composingTitle || isImeKey(e)) return;
+          if (e.key === "Enter") { e.preventDefault(); commitTitle(); }
+          else if (e.key === "Escape") { e.preventDefault(); editingTitle = false; }
         }}
         on:blur={commitTitle}
       />
@@ -324,23 +331,13 @@
     font-size: var(--font-ui-smaller);
   }
 
-  /* DG-9 lazy-render skeleton */
+  /* DG-9 lazy-render skeleton. Static on purpose: it stands for as long as a
+     tile is below the fold, and a background-position shimmer is not composited,
+     so it cost a style recalc per frame for every such tile while idle. */
   .ppp-widget-skeleton {
     flex: 1;
     min-height: 4rem;
-    background: linear-gradient(
-      90deg,
-      var(--background-modifier-border) 25%,
-      var(--background-secondary-alt, var(--background-secondary)) 50%,
-      var(--background-modifier-border) 75%
-    );
-    background-size: 200% 100%;
-    animation: ppp-shimmer 1.4s infinite linear;
+    background: var(--background-secondary-alt, var(--background-secondary));
     border-radius: var(--radius-s, 0.25rem);
-  }
-
-  @keyframes ppp-shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
   }
 </style>

@@ -12,7 +12,7 @@
 
   $: t = $i18n.t;
   $: isFrozen = view?.config?.["freezeAll"] ?? view?.config?.["freezeColumns"] ?? false;
-  $: isAgendaOpen = agendaOpen ?? view?.config?.["agendaOpen"] ?? false;
+  $: isAgendaOpen = agendaOpen ?? view?.config?.["agendaOpen"] !== false;
 </script>
 
 <div class="actions">

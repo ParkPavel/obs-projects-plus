@@ -34,7 +34,8 @@
   import type { FilterCondition, ProjectDefinition } from "src/settings/settings";
   import { getFilterValuesFromConditions } from "src/lib/helpers";
   import GalleryOptionsProvider from "./GalleryOptionsProvider.svelte";
-  import { getCoverRealPath } from "./gallery";
+  import { coverOf } from "./gallery";
+  import GalleryCardPanel from "./components/CardPanel/GalleryCardPanel.svelte";
   import { aspectRatioCss, cardFieldsInOrder } from "./galleryOptions";
   import { toRem } from "src/ui/utils/cssLength";
   import { handleHoverLink, showMobileNavMenu } from "../helpers";
@@ -143,7 +144,13 @@
     ).open();
   }
 
-  /** v3.0.8: unified note navigation — Shift → new window, Ctrl → new tab, else → modal. */
+  /**
+   * B9 — a tap on the card opens the record in the peek (Notion's gallery: the
+   * card opens over the view, the view stays). Shift → window, Ctrl/Meta →
+   * tab, as before; the title link keeps its own routes, and the editor stays
+   * one entry away in the card's "⋯" menu and its long press. Everything goes
+   * through `openRecord`, the one opener.
+   */
   function openFromCard(event: MouseEvent, record: DataRecord) {
     // v3.0.10: Suppress click if long-press was fired
     if (longPressFired) { longPressFired = false; return; }
@@ -152,14 +159,30 @@
     } else if (event.metaKey || event.ctrlKey) {
       void openRecord({ id: record.id, sourcePath: "" }, "tab", { app: $app });
     } else {
-      handleRecordClick(record);
+      void openRecord({ id: record.id, sourcePath: "", readonly: dataReadOnly || readonly }, "peek", { app: $app });
     }
   }
 
-  // cards-g3: with no media area (ratio `none`) the whole card is the open and
-  // long-press target. A touch on the title link is left to the link, which has
-  // its own long press, so the menu never opens twice.
-  const onLink = (e: Event) => e.target instanceof Element && e.target.closest("a, .internal-link") !== null;
+  // B9: the whole card is the open and long-press target, except what is a
+  // control of its own or reads as one — the title link (its own open and long
+  // press, so the menu never opens twice), a chip, the "⋯" and resize buttons.
+  const OWN_TARGETS = "a, .internal-link, button, select, input, textarea, [contenteditable], .ppp-card-meta-chip, .ppp-card-resize-handle";
+  const onLink = (e: Event) => e.target instanceof Element && e.target.closest(OWN_TARGETS) !== null;
+
+  /** B9 — the visible "⋯": the same menu the long press opens, never hover-only. */
+  function openCardMenu(event: MouseEvent, record: DataRecord) {
+    event.stopPropagation();
+    showMobileNavMenu($app, { id: record.id }, event, () => handleRecordClick(record));
+  }
+
+  // B9 — the gallery's own «Card» panel (cover, size, layout, properties).
+  let panelOpen = false;
+  // B9 — covers whose image failed to load (a resolved path whose file is
+  // gone or unreadable); shown as broken, like an unresolved path.
+  let failedCovers: Record<string, true> = {};
+  function coverFailed(src: string) {
+    if (!failedCovers[src]) failedCovers = { ...failedCovers, [src]: true };
+  }
 
   // v3.0.10: Long-press detection for CardMedia on touch devices
   let longPressTimer: ReturnType<typeof setTimeout> | null = null;
@@ -229,6 +252,24 @@
        contents` keeps it out of layout while it stays an ancestor in the DOM,
        which is all Obsidian's recogniser reads. -->
   <div class="ppp-gallery-content" use:ignoreHostSwipe>
+  {#if canResize}
+    <div class="ppp-gallery-toolbar">
+      <button
+        type="button"
+        class="ppp-gallery-card-options clickable-icon"
+        data-gallery-card-options
+        aria-expanded={panelOpen}
+        aria-label={$i18n.t("views.gallery.card-panel.open")}
+        on:click={() => (panelOpen = !panelOpen)}
+      >
+        <Icon name="layout-grid" size="sm" />
+        <span>{$i18n.t("views.gallery.card-panel.title")}</span>
+      </button>
+    </div>
+    {#if panelOpen}
+      <GalleryCardPanel {fields} {config} onChange={saveConfig} onClose={() => (panelOpen = false)} />
+    {/if}
+  {/if}
   {#if records.length}
     {@const mediaRatio = aspectRatioCss(coverAspectRatio)}
     {@const cardSize = toRem(cardWidth)}
@@ -244,7 +285,7 @@
     <Grid {cardWidth} {layout} let:columns let:columnStep>
       {#each records as record (record.id)}
         {@const color = getRecordColor(record)}
-        {@const coverPath = getCoverRealPath($app, record, coverField)}
+        {@const cover = coverOf($app, record, coverField)}
         {@const shown = resolveCardFrame(frames.view, preview?.id === record.id ? preview.frame : frames.byRecord[record.id])}
         {@const height = heightCss(shown)}
         <!-- cards-g5: the frame shown — a drag's preview, else the saved
@@ -266,11 +307,11 @@
           size={cardSize}
           span={layout === "grid" ? effectiveSpan(shown.gridSpan, columns) : undefined}
           minHeight={mediaRatio === null ? height : undefined}
-          interactive={mediaRatio === null}
-          on:click={(event) => { if (mediaRatio === null) openFromCard(event, record); }}
-          on:touchstart={(event) => { if (mediaRatio === null && !onLink(event)) handleCardTouchStart(record)(event); }}
-          on:touchmove={(event) => { if (mediaRatio === null) handleCardTouchMove(event); }}
-          on:touchend={(event) => { if (mediaRatio === null) handleCardTouchEnd(event); }}
+          interactive
+          on:click={(event) => { if (!onLink(event)) openFromCard(event, record); }}
+          on:touchstart={(event) => { if (!onLink(event)) handleCardTouchStart(record)(event); }}
+          on:touchmove={handleCardTouchMove}
+          on:touchend={handleCardTouchEnd}
         >
           <svelte:fragment slot="media">
           {#if mediaRatio !== null}
@@ -280,14 +321,16 @@
             style:--ppp-card-media-ratio={height ? "auto" : mediaRatio}
             style:--ppp-card-media-fit={fitStyle}
             style:height={height}
-            on:keypress
-            on:click={(event) => openFromCard(event, record)}
-            on:touchstart={handleCardTouchStart(record)}
-            on:touchmove={handleCardTouchMove}
-            on:touchend={handleCardTouchEnd}
           >
-            {#if coverPath}
-              <Image alt={$i18n.t("views.gallery.cover-alt")} src={coverPath} fit={fitStyle} />
+            {#if cover.kind === "ok" && !failedCovers[cover.src]}
+              <Image alt={$i18n.t("views.gallery.cover-alt")} src={cover.src} fit={fitStyle} on:error={() => coverFailed(cover.src)} />
+            {:else if cover.kind !== "none" && coverField}
+              <!-- B9: a cover value that gives no image says so, and where to fix it. -->
+              <div class="ppp-gallery-cover-broken" data-cover-broken title={cover.raw}>
+                <Icon name="image-off" size="md" />
+                <span class="ppp-gallery-cover-broken-text">{$i18n.t("views.gallery.cover-broken")}</span>
+                <span class="ppp-gallery-cover-broken-hint">{$i18n.t("views.gallery.cover-broken-hint", { field: coverField.name, path: cover.raw, interpolation: { escapeValue: false } })}</span>
+              </div>
             {:else}
               <Icon name="image" size="lg" />
             {/if}
@@ -328,6 +371,13 @@
             showLabels={showFieldLabels}
           />
           <svelte:fragment slot="controls">
+            <button
+              type="button"
+              class="ppp-gallery-card-more clickable-icon"
+              data-gallery-card-more
+              aria-label={$i18n.t("views.gallery.card-more", { name: getDisplayName(record.id), interpolation: { escapeValue: false } })}
+              on:click={(event) => openCardMenu(event, record)}
+            ><Icon name="more-horizontal" size="sm" /></button>
             {#if canResize}
               <CardResizeHandle
                 view={frames.view}
@@ -373,6 +423,83 @@
 </GalleryOptionsProvider>
 
 <style>
+  .ppp-gallery-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0.25rem 0.75rem 0;
+  }
+
+  .ppp-gallery-card-options {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--size-4-1);
+    min-height: var(--ppp-touch-target-min, 2rem);
+    font-size: var(--font-ui-small);
+    color: var(--text-muted);
+  }
+
+  /* B9: the card's "⋯", always visible (no hover-only control), in the top
+     trailing corner; a finger-sized target on touch. */
+  .ppp-gallery-card-more {
+    position: absolute;
+    top: var(--size-4-1);
+    right: var(--size-4-1);
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+    padding: 0;
+    border-radius: var(--radius-s);
+    background: var(--background-primary);
+    color: var(--text-muted);
+    box-shadow: var(--shadow-s);
+  }
+
+  @media (pointer: coarse) {
+    .ppp-gallery-card-more {
+      min-width: var(--ppp-touch-target-min, 2.75rem);
+      min-height: var(--ppp-touch-target-min, 2.75rem);
+    }
+  }
+
+  /* B9: the title never runs under the "⋯", and a long one wraps instead of
+     widening the card; the body's fields keep a gap from the cover. */
+  :global(.projects--gallery--card > .projects--gallery--card__body) {
+    min-width: 0;
+    padding-top: var(--size-4-2);
+  }
+
+  :global(.projects--gallery--card .card-header) {
+    min-width: 0;
+    padding-right: 2rem;
+    overflow-wrap: anywhere;
+  }
+
+  .ppp-gallery-cover-broken {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--size-4-1);
+    padding: var(--size-4-2);
+    max-width: 100%;
+    min-width: 0;
+    text-align: center;
+    color: var(--text-muted);
+  }
+
+  .ppp-gallery-cover-broken-text {
+    font-size: var(--font-ui-small);
+  }
+
+  .ppp-gallery-cover-broken-hint {
+    font-size: var(--font-ui-smaller);
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
   .ppp-gallery-content {
     display: contents;
   }

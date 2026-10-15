@@ -9,7 +9,10 @@
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
+  import TextField from "src/ui/components/fields/TextField.svelte";
   import WidgetConfigShell from "../_shared/WidgetConfigShell.svelte";
+  import ComboField from "src/ui/components/fields/ComboField.svelte";
+  import { namesToOptions } from "src/ui/components/fields/comboOptions";
 
   export let config: Record<string, unknown> = {};
   export let fields: DataField[] = [];
@@ -24,7 +27,7 @@
   $: field = (config["field"] as string) ?? "";
   $: tabs = ((config["tabs"] as FilterTabConfig[] | undefined) ?? []).slice();
   $: showAll = (config["showAll"] as boolean) ?? true;
-  $: fieldNames = fields.map((f) => f.name);
+  $: fieldOptions = namesToOptions(fields.map((f) => f.name));
 
   $: preview = source && field ? extractUnique(source, field) : [];
 
@@ -61,9 +64,6 @@
     emit({ tabs: seeded });
   }
 
-  function inputVal(e: Event): string {
-    return (e.currentTarget as HTMLInputElement).value;
-  }
   function checkVal(e: Event): boolean {
     return (e.currentTarget as HTMLInputElement).checked;
   }
@@ -75,13 +75,14 @@
   on:close={() => dispatch("close")}
 >
   <div class="ppp-cfg-row">
+    <!-- svelte-ignore a11y-label-has-associated-control -->
     <label>
       {$i18n.t("views.dashboard.filter-tabs.config.field", { defaultValue: "Filter field" })}
-      <input
-        type="text"
-        list="ppp-ft-fields"
+      <ComboField
         value={field}
-        on:input={(e) => emit({ field: inputVal(e) })}
+        options={fieldOptions}
+        allowCustom
+        on:commit={(e) => emit({ field: e.detail.value })}
       />
     </label>
 
@@ -123,20 +124,20 @@
     <div class="ppp-cfg-list">
       {#each tabs as t, idx (t.id)}
         <div class="ppp-cfg-item">
+          <!-- svelte-ignore a11y-label-has-associated-control -->
           <label>
             {$i18n.t("views.dashboard.filter-tabs.config.tab-label", { defaultValue: "Label" })}
-            <input
-              type="text"
+            <TextField
               value={t.label}
-              on:input={(e) => updateTab(idx, { label: inputVal(e) })}
+              on:input={(e) => updateTab(idx, { label: e.detail })}
             />
           </label>
+          <!-- svelte-ignore a11y-label-has-associated-control -->
           <label>
             {$i18n.t("views.dashboard.filter-tabs.config.tab-value", { defaultValue: "Value" })}
-            <input
-              type="text"
+            <TextField
               value={t.value}
-              on:input={(e) => updateTab(idx, { value: inputVal(e) })}
+              on:input={(e) => updateTab(idx, { value: e.detail })}
             />
           </label>
           <button
@@ -155,11 +156,6 @@
     + {$i18n.t("views.dashboard.filter-tabs.config.add", { defaultValue: "Add tab" })}
   </button>
 
-  <datalist id="ppp-ft-fields">
-    {#each fieldNames as name (name)}
-      <option value={name} />
-    {/each}
-  </datalist>
 </WidgetConfigShell>
 
 <style>
