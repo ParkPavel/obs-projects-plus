@@ -75,17 +75,14 @@ describe("WidgetHeaderActions — B7 one block menu", () => {
     destroy();
   });
 
-  it("a database block menu holds every block action, in plain words", () => {
+  it("i2-model (N27): a database block menu is seven plain entries, data steps behind «More…»", () => {
     const { target, destroy } = mount({ isDatabase: true });
     expect(titles(openMenu(target))).toEqual([
       "Rename",
       "Source and settings…",
       "Filter for all views of this block…",
-      "Group and count…",
-      "Pivot table…",
-      "Combine with another source…",
+      "More…",
       "Collapse",
-      "Pin position",
       "Duplicate",
       "Delete block",
     ]);
@@ -95,14 +92,13 @@ describe("WidgetHeaderActions — B7 one block menu", () => {
   it("each entry dispatches the host's existing command", () => {
     const { component, target, destroy } = mount({ isDatabase: true });
     const events: string[] = [];
-    for (const name of ["rename", "toggleConfig", "filter", "togglePipeline", "toggleCollapse", "toggleLock", "duplicate", "remove"]) {
+    for (const name of ["rename", "toggleConfig", "filter", "togglePipeline", "toggleCollapse", "duplicate", "remove"]) {
       component.$on(name, (e: CustomEvent) => events.push(e.detail ? `${name}:${String(e.detail)}` : name));
     }
     for (const entry of openMenu(target)) entry.onClick?.();
     expect(events).toEqual([
-      "rename", "toggleConfig", "filter",
-      "togglePipeline:summarize", "togglePipeline:pivot", "togglePipeline:join",
-      "toggleCollapse", "toggleLock", "duplicate", "remove",
+      "rename", "toggleConfig", "filter", "togglePipeline",
+      "toggleCollapse", "duplicate", "remove",
     ]);
     destroy();
   });

@@ -1118,6 +1118,7 @@
                     },
                     "menu": "区块菜单",
                     "menu-configure": "配置组件…",
+                    "menu-more": "更多…",
                     "menu-pipeline": "分组、计数、合并…",
                     "menu-pipeline-active": "数据步骤（{{count}}）…",
                     "menu-rename": "重命名",

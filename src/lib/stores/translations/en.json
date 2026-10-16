@@ -1151,6 +1151,7 @@
                     "lock": "Pin position",
                     "menu": "Block menu",
                     "menu-configure": "Configure widget…",
+                    "menu-more": "More…",
                     "menu-pipeline": "Group, count, combine…",
                     "menu-pipeline-active": "Data steps ({{count}})…",
                     "menu-remove": "Delete block",

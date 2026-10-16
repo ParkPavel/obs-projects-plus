@@ -36,25 +36,22 @@ export function buildWidgetMenuEntries(opts: WidgetMenuHandlers & {
   ];
   if (opts.hasCog) e.push({ title: t(`${K}menu-source`, "Source and settings…"), icon: "database", onClick: opts.onConfigure });
   if (opts.isDatabase) e.push({ title: t(`${K}menu-filter`, "Filter for all views of this block…"), icon: "filter", onClick: opts.onFilter });
-  if (opts.isDatabase) {
-    e.push({ separator: true });
-    e.push({ title: t(`${K}menu-summarize`, "Group and count…"), icon: "sigma", onClick: () => opts.onPipeline("summarize") });
-    e.push({ title: t(`${K}menu-pivot`, "Pivot table…"), icon: "table-2", onClick: () => opts.onPipeline("pivot") });
-    e.push({ title: t(`${K}menu-join`, "Combine with another source…"), icon: "git-merge", onClick: () => opts.onPipeline("join") });
-  }
-  // A stored pipeline must stay reachable, whatever the block type.
-  if (opts.hasPipeline && (pipelineStepCount > 0 || !opts.isDatabase)) {
+  // i2-model (N27): the data-shaping steps sit behind one «Дополнительно…»
+  // (the step editor offers group, pivot and combine). The menu was ten
+  // entries; a stored pipeline is named by its step count.
+  if (opts.isDatabase || (opts.hasPipeline && pipelineStepCount > 0)) {
     e.push({
       title: pipelineStepCount > 0
         ? t(`${K}menu-pipeline-active`, "Data steps ({{count}})…").replace("{{count}}", String(pipelineStepCount))
-        : t(`${K}menu-pipeline`, "Group, count, combine…"),
+        : t(`${K}menu-more`, "More…"),
       icon: "list-ordered",
       onClick: () => opts.onPipeline(null),
     });
   }
   e.push({ separator: true });
   e.push({ title: collapsed ? t(`${K}expand`, "Expand") : t(`${K}menu-collapse`, "Collapse"), icon: collapsed ? "chevron-down" : "chevron-up", onClick: opts.onToggleCollapse });
-  e.push({ title: locked ? t(`${K}unlock`, "Unpin position") : t(`${K}lock`, "Pin position"), icon: locked ? "unlock" : "lock", onClick: opts.onToggleLock });
+  // Pinning is undone here; a block is pinned from its grip, not the menu.
+  if (locked) e.push({ title: t(`${K}unlock`, "Unpin position"), icon: "unlock", onClick: opts.onToggleLock });
   e.push({ title: t(`${K}menu-duplicate`, "Duplicate"), icon: "copy", onClick: opts.onDuplicate });
   e.push({ separator: true });
   e.push({ title: t(`${K}menu-remove`, "Delete block"), icon: "trash", danger: true, onClick: opts.onRemove });
