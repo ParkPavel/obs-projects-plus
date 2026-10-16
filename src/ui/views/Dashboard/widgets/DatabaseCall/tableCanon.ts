@@ -6,6 +6,7 @@
 // presents what the canonical pipeline already produced.
 
 import { displayFormatOf, formatDateCell } from "src/lib/helpers/dateDisplay";
+export { isDerivedRowId, sourceIdOf } from "src/lib/dashboard-engine/derivedRowId";
 type DateFormatConfig = import("src/settings/v3/settings").DateFormatConfig;
 import { isRelationCompanionField } from "src/lib/engine/crossProjectResolver";
 import {

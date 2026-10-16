@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { formatLocalDay } from "src/lib/helpers/dateFormatting";
+  import { formatDisplayValue } from "src/lib/helpers/dateDisplay";
   /**
    * RollupCellRenderer — standalone Rollup display component (#045.4).
    *
@@ -106,8 +106,6 @@
       .filter(Boolean);
   }
 
-  /** #158 — same local-day rule as the table cell, one shared formatter. */
-  const dateCellText = formatLocalDay;
 
   function formatPlain(val: Optional<DataValue>, decimals: number): string {
     if (val == null) return emptyPlaceholder;
@@ -116,14 +114,9 @@
       if (val.length === 0) return emptyPlaceholder;
       return val.map(String).join(", ");
     }
-    if (typeof val === "number") {
-      if (Number.isInteger(val)) return val.toString();
-      return val.toFixed(Math.max(0, decimals));
-    }
-    if (val instanceof Date) {
-      return dateCellText(val);
-    }
-    return String(val);
+    // i2-record: grouped digits and DD.MM.YYYY, as every other surface shows them.
+    if (typeof val === "number") return formatDisplayValue(val, Math.max(0, decimals));
+    return formatDisplayValue(val);
   }
 </script>
 

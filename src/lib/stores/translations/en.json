@@ -1,5 +1,15 @@
 ﻿{
     "translation": {
+        "formula-errors": {
+            "unknown-field": "There is no property '{{name}}'",
+            "unknown-field-hint": "There is no property '{{name}}'. Did you mean '{{hint}}'?",
+            "unknown-function": "There is no function '{{name}}'",
+            "unfinished": "The formula is not finished — add a value",
+            "operator": "A sign is missing a value next to it — put a number, a property or a function there",
+            "character": "Unexpected character '{{char}}'",
+            "bracket": "A bracket or a comma is missing",
+            "arguments": "{{name}} takes {{count}} value(s)"
+        },
         "data-types": {
             "string": "Text",
             "number": "Number",

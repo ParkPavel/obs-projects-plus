@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { guarded } from "src/lib/errors/guarded";
   import type { DataFrame, DataRecord } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
   import type { ProjectDefinition } from "src/settings/settings";
@@ -97,7 +98,7 @@
     const f = a?.vault.getAbstractFileByPath(path);
     return f && "stat" in f ? (f as { stat: { ctime: number; mtime: number } }).stat : null;
   })($app) satisfies GetFileStat;
-  $: displayFrame = buildDisplayFrame(filteredFrame, effectiveConfig, getFileStat);
+  $: displayFrame = guarded("page", filteredFrame, () => buildDisplayFrame(filteredFrame, effectiveConfig, getFileStat));
   $: availableSources = ($settings.projects ?? []).filter((p) => p.id !== project.id).map((p) => ({ id: p.id, name: p.name }));
   $: availableWidgets = widgets.map((w) => ({ id: w.id, title: w.title }));
   const sourceStatesStore = writable<ReadonlyMap<string, ExternalSourceState>>(new Map());

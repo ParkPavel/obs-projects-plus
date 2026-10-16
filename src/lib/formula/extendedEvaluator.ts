@@ -3,6 +3,7 @@
 // Returns DataValue (not boolean) — builds on existing formulaParser AST.
 
 import type { DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
+import { humanFormulaError, resolveFieldName } from "./formulaErrors";
 import type { DataFrame } from "src/lib/dataframe/dataframe";
 import { type FormulaNode, parseFormula, tokenize } from "src/lib/helpers/formulaParser";
 import { isUnsafePattern, MAX_REGEX_INPUT_LENGTH, MAX_REGEX_PATTERN_LENGTH } from "src/lib/helpers/regexSafety";
@@ -969,6 +970,24 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
 
 // ── Public API ───────────────────────────────────────────────
 
+/**
+ * i2-perf (A4 H3): an expression is parsed once, not once per record — 54 ms
+ * per 5000 records went to re-parsing the same text. A parse error is kept
+ * too, so a broken formula costs one throw per record instead of a parse.
+ */
+const AST_CACHE_LIMIT = 256;
+const astCache = new Map<string, FormulaNode | Error>();
+function parsedFormula(expression: string): FormulaNode {
+  let entry = astCache.get(expression);
+  if (entry === undefined) {
+    try { entry = parseFormula(expression); } catch (e) { entry = e instanceof Error ? e : new Error(String(e)); }
+    if (astCache.size >= AST_CACHE_LIMIT) astCache.delete(astCache.keys().next().value as string);
+    astCache.set(expression, entry);
+  }
+  if (entry instanceof Error) throw entry;
+  return entry;
+}
+
 export function evaluateFormulaValue(
   expression: string,
   record: DataRecord,
@@ -983,7 +1002,7 @@ export function evaluateFormulaWithError(
   dataFrame?: DataFrame
 ): FormulaResult {
   try {
-    const ast = parseFormula(expression);
+    const ast = parsedFormula(expression);
     const value = evaluateNode(ast, record, dataFrame);
     return { value };
   } catch (e) {
@@ -1011,7 +1030,7 @@ export function validateFormulaExpression(
   } catch (e) {
     errors.push(e instanceof Error ? e.message : String(e));
   }
-  return errors;
+  return errors.map((raw) => humanFormulaError(raw, availableFields));
 }
 
 export function getFormulaFunctions(): string[] {
@@ -1049,7 +1068,9 @@ function evaluateNode(
 
       case "field": {
         if (scope?.has(n.name)) return scope.get(n.name);
-        const val = record.values[n.name];
+        // D20: `Paid` reaches the property `paid` — names match without case.
+        const key = n.name in record.values ? n.name : resolveFieldName(n.name, Object.keys(record.values)) ?? n.name;
+        const val = record.values[key];
         if (val === undefined) return null;
         if (typeof val === "string") {
           const m = val.match(/^\[\[([^\]]+)\]\]$/);
@@ -1261,7 +1282,7 @@ function checkFieldRefs(
   errors: string[]
 ): void {
   if (node.type === "field") {
-    if (!fields.includes(node.name)) errors.push(`Unknown field: ${node.name}`);
+    if (resolveFieldName(node.name, fields) === undefined) errors.push(`Unknown field: ${node.name}`);
   } else if (node.type === "function") {
     for (const arg of node.args) checkFieldRefs(arg, fields, errors);
   } else if (node.type === "operator") {

@@ -1,5 +1,15 @@
 ﻿{
     "translation": {
+        "formula-errors": {
+            "unknown-field": "没有属性“{{name}}”",
+            "unknown-field-hint": "没有属性“{{name}}”。是否是“{{hint}}”？",
+            "unknown-function": "没有函数“{{name}}”",
+            "unfinished": "公式尚未完成——请补充一个值",
+            "operator": "运算符旁缺少值——请填入数字、属性或函数",
+            "character": "无法识别的字符“{{char}}”",
+            "bracket": "缺少括号或逗号",
+            "arguments": "{{name}} 需要 {{count}} 个值"
+        },
         "data-types": {
             "string": "文本",
             "number": "数字",

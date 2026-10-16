@@ -128,3 +128,13 @@ export function declaredPropertyType(field: DataField): PropertyType | undefined
   if (field.type === DataFieldType.Date && field.typeConfig?.time) return "datetime";
   return DECLARED_TYPES[field.type];
 }
+
+/** The base's formula properties, as the formula pass takes them (R3). */
+export function formulaPropertiesOf(
+  fieldConfig: DeclaredRelations | undefined
+): { name: string; expression: string }[] {
+  if (!fieldConfig) return [];
+  return Object.entries(fieldConfig)
+    .filter(([, cfg]) => typeof cfg?.formula === "string" && cfg.formula.trim() !== "")
+    .map(([name, cfg]) => ({ name, expression: cfg!.formula! }));
+}

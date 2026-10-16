@@ -10,7 +10,7 @@
   import { i18n } from "src/lib/stores/i18n";
   import type { DataFrame, DataRecord, DataField, DataValue, Optional } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
-  import { cellDisplay, type TableColumn } from "./tableCanon";
+  import { cellDisplay, isDerivedRowId, sourceIdOf, type TableColumn } from "./tableCanon";
   import EditableCell from "./EditableCell.svelte";
   import HighlightText from "./HighlightText.svelte";
   import type { ParsedSearch } from "./tableSearchQuery";
@@ -45,7 +45,7 @@
   // R3: never surface the full vault path — identity falls back to the
   // note's basename, like Notion shows the page title.
   function baseName(id: string): string {
-    return (id.split("/").pop() ?? id).replace(/\.md$/, "");
+    return (sourceIdOf(id).split("/").pop() ?? id).replace(/\.md$/, ""); // D17: a pipeline row is named by its note
   }
 
   function nameText(): string {
@@ -86,7 +86,7 @@
       <EditableCell
         field={col.field}
         value={record.values[col.field.name]}
-        {readonly}
+        readonly={readonly || isDerivedRowId(record.id)}
         {api}
         {frame}
         {dateFormat}

@@ -45,3 +45,25 @@ function partsOf(value: Optional<DataValue>, withTime: boolean): Parts | "invali
   const parts: Parts = { y: y ?? 0, m: m ?? 1, d: d ?? 1 };
   return hh !== null && hh !== undefined ? { ...parts, time: [hh, mm ?? 0] } : parts;
 }
+
+/**
+ * i2-record: a computed value as a person reads it — `45 000`, `7,47`,
+ * `13.10.2026` — instead of `45000`, `7.470588235294118`, `2026-10-13`.
+ * `decimals` fixes the number of decimals (a rollup's own setting); without
+ * it at most two are shown. Lists join with commas.
+ */
+export function formatDisplayValue(value: Optional<DataValue>, decimals?: number): string {
+  if (value === null || value === undefined || value === "") return "";
+  if (Array.isArray(value)) return value.map((v) => formatDisplayValue(v, decimals)).join(", ");
+  if (typeof value === "number") {
+    const fixed = decimals !== undefined && !Number.isInteger(value);
+    return new Intl.NumberFormat(undefined, {
+      minimumFractionDigits: fixed ? decimals : 0,
+      maximumFractionDigits: fixed ? decimals : 2,
+    }).format(value);
+  }
+  if (value instanceof Date || (typeof value === "string" && ISO_DAY.test(value))) {
+    return formatDateCell(value, { withTime: false });
+  }
+  return String(value);
+}

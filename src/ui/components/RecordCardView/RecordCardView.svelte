@@ -23,6 +23,10 @@
   import SlideInPanel from "src/ui/components/SlideInPanel/SlideInPanel.svelte";
   import TextField from "src/ui/components/fields/TextField.svelte";
   import EditNote from "src/ui/modals/components/EditNote.svelte";
+  import NotePropertiesBlock from "src/ui/properties/NotePropertiesBlock.svelte";
+  import { app as appStore } from "src/lib/stores/obsidian";
+  import { TFile } from "obsidian";
+  import { formatDisplayValue } from "src/lib/helpers/dateDisplay";
   import PageIcon from "src/ui/components/PageIcon/PageIcon.svelte";
   import { DataFieldType, type DataField, type DataRecord } from "src/lib/dataframe/dataframe";
   import { normalizeRelationValue } from "src/lib/relations/relationContract";
@@ -43,7 +47,7 @@
   export let onRenameNote: ((newName: string) => void) | undefined = undefined;
   /**
    * Name of the field whose value is used as the record icon.
-   * Auto-detects "icon", "cover", or "thumbnail" when omitted.
+   * Auto-detects an "icon" field when omitted.
    */
   export let iconField: string | undefined = undefined;
 
@@ -86,20 +90,21 @@
   $: relationFields = fields.filter((f) => f.type === DataFieldType.Relation && !f.derived);
 
   /** The fields that really become frontmatter keys — see the block below. */
-  $: writtenFields = fields.filter((f) => !f.derived);
+  // i2-record (D07/N05): the peek shows the SAME properties block as the note
+  // itself — the keys are its labels — and the computed properties (rollups,
+  // formulas) read-only beneath it. A row that is not a note keeps the old editor.
+  $: noteFile = (() => {
+    const f = record && $appStore?.vault ? $appStore.vault.getAbstractFileByPath(record.id) : null;
+    return f instanceof TFile ? f : null;
+  })();
+  $: isNote = noteFile !== null;
+  $: computedFields = fields.filter((f) =>
+    (f.type === DataFieldType.Formula || f.type === DataFieldType.Rollup || !!f.typeConfig?.rollup) && record?.values[f.name] != null);
 
-  /**
-   * A value as frontmatter would carry it — the point of the block is that it
-   * matches the file, so a list stays a list and an absent key says so rather
-   * than rendering as an empty string that looks like an empty value.
-   */
-  function formatKeyValue(v: unknown): string {
-    if (v === undefined || v === null) return "—";
-    if (Array.isArray(v)) return v.map(String).join(", ");
-    return String(v);
-  }
 
-  const ICON_CANDIDATES = ["icon", "cover", "thumbnail"];
+  // N06: a cover is an image, not an icon — «[[Обложка….svg]]» was drawn as an
+  // emoji over the title. Only an icon field gives the header its icon.
+  const ICON_CANDIDATES = ["icon"];
   const DESC_CANDIDATES = ["description", "summary", "excerpt"];
 
   $: title = record
@@ -239,45 +244,30 @@
     <div class="ppp-rcv-desc">{descText}</div>
   {/if}
 
-  {#if record}
+  {#if record && isNote && noteFile}
+    <NotePropertiesBlock app={$appStore} file={noteFile} />
+    {#if computedFields.length > 0}
+      <dl class="ppp-rcv-computed">
+        {#each computedFields as field (field.name)}
+          <div class="ppp-rcv-fm-row">
+            <dt>{field.name}</dt>
+            <dd>{formatDisplayValue(record.values[field.name]) || "—"}</dd>
+          </div>
+        {/each}
+      </dl>
+    {/if}
+  {:else if record}
     <EditNote
       {fields}
       {record}
       {allRecords}
       {autosave}
-      {readonly}
+      readonly={true}
       {projectName}
       onSave={handleSave}
       onOpenNote={onOpenNote}
       onRenameNote={onRenameNote}
     />
-
-    <!--
-      Vision scene 3. Its readiness criterion is "hover/inspect shows the
-      frontmatter key", and nothing in the product showed one: the editor
-      renders view fields and the sidebar pane renders raw keys, and neither
-      says they are the same thing. They are — `dataApi` writes
-      `frontmatter[field.name]`, so a field's name IS its key — and this says so
-      where a person is already looking at the record. It is the smallest
-      honest form of the promise: the file, as it will be on disk.
-
-      DERIVED fields are excluded, and that is not a detail: `dataApi` skips
-      them when it writes (`updateFrontMatter`), so a formula column, a rollup
-      and a relation's `__resolved__…` companion have names that are NOT keys.
-      Listing them under "frontmatter" would have made the panel say something
-      false about the file — found by the adversarial review of step (b).
-    -->
-    <details class="ppp-rcv-frontmatter">
-      <summary>{$i18n.t("views.dashboard.record-card.frontmatter", { defaultValue: "Frontmatter keys" })}</summary>
-      <dl>
-        {#each writtenFields as field (field.name)}
-          <div class="ppp-rcv-fm-row">
-            <dt>{field.name}</dt>
-            <dd>{formatKeyValue(record.values[field.name])}</dd>
-          </div>
-        {/each}
-      </dl>
-    </details>
 
     <!--
       #151 / #168(c): which links found their target. Only the ones that did
@@ -313,34 +303,31 @@
     font-size: 0.85em;
   }
 
-  .ppp-rcv-frontmatter {
-    margin: 0.75em 0 0;
-    font-size: 0.85em;
-    color: var(--text-muted);
-  }
-
-  .ppp-rcv-frontmatter summary {
-    cursor: pointer;
-    padding: 0.25em 0;
-  }
-
-  .ppp-rcv-frontmatter dl {
-    margin: 0.25em 0 0;
+  /* Computed properties sit under the block as its own rows read-only:
+     label left and muted, value right — the block's own columns. */
+  .ppp-rcv-computed {
     display: grid;
-    grid-template-columns: minmax(6em, auto) 1fr;
-    gap: 0.125em 0.75em;
+    grid-template-columns: minmax(7rem, 30%) minmax(0, 1fr);
+    gap: 0.25rem 0.5rem;
+    margin: 0 0 0.75rem;
+    padding: 0 0.25rem;
+    font-size: var(--font-ui-small);
   }
+
+
 
   .ppp-rcv-fm-row {
     display: contents;
   }
 
-  .ppp-rcv-frontmatter dt {
-    font-family: var(--font-monospace);
-    color: var(--text-normal);
+  .ppp-rcv-computed dt {
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  .ppp-rcv-frontmatter dd {
+  .ppp-rcv-computed dd {
     margin: 0;
     overflow-wrap: anywhere;
   }

@@ -128,14 +128,14 @@ describe("RollupCellRenderer — plain (count / more) group", () => {
     const { container } = render(RollupCellRenderer, {
       props: { value: 3.14159, fn: "avg" },
     });
-    expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe("3.14");
+    expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe(new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(3.14)); // grouped and localised (i2-record)
   });
 
   test("respects custom precision", () => {
     const { container } = render(RollupCellRenderer, {
       props: { value: 3.14159, fn: "avg", precision: 4 },
     });
-    expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe("3.1416");
+    expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe(new Intl.NumberFormat(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(3.1416));
   });
 
   test("renders empty placeholder for null", () => {
@@ -145,11 +145,11 @@ describe("RollupCellRenderer — plain (count / more) group", () => {
     expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe("—");
   });
 
-  test("renders a date as YYYY-MM-DD", () => {
+  test("renders a date as DD.MM.YYYY, the way dates are typed (i2-record)", () => {
     const { container } = render(RollupCellRenderer, {
       props: { value: new Date("2024-03-15T12:00:00Z"), fn: "min" },
     });
-    expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe("2024-03-15");
+    expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe("15.03.2024");
   });
 
   /**
@@ -179,7 +179,7 @@ describe("RollupCellRenderer — plain (count / more) group", () => {
     const { container } = render(RollupCellRenderer, {
       props: { value, fn: "min" },
     });
-    expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe("2026-09-01");
+    expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe("01.09.2026");
   });
 
   test("gives a time-carrying rollup value the day its own host is living (#158)", () => {
@@ -187,7 +187,7 @@ describe("RollupCellRenderer — plain (count / more) group", () => {
     const { container } = render(RollupCellRenderer, {
       props: { value, fn: "min" },
     });
-    expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe("2024-03-16");
+    expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe("16.03.2024");
   });
 
   test("supports custom emptyPlaceholder", () => {

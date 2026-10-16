@@ -163,11 +163,13 @@
 
   // ── Reactive derived ────────────────────────────────────────
   // B5 — validation parses the whole expression against every field, so it
-  // waits for a 150 ms pause in typing; suggestions answer at once from an
-  // index built once per schema (src/lib/engine/formulaSuggestIndex.ts).
+  // waits for a pause in typing; suggestions answer at once from an index
+  // built once per schema (src/lib/engine/formulaSuggestIndex.ts).
+  // i2-data (D20): 700 ms, not 150 — «paid +» is a formula being typed, not
+  // an error; the message waits until the person stops.
   const validation = debounceLatest((expr: string) => {
     errors = expr.trim() ? validate(expr, fields) : [];
-  }, 150);
+  }, 700);
   onDestroy(() => validation.cancel());
   $: {
     void fields;

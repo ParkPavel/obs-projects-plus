@@ -122,28 +122,23 @@ describe("A168 — scene 3: the record says which frontmatter keys it writes", (
       "utf8"
     ) as string;
 
-  it("only the fields that really become keys are listed", () => {
-    // `dataApi` skips derived fields when it writes, so a formula column, a
-    // rollup and a relation's `__resolved__…` companion have names that are
-    // NOT frontmatter keys. Listing them would make the panel lie about the
-    // file — the adversarial review of step (b) found exactly that.
+  it("i2-record (D07): the peek shows the note's own properties block — its labels are the keys", () => {
+    // The dump of «Frontmatter keys» under a second editor is gone: the same
+    // block as in the note shows each key as its label and writes only it.
     const s = source();
-    expect(s).toMatch(/writtenFields = fields\.filter\(\(f\) => !f\.derived\)/);
-    expect(s).toMatch(/\{#each writtenFields as field \(field\.name\)\}/);
+    expect(s).toMatch(/<NotePropertiesBlock app=\{\$appStore\} file=\{noteFile\} \/>/);
+    expect(s).not.toMatch(/ppp-rcv-frontmatter">/);
   });
 
-  it("the peek lists each field name as the key it is", () => {
-    // The scene's readiness criterion is that inspecting a record shows the
-    // frontmatter key. `dataApi` writes `frontmatter[field.name]`, so the name
-    // IS the key; the panel says so where the record already is.
+  it("computed properties are listed read-only and are not presented as keys of the file", () => {
     const s = source();
-    expect(s).toMatch(/ppp-rcv-frontmatter/);
+    expect(s).toMatch(/computedFields = fields\.filter\(\(f\) =>\s+\(f\.type === DataFieldType\.Formula/);
     expect(s).toMatch(/<dt>\{field\.name\}<\/dt>/);
   });
 
-  it("an absent key reads as absent rather than as an empty value", () => {
+  it("an absent computed value reads as absent rather than as an empty value", () => {
     const s = source();
-    expect(s).toMatch(/if \(v === undefined \|\| v === null\) return "—";/);
+    expect(s).toMatch(/formatDisplayValue\(record\.values\[field\.name\]\) \|\| "—"/);
   });
 });
 
