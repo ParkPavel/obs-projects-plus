@@ -14,6 +14,8 @@
   import Datetime from "./Datetime.svelte";
   import Number from "./Number.svelte";
   import RollupCellRenderer from "src/ui/components/RollupCellRenderer/RollupCellRenderer.svelte";
+  // i2-board: a link reads as its note's name, «Жанна Соколова», not «[[Жанна Соколова]]».
+  import { stripToDisplay } from "src/lib/engine/wikilink";
 
   export let fields: DataField[];
   export let record: DataRecord;
@@ -30,9 +32,9 @@
 {#each fields as field (field.name)}
   {@const value = record.values[field.name]}
   {#if value !== undefined && value !== null}
-    <div class="field-label" title={showLabels ? undefined : field.name}>
+    <div class="field-label" class:has-label={showLabels} title={showLabels ? undefined : field.name}>
       {#if showLabels}
-        <div class="setting-item-description" style:margin-bottom={"0.25rem"}>
+        <div class="setting-item-description field-name">
           {field.name}
         </div>
       {/if}
@@ -68,13 +70,13 @@
           <span class="ppp-card-meta-relations">
             {#each value as item, i}
               <span class="ppp-card-meta-chip ppp-card-meta-chip--relation">
-                {String(item)}
+                {stripToDisplay(String(item))}
               </span>{#if i < value.length - 1}{" "}{/if}
             {/each}
           </span>
         {:else}
           <span class="ppp-card-meta-chip ppp-card-meta-chip--relation">
-            {String(value)}
+            {stripToDisplay(String(value))}
           </span>
         {/if}
       {:else if field.type === DataFieldType.Formula}
@@ -103,6 +105,24 @@
 
   .field-label:last-child {
     margin-bottom: 0;
+  }
+
+  /* i2-board: one line per property, name left and muted, value right — a
+     name above every value made a phone card 500 px tall for five values. */
+  .field-label.has-label {
+    display: grid;
+    grid-template-columns: minmax(4em, 38%) minmax(0, 1fr);
+    gap: 0.5em;
+    align-items: baseline;
+    margin-bottom: 0.25em;
+  }
+
+  .field-name {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .ppp-card-meta-chip {
