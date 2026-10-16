@@ -13,6 +13,7 @@
   } from "obsidian-svelte";
   import FormulaEditor from "src/ui/components/FormulaEditor/FormulaEditor.svelte";
   import { isEmptyFieldValue } from "src/lib/relations/declaredFieldTypes";
+  import { baseRefOptions } from "src/lib/relations/baseRef";
   import {
     FIELD_TYPE_GROUPS,
     ROLLUP_QUICK_FUNCTIONS,
@@ -309,12 +310,13 @@
     availableProjects.length > 0 ? availableProjects : $settingsStore.projects;
   $: projectOptions = [
     { label: $i18n.t("modals.field.configure.relation.no-project"), value: "" },
-    ...effectiveProjects.map((p) => ({
+    // D19: a project's own sources are bases too («Кабинет · Активные клиенты»).
+    ...baseRefOptions(effectiveProjects).map((o) => ({
       label:
-        p.id === currentProjectId
-          ? `${p.name} ${$i18n.t("modals.field.configure.relation.this-project-suffix")}`
-          : p.name,
-      value: p.id,
+        o.value === currentProjectId
+          ? `${o.label} ${$i18n.t("modals.field.configure.relation.this-project-suffix")}`
+          : o.label,
+      value: o.value,
     })),
   ];
   $: relationFieldsOnThisProject = existingFields.filter(
@@ -335,14 +337,14 @@
   const CREATE_PREFIX = "create:";
   let pendingRelation: { name: string; targetProjectId: string; projectName: string } | null = null;
   $: createRelationOptions = onCreateRelation
-    ? effectiveProjects
-        .filter((p) => p.id !== currentProjectId)
-        .map((p) => ({
+    ? baseRefOptions(effectiveProjects)
+        .filter((o) => o.value !== currentProjectId)
+        .map((o) => ({
           label: $i18n.t("modals.field.create.flow.create-relation-option", {
             defaultValue: "New relation to {{project}}",
-            project: p.name,
+            project: o.label,
           }),
-          value: CREATE_PREFIX + p.id,
+          value: CREATE_PREFIX + o.value,
         }))
     : [];
   $: rollupRelationOptions = [
@@ -510,10 +512,10 @@
   function handleRollupSourceChange(e: CustomEvent<string>) {
     if (e.detail.startsWith(CREATE_PREFIX)) {
       const projectId = e.detail.slice(CREATE_PREFIX.length);
-      const project = effectiveProjects.find((p) => p.id === projectId);
-      if (!project) return;
-      const name = newRelationFieldName(project.name, [...existingFields.map((f) => f.name), field.name]);
-      pendingRelation = { name, targetProjectId: projectId, projectName: project.name };
+      const target = baseRefOptions(effectiveProjects).find((o) => o.value === projectId);
+      if (!target) return;
+      const name = newRelationFieldName(target.label, [...existingFields.map((f) => f.name), field.name]);
+      pendingRelation = { name, targetProjectId: projectId, projectName: target.label };
       const base: RollupFieldConfig = rollupCfg ?? { relationField: "", targetField: "", function: "count" };
       const { backlink: _b, ...rest } = base;
       void _b;

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { baseRefOptions } from "src/lib/relations/baseRef";
   import {
     Button,
     ModalButtonGroup,
@@ -302,12 +303,13 @@
 
   $: projectOptions = [
     { label: $i18n.t("modals.field.configure.relation.no-project"), value: "" },
-    ...effectiveProjects.map((p) => ({
+    // D19: a project's own sources are bases too.
+    ...baseRefOptions(effectiveProjects).map((o) => ({
       label:
-        p.id === currentProjectId
-          ? `${p.name} ${$i18n.t("modals.field.configure.relation.this-project-suffix", { defaultValue: "(this project)" })}`
-          : p.name,
-      value: p.id,
+        o.value === currentProjectId
+          ? `${o.label} ${$i18n.t("modals.field.configure.relation.this-project-suffix", { defaultValue: "(this project)" })}`
+          : o.label,
+      value: o.value,
     })),
   ];
 

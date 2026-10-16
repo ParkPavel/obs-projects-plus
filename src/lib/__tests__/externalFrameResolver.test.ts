@@ -212,3 +212,29 @@ describe("resolveExternalFrame — rollup columns", () => {
     expect(out!.fields.find((f: { name: string }) => f.name === "paid")?.derived).toBe(true);
   });
 });
+
+describe("i2-data (D19) — a project's own source is a base", () => {
+  it("a saved selection narrows the project's records by its filter", async () => {
+    FolderDataSource.mockImplementation(() => ({
+      queryAll: async () => ({
+        fields: [{ name: "type", type: "string", repeated: false, identifier: false, derived: false }],
+        records: [
+          { id: "a.md", values: { type: "client" } },
+          { id: "b.md", values: { type: "visit" } },
+        ],
+      }),
+    }));
+    const project = makeProject("p1", "folder");
+    project.additionalSources = [{
+      kind: "derived", id: "clients", name: "Клиенты",
+      config: { from: "project", where: { conjunction: "and", conditions: [{ field: "type", operator: "is", value: "client", enabled: true }] } },
+    }];
+    const frame = await resolveExternalFrame("p1::clients", makeDeps({ projects: [project] }));
+    expect(frame?.records.map((r) => r.id)).toEqual(["a.md"]);
+  });
+
+  it("an unknown source is no base", async () => {
+    const project = makeProject("p1", "folder");
+    expect(await resolveExternalFrame("p1::missing", makeDeps({ projects: [project] }))).toBeNull();
+  });
+});

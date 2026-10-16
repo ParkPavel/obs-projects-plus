@@ -13,6 +13,9 @@ import { createDataSource } from "src/lib/datasources";
 import { applyDeclaredFieldTypes } from "src/lib/relations/declaredFieldTypes";
 import { applyRollupColumns } from "src/lib/relations/rollupColumns";
 import { extractRelationTargetIds, type FieldConfigRelationMap } from "src/lib/relations/relationTargets";
+import { parseBaseRef } from "src/lib/relations/baseRef";
+import { isAcquirable, resolveDerived } from "src/lib/datasources/derivedSource";
+import type { DerivedDataSource } from "src/settings/v3/settings";
 
 export interface ResolverDeps {
   readonly fileSystem: IFileSystem;
@@ -55,6 +58,9 @@ export async function resolveExternalFrame(
   projectId: string,
   deps: ResolverDeps
 ): Promise<DataFrame | null> {
+  // D19: `projectId::sourceId` names one of a project's own sources.
+  const ref = parseBaseRef(projectId);
+  if (ref.sourceId) return resolveSourceFrame(ref.projectId, ref.sourceId, deps);
   const base = await resolveEnrichedFrame(projectId, deps);
   const project = deps.projects.find((p) => p.id === projectId);
   const fieldConfig = project?.fieldConfig as FieldConfigRelationMap | undefined;
@@ -71,12 +77,34 @@ export async function resolveExternalFrame(
   return applyRollupColumns(base, fieldConfig, projectId, targets);
 }
 
+/**
+ * D19 — one source of a project as a base: an additional source is queried
+ * on its own; a saved selection (derived source) narrows the project's frame,
+ * or the part it reads, by its filter.
+ */
+async function resolveSourceFrame(projectId: string, sourceId: string, deps: ResolverDeps): Promise<DataFrame | null> {
+  const project = deps.projects.find((p) => p.id === projectId);
+  const source = project?.additionalSources?.find((s) => (s as { id?: string }).id === sourceId);
+  if (!project || !source) return null;
+  const asProject = (src: typeof source) => ({ ...project, dataSource: src }) as ProjectDefinition;
+  if (isAcquirable(source)) return resolveEnrichedFrame(projectId, deps, asProject(source));
+  const derived = source as DerivedDataSource;
+  const enriched = await resolveExternalFrame(projectId, deps);
+  if (!enriched) return null;
+  const from = derived.config.from;
+  const partSource = from === "project" ? undefined : [project.dataSource, ...(project.additionalSources ?? [])].find((s) => (s as { id?: string }).id === from);
+  const partFrame = partSource && isAcquirable(partSource) ? await resolveEnrichedFrame(projectId, deps, asProject(partSource)) : null;
+  const result = resolveDerived(derived, { enriched, parts: partFrame ? [{ id: from, frame: partFrame }] : [] });
+  return result.kind === "ok" || result.kind === "empty" ? result.frame : null;
+}
+
 /** A project's frame with its declared types and backlinks, before rollups. */
 async function resolveEnrichedFrame(
   projectId: string,
-  deps: ResolverDeps
+  deps: ResolverDeps,
+  override?: ProjectDefinition
 ): Promise<DataFrame | null> {
-  const project = deps.projects.find((p) => p.id === projectId);
+  const project = override ?? deps.projects.find((p) => p.id === projectId);
   if (!project) return null;
 
   try {
