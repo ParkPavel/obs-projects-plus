@@ -173,9 +173,9 @@ describe("cellDisplay (canon §2)", () => {
     expect(pills.overflow).toBe(value.length - MAX_VISIBLE_PILLS);
   });
 
-  it("formats Date instances as ISO dates", () => {
+  it("formats Date instances as DD.MM.YYYY, the way dates are typed (i2-table, D14)", () => {
     const cell = cellDisplay(field("d", DataFieldType.Date), new Date("2026-06-11T10:00:00Z"));
-    expect(cell).toEqual({ kind: "text", text: "2026-06-11" });
+    expect(cell).toEqual({ kind: "text", text: "11.06.2026" });
   });
 
   /**
@@ -207,7 +207,7 @@ describe("cellDisplay (canon §2)", () => {
     // midnight for that date is the absolute instant 2026-08-31T16:00:00Z.
     const value = hostLocalDate(new Date("2026-08-31T16:00:00Z"), 8 * 60);
     const cell = cellDisplay(field("d", DataFieldType.Date), value);
-    expect(cell).toEqual({ kind: "text", text: "2026-09-01" });
+    expect(cell).toEqual({ kind: "text", text: "01.09.2026" });
   });
 
   it("gives a time-carrying value the day its own host is living (#158)", () => {
@@ -216,13 +216,13 @@ describe("cellDisplay (canon §2)", () => {
     // day — so it shows the one the reader is in.
     const value = hostLocalDate(new Date("2026-06-11T20:00:00Z"), 8 * 60);
     const cell = cellDisplay(field("d", DataFieldType.Date), value);
-    expect(cell).toEqual({ kind: "text", text: "2026-06-12" });
+    expect(cell).toEqual({ kind: "text", text: "12.06.2026" });
   });
 
   it("formats AutoTime (pp_created_time / pp_last_edited_time) Date instances as local date-time, not Date.toString()", () => {
     const value = hostLocalDate(new Date("2026-06-11T20:00:00Z"), 8 * 60);
     const cell = cellDisplay(field("pp_created_time", DataFieldType.AutoTime), value);
-    expect(cell).toEqual({ kind: "text", text: "2026-06-12 04:00" });
+    expect(cell).toEqual({ kind: "text", text: "12.06.2026 04:00" });
   });
 
   it("parses an ISO-string AutoTime value before formatting it", () => {
@@ -231,8 +231,9 @@ describe("cellDisplay (canon §2)", () => {
     expect((cell as { text: string }).text).not.toBe("");
   });
 
-  it("keeps a string in a Date field as written — only AutoTime parses (a date-only ISO string is UTC midnight)", () => {
-    expect(cellDisplay(field("due", DataFieldType.Date), "2026-06-11")).toEqual({ kind: "text", text: "2026-06-11" });
+  it("reads a stored day string by its digits — no UTC conversion — and keeps anything else as written", () => {
+    expect(cellDisplay(field("due", DataFieldType.Date), "2026-06-11")).toEqual({ kind: "text", text: "11.06.2026" });
+    expect(cellDisplay(field("due", DataFieldType.Date), "2026-06-11", { writeFormat: "YYYY-MM-DD", displayFormat: "DD/MM/YYYY" })).toEqual({ kind: "text", text: "11/06/2026" });
     expect(cellDisplay(field("due", DataFieldType.Date), "next week")).toEqual({ kind: "text", text: "next week" });
   });
 

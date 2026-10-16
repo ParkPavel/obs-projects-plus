@@ -45,7 +45,7 @@
     setupRelation: DataField;
   }>();
 
-  $: cell = cellDisplay(field, value);
+  $: cell = cellDisplay(field, value, dateFormat);
   $: access = cellAccess(field, value, readonly);
   $: editable = access.editable;
   $: reason = access.editable ? "" : $i18n.t(access.reason.key, { defaultValue: access.reason.defaultValue, ...access.reason.params });

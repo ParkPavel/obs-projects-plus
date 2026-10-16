@@ -126,6 +126,11 @@
   }
 
   .ppp-t2-name {
+    /* i2-base-style (N17): Obsidian makes every button a centred flex box, so
+       a name wider than the cell was clipped at both ends — the start of
+       «Визит Анна Смирнова» was lost. A block box ends in an ellipsis instead. */
+    display: block;
+    flex: 0 1 auto;
     min-width: 0;
     height: auto;
     padding: 0;
@@ -194,6 +199,13 @@
 
     .ppp-t2-cell--primary {
       gap: 0;
+    }
+  }
+  /* i2-table (N18): the ↗ button opens the same record the name does. On a
+     phone that duplicate took a third of the name cell; the name is the target. */
+  @media (pointer: coarse) {
+    .ppp-t2-rowbtn {
+      display: none;
     }
   }
 </style>

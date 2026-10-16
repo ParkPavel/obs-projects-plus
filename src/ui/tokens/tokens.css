@@ -726,3 +726,21 @@ body {
   pointer-events: auto;
 }
 /* Note: rem-based tokens automatically scale with user font preferences */
+
+/* ═══════════════════════════════════════════════════════════
+   BASE CONTROLS (i2-base-style)
+   ───────────────────────────────────────────────────────────
+   Obsidian styles every <button> as a centred, non-wrapping flex box
+   and, on a phone, adds its own heights and paddings. Plugin buttons
+   that carry text (a record name, a menu row, a tab) inherited that:
+   content wider than the button was centred and clipped at BOTH ends
+   (stand 390 px: name 146 px in a 116 px button lost «Ви» of «Визит»).
+
+   `safe center` keeps a short label centred and aligns an overflowing
+   one to its start, so the reader always sees how it begins. A scoped
+   component rule still wins where a control sets its own alignment.
+   ═══════════════════════════════════════════════════════════ */
+:is(.projects-container, .projects-modal, .ppp-add-view-modal, .ppp-modal, .ppp-popup, .ppp-popover-container, .ppp-list-editor-overlay, .obsidian-projects-popup-portal, .ppp-note-props) button {
+  justify-content: safe center;
+  min-width: 0;
+}
