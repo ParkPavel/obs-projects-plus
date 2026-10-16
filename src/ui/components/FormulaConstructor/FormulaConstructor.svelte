@@ -464,6 +464,10 @@
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    /* N31: the visible text is the highlight layer, which inherited Obsidian's
+       right-aligned setting control while the transparent textarea stayed at
+       the start — the formula read right-aligned, the caret at the left. */
+    text-align: start;
   }
 
   .ppp-fc-editor {

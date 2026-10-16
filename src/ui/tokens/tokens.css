@@ -760,5 +760,6 @@ body {
   :is(.projects-modal, .ppp-add-view-modal, .ppp-modal) .setting-item-control {
     justify-content: flex-start;
     width: 100%;
+    text-align: start;
   }
 }
