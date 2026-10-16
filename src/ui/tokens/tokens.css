@@ -744,3 +744,21 @@ body {
   justify-content: safe center;
   min-width: 0;
 }
+
+/* i2-base-style: on a phone a setting row's name was squeezed to «Н…» and
+   «З… по у…» beside its control. Under 30rem the name sits above the control
+   in every plugin modal, as Obsidian lays out its own phone settings. */
+@media (max-width: 30rem) {
+  :is(.projects-modal, .ppp-add-view-modal, .ppp-modal) .setting-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  :is(.projects-modal, .ppp-add-view-modal, .ppp-modal) .setting-item-info {
+    margin-inline-end: 0;
+  }
+  :is(.projects-modal, .ppp-add-view-modal, .ppp-modal) .setting-item-control {
+    justify-content: flex-start;
+    width: 100%;
+  }
+}
