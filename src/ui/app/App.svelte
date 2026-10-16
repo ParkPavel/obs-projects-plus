@@ -210,11 +210,19 @@
 
   onMount(() => {
     const appInstance = $app;
+    // i2-perf (C3): a burst of writes (a bulk field write: 193 notes) cleared
+    // the sibling frames and re-loaded every one of them once per file. The
+    // burst is coalesced: one invalidation 300 ms after the last change.
+    let invalidateTimer: number | null = null;
+    const invalidateSoon = () => {
+      if (invalidateTimer !== null) window.clearTimeout(invalidateTimer);
+      invalidateTimer = window.setTimeout(() => { invalidateTimer = null; invalidateExternalFrameCache(); }, 300);
+    };
     const events = [
-      appInstance.vault.on("modify", invalidateExternalFrameCache),
-      appInstance.vault.on("create", invalidateExternalFrameCache),
-      appInstance.vault.on("delete", invalidateExternalFrameCache),
-      appInstance.vault.on("rename", invalidateExternalFrameCache),
+      appInstance.vault.on("modify", invalidateSoon),
+      appInstance.vault.on("create", invalidateSoon),
+      appInstance.vault.on("delete", invalidateSoon),
+      appInstance.vault.on("rename", invalidateSoon),
     ];
     // #016 — atomic transform-cache invalidation tied to dataFrame mutations.
     // Returns an unsubscribe handle; idempotent for the same callback ref so
@@ -223,6 +231,7 @@
       invalidateTransformAll,
     );
     return () => {
+      if (invalidateTimer !== null) window.clearTimeout(invalidateTimer);
       for (const ref of events) appInstance.vault.offref(ref);
       unregisterTransformInvalidation();
     };

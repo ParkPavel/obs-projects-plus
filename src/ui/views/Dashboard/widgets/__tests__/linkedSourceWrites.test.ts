@@ -204,7 +204,9 @@ describe("#137 the pipeline editor reads the block's own source", () => {
     // Without them a `join` preview resolves no right frame and reports
     // different numbers than the widget behind the popup.
     expect(host).toMatch(/<PipelineEditor[\s\S]*?\{rightFrames\}/);
-    expect(editor).toMatch(/executeTransform\(frame, \{ steps: steps\.slice\(0, i \+ 1\) \}, \{ rightFrames \}\)/);
+    // i2-perf: one pass, each step on the previous output — still with the runtime's right-frames.
+    expect(editor).toMatch(/scheduleCounts\(source as DataFrame \| null, steps, rightFrames\)/);
+    expect(editor).toMatch(/executeTransform\(current, \{ steps: \[step\] \}, \{ rightFrames: right \}\)/);
   });
 
   it("the editor says so when there is no schema to configure against", () => {

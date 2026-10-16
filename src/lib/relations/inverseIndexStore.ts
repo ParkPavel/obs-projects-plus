@@ -78,20 +78,21 @@ export function createInverseIndexStore(
     inner.set(idx);
   }
 
+  // i2-perf (A4 H5): a rebuild walks the whole vault. A burst of changes (a
+  // bulk write, a sync) is collected for 200 ms and rebuilt once, instead of
+  // once per animation frame and again on every `resolved`.
   function schedule(): void {
     if (pending) return;
     pending = true;
-    if (typeof requestAnimationFrame === "function") {
-      scheduled = window.requestAnimationFrame(rebuildNow);
-    } else {
-      scheduled = window.setTimeout(rebuildNow, 16);
-    }
+    scheduled = window.setTimeout(rebuildNow, 200);
   }
 
   // Initial population — wait for `resolved` so we don't capture a
-  // half-loaded vault on plugin startup.
+  // half-loaded vault on plugin startup. Later `resolved` events follow
+  // changes and join the same coalesced rebuild.
+  let populated = false;
   const resolvedRef = app.metadataCache.on("resolved", () => {
-    rebuildNow();
+    if (!populated) { populated = true; rebuildNow(); } else schedule();
   });
   const changedRef = app.metadataCache.on("changed", (_file: TFile) => {
     schedule();
@@ -110,13 +111,7 @@ export function createInverseIndexStore(
       app.metadataCache.offref(resolvedRef);
       app.metadataCache.offref(changedRef);
       app.metadataCache.offref(deletedRef);
-      if (scheduled !== null) {
-        if (typeof cancelAnimationFrame === "function") {
-          cancelAnimationFrame(scheduled);
-        } else {
-          window.clearTimeout(scheduled);
-        }
-      }
+      if (scheduled !== null) window.clearTimeout(scheduled);
     },
   };
 }

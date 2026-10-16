@@ -119,6 +119,7 @@ export function createPreloadRunner(
   setStates: (states: ReadonlyMap<string, ExternalSourceState>) => void
 ): (referencedIds: readonly string[]) => void {
   let generation = 0;
+  let lastStates = new Map<string, ExternalSourceState>();
 
   return function run(referencedIds) {
     const token = ++generation;
@@ -128,8 +129,11 @@ export function createPreloadRunner(
       return;
     }
 
+    // i2-perf (C3): a reload keeps the frames already shown; only a source
+    // never loaded shows «loading». Blanking every block on each invalidation
+    // made the page flicker empty during a bulk write.
     const loading = new Map<string, ExternalSourceState>();
-    for (const id of referencedIds) loading.set(id, { status: "loading" });
+    for (const id of referencedIds) loading.set(id, lastStates.get(id)?.status === "ready" ? lastStates.get(id)! : { status: "loading" });
     setStates(loading);
 
     void (async () => {
@@ -152,7 +156,8 @@ export function createPreloadRunner(
         })
       );
       if (token !== generation) return;
-      setStates(new Map(entries));
+      lastStates = new Map(entries);
+      setStates(lastStates);
     })();
   };
 }

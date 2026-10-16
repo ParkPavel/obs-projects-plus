@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from "svelte";
+  import { onDestroy, createEventDispatcher } from "svelte";
   import type {
     TransformPipeline,
     TransformStep,
@@ -89,18 +89,28 @@
   $: fieldMap = new Map(fields.map(f => [f.name, f]));
 
   // Live per-step counters: N → M records (executor meta).
-  $: stepCounts = (() => {
-    const frame = source as DataFrame | null;
-    if (!frame || steps.length === 0) return [] as Array<{ rowsIn: number; rowsOut: number }>;
+  // i2-perf (A4 H4): one pass — each step runs on the previous step's output —
+  // after a 250 ms pause in typing. Re-running every prefix on each keystroke
+  // cost 107 / 527 ms per key at 1k / 5k records.
+  let stepCounts: Array<{ rowsIn: number; rowsOut: number }> = [];
+  let countsTimer: ReturnType<typeof setTimeout> | null = null;
+  $: scheduleCounts(source as DataFrame | null, steps, rightFrames);
+  function scheduleCounts(frame: DataFrame | null, list: typeof steps, right: typeof rightFrames): void {
+    if (countsTimer) clearTimeout(countsTimer);
+    countsTimer = setTimeout(() => { stepCounts = countSteps(frame, list, right); }, 250);
+  }
+  function countSteps(frame: DataFrame | null, list: typeof steps, right: typeof rightFrames): Array<{ rowsIn: number; rowsOut: number }> {
+    if (!frame || list.length === 0) return [];
     const out: Array<{ rowsIn: number; rowsOut: number }> = [];
-    let prev = frame.records.length;
-    for (let i = 0; i < steps.length; i++) {
-      const result = executeTransform(frame, { steps: steps.slice(0, i + 1) }, { rightFrames });
-      out.push({ rowsIn: prev, rowsOut: result.meta.outputRowCount });
-      prev = result.meta.outputRowCount;
+    let current = frame;
+    for (const step of list) {
+      const result = executeTransform(current, { steps: [step] }, { rightFrames: right });
+      out.push({ rowsIn: current.records.length, rowsOut: result.meta.outputRowCount });
+      current = result.data;
     }
     return out;
-  })();
+  }
+  onDestroy(() => { if (countsTimer) clearTimeout(countsTimer); });
 
   // Detect array-valued fields in the source data to suggest Unnest. Powers a
   // discoverability banner pointing users at the Unnest transform when their
