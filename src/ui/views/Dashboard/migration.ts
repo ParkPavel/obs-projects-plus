@@ -76,12 +76,26 @@ export function isLegacyTableConfig(
     return false;
   }
   // LegacyTableConfig has fieldConfig/sortField/orderFields at top level
+  // i2-model (D10/N24): an EMPTY config is a page just created, not a legacy
+  // table. Read as legacy it gained a block named «Table» on first open, so a
+  // new page never showed its empty state with the one «Add a database» button.
   return (
     config["fieldConfig"] !== undefined ||
     config["sortField"] !== undefined ||
-    config["orderFields"] !== undefined ||
-    Object.keys(config).length === 0
+    config["orderFields"] !== undefined
   );
+}
+
+/** The config of a page that has no blocks yet. */
+export function emptyDashboardConfig(): DatabaseViewConfig {
+  return {
+    widgets: [],
+    layoutMode: "stack",
+    layoutVersion: 1,
+    table: { aggregations: {}, showAggregationRow: false },
+    showWidgetToolbar: true,
+    compactMode: false,
+  };
 }
 
 /**

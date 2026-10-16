@@ -4,8 +4,8 @@ import { migrateTableConfig, isLegacyTableConfig, migrateAggregationCount, migra
 import type { DatabaseViewConfig } from "../types";
 
 describe("isLegacyTableConfig", () => {
-  test("identifies empty config as legacy", () => {
-    expect(isLegacyTableConfig({})).toBe(true);
+  test("i2-model (D10): an empty config is a new page, not a legacy table", () => {
+    expect(isLegacyTableConfig({})).toBe(false);
   });
 
   test("identifies config with fieldConfig as legacy", () => {

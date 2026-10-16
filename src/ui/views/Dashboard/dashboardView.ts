@@ -8,7 +8,8 @@ import {
 
 import DashboardCanvasSvelte from "./DashboardCanvas.svelte";
 import type { DatabaseViewConfig } from "./types";
-import { isLegacyTableConfig, migrateTableConfig, migrateDashboardTransforms, dropTemplateQuickActions } from "./migration";
+import { isLegacyTableConfig, migrateTableConfig,
+  emptyDashboardConfig, migrateDashboardTransforms, dropTemplateQuickActions } from "./migration";
 import { get } from "svelte/store";
 import { app } from "src/lib/stores/obsidian";
 import { writeMigrationBackup } from "src/lib/settingsBackup";
@@ -87,6 +88,12 @@ export class DashboardView extends ProjectView<DatabaseViewConfig> {
 
     let config = props.config;
     let migrated = false;
+    // D10: a page opened with no config at all starts empty — its empty state
+    // offers «Add a database» — instead of with a block made for it.
+    if (!config || Object.keys(config).length === 0) {
+      config = emptyDashboardConfig();
+      props.saveConfig(config);
+    }
     if (
       isLegacyTableConfig(props.config as unknown as Record<string, unknown>)
     ) {
