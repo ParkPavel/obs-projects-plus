@@ -136,6 +136,7 @@ describe("FieldComboInput — a pick is accepted at once", () => {
     const input = m.input as HTMLInputElement;
     pick(input, "日付", "insertCompositionText");
     input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, isComposing: true }));
+    input.dispatchEvent(new Event("compositionend", { bubbles: true })); // Safari: right before the accepting Enter
     const legacy = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
     Object.defineProperty(legacy, "keyCode", { value: 229 });
     input.dispatchEvent(legacy);

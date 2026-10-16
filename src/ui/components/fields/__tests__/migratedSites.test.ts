@@ -137,6 +137,8 @@ describe("CellChoiceDropdown", () => {
     m.input.focus();
     type(m.input, "完了");
     key(m.input, "Enter", { isComposing: true });
+    // Safari: compositionend comes right before the Enter that accepts the candidate.
+    m.input.dispatchEvent(new Event("compositionend", { bubbles: true }));
     key(m.input, "Enter", { keyCode: 229 });
     expect(m.commits).toEqual([]);
     key(m.input, "Enter");
@@ -246,6 +248,8 @@ describe("RelationPickerPopover", () => {
   test("IME: Enter and Escape during composition do nothing; afterwards they act", async () => {
     const m = await mount();
     key(m.input, "Enter", { isComposing: true });
+    // Safari: compositionend comes right before the Enter that accepts the candidate.
+    m.input.dispatchEvent(new Event("compositionend", { bubbles: true }));
     key(m.input, "Enter", { keyCode: 229 });
     key(m.input, "Escape", { isComposing: true });
     expect(m.commits).toEqual([]);
@@ -348,6 +352,8 @@ describe("PopoverList", () => {
     type(input, "ap");
     await tick();
     key(input, "Enter", { isComposing: true });
+    // Safari: compositionend comes right before the Enter that accepts the candidate.
+    input.dispatchEvent(new Event("compositionend", { bubbles: true }));
     key(input, "Enter", { keyCode: 229 });
     expect(m.selects).toEqual([]);
     key(input, "Enter");

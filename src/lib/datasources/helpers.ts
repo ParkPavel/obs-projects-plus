@@ -144,12 +144,23 @@ export function updateRecordValues(
   return markTouched({ ...record, values: { ...record.values, ...values } }, [...keys]);
 }
 
+/**
+ * Keys the plugin stores its own state in (`pp_overlay`, `pp_types`) or that
+ * Obsidian reserves (`$…`). They are not properties of the base: no field
+ * list, picker or table shows them (D09). The virtual time fields
+ * (`pp_created_time`, …) are real read-only fields and stay.
+ */
+export function isPluginStorageKey(key: string): boolean {
+  return key === "pp_overlay" || key === "pp_types" || key.startsWith("$");
+}
+
 export function detectFields(records: DataRecord[]): DataField[] {
   const valuesByField: Record<string, Optional<DataValue>[]> = {};
 
   records.forEach((record) => {
     Object.entries(record.values).forEach(([field, value]) => {
-      valuesByField[field] = [...(valuesByField[field] ?? []), value];
+      if (isPluginStorageKey(field)) return;
+      (valuesByField[field] ??= []).push(value);
     });
   });
 

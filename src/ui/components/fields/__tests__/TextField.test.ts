@@ -138,11 +138,22 @@ describe("TextField", () => {
     m.destroy();
   });
 
+  test("i2-input (D03): iOS Return with keyCode 229 and no composition commits", async () => {
+    const m = mount();
+    m.input.focus();
+    type(m.input, "завтра");
+    key(m.input, "Enter", { keyCode: 229 });
+    expect(m.commits).toEqual([{ value: "завтра", reason: "enter" }]);
+    m.destroy();
+  });
+
   test("IME: the Enter that accepts a candidate does not commit; the next one does", async () => {
     const m = mount();
     m.input.focus();
     type(m.input, "日本");
     key(m.input, "Enter", { isComposing: true });
+    // Safari: compositionend comes right before the Enter that accepts the candidate.
+    m.input.dispatchEvent(new Event("compositionend", { bubbles: true }));
     key(m.input, "Enter", { keyCode: 229 });
     expect(m.commits).toEqual([]);
     key(m.input, "Enter");

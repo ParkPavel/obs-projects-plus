@@ -1074,7 +1074,7 @@
                     "hide-formula-bar": "Сховати редактор формул",
                     "show-formula-bar": "Показати редактор формул",
                     "formula-builder": "Формули",
-                    "schema": "Схема",
+                    "schema": "Властивості",
                     "schema-tip": "Керування полями проекту — типи, зв'язки, зведення",
                     "filter-bridge-global": "Глобальний фільтр: {{count}} умов",
                     "filter-bridge-local": "Локальний: {{field}} = {{value}}",

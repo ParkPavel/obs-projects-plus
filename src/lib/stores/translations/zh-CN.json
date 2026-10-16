@@ -1050,7 +1050,7 @@
                     "hide-formula-bar": "隐藏公式栏",
                     "show-formula-bar": "显示公式栏",
                     "formula-builder": "公式",
-                    "schema": "模式",
+                    "schema": "属性",
                     "schema-tip": "管理项目字段 — 类型、关系、汇总",
                     "filter-bridge-global": "全局筛选器：{{count}} 个条件",
                     "filter-bridge-local": "本地：{{field}} = {{value}}",

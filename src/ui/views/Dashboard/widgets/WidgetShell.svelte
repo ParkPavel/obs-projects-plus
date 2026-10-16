@@ -340,4 +340,6 @@
     background: var(--background-secondary-alt, var(--background-secondary));
     border-radius: var(--radius-s, 0.25rem);
   }
+  /* N23: card count / chart kind took a phone's room from the block title. */
+  @media (pointer: coarse) { .ppp-widget-badges { display: none; } }
 </style>

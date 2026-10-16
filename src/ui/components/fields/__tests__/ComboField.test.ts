@@ -376,6 +376,8 @@ describe("ComboField — IME", () => {
     await open(m);
     key(m.input, "ArrowDown");
     key(m.input, "Enter", { isComposing: true });
+    // Safari: compositionend comes right before the Enter that accepts the candidate.
+    m.input.dispatchEvent(new Event("compositionend", { bubbles: true }));
     key(m.input, "Enter", { keyCode: 229 });
     expect(m.commits).toEqual([]);
     expect(m.selects).toEqual([]);

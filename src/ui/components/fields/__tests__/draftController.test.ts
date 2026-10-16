@@ -152,6 +152,12 @@ describe("draftController — IME", () => {
     expect(c.isComposing({ isComposing: false, keyCode: 13 })).toBe(false);
     expect(isImeKey({})).toBe(false);
     expect(isImeKey({ keyCode: 229 })).toBe(true);
+    // i2-input (D03): iOS reports 229 for a plain Return; only the Return right
+    // after compositionend belongs to the IME.
+    expect(isImeKey({ keyCode: 229, key: "Enter" })).toBe(false);
+    document.dispatchEvent(new Event("compositionend"));
+    expect(isImeKey({ keyCode: 229, key: "Enter" })).toBe(true);
+    expect(isImeKey({ keyCode: 229, key: "Enter" }, Date.now() + 1000)).toBe(false);
   });
 
   test("leaving the field ends a composition", () => {

@@ -5,6 +5,7 @@
 // engine — filtering stays at view/block level; this module only orders and
 // presents what the canonical pipeline already produced.
 
+import { displayFormatOf, formatDateCell } from "src/lib/helpers/dateDisplay";
 type DateFormatConfig = import("src/settings/v3/settings").DateFormatConfig;
 import { isRelationCompanionField } from "src/lib/engine/crossProjectResolver";
 import {
@@ -206,37 +207,8 @@ function toPills(labels: string[], color: (label: string) => string | null, stat
   };
 }
 // A Date field keeps a string as written; only AutoTime parses its ISO stat string. Never Date.toString().
-const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/;
-
-/**
- * i2-table (D14): a date reads as the person writes it — DD.MM.YYYY, or the
- * project's own display format — not as the YYYY-MM-DD it is stored in. The
- * day comes from LOCAL getters (or the stored digits), never from a UTC
- * conversion, so a date-only note keeps its calendar day (#158).
- */
 function dateCellText(auto: boolean, value: Optional<DataValue>, dateFormat?: DateFormatConfig): string {
-  let parts: { y: number; m: number; d: number; hh?: number; mm?: number } | null = null;
-  if (value instanceof Date) {
-    if (Number.isNaN(value.getTime())) return "";
-    parts = { y: value.getFullYear(), m: value.getMonth() + 1, d: value.getDate() };
-    if (auto) Object.assign(parts, { hh: value.getHours(), mm: value.getMinutes() });
-  } else if (typeof value === "string") {
-    const iso = ISO_DAY.exec(value.trim());
-    if (iso) {
-      parts = { y: +iso[1]!, m: +iso[2]!, d: +iso[3]! };
-      if (iso[4] !== undefined) Object.assign(parts, { hh: +iso[4], mm: +iso[5]! });
-    } else if (auto) {
-      const parsed = new Date(value);
-      if (!Number.isNaN(parsed.getTime())) return dateCellText(true, parsed, dateFormat);
-    }
-  }
-  if (!parts) return String(value);
-  const p = (n: number) => String(n).padStart(2, "0");
-  const custom = dateFormat?.displayFormat ?? (dateFormat?.writeFormat && dateFormat.writeFormat !== "YYYY-MM-DD" ? dateFormat.writeFormat : undefined);
-  const day = custom
-    ? custom.replace(/YYYY/g, String(parts.y)).replace(/MM/g, p(parts.m)).replace(/DD/g, p(parts.d))
-    : `${p(parts.d)}.${p(parts.m)}.${parts.y}`;
-  return parts.hh !== undefined ? `${day} ${p(parts.hh)}:${p(parts.mm ?? 0)}` : day;
+  return formatDateCell(value, { withTime: auto, displayFormat: displayFormatOf(dateFormat) });
 }
 export function cellDisplay(field: DataField, value: Optional<DataValue>, dateFormat?: DateFormatConfig): CellDisplay {
   if (value === null || value === undefined || value === "") return { kind: "empty" };

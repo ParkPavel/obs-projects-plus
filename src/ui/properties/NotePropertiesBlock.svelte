@@ -513,8 +513,16 @@
 </section>
 
 <style>
-  /* Obsidian's own block is hidden only in views the manager marked. */
+  /* Obsidian's own block is hidden only in views the manager marked.
+     i2-record (D01): Live Preview shows it again with a more specific rule of
+     its own (measured on the stand: display block under our class), so the
+     hide is !important — it is the one switch between the two blocks. */
   :global(.ppp-note-props-replace-native .metadata-container) {
+    display: none !important;
+  }
+  /* i2-record (D02): in Source mode the YAML itself is on screen; a second,
+     editable copy of it above is a duplicate. */
+  :global(.markdown-source-view:not(.is-live-preview) .ppp-note-props-host) {
     display: none;
   }
   .ppp-note-props {
@@ -574,7 +582,10 @@
     opacity: 0.55;
   }
   .ppp-note-props__key {
+    /* i2-record (N10): Obsidian centres button content, so each key sat at a
+       different x by the length of its name. Keys line up at the start. */
     display: inline-flex;
+    justify-content: flex-start;
     align-items: center;
     gap: 0.375rem;
     min-width: 0;
@@ -599,6 +610,15 @@
     display: flex;
     flex-direction: column;
     gap: 0.125rem;
+  }
+  /* i2-record (D05): a long value (a cover link) ran under «⋯» and off the
+     screen; every value item ends in an ellipsis inside its column. */
+  .ppp-note-props__display > :global(*) {
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .ppp-note-props__display {
     display: flex;

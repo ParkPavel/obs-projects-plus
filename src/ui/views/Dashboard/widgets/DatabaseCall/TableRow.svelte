@@ -66,7 +66,7 @@
           on:click|stopPropagation={(e) => dispatch("openRecord", { record, event: e })}
         ><HighlightText text={nameText()} search={highlight} /></button>
         <button
-          class="ppp-t2-rowbtn clickable-icon"
+          class="ppp-t2-rowbtn ppp-t2-rowbtn--open clickable-icon"
           on:click|stopPropagation={(e) => dispatch("openRecord", { record, event: e })}
           aria-label={$i18n.t("views.dashboard.table-v2.open", { defaultValue: "Open note" })}
           title={$i18n.t("views.dashboard.table-v2.open", { defaultValue: "Open note" })}
@@ -126,10 +126,7 @@
   }
 
   .ppp-t2-name {
-    /* i2-base-style (N17): Obsidian makes every button a centred flex box, so
-       a name wider than the cell was clipped at both ends — the start of
-       «Визит Анна Смирнова» was lost. A block box ends in an ellipsis instead. */
-    display: block;
+    display: block; /* N17: a centred flex button clipped the name's start */
     flex: 0 1 auto;
     min-width: 0;
     height: auto;
@@ -177,9 +174,7 @@
       opacity: 0;
     }
 
-    .ppp-t2-row:hover .ppp-t2-rowbtn {
-      opacity: 1;
-    }
+    .ppp-t2-row:hover .ppp-t2-rowbtn { opacity: 1; }
 
     .ppp-t2-rowbtn:hover {
       color: var(--text-normal);
@@ -187,9 +182,7 @@
     }
   }
 
-  /* A finger has no hover to find them: both actions stay shown, each in its
-     own finger-sized box side by side, so the two targets never overlap. The
-     row keeps its fixed height; the name keeps its ellipsis. */
+  /* A finger has no hover: the row menu stays shown in a finger-sized box. */
   @media (pointer: coarse) {
     .ppp-t2-rowbtn {
       opacity: 1;
@@ -201,11 +194,5 @@
       gap: 0;
     }
   }
-  /* i2-table (N18): the ↗ button opens the same record the name does. On a
-     phone that duplicate took a third of the name cell; the name is the target. */
-  @media (pointer: coarse) {
-    .ppp-t2-rowbtn {
-      display: none;
-    }
-  }
+  @media (pointer: coarse) { .ppp-t2-rowbtn--open { display: none; } } /* N18: ↗ repeats a tap on the name */
 </style>

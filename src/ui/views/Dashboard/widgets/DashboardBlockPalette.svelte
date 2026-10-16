@@ -68,7 +68,9 @@
 
 <style>
   .ppp-block-insert { display: flex; justify-content: center; position: relative; }
-  .ppp-block-insert--between { height: 0; }
+  /* i2-model (N26): the «+» between blocks has its own row. At height 0 and
+     lifted by half it was drawn over the next block's header on a phone. */
+  .ppp-block-insert--between { height: 2em; align-items: center; }
   .ppp-block-insert__list { max-height: 60vh; overflow-y: auto; min-width: 15rem; }
 
   .ppp-block-insert__trigger {
@@ -80,7 +82,7 @@
     font-size: var(--font-ui-small); cursor: pointer;
     transition: opacity 120ms ease, border-color 120ms ease, color 120ms ease;
   }
-  .ppp-block-insert--between .ppp-block-insert__trigger { position: relative; transform: translateY(-50%); }
+  .ppp-block-insert--between .ppp-block-insert__trigger { height: 1.75em; }
 
   /* Mouse: the in-between «+» shows on hover of the gap or on keyboard focus.
      `opacity`, not `visibility`: a hidden control could never receive focus. */
@@ -98,7 +100,10 @@
   .ppp-block-insert__trigger:focus-visible { outline: 0.125rem solid var(--interactive-accent); outline-offset: 0.0625rem; }
 
   .ppp-block-insert__item {
-    display: flex; align-items: flex-start; gap: 0.5rem; width: 100%;
+    /* i2-base-style (D11): rows start at the left and wrap; Obsidian's button
+       centring and nowrap made a staircase and cut the descriptions. */
+    display: flex; align-items: flex-start; justify-content: flex-start; gap: 0.5rem; width: 100%;
+    white-space: normal;
     padding: 0.375rem 0.5rem; color: var(--text-normal);
     background: transparent; border: none; border-radius: var(--radius-s, 0.25rem);
     cursor: pointer; text-align: left; height: auto;
@@ -106,7 +111,7 @@
   .ppp-block-insert__item:hover:not(:disabled) { background: var(--background-modifier-hover); }
   .ppp-block-insert__item:disabled { opacity: 0.4; cursor: not-allowed; }
   .ppp-block-insert__icon { flex-shrink: 0; color: var(--text-muted); }
-  .ppp-block-insert__text { display: flex; flex-direction: column; gap: 0.125rem; }
+  .ppp-block-insert__text { display: flex; flex-direction: column; align-items: flex-start; gap: 0.125rem; min-width: 0; }
   .ppp-block-insert__label { font-size: var(--font-ui-small); }
   .ppp-block-insert__desc { font-size: var(--font-ui-smaller); color: var(--text-muted); }
 </style>

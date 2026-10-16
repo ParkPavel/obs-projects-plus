@@ -159,6 +159,22 @@
     opacity: 0;
     pointer-events: none;
   }
+  /* i2-input (D04): iOS does not open a picker from showPicker() on a 1 px
+     hidden input. On a touch screen the native input lies over the calendar
+     button, transparent, so the tap lands on it and the system picker opens. */
+  @media (pointer: coarse) {
+    .ppp-date-field__native {
+      top: 50%;
+      right: 0;
+      bottom: auto;
+      transform: translateY(-50%);
+      width: var(--ppp-touch-target, 2.75rem);
+      height: var(--ppp-touch-target, 2.75rem);
+      opacity: 0.011;
+      pointer-events: auto;
+      z-index: var(--ppp-z-raised);
+    }
+  }
   .ppp-date-field--disabled .ppp-date-field__calendar {
     opacity: 0.5;
   }

@@ -57,6 +57,7 @@ export interface DraftState {
 export interface ImeKeyLike {
   isComposing?: boolean;
   keyCode?: number;
+  key?: string;
 }
 
 /** Options of one commit. */
@@ -74,8 +75,21 @@ export interface CommitOptions {
  * standard flag; keyCode 229 is what some hosts report for the Enter that
  * accepts a candidate, including Safari's keydown after `compositionend`.
  */
-export function isImeKey(e: ImeKeyLike): boolean {
-  return e.isComposing === true || e.keyCode === 229;
+export function isImeKey(e: ImeKeyLike, now: number = Date.now()): boolean {
+  if (e.isComposing === true) return true;
+  if (e.keyCode !== 229) return false;
+  // i2-input (D03): iOS Safari also reports keyCode 229 for the plain Return
+  // key while the predictive bar is on — «завтра» + Return was dropped as IME
+  // and never committed. Return counts as Return unless a composition has
+  // just ended: that keydown is the IME accepting its candidate.
+  return e.key !== "Enter" || now - lastCompositionEnd < IME_ACCEPT_WINDOW_MS;
+}
+
+/** How long after `compositionend` a keyCode-229 Return still belongs to the IME. */
+const IME_ACCEPT_WINDOW_MS = 150;
+let lastCompositionEnd = -Infinity;
+if (typeof document !== "undefined") {
+  document.addEventListener("compositionend", () => { lastCompositionEnd = Date.now(); }, true);
 }
 
 /** The controller returned by {@link createDraftController}. */

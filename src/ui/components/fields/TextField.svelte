@@ -10,6 +10,7 @@
   import { createEventDispatcher } from "svelte";
   import { createDraftController, isImeKey } from "./draftController";
   import { keepInView } from "./keepInView";
+  import { releaseOnOutsideTap } from "./releaseOnOutsideTap";
 
   export let value = "";
   export let placeholder = "";
@@ -106,11 +107,14 @@
 <input
   bind:this={inputEl}
   use:keepInView
+  use:releaseOnOutsideTap
   {id}
   class="ppp-text-field {inputClass}"
   class:ppp-text-field--invalid={invalid || error}
   type="text"
   inputmode={inputMode}
+  autocapitalize="off"
+  autocorrect="off"
   value={draft}
   {placeholder}
   {disabled}

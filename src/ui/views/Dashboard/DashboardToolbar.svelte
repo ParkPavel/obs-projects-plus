@@ -23,7 +23,7 @@
         defaultValue: "Manage project fields — types, relations, rollups",
       })}
     >
-      <Icon name="settings-2" size="sm" /> {$i18n.t("views.dashboard.canvas.schema")}
+      <Icon name="settings-2" size="sm" /><span class="ppp-toolbar-label">{$i18n.t("views.dashboard.canvas.schema")}</span>
     </button>
     <button
       class="ppp-toolbar-btn clickable-icon"
@@ -36,30 +36,40 @@
             defaultValue: "Show formula bar — IntelliSense, live preview, syntax check",
           })}
     >
-      <Icon name="function-square" size="sm" /> {$i18n.t("views.dashboard.canvas.formula-builder", { defaultValue: "Formulas" })}
+      <Icon name="function-square" size="sm" /><span class="ppp-toolbar-label">{$i18n.t("views.dashboard.canvas.formula-builder", { defaultValue: "Formulas" })}</span>
     </button>
   {/if}
 </div>
 
 <style>
+  /* i2-model (N23): page tools are quiet, at the end of a short row — the
+     page's content starts right under them, as in Notion. On a phone they
+     are icons; the label is the tooltip and the accessible name. */
   .ppp-database-toolbar {
     display: flex;
     align-items: center;
-    gap: 0.375rem;
-    padding: 0.25rem 0;
+    justify-content: flex-end;
+    gap: 0.25rem;
+    padding: 0;
     flex-wrap: wrap;
+  }
+
+  @media (pointer: coarse) {
+    .ppp-toolbar-label {
+      display: none;
+    }
   }
 
   .ppp-toolbar-btn {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    padding: 0.25rem 0.625rem;
-    min-height: 2.25rem;
+    padding: 0.125rem 0.5rem;
+    min-height: 1.75rem;
     font-size: var(--font-ui-small);
-    color: var(--text-muted);
+    color: var(--text-faint);
     background: transparent;
-    border: var(--ppp-border-width) solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid transparent;
     border-radius: var(--radius-s, 0.25rem);
     cursor: pointer;
     transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
