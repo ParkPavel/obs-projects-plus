@@ -413,6 +413,7 @@
     on:centerToday={handleCenterToday}
     on:toggleAgenda={handleToggleAgenda}
     on:freezeColumns={handleFreezeColumns}
+    on:setInterval={(event) => mergeViewConfig({ interval: event.detail, centerOn: "today" })}
   />
 
   <div class="projects-main" bind:this={mainEl}>

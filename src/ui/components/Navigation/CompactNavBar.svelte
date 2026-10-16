@@ -18,6 +18,7 @@
     openSettings: MouseEvent;
     centerToday: void;
     toggleAgenda: void;
+    setInterval: string;
     freezeColumns: void;
     viewChange: ViewId;
   }>();
@@ -55,6 +56,7 @@
       onCenterToday={() => dispatch("centerToday")}
       onToggleAgenda={() => dispatch("toggleAgenda")}
       onFreezeColumns={() => dispatch("freezeColumns")}
+      onSetInterval={(interval) => dispatch("setInterval", interval)}
     />
   </div>
 </nav>

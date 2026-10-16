@@ -675,8 +675,12 @@
 
   /* NOTE: Multi-day and All-day styles moved to HeaderStripsSection.svelte */
 
-  .day-cell:not(.outside-month):hover {
-    background: var(--background-secondary);
+  /* N44: on a touch screen :hover sticks to the last tapped day — hover
+     shades only where there is a pointer that hovers. */
+  @media (hover: hover) {
+    .day-cell:not(.outside-month):hover {
+      background: var(--background-secondary);
+    }
   }
 
   .day-cell:not(.outside-month):focus {
@@ -696,8 +700,10 @@
     animation: today-pulse 2s ease-out 1;
   }
 
-  .day-cell.today:hover {
-    background: hsla(var(--interactive-accent-hsl), 0.12);
+  @media (hover: hover) {
+    .day-cell.today:hover {
+      background: hsla(var(--interactive-accent-hsl), 0.12);
+    }
   }
   
   /* Today pulse animation for edge centering visibility */
@@ -721,8 +727,10 @@
     background: var(--background-primary-alt);
   }
 
-  .day-cell.weekend:not(.outside-month):not(.today):hover {
-    background: var(--background-modifier-hover);
+  @media (hover: hover) {
+    .day-cell.weekend:not(.outside-month):not(.today):hover {
+      background: var(--background-modifier-hover);
+    }
   }
 
   /* Outside month (inactive days) */
