@@ -8,7 +8,13 @@ import type { RelationFieldConfig, RollupFieldConfig } from "src/settings/base/s
 
 export type FieldConfigRelationMap = Record<
   string,
-  { relation?: RelationFieldConfig; rollup?: RollupFieldConfig } | undefined
+  | {
+      relation?: RelationFieldConfig;
+      rollup?: RollupFieldConfig;
+      formula?: string;
+      type?: import("src/lib/visualizer/propertyTypes").PropertyType;
+    }
+  | undefined
 >;
 
 /**

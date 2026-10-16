@@ -1,4 +1,5 @@
 import { Notice } from "obsidian";
+import { isEmptyFieldValue } from "src/lib/relations/declaredFieldTypes";
 import { get } from "svelte/store";
 
 import type {
@@ -231,6 +232,12 @@ export class ViewApi {
     position?: number
   ): Promise<BulkFieldWriteOutcome> {
     dataFrame.addField(field, position);
+
+    // i2-safety (N33): a property without a value is declared in the base's
+    // settings, not written into every note — `null` for a formula, relation
+    // or rollup, `[]` for the relation a new rollup reads through, `""` for an
+    // empty default. Writing those took 193 files at once on the phone.
+    if (isEmptyFieldValue(value)) return EMPTY_BULK_WRITE;
 
     const outcome = await this.dataApi.addField(this.fieldWriteTargets(), field, value);
     reportBulkFieldWrite(outcome, field.name);

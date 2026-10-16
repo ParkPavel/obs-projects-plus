@@ -31,6 +31,7 @@ import { ConfigureFieldModal } from "src/ui/modals/configureField";
 import { SchemaModal } from "src/ui/modals/schemaModal";
 import { ConfirmDialogModal } from "src/ui/modals/confirmDialog";
 import { createRelationSetupController } from "./relationSetupController";
+import { declaredPropertyType, isEmptyFieldValue } from "src/lib/relations/declaredFieldTypes";
 
 export interface SchemaControllerDeps {
   readonly app: App;
@@ -105,7 +106,11 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
       async (field, value) => {
         try {
           const outcome = await deps.api.addField(field, value);
-          persistFieldTypeConfig(field, createdHere);
+          // i2-safety: nothing was written into the notes, so the base's
+          // settings carry the property — with its type, or the frame would
+          // not list it and the next config write would prune it.
+          const type = isEmptyFieldValue(value) ? declaredPropertyType(field) : undefined;
+          persistFieldTypeConfig(type ? { ...field, typeConfig: { ...field.typeConfig, type } } : field, createdHere);
           if (outcome && outcome.failed.length + outcome.missing.length > 0) return false;
           reopenSchema();
           return true;

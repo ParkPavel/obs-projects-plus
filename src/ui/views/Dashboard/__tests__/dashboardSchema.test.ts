@@ -131,3 +131,38 @@ describe("M03 (C13) — the create callback reports the real outcome to the moda
     warn.mockRestore();
   });
 });
+
+describe("i2-safety — a property created without a value is declared in the base's settings", () => {
+  const controller = () => createSchemaController({
+    app: {} as never,
+    api: { addField: jest.fn().mockResolvedValue({ written: 0, failed: [], missing: [] }), fieldWriteTargets: () => ["a.md"] } as never,
+    getProjectId: () => "p",
+    t: (key, opts) => opts?.defaultValue ?? key,
+    getFields: () => [],
+    getRecords: () => [],
+    getProjects: () => [],
+  });
+  const f = (type: string, typeConfig?: Record<string, unknown>) =>
+    ({ name: "Новое", type, repeated: false, identifier: false, derived: false, ...(typeConfig ? { typeConfig } : {}) });
+
+  beforeEach(() => { mockUpdateFieldConfig.mockClear(); capturedOnCreate = undefined; });
+
+  test.each([
+    ["formula without an expression", f(DataFieldType.Formula), null, { type: "formula" }],
+    ["formula with an expression", f(DataFieldType.Formula, { formula: "price * 2" }), null, { formula: "price * 2", type: "formula" }],
+    ["text with an empty default", f(DataFieldType.String), "", { type: "string" }],
+    ["number with no default", f(DataFieldType.Number), undefined, { type: "number" }],
+  ])("%s → config declares its type", async (_label, field, value, expected) => {
+    controller().openCreateField();
+    await capturedOnCreate?.(field, value);
+    expect(mockUpdateFieldConfig).toHaveBeenCalledTimes(1);
+    expect(mockUpdateFieldConfig.mock.calls[0]?.[1]).toBe("Новое");
+    expect(mockUpdateFieldConfig.mock.calls[0]?.[3]).toEqual(expected);
+  });
+
+  test("a property written with a real default keeps the old config (no type override)", async () => {
+    controller().openCreateField();
+    await capturedOnCreate?.(f(DataFieldType.String), "новый");
+    expect(mockUpdateFieldConfig).not.toHaveBeenCalled();
+  });
+});

@@ -515,7 +515,8 @@
                     },
                     "create": "添加字段",
                     "reserved-name-error": "以 __resolved__ 开头的名称为插件自身的列保留。",
-                    "bulk-write-notice": "将 '{{field}}' 添加到 {{count}} 篇笔记。会写入空值；现有值不会更改。"
+                    "bulk-write-notice": "将 '{{field}}' 的默认值写入数据库的 {{count}} 篇笔记。",
+                    "declared-notice": "'{{field}}' 将添加到数据库。在你填写值之前，笔记不会更改。"
                 }
             },
             "schema": {

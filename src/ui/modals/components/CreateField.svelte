@@ -12,6 +12,7 @@
     Icon,
   } from "obsidian-svelte";
   import FormulaEditor from "src/ui/components/FormulaEditor/FormulaEditor.svelte";
+  import { isEmptyFieldValue } from "src/lib/relations/declaredFieldTypes";
   import {
     FIELD_TYPE_GROUPS,
     ROLLUP_QUICK_FUNCTIONS,
@@ -110,7 +111,14 @@
   // Derived / linked types write nothing into frontmatter on creation
   // (`isStageANoDefault` passes null), so the consequence line would be a lie
   // for them.
-  $: writesToNotes = recordCount > 0 && !isStageANoDefault(field.type);
+  // i2-safety: only a real default goes into the notes (ViewApi.addField skips
+  // an empty one), so the line below says which of the two happens.
+  $: writesToNotes = recordCount > 0 && hasDefault(field, value, listValue, dateValue);
+
+  /** The arguments only make the statement above re-run when they change. */
+  function hasDefault(..._deps: unknown[]): boolean {
+    return !isEmptyFieldValue(normalizedSubmission()[1]);
+  }
 
   $: fieldNameError = validateFieldName(field.name);
 
@@ -975,10 +983,16 @@
     {#if writesToNotes}
       <p class="ppp-create-field-consequence" role="status">
         {$i18n.t("modals.field.create.bulk-write-notice", {
-          defaultValue:
-            "Adds '{{field}}' to {{count}} notes. Empty values are written; existing values are not changed.",
+          defaultValue: "Writes the default value of '{{field}}' to {{count}} notes of the base.",
           field: field.name,
           count: recordCount,
+        })}
+      </p>
+    {:else}
+      <p class="ppp-create-field-consequence" role="status">
+        {$i18n.t("modals.field.create.declared-notice", {
+          defaultValue: "'{{field}}' is added to the base. Notes are not changed until you fill in a value.",
+          field: field.name,
         })}
       </p>
     {/if}

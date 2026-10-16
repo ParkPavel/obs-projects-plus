@@ -92,7 +92,18 @@ describe("applyDeclaredFieldTypes", () => {
       { name: "notes", type: DataFieldType.String, identifier: false, derived: false, repeated: false, typeConfig: {} },
     ]);
 
-    expect(applyDeclaredFieldTypes(frame, { other: { relation: { targetProjectId: "p2" } } })).toBe(frame);
+    expect(applyDeclaredFieldTypes(frame, { notes: {} })).toBe(frame);
+  });
+
+  it("i2-safety: a declared relation no note carries yet joins the frame (it used to be ignored)", () => {
+    const frame = frameWith([
+      { name: "notes", type: DataFieldType.String, identifier: false, derived: false, repeated: false, typeConfig: {} },
+    ]);
+
+    const result = applyDeclaredFieldTypes(frame, { other: { relation: { targetProjectId: "p2" } } });
+
+    expect(result.fields.map((f) => f.name)).toEqual(["notes", "other"]);
+    expect(result.fields[1]?.type).toBe(DataFieldType.Relation);
   });
 
   it("is a no-op for a field already typed Relation (e.g. auto-detected array of wikilinks)", () => {

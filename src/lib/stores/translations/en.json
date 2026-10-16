@@ -486,7 +486,8 @@
                         "description": "For fields with Markdown content."
                     },
                     "create": "Create field",
-                    "bulk-write-notice": "Adds '{{field}}' to {{count}} notes. Empty values are written; existing values are not changed."
+                    "bulk-write-notice": "Writes the default value of '{{field}}' to {{count}} notes of the base.",
+                    "declared-notice": "'{{field}}' is added to the base. Notes are not changed until you fill in a value."
                 }
             },
             "schema": {
