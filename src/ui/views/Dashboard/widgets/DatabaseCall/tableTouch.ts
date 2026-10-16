@@ -180,3 +180,5 @@ export function liftOnKeyboard(node: HTMLElement, on: boolean): { update(next: b
   set(on);
   return { update: set, destroy: () => set(false) };
 }
+
+export { timedDismiss } from "./timedDismiss";

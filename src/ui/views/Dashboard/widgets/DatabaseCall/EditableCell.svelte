@@ -1,10 +1,10 @@
 <script lang="ts">
   /** EditableCell — F2.2 (TABLE_V2_CANON §2/§3): typed property edited in place; editor by DataFieldType (invariant #1).
    * Commit on blur/Enter/option-click, Esc reverts, Boolean toggles. B3: a locked cell shows why; a tap edits, a drag scrolls. */
-  import { createEventDispatcher } from "svelte";
+  import { createEventDispatcher, onDestroy } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { cellAccess } from "./tableCellAccess";
-  import { cellTouch, liftOnKeyboard } from "./tableTouch";
+  import { cellTouch, liftOnKeyboard, timedDismiss } from "./tableTouch";
   import type { ParsedSearch } from "./tableSearchQuery";
   import CellLockReason from "./CellLockReason.svelte";
   import HighlightText from "./HighlightText.svelte";
@@ -49,10 +49,10 @@
   $: access = cellAccess(field, value, readonly);
   $: editable = access.editable;
   $: reason = access.editable ? "" : $i18n.t(access.reason.key, { defaultValue: access.reason.defaultValue, ...access.reason.params });
-  let reasonOpen = false;
+  let reasonOpen = false; const reasonClose = timedDismiss(() => { reasonOpen = false; }); onDestroy(() => reasonClose(false)); // D16
+  $: reasonClose(reasonOpen);
   $: isChoice = field.type === DataFieldType.Select || field.type === DataFieldType.Status;
-  let draft = "";
-  let committed = false, wasEditing = false, invalid = false;
+  let draft = "", committed = false, wasEditing = false, invalid = false;
 
   // Seeded on the turn INTO editing, inside a function: `draft` is bound, and a `$:` that assigns it re-seeds per keystroke (R0.34).
   function onEditing(on: boolean) {
