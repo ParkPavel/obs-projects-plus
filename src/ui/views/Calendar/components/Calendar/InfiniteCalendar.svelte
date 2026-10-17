@@ -147,6 +147,7 @@
   const INITIAL_BUFFER = 5; // v7.5: Increased buffer for better viewport coverage
   const LOAD_THRESHOLD = 2; // units from edge to trigger load
   const LOAD_BATCH = 3; // units to add at once
+  const MAX_UNITS = 24; // mounted months (or 2-week periods) at most
   
   // Universal: units are either months or 2-week periods
   let units: dayjs.Dayjs[] = [];
@@ -282,8 +283,10 @@
       newUnits.unshift(current);
     }
     
-    units = [...newUnits, ...units];
-    
+    // 17.10: the list is bounded — what is added at the top is taken from the
+    // bottom, so a long scroll does not keep hundreds of months mounted.
+    units = [...newUnits, ...units].slice(0, MAX_UNITS);
+
     // Maintain scroll position after DOM update
     requestAnimationFrame(() => {
       if (scrollableParent) {
@@ -309,9 +312,15 @@
       }
     }
     
-    units = [...units, ...newUnits];
-    
+    // Bounded at the other end too: units taken from the top are measured
+    // first, and the scroll moves up by their height so the view stays put.
+    const excess = Math.max(0, units.length + newUnits.length - MAX_UNITS);
+    let removedHeight = 0;
+    for (let i = 0; i < excess; i++) removedHeight += unitElements[i]?.offsetHeight ?? 0;
+    units = [...units, ...newUnits].slice(excess);
+
     requestAnimationFrame(() => {
+      if (excess > 0 && scrollableParent) scrollableParent.scrollTop -= removedHeight;
       isLoadingNext = false;
     });
   }
@@ -330,6 +339,11 @@
   }
 
   function checkAndLoadMore() {
+    // 17.10 (freeze): a hidden month shares the scroll parent with the week
+    // and day views. Its units all measure 0 there, so every scroll of the
+    // visible view read as «at the edge» and appended and prepended more
+    // months to an invisible list without end.
+    if (!isActive) return;
     // Ensure scrollable parent exists and is valid
     if (!scrollableParent || !activeDocument.contains(scrollableParent)) {
       scrollableParent = findScrollableParent();

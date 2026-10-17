@@ -430,7 +430,8 @@
   }
 
   function checkAndLoadMore() {
-    if (!container) return;
+    // 17.10: a hidden week/day timeline loads nothing (see InfiniteCalendar).
+    if (!container || !isActive) return;
     
     const idx = getCurrentPeriodIndex();
     currentPeriodIndex = idx;

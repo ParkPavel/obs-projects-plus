@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { installCrashLog } from "src/lib/errors/crashLog";
+import { installCrashLog, installLongTaskWatch } from "src/lib/errors/crashLog";
 import isoWeek from "dayjs/plugin/isoWeek";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 
@@ -178,6 +178,8 @@ export default class ProjectsPlusPlugin extends Plugin {
     // i2-schema (D13): a crash on the phone leaves a readable trace in the vault.
     const crashPath = `${this.manifest.dir ?? `${this.app.vault.configDir}/plugins/${this.manifest.id}`}/crash.log`;
     this.register(installCrashLog(window, this.app.vault.adapter, crashPath, this.manifest.id));
+    // 17.10: a freeze throws nothing — long main-thread tasks are logged with what was mounted.
+    this.register(installLongTaskWatch(window, this.app.vault.adapter, crashPath));
     await this.loadSettings();
 
     // Re-detect locale now that Obsidian app is fully initialized

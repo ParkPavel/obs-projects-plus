@@ -764,17 +764,14 @@
   // Safe now because saveConfig defers onConfigChange via setTimeout, breaking the
   // synchronous cascade: saveConfig → settings → App → View → $set → reactive re-fire.
   $: if (mounted && config?.["centerOn"] === "today") {
-    // i2-calendar: a scale picked from the menu arrives with centerOn too; the
-    // new layer mounts a frame later, and a stale zoom focus would win — so the
-    // focus is cleared and the jump waits for the layer.
-    // The layers center on focusedDate when they mount (the year view's month
-    // click works this way), so today is set as the focus, not jumped to.
-    focusedDate = dayjs();
-    focusedScrollPosition = 'center';
-    setTimeout(() => navigateToDate('today'), isInstantMode ? 0 : 250);
-    // The month list measures its rows after mounting; a second jump lands on
-    // today once the heights are known (stand: the first one stopped at May).
-    setTimeout(() => navigateToDate('today'), 900);
+    navigateToDate('today');
+    // i2-calendar: a scale picked from the menu arrives with centerOn too, and
+    // the month list measures its rows only after it mounts — one more jump
+    // once the heights are known (stand: the first one stopped at May).
+    // focusedDate is NOT set here: it is the list's standing scroll target,
+    // and left at today it pulled the month back on every update (the freeze
+    // reported on 17.10).
+    if (interval === 'month' || interval === '2weeks') setTimeout(() => navigateToDate('today'), 900);
     saveConfig({ ...config, centerOn: null });
   }
   
@@ -902,10 +899,10 @@
     // Default to 'headers' for 2weeks and month views (shows list)
     return 'headers';
   })();
-  // i2-calendar (D23): month and 2 weeks are always a list of events per day,
-  // as in Notion. The one stored displayMode is the week/day choice; applied
-  // here it laid month events out by time inside a ~55 px cell — text on text.
-  const monthDisplayMode: 'list' | 'bars' = 'list';
+  // Map 'headers' to 'list' for InfiniteCalendar (month view). The person's
+  // choice stands: «bars» is the month timeline (17.10: forcing a list here
+  // took the timelines away). Overlap in narrow cells is fixed in the layout.
+  $: monthDisplayMode = effectiveDisplayMode === 'headers' ? 'list' : 'bars' as 'list' | 'bars';
   
   // Day popup state - works on both mobile and desktop
   let showDayPopup = false;

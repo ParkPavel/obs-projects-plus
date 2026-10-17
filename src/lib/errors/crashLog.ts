@@ -36,6 +36,37 @@ export async function appendCrash(target: CrashLogTarget, path: string, entry: s
 }
 
 /**
+ * 17.10 (freeze on start): a hang throws nothing, so the error listener
+ * below never sees it. A main-thread task longer than `minMs` is logged with
+ * what was mounted and how much memory the page held — the next run on the
+ * person's machine says what grew. At most one entry per 10 s.
+ */
+export function installLongTaskWatch(win: Window, target: CrashLogTarget, path: string, minMs = 1000): () => void {
+  const Observer = (win as Window & { PerformanceObserver?: typeof PerformanceObserver }).PerformanceObserver;
+  if (!Observer) return () => undefined;
+  let last = 0;
+  const observer = new Observer((list) => {
+    for (const entry of list.getEntries()) {
+      if (entry.duration < minMs || Date.now() - last < 10_000) continue;
+      last = Date.now();
+      const doc = win.document;
+      const mem = (win.performance as Performance & { memory?: { usedJSHeapSize: number } }).memory;
+      const facts = [
+        `long task ${Math.round(entry.duration)} ms`,
+        `heap ${mem ? Math.round(mem.usedJSHeapSize / 1048576) : "?"} MB`,
+        `months ${doc.querySelectorAll(".infinite-calendar .unit-wrapper").length}`,
+        `day cells ${doc.querySelectorAll(".day-cell").length}`,
+        `table rows ${doc.querySelectorAll(".ppp-t2-row").length}`,
+        `dom ${doc.getElementsByTagName("*").length}`,
+      ];
+      void appendCrash(target, path, `--- ${new Date().toISOString()} performance\n${facts.join(" · ")}\n`);
+    }
+  });
+  try { observer.observe({ type: "longtask", buffered: false }); } catch { return () => undefined; }
+  return () => observer.disconnect();
+}
+
+/**
  * Listens on the window for errors and rejections from this plugin and logs
  * them. Returns the function that stops listening (plugin unload).
  */

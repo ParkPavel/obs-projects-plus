@@ -1,5 +1,6 @@
 <script lang="ts">
   import dayjs from "dayjs";
+  import { observeHeight } from "src/ui/actions/observeHeight";
   import type { DataRecord } from "src/lib/dataframe/dataframe";
   import { EventRenderType, type ProcessedRecord } from "../../types";
   import { i18n } from "src/lib/stores/i18n";
@@ -144,7 +145,9 @@
   let scrollAreaHeight = 0;
   let rowPx = 0;
   const FALLBACK_ROW_PX = 26;
-  $: if (eventScrollArea && cellRecords.length > 0) {
+  // Measured once per cell (a card's height does not change): reading
+  // offsetHeight in every cell on every update forced a layout per cell.
+  $: if (eventScrollArea && cellRecords.length > 0 && rowPx === 0) {
     const first = eventScrollArea.querySelector('.event-list > *');
     const h = first instanceof HTMLElement ? first.offsetHeight : 0;
     if (h > 0) rowPx = h + 2;
@@ -598,7 +601,7 @@
       </div>
     {:else if displayMode === 'list'}
       <!-- LIST MODE: Scrollable event list (Shift+wheel to scroll) -->
-      <div class="event-scroll-area" bind:this={eventScrollArea} bind:clientHeight={scrollAreaHeight}>
+      <div class="event-scroll-area" bind:this={eventScrollArea} use:observeHeight={(h) => { scrollAreaHeight = h; }}>
         <EventList
           {checkField}
           {iconField}
@@ -894,6 +897,22 @@
     }
   }
   
+  /* D23 (17.10): a phone's month cell is ~3.4rem wide. A label does not fit a
+     bar there, and the coarse-pointer min-height (1.25rem) made bars the
+     layout placed one under another overlap — «ВизиВизи», text over text.
+     In a narrow cell the timeline is colour segments at their real height;
+     tapping the day lists the events, the tooltip names each bar. */
+  @container (max-width: 5em) {
+    .timed-bar {
+      min-height: 0.5em;
+      padding: 0;
+      border-radius: 0.2em;
+    }
+    .bar-label {
+      display: none;
+    }
+  }
+
   /* Mobile responsive timed bars — v8.2: @container view-content */
   @container view-content (max-width: 48rem) {
     .timed-bar {
