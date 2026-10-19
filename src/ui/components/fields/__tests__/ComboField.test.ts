@@ -292,6 +292,44 @@ describe("ComboField — keyboard", () => {
     m.destroy();
   });
 
+  test("i3-input — allowCustom=false: blur keeps text that plainly means one option instead of throwing it away", async () => {
+    const m = mount({ allowCustom: false });
+    await open(m);
+    type(m.input, "doi"); // only «Doing» still matches
+    m.input.blur();
+    await tick();
+    expect(m.commits).toEqual([{ value: "Doing", reason: "select" }]);
+    m.destroy();
+
+    const n = mount({ allowCustom: false });
+    await open(n);
+    type(n.input, "done"); // the same label in another case
+    n.input.blur();
+    await tick();
+    expect(n.commits).toEqual([{ value: "Done", reason: "select" }]);
+    n.destroy();
+  });
+
+  test("i3-input — allowCustom=false: an ambiguous text is still restored on blur", async () => {
+    const m = mount({ allowCustom: false });
+    await open(m);
+    type(m.input, "do"); // «Doing» and «Done»
+    m.input.blur();
+    await tick();
+    expect(m.commits).toEqual([]);
+    expect(m.input.value).toBe("Todo");
+    m.destroy();
+  });
+
+  test("i3-input — a field removed while an edit is pending commits it", async () => {
+    const m = mount();
+    await open(m);
+    type(m.input, "Typed");
+    m.component.$destroy();
+    expect(m.commits).toEqual([{ value: "Typed", reason: "blur" }]);
+    m.target.remove();
+  });
+
   test("allowCustom=false: Enter takes the active top match", async () => {
     const m = mount({ allowCustom: false });
     await open(m);

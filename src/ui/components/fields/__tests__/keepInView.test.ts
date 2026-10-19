@@ -37,7 +37,13 @@ function boxAt(el: HTMLElement, top: number, height = 40): void {
   el.getBoundingClientRect = () => ({ top, bottom: top + height, left: 0, right: 200, width: 200, height, x: 0, y: top, toJSON: () => ({}) });
 }
 
+// i3-input: the check runs on the next frame; the tests run that frame at once.
+const realRaf = window.requestAnimationFrame;
+beforeEach(() => {
+  window.requestAnimationFrame = (cb: FrameRequestCallback) => { cb(0); return 0; };
+});
 afterEach(() => {
+  window.requestAnimationFrame = realRaf;
   document.body.innerHTML = "";
   delete (window as { visualViewport?: unknown }).visualViewport;
 });
@@ -54,7 +60,8 @@ describe("keepInView", () => {
     input.focus();
     // Full height: the field at 600..640 is visible, nothing scrolls.
     expect(input.scrollIntoView).not.toHaveBeenCalled();
-    expect(vv.count()).toBe(2);
+    // i3-input: only the size change is listened to, not the pan (scroll).
+    expect(vv.count()).toBe(1);
     // The keyboard takes the bottom half.
     vv.height = 400;
     vv.fire("resize");
@@ -75,7 +82,10 @@ describe("keepInView", () => {
     input.focus();
     expect(input.scrollIntoView).not.toHaveBeenCalled();
     bounds = { left: 0, top: 200, width: 400, height: 300, right: 400, bottom: 500 };
+    // i3-input: a pan (visualViewport scroll) is WebKit's own and is left alone.
     vv.fire("scroll");
+    expect(input.scrollIntoView).not.toHaveBeenCalled();
+    vv.fire("resize");
     expect(input.scrollIntoView).toHaveBeenCalledTimes(1);
     action.destroy();
     expect(vv.count()).toBe(0);

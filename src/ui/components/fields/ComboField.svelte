@@ -157,6 +157,33 @@
   $: watch(expanded ? rootEl?.ownerDocument.defaultView ?? null : null);
   onDestroy(() => watch(null));
 
+  // i3-input: the list follows its field. A sheet that fits itself to the
+  // keyboard moves the field by layout alone — no scroll or resize event —
+  // and the list stayed where the field used to be. While the list is open,
+  // each frame compares the field's box and re-places the list on a change.
+  let anchorFrame = 0;
+  let lastAnchor = "";
+  function trackAnchor(): void {
+    anchorFrame = 0;
+    const view = rootEl?.ownerDocument.defaultView;
+    if (!expanded || !rootEl || !view?.requestAnimationFrame) return;
+    const r = rootEl.getBoundingClientRect();
+    const key = `${r.top}|${r.left}|${r.width}`;
+    if (key !== lastAnchor) {
+      lastAnchor = key;
+      void place();
+    }
+    anchorFrame = view.requestAnimationFrame(trackAnchor);
+  }
+  function untrackAnchor(): void {
+    if (anchorFrame !== 0) rootEl?.ownerDocument.defaultView?.cancelAnimationFrame(anchorFrame);
+    anchorFrame = 0;
+    lastAnchor = "";
+  }
+  $: if (expanded && anchorFrame === 0) trackAnchor();
+  $: if (!expanded) untrackAnchor();
+  onDestroy(untrackAnchor);
+
   async function revealActive(): Promise<void> {
     await tick();
     const row = popupEl?.querySelector<HTMLElement>(".ppp-combo-option--active");
@@ -205,6 +232,20 @@
     return options.find((o) => o.label === text);
   }
   /**
+   * i3-input — the option a typed text plainly means: the same label in
+   * another case, or the only option the text still matches. In a field that
+   * takes only its options, such text used to be thrown away on blur (the
+   * keyboard closed, a tap elsewhere), which read as the field losing data.
+   */
+  function plainMatch(text: string): ComboOption | undefined {
+    const t = text.trim().toLowerCase();
+    if (!t) return undefined;
+    const same = options.find((o) => o.label.toLowerCase() === t);
+    if (same) return same;
+    const hits = filterOptions(options, text);
+    return hits.length === 1 ? hits[0] : undefined;
+  }
+  /**
    * Commit the typed text (Enter, Tab, blur); a pick of an exact option is
    * reported as a select too. `change` is the native signal that the text was
    * accepted (autofill, assistive technology); it commits like a blur that
@@ -220,6 +261,13 @@
     }
     const text = ctl.getState().draft;
     const exact = exactMatch(text);
+    if (!allowCustom && exact === undefined && text !== ctl.getState().baseline) {
+      const meant = plainMatch(text);
+      if (meant) {
+        choose(meant);
+        return;
+      }
+    }
     const accept = allowCustom || exact !== undefined;
     const opts = { accept, unchanged: commitUnchanged };
     const result = reason === "blur" ? ctl.blur(opts) : ctl.commit(reason === "change" ? "blur" : reason, opts);
@@ -318,6 +366,12 @@
     finish("blur");
     dirty = false;
   }
+  // i3-input: a host that closes on an outside press removes the field while
+  // it still has focus, and whether a blur fires first depends on the browser.
+  // An edit still pending when the field goes is committed as a blur would.
+  onDestroy(() => {
+    if (!multi && ctl.getState().draft !== ctl.getState().baseline) finish("blur");
+  });
 
   function isSelected(opt: ComboOption, chosen: string[], text: string): boolean {
     return multi ? chosen.includes(opt.id) : opt.label === text;

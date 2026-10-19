@@ -35,6 +35,14 @@
 
   let inputEl: HTMLInputElement | null = null;
 
+  // i3-input: the field shows its own text while it has focus. The input was
+  // bound to the parent's `query`, so a late or debounced echo of an older
+  // query replaced what was being typed. A query the parent sets while the
+  // field is not being typed in (a reset, a restore) is still shown.
+  let text = query;
+  let typing = false;
+  $: if (!typing) text = query;
+
   /** Move focus into the input. */
   export function focus(): void {
     inputEl?.focus();
@@ -47,9 +55,11 @@
   });
 
   function onInput(e: Event): void {
-    dispatch("queryChange", (e.currentTarget as HTMLInputElement).value);
+    text = (e.currentTarget as HTMLInputElement).value;
+    dispatch("queryChange", text);
   }
   function clear(): void {
+    text = "";
     dispatch("queryChange", "");
     dispatch("clear");
     inputEl?.focus();
@@ -65,7 +75,7 @@
     class="ppp-search-field-input {inputClass}"
     type="text"
     role={controls ? "combobox" : "searchbox"}
-    value={query}
+    value={text}
     {placeholder}
     aria-label={ariaLabel ?? (placeholder || undefined)}
     aria-controls={controls}
@@ -75,10 +85,12 @@
     autocomplete="off"
     spellcheck="false"
     on:input={onInput}
+    on:focus={() => (typing = true)}
+    on:blur={() => (typing = false)}
     on:keydown
     on:mousedown|stopPropagation
   />
-  {#if clearable && query !== ""}
+  {#if clearable && text !== ""}
     <button
       type="button"
       class="ppp-search-field-clear clickable-icon"
