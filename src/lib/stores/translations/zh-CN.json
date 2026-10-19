@@ -1655,6 +1655,8 @@
                     "calculate": "计算",
                     "calc-none": "无",
                     "hide-field": "在视图中隐藏",
+                    "freeze": "滚动时固定列",
+                    "unfreeze": "取消固定列",
                     "add-property": "添加属性",
                     "group-by": "按此字段分组",
                     "ungroup": "取消分组",
@@ -1827,7 +1829,9 @@
                     "pin": "固定列表",
                     "unpin": "取消固定",
                     "persist": "为空时保留",
-                    "unpersist": "为空时移除"
+                    "unpersist": "为空时移除",
+                    "move-left": "左移",
+                    "move-right": "右移"
                 }
             },
             "color": {

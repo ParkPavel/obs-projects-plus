@@ -109,7 +109,7 @@ export function getColumns(
         id: column,
         records,
         collapse: columnSettings[column]?.collapse ?? false,
-        pinned: grouByField?.typeConfig?.options?.includes(column) ?? false,
+        pinned: columnSettings[column]?.pinned === true,
         persisted: persistedStatuses?.includes(column) ?? false,
       };
     });

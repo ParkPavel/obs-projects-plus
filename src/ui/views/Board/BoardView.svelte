@@ -461,58 +461,21 @@
     });
   };
 
-  const toggleColumnPin =
-    (field: DataField | undefined): OnColumnPin =>
-    (columns, name) => {
-      if (!field) return;
-
-      if (field.typeConfig && field.typeConfig.options) {
-        let options = [...field.typeConfig.options];
-        const pinned = options.includes(name);
-
-        if (pinned) {
-          options = options.filter((v) => v !== name);
-        } else {
-          options = columns.filter((v) => options.includes(v) || v === name);
-          // Pinning implies persist — ensure column stays visible after unpin
-          const current = config?.persistedStatuses ?? [];
-          if (!current.includes(name)) {
-            saveConfig({
-              ...config,
-              persistedStatuses: [...current, name],
-            });
-          }
-        }
-
-        settings.updateFieldConfig(
-          project.id,
-          field.name,
-          fields.map((f) => f.name),
-          {
-            ...field.typeConfig,
-            options,
-          }
-        );
-      } else {
-        // First pin — also persist
-        const current = config?.persistedStatuses ?? [];
-        if (!current.includes(name)) {
-          saveConfig({
-            ...config,
-            persistedStatuses: [...current, name],
-          });
-        }
-        settings.updateFieldConfig(
-          project.id,
-          field.name,
-          fields.map((f) => f.name),
-          {
-            ...field.typeConfig,
-            options: [name],
-          }
-        );
-      }
-    };
+  // i3-board: a pin is a view setting (config.columns[name].pinned). The
+  // status field's options are its values, not a pin list; they stay as
+  // they are. Pinning also keeps the column when it empties, as before.
+  const toggleColumnPin = (): OnColumnPin => (_columns, name) => {
+    const pinned = config?.columns?.[name]?.pinned === true;
+    const current = config?.persistedStatuses ?? [];
+    saveConfig({
+      ...config,
+      persistedStatuses: pinned || current.includes(name) ? current : [...current, name],
+      columns: {
+        ...config?.columns,
+        [name]: { ...config?.columns?.[name], pinned: !pinned },
+      },
+    });
+  };
 
   function saveConfig(cfg: BoardConfig) {
     config = cfg;
@@ -606,7 +569,7 @@
     onColumnDelete={handleColumnDelete(groupByField)}
     onColumnRename={handleColumnRename(groupByField)}
     onColumnCollapse={toggleColumnCollapse()}
-    onColumnPin={toggleColumnPin(groupByField)}
+    onColumnPin={toggleColumnPin()}
     onColumnPersist={handleColumnPersist}
     onSortColumns={handleSortColumns(groupByField)}
     {readonly}

@@ -1563,6 +1563,8 @@
                     "filter-canvas": "Filter linked blocks by this row",
                     "group-by": "Group by this field",
                     "hide-field": "Hide in view",
+                    "freeze": "Pin column while scrolling",
+                    "unfreeze": "Unpin column",
                     "new": "New",
                     "new-name": "Note name…",
                     "open": "Open note",
@@ -1733,7 +1735,9 @@
                     "pin": "Pin column",
                     "unpin": "Unpin column",
                     "persist": "Keep when empty",
-                    "unpersist": "Remove when empty"
+                    "unpersist": "Remove when empty",
+                    "move-left": "Move left",
+                    "move-right": "Move right"
                 }
             },
             "color": {

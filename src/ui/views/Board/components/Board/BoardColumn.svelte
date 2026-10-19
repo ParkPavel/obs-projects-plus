@@ -52,6 +52,10 @@
   export let onColumnDelete: (name: string, records: DataRecord[]) => void;
   export let onColumnRename: (name: string) => void;
   export let onValidate: (name: string) => boolean;
+  /** i3-board — Move left / Move right in the column menu; absent for pinned or read-only columns. */
+  export let onColumnMove: ((name: string, delta: -1 | 1) => void) | undefined = undefined;
+  export let canMoveLeft: boolean = false;
+  export let canMoveRight: boolean = false;
 
   let editing: boolean = false;
 
@@ -80,6 +84,20 @@
         icon: collapse ? "chevrons-left-right" : "chevrons-right-left",
         onClick: () => { onColumnCollapse(name); },
       },
+      ...(onColumnMove && canMoveLeft
+        ? [{
+            title: $i18n.t("components.board.column.move-left"),
+            icon: "arrow-left",
+            onClick: () => { onColumnMove?.(name, -1); },
+          }]
+        : []),
+      ...(onColumnMove && canMoveRight
+        ? [{
+            title: $i18n.t("components.board.column.move-right"),
+            icon: "arrow-right",
+            onClick: () => { onColumnMove?.(name, 1); },
+          }]
+        : []),
       {
         title: pinned
           ? $i18n.t("components.board.column.unpin")

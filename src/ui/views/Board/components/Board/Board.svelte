@@ -161,8 +161,34 @@
       if (pendingColumnOrder) {
         onSortColumns(pendingColumnOrder);
       }
+      // i3-board: the drag ends here even if no matching `columns` comes back
+      // (a read-only source saves nothing, or the saved order sorts
+      // differently); waiting for that echo alone froze the board for good.
+      finalizeTimeout = setTimeout(releaseColumnDrag, COLUMN_ECHO_WAIT_MS);
     }, flipDurationMs + 50);
   }
+
+  const COLUMN_ECHO_WAIT_MS = 1000;
+  function releaseColumnDrag() {
+    pendingColumnOrder = undefined;
+    isDraggingColumns = false;
+  }
+
+  /**
+   * i3-board — the column menu's Move left / Move right: the same write as a
+   * drag, for the keyboard and for a phone where a grip drag is awkward.
+   * Pinned columns stay first and are not moved.
+   */
+  function moveColumn(name: string, delta: -1 | 1) {
+    if (dataReadOnly) return;
+    const unpinned = columns.filter((c) => !c.pinned).map((c) => c.id);
+    const from = unpinned.indexOf(name);
+    const to = from + delta;
+    if (from < 0 || to < 0 || to >= unpinned.length) return;
+    unpinned.splice(to, 0, ...unpinned.splice(from, 1));
+    onSortColumns([...pinnedColumns.map((c) => c.id), ...unpinned]);
+  }
+  $: unpinnedIds = columns.filter((c) => !c.pinned).map((c) => c.id);
 
   onDestroy(() => {
     if (pendingColumnOrder) {
@@ -500,6 +526,9 @@
                   records
                 )}
               {onColumnCollapse}
+              onColumnMove={dataReadOnly ? undefined : moveColumn}
+              canMoveLeft={unpinnedIds.indexOf(column.id) > 0}
+              canMoveRight={unpinnedIds.indexOf(column.id) < unpinnedIds.length - 1}
               onColumnRename={(name) => {
                 const cols = columns.map((col) => col.id);
                 onColumnRename(cols, column.id, name, column.records);
