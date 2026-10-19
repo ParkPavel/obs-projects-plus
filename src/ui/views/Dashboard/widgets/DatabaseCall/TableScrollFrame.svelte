@@ -12,10 +12,12 @@
   export let onViewport: (viewport: TableViewport) => void;
   /** Width of the pinned first column, so the left cue starts after it. */
   export let firstColRem = 0;
+  /** i3-table — the first column stays in place while scrolling sideways (off by default). */
+  export let frozen = false;
 </script>
 
 <div class="ppp-t2-frame" style:--ppp-t2-first-col={`${firstColRem}rem`}>
-  <div class="ppp-t2-scroll" bind:this={scroller} use:trackViewport={onViewport} use:trackEdges role="rowgroup">
+  <div class="ppp-t2-scroll" class:is-frozen={frozen} bind:this={scroller} use:trackViewport={onViewport} use:trackEdges role="rowgroup">
     <slot />
   </div>
   <span class="ppp-t2-edge ppp-t2-edge--left" aria-hidden="true" />
@@ -32,19 +34,25 @@
     min-height: 0;
   }
 
+  /* i3-table: a table never fills the screen — there is always dashboard
+     above or below it to grab — and a vertical scroll that reaches the
+     table's end carries on into the dashboard instead of stopping there
+     (was `overscroll-behavior: contain` on both axes and 70vh). Sideways it
+     stays contained, so a swipe across columns never turns the page. */
   .ppp-t2-scroll {
     flex: 1;
     min-width: 0;
-    max-height: var(--ppp-t2-scroll-max, 70vh);
+    max-height: var(--ppp-t2-scroll-max, 60vh);
     overflow: auto;
-    overscroll-behavior: contain;
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: auto;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-x pan-y;
   }
 
-  .ppp-t2-scroll :global(.ppp-t2-row > :first-child),
-  .ppp-t2-scroll :global(.ppp-t2-header > :first-child),
-  .ppp-t2-scroll :global(.ppp-t2-footer > :first-child) {
+  .ppp-t2-scroll.is-frozen :global(.ppp-t2-row > :first-child),
+  .ppp-t2-scroll.is-frozen :global(.ppp-t2-header > :first-child),
+  .ppp-t2-scroll.is-frozen :global(.ppp-t2-footer > :first-child) {
     position: sticky;
     left: 0;
     z-index: var(--ppp-z-raised);
@@ -52,8 +60,8 @@
     box-shadow: inset -0.0625em 0 0 var(--background-modifier-border);
   }
 
-  .ppp-t2-scroll :global(.ppp-t2-header > :first-child),
-  .ppp-t2-scroll :global(.ppp-t2-footer > :first-child) {
+  .ppp-t2-scroll.is-frozen :global(.ppp-t2-header > :first-child),
+  .ppp-t2-scroll.is-frozen :global(.ppp-t2-footer > :first-child) {
     background: var(--background-secondary);
   }
 

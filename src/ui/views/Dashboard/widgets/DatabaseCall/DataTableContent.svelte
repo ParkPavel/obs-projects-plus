@@ -34,7 +34,7 @@
   import TableScrollFrame from "./TableScrollFrame.svelte";
   import { createNamedRecord, isRowDriving } from "./tableRowOps";
   import { openTableRowMenu, setupTableRelation } from "./tableInteractions";
-  import { applySortPatch, applyHidePatch, applyCalculatePatch, applyWidthPatch, applyGroupPatch, toggleGroupCollapsed, optionPools } from "./tableHeaderOps";
+  import { applySortPatch, applyHidePatch, applyCalculatePatch, applyWidthPatch, applyGroupPatch, toggleGroupCollapsed, optionPools, applyFreezePatch } from "./tableHeaderOps";
   import {
     buildColumns,
     gridTemplate,
@@ -106,6 +106,7 @@
   $: renderRows = buildRenderRows(visibleRecords, config);
   $: rowHeightRem = config?.rowHeight === "compact" ? 1.75 : config?.rowHeight === "expanded" ? 3 : 2.25;
   $: optionsByField = optionPools(fields, frame.records);
+  $: frozen = !!config?.freezeUpTo && columns.some((c) => c.field.name === config?.freezeUpTo); // i3-table: pinned only on request
 
   // ── Windowing (canon: simple overscan, no framework) ─────────
   let bodyEl: HTMLDivElement | null = null;
@@ -180,14 +181,14 @@
     on:removeSort={handleRemoveSort}
   />
   <!-- UT-R2 #083 + B3: ONE scroll owner for header+rows+footer, both axes. -->
-  <TableScrollFrame bind:scroller={bodyEl} {onViewport} firstColRem={columns[0]?.widthRem ?? 0}>
+  <TableScrollFrame bind:scroller={bodyEl} {onViewport} {frozen} firstColRem={frozen ? columns[0]?.widthRem ?? 0 : 0}>
     <div class="ppp-t2-table">
       <TableHeader
         {columns}
         {sortCriteria}
         aggregations={config?.aggregations ?? {}}
         groupByField={config?.groupBy?.field}
-        {readonly}
+        {readonly} {frozen} on:freeze={(e) => dispatch("configChange", applyFreezePatch(config, e.detail.freeze ? e.detail.field : null))}
         on:sort={(e) => dispatch("configChange", applySortPatch(config, e.detail.field, e.detail.order))}
         on:hide={(e) => dispatch("configChange", applyHidePatch(config, e.detail))}
         on:calculate={(e) => dispatch("configChange", applyCalculatePatch(config, e.detail.field, e.detail.fn))}
@@ -265,9 +266,7 @@
     min-height: 100%;
   }
 
-  .ppp-t2-footer-spacer {
-    flex: 1;
-  }
+  .ppp-t2-footer-spacer { flex: 1; }
 
   .ppp-t2-search-empty {
     padding: var(--ppp-space-lg);

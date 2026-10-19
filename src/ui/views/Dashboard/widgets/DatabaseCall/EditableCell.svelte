@@ -121,7 +121,7 @@
   {:else if cell.kind === "pills"}
     <span class="ppp-t2-pills">
       {#each cell.pills as pill}
-        <span class="ppp-t2-pill" style:background-color={pill.color ?? ""}>
+        <span class="ppp-t2-pill" class:ppp-t2-pill--tinted={!!pill.color} style:--ppp-t2-pill-color={pill.color ?? null}>
           {#if cell.status}<span class="ppp-t2-pill-dot" aria-hidden="true">●</span>{/if}{pill.label}
         </span>
       {/each}
@@ -168,17 +168,9 @@
     --ppp-t2-editor-ring: var(--text-error);
   }
 
-  .ppp-t2-empty {
-    color: transparent;
-  }
-
-  .ppp-t2-cell:hover .ppp-t2-empty {
-    color: var(--text-faint);
-  }
-
-  .ppp-t2-check {
-    margin: 0;
-  }
+  .ppp-t2-empty { color: transparent; }
+  .ppp-t2-cell:hover .ppp-t2-empty { color: var(--text-faint); }
+  .ppp-t2-check { margin: 0; }
 
   .ppp-t2-pills {
     display: flex;
@@ -202,9 +194,12 @@
     text-overflow: ellipsis;
   }
 
+  /* i3-table: an option colour tints the pill (a raw fill hid dark text). */
+  .ppp-t2-pill--tinted { background: color-mix(in srgb, var(--ppp-t2-pill-color) 22%, var(--background-primary)); box-shadow: inset 0.25em 0 0 var(--ppp-t2-pill-color); }
   .ppp-t2-pill-dot {
     font-size: 0.5rem;
     line-height: 1;
+    color: var(--ppp-t2-pill-color, inherit);
   }
 
   .ppp-t2-pill--more {

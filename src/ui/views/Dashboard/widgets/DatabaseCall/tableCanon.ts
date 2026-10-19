@@ -200,17 +200,15 @@ const HAS_WIKILINK = /\[\[/;
 
 function toPills(labels: string[], color: (label: string) => string | null, status: boolean): CellDisplay {
   const visible = labels.slice(0, MAX_VISIBLE_PILLS);
-  return {
-    kind: "pills",
-    pills: visible.map((label) => ({ label, color: color(label) })),
-    overflow: Math.max(0, labels.length - MAX_VISIBLE_PILLS),
-    status,
-  };
+  const pills = visible.map((label) => ({ label, color: color(label) }));
+  return { kind: "pills", pills, overflow: Math.max(0, labels.length - MAX_VISIBLE_PILLS), status };
 }
 // A Date field keeps a string as written; only AutoTime parses its ISO stat string. Never Date.toString().
 function dateCellText(auto: boolean, value: Optional<DataValue>, dateFormat?: DateFormatConfig): string {
   return formatDateCell(value, { withTime: auto, displayFormat: displayFormatOf(dateFormat) });
 }
+/** i3-table — a computed value's text: a date as a date, not a String() dump. */
+const computedText = (v: Optional<DataValue>, f?: DateFormatConfig) => (v instanceof Date ? dateCellText(false, v, f) : String(v));
 export function cellDisplay(field: DataField, value: Optional<DataValue>, dateFormat?: DateFormatConfig): CellDisplay {
   if (value === null || value === undefined || value === "") return { kind: "empty" };
 
@@ -235,7 +233,7 @@ export function cellDisplay(field: DataField, value: Optional<DataValue>, dateFo
       return toPills(parseRelationLinks(value), () => null, false);
     case DataFieldType.Formula:
     case DataFieldType.Rollup:
-      return typeof value === "number" ? { kind: "number", text: value.toLocaleString() } : { kind: "text", text: String(value) };
+      return typeof value === "number" ? { kind: "number", text: value.toLocaleString() } : Array.isArray(value) ? toPills(value.map((v) => computedText(v, dateFormat)), () => null, false) : { kind: "text", text: computedText(value, dateFormat) };
     default: {
       // UT-R2 #085: wikilinks in plain String fields read as link chips,
       // not raw "[[...]]" markup — the cell honors what the user wrote.

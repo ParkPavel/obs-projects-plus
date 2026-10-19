@@ -68,6 +68,17 @@ export function applyHidePatch(config: DataTableConfig | undefined, field: strin
   };
 }
 
+/**
+ * i3-table — the first column is pinned only when the view asks for it
+ * (`freezeUpTo` names it). It used to be pinned always, and at 17rem it took
+ * most of a phone's width and every horizontal swipe.
+ */
+export function applyFreezePatch(config: DataTableConfig | undefined, field: string | null): DataTableConfig {
+  const { freezeUpTo: _omit, ...rest } = config ?? {};
+  void _omit;
+  return field === null ? rest : { ...rest, freezeUpTo: field };
+}
+
 export function applyWidthPatch(
   config: DataTableConfig | undefined,
   field: string,
@@ -157,8 +168,11 @@ export function buildHeaderMenuEntries(opts: {
   onHide: () => void;
   onCalculate: (fn: ColumnAggregation | null) => void;
   onGroup: (group: boolean) => void;
+  /** i3-table — first column only: pin it while scrolling sideways, or release it. */
+  frozen?: boolean;
+  onFreeze?: ((freeze: boolean) => void) | undefined;
 }): ContextMenuEntry[] {
-  const { field, isPrimary, currentSort, currentCalc, groupedBy, t, onSort, onHide, onCalculate, onGroup } = opts;
+  const { field, isPrimary, currentSort, currentCalc, groupedBy, t, onSort, onHide, onCalculate, onGroup, frozen, onFreeze } = opts;
   const entries: ContextMenuEntry[] = [
     { title: t("views.dashboard.table-v2.sort-asc", "Sort ascending"), icon: "arrow-up", onClick: () => onSort("asc"), disabled: currentSort === "asc" },
     { title: t("views.dashboard.table-v2.sort-desc", "Sort descending"), icon: "arrow-down", onClick: () => onSort("desc"), disabled: currentSort === "desc" },
@@ -185,6 +199,14 @@ export function buildHeaderMenuEntries(opts: {
       })),
     ],
   });
+  if (onFreeze) {
+    entries.push({ separator: true });
+    entries.push(
+      frozen
+        ? { title: t("views.dashboard.table-v2.unfreeze", "Unpin column"), icon: "pin-off", onClick: () => onFreeze(false) }
+        : { title: t("views.dashboard.table-v2.freeze", "Pin column while scrolling"), icon: "pin", onClick: () => onFreeze(true) }
+    );
+  }
   if (!isPrimary) {
     entries.push({ separator: true });
     entries.push({ title: t("views.dashboard.table-v2.hide-field", "Hide in view"), icon: "eye-off", onClick: onHide });
