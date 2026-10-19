@@ -4,6 +4,7 @@
   import { remAt, rootFontPx } from "src/ui/utils/cssLength";
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import dayjs from 'dayjs';
+  import { ALL_DAY_ROW_MIN_HOURS } from '../../utils/eventLayout';
   import type { DataRecord } from '../../../../../lib/dataframe/dataframe';
   import { EventRenderType, type ProcessedRecord } from '../../types';
   import { getDisplayName, cleanWikiLink } from "src/ui/views/Board/components/Board/boardHelpers";
@@ -132,16 +133,24 @@
    * v7.1: Derive headerEventsByDay reactively
    * This creates a new object reference when data changes, forcing re-render
    */
+  function isAllDayRowSpan(r: ProcessedRecord): boolean {
+    const t = r.timeInfo;
+    return !t || t.endTime.diff(t.startTime, 'hour', true) >= ALL_DAY_ROW_MIN_HOURS;
+  }
+
   $: headerEventsByDay = (() => {
     void dataVersion; // Force reactivity
     const result: Record<string, ProcessedRecord[]> = {};
     for (const day of days) {
       const dateStr = day.format('YYYY-MM-DD');
       const records = processedGroupedRecords[dateStr] || [];
+      // i3-calendar: a timed span joins the all-day row only from 24 hours
+      // on; a shorter overnight one is drawn as clipped segments in the
+      // day columns (DayColumn), not twice.
       result[dateStr] = records.filter(r =>
         r.renderType === EventRenderType.ALL_DAY ||
         r.renderType === EventRenderType.MULTI_DAY_ALLDAY ||
-        r.renderType === EventRenderType.MULTI_DAY_TIMED
+        (r.renderType === EventRenderType.MULTI_DAY_TIMED && isAllDayRowSpan(r))
       );
     }
     return result;

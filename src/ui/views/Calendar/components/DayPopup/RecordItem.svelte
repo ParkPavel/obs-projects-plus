@@ -575,7 +575,6 @@
         class="check-button" 
         class:checked={isChecked}
         on:click|stopPropagation={handleCheck}
-        on:touchend|stopPropagation|preventDefault={handleCheck}
         aria-label={isChecked ? "Uncheck" : "Check"}
       >
         {#if isChecked}
@@ -675,7 +674,6 @@
               <button 
                 class="hsl-apply-button"
                 on:click|stopPropagation={() => favoritesStore.add(hsvToHex(hueValue, saturationValue, valueValue))}
-                on:touchend|stopPropagation|preventDefault={() => favoritesStore.add(hsvToHex(hueValue, saturationValue, valueValue))}
                 aria-label={$i18n.t("views.calendar.colors.save-favorite")}
                 style="margin-right: var(--ppp-spacing-xs, 0.25rem); background: var(--background-secondary-alt); color: var(--text-muted);"
               >
@@ -684,7 +682,6 @@
               <button 
                 class="hsl-apply-button"
                 on:click|stopPropagation={applyHslColor}
-                on:touchend|stopPropagation|preventDefault={applyHslColor}
                 aria-label={$i18n.t("views.calendar.colors.apply")}
               >
                 <Icon name="check" size="sm" />
@@ -708,7 +705,6 @@
                     class:selected={displayColor === color}
                     style:--swatch-color={color}
                     on:click|stopPropagation={() => handleColorSelect(color)}
-                    on:touchend|stopPropagation|preventDefault={() => handleColorSelect(color)}
                     title={name}
                     aria-label="Select {name}"
                   >
@@ -719,10 +715,9 @@
                   <button
                     class="remove-favorite"
                     on:click|stopPropagation={() => favoritesStore.remove(color)}
-                    on:touchend|stopPropagation|preventDefault={() => favoritesStore.remove(color)}
                     aria-label={$i18n.t("common.remove")}
                   >
-                    Г—
+                    <Icon name="x" size="xs" />
                   </button>
                 </div>
               {/each}
@@ -747,7 +742,6 @@
               <button 
                 class="hex-apply-button"
                 on:click|stopPropagation={applyCustomHex}
-                on:touchend|stopPropagation|preventDefault={applyCustomHex}
                 disabled={!customHexInput}
                 aria-label={$i18n.t("views.calendar.colors.apply")}
               >
@@ -765,7 +759,6 @@
       <button 
         class="action-button primary" 
         on:click|stopPropagation={() => dispatch('openNote')}
-        on:touchend|stopPropagation|preventDefault={() => dispatch('openNote')}
       >
         <Icon name="file-text" size="sm" />
         <span>{$i18n.t("views.calendar.record.open") ?? "Open note"}</span>
@@ -775,7 +768,6 @@
       <button 
         class="action-button" 
         on:click|stopPropagation={() => dispatch('openInNewWindow')}
-        on:touchend|stopPropagation|preventDefault={() => dispatch('openInNewWindow')}
       >
         <Icon name="external-link" size="sm" />
         <span>{$i18n.t("views.calendar.record.open-new-tab") ?? "Open in new tab"}</span>
@@ -784,7 +776,6 @@
       <button 
         class="action-button" 
         on:click|stopPropagation={() => dispatch('settings')}
-        on:touchend|stopPropagation|preventDefault={() => dispatch('settings')}
       >
         <Icon name="settings" size="sm" />
         <span>{$i18n.t("views.calendar.record.settings")}</span>
@@ -793,7 +784,6 @@
       <button 
         class="action-button" 
         on:click|stopPropagation={() => dispatch('duplicate')}
-        on:touchend|stopPropagation|preventDefault={() => dispatch('duplicate')}
       >
         <Icon name="copy" size="sm" />
         <span>{$i18n.t("views.calendar.record.duplicate")}</span>
@@ -802,7 +792,6 @@
       <button 
         class="action-button danger" 
         on:click|stopPropagation={() => dispatch('delete')}
-        on:touchend|stopPropagation|preventDefault={() => dispatch('delete')}
       >
         <Icon name="trash-2" size="sm" />
         <span>{$i18n.t("views.calendar.record.delete")}</span>

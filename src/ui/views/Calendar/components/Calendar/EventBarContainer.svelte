@@ -7,7 +7,7 @@
   import { barDragView, type TimelineDragManager } from '../../dnd/TimelineDragManager';
   import { app } from 'src/lib/stores/obsidian';
   import { openRecord } from "src/lib/record/openRecord";
-  import { layoutOverlapClusters } from '../../utils/eventLayout';
+  import { layoutOverlapClusters, MIN_EVENT_VISUAL_MINUTES } from '../../utils/eventLayout';
   
   /**
    * EventBarContainer - Manages overlapping event bars with collision detection
@@ -68,10 +68,10 @@
   
   /**
    * layoutTimelineEvents - cluster-of-overlaps → columns (shared with month bars).
-   * Width is per overlap cluster; short events collide by their 20-minute
-   * minimum visual height (synced with EventBar.svelte MIN_VISUAL_MINUTES).
+   * Width is per overlap cluster; short events collide by the minimum visual
+   * height EventBar draws them at (one shared MIN_EVENT_VISUAL_MINUTES).
    */
-  const MIN_VISUAL_MS = 20 * 60 * 1000;
+  const MIN_VISUAL_MS = MIN_EVENT_VISUAL_MINUTES * 60 * 1000;
   function layoutTimelineEvents(inputEvents: EventInput[]): EventWithColumn[] {
     const slots = layoutOverlapClusters(
       inputEvents.map((e) => ({

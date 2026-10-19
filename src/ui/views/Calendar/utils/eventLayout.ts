@@ -7,6 +7,41 @@
  * Times are plain numbers (minutes or ms) so the same code serves the timeline
  * (dayjs) and the month cell (minutes since midnight).
  */
+/**
+ * i3-calendar — the shortest an event is drawn on the day/week time grid, and
+ * so the length the overlap layout reserves for it: one 15-minute step, the
+ * drag snap (dnd/types SNAP_INTERVAL_DEFAULT). The bar and the layout read
+ * this one value; a CSS minimum taller than it made a 15-minute event cover
+ * the next hour on touch screens.
+ */
+export const MIN_EVENT_VISUAL_MINUTES = 15;
+
+/** i3-calendar — a timed event this long or longer lives in the all-day row only. */
+export const ALL_DAY_ROW_MIN_HOURS = 24;
+
+/**
+ * i3-calendar — the part of [start, end) that falls on one day, in minutes
+ * from that day's midnight, or null when the event does not touch the day.
+ * An event crossing midnight is drawn as one clipped segment per day.
+ */
+export function daySegment(
+  startMs: number,
+  endMs: number,
+  dayStartMs: number,
+  dayEndMs: number,
+): { startMin: number; endMin: number; continuesBefore: boolean; continuesAfter: boolean } | null {
+  const end = Math.max(endMs, startMs);
+  const segStart = Math.max(startMs, dayStartMs);
+  const segEnd = Math.min(end, dayEndMs);
+  if (segEnd < segStart || (segEnd === segStart && startMs !== end)) return null;
+  return {
+    startMin: (segStart - dayStartMs) / 60000,
+    endMin: (segEnd - dayStartMs) / 60000,
+    continuesBefore: startMs < dayStartMs,
+    continuesAfter: end > dayEndMs,
+  };
+}
+
 export interface LayoutSpan {
   start: number;
   end: number;

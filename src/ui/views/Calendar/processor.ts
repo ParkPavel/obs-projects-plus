@@ -441,8 +441,13 @@ export class CalendarDataProcessor {
         continue;
       }
       
-      const eventStartMs = (event.startDate || event.endDate!).startOf("day").valueOf();
-      const eventEndMs = (event.endDate || event.startDate!).startOf("day").valueOf();
+      // i3-calendar: an inverted range (end before start) takes the same days
+      // as calculateSpanInfo gives it, which swaps them; raw values made the
+      // lane check see an empty range and stack it over another strip.
+      const aMs = (event.startDate || event.endDate!).startOf("day").valueOf();
+      const bMs = (event.endDate || event.startDate!).startOf("day").valueOf();
+      const eventStartMs = Math.min(aMs, bMs);
+      const eventEndMs = Math.max(aMs, bMs);
 
       // Find first available lane (no overlap)
       let assignedLane = -1;
@@ -488,8 +493,10 @@ export class CalendarDataProcessor {
     const grouped: Record<string, ProcessedRecord[]> = {};
 
     for (const pr of processed) {
-      const startDay = (pr.startDate || pr.endDate!).startOf("day");
-      const endDay = (pr.endDate || pr.startDate!).startOf("day");
+      const a = (pr.startDate || pr.endDate!).startOf("day");
+      const b = (pr.endDate || pr.startDate!).startOf("day");
+      // i3-calendar: an inverted range is grouped over the days it covers.
+      const [startDay, endDay] = b.isBefore(a) ? [b, a] : [a, b];
 
       // Fast path: single-day events (most common case, skip loop overhead)
       if (startDay.isSame(endDay, "day")) {

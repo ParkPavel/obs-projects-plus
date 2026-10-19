@@ -3,6 +3,7 @@
   import type { DataRecord } from 'src/lib/dataframe/dataframe';
   import { EventRenderType, type ProcessedRecord } from '../../types';
   import EventBarContainer from './EventBarContainer.svelte';
+  import { ALL_DAY_ROW_MIN_HOURS, daySegment } from '../../utils/eventLayout';
   import EventIndicator from './EventIndicator.svelte';
   import type { TimelineDragManager } from '../../dnd/TimelineDragManager';
   import CreationPreview from '../../dnd/CreationPreview.svelte';
@@ -94,39 +95,45 @@
    * All date/time parsing is done in CalendarDataProcessor
    * Timezone is applied here for correct positioning
    */
+  /** The time as wall-clock in the view's timezone, so a day's midnight compares with it. */
+  const wallClock = (date: dayjs.Dayjs) => dayjs(getTimeInTimezone(date).format('YYYY-MM-DDTHH:mm:ss'));
+
   function buildBarEvents(): BarEvent[] {
     const bars: BarEvent[] = [];
     const visibleStart = startHour * 60; // in minutes
     const visibleEnd = endHour * 60;     // in minutes
-    
+    const dayStart = day.startOf('day');
+    const dayStartMs = dayStart.valueOf();
+    const dayEndMs = dayStart.add(1, 'day').valueOf();
+
     for (const pRecord of processedRecords) {
       // Only process TIMED events for the timeline
       // (All-day events are handled by AllDayEventStrip in the header)
       if ((pRecord.renderType === EventRenderType.TIMED || pRecord.renderType === EventRenderType.MULTI_DAY_TIMED) && pRecord.timeInfo) {
-         const { startTime, endTime } = pRecord.timeInfo;
-         
-         // Apply timezone for display
-         const tzStartTime = getTimeInTimezone(startTime);
-         const tzEndTime = getTimeInTimezone(endTime);
-         
-         // Detect overflow using timezone-adjusted times
-         const eventStartMinutes = tzStartTime.hour() * 60 + tzStartTime.minute();
-         const eventEndMinutes = tzEndTime.hour() * 60 + tzEndTime.minute();
-         const overflowTop = eventStartMinutes < visibleStart;
-         const overflowBottom = eventEndMinutes > visibleEnd;
-         
+         const start = wallClock(pRecord.timeInfo.startTime);
+         const end = wallClock(pRecord.timeInfo.endTime);
+         // i3-calendar: 24 hours or longer is drawn in the all-day row only
+         // (TimelineView headerEventsByDay); a column shows it nowhere.
+         if (end.diff(start, 'hour', true) >= ALL_DAY_ROW_MIN_HOURS) continue;
+         // i3-calendar: an overnight event is the part of it on this day. Its
+         // hours used to be read from the full start and end, so Mon 22:00 →
+         // Wed 02:00 was a stub at 22:00 in every column while the layout
+         // reserved the whole span.
+         const seg = daySegment(start.valueOf(), end.valueOf(), dayStartMs, dayEndMs);
+         if (!seg) continue;
+
          bars.push({
            record: pRecord.record,
-           startDate: tzStartTime,
-           endDate: tzEndTime,
+           startDate: dayStart.add(seg.startMin, 'minute'),
+           endDate: dayStart.add(seg.endMin, 'minute'),
            color: pRecord.color || '#808080',
-           overflowTop,
-           overflowBottom,
+           overflowTop: seg.continuesBefore || seg.startMin < visibleStart,
+           overflowBottom: seg.continuesAfter || seg.endMin > visibleEnd,
            isMultiDay: pRecord.renderType === EventRenderType.MULTI_DAY_TIMED
          });
       }
     }
-    
+
     return bars;
   }
   

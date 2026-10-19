@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy, createEventDispatcher } from "svelte";
   import DateField from "src/ui/components/fields/DateField.svelte";
+  import { Icon } from "obsidian-svelte";
   import dayjs from "dayjs";
   import type { ProcessedRecord, ProcessedCalendarData } from "../../types";
   import { duplicateStore } from "src/lib/stores/duplicateStore";
@@ -150,7 +151,7 @@
           on:click={handleClose} 
           aria-label={$i18n.t('common.close')}
         >
-          ✕
+          <Icon name="x" size="sm" />
         </button>
       </header>
       
@@ -161,14 +162,14 @@
           on:click={handleScrollToToday}
           title={$i18n.t('views.calendar.duplicate.today')}
         >
-          📅 {$i18n.t("views.calendar.duplicate.today")}
+          <Icon name="calendar" size="sm" /> {$i18n.t("views.calendar.duplicate.today")}
         </button>
         
         <div class="toolbar-status">
           {#if selectedCount > 0}
             <span class="status-badge">{selectedCount}</span>
             {#if hasCollisions}
-              <span class="collision-warning">⚠️ {collisionCount}</span>
+              <span class="collision-warning"><Icon name="alert-triangle" size="xs" /> {collisionCount}</span>
             {/if}
           {/if}
         </div>
@@ -178,7 +179,7 @@
           on:click={handleConfirm}
           disabled={selectedCount === 0}
         >
-          ✓ {$i18n.t("views.calendar.duplicate.confirm") || "Дублировать"}
+          <Icon name="check" size="sm" /> {$i18n.t("views.calendar.duplicate.confirm")}
         </button>
       </div>
       
@@ -186,12 +187,12 @@
       {#if hasTimed && store.editedTime && sourceRecord.timeInfo}
         {@const editedTime = store.editedTime}
         <div class="time-row">
-          <span class="time-label">{$i18n.t("views.calendar.duplicate.time") || "Время"}:</span>
+          <span class="time-label">{$i18n.t("views.calendar.duplicate.time")}:</span>
           <div class="time-field">
             <DateField
               withTime
               value={editedTime.startTime.toDate()}
-              ariaLabel={$i18n.t("views.calendar.duplicate.time") || "Время"}
+              ariaLabel={$i18n.t("views.calendar.duplicate.time")}
               on:change={(e) => { if (e.detail) updateStartTime(e.detail.getHours(), e.detail.getMinutes()); }}
             />
           </div>
@@ -200,7 +201,7 @@
             <DateField
               withTime
               value={editedTime.endTime.toDate()}
-              ariaLabel={$i18n.t("views.calendar.duplicate.time") || "Время"}
+              ariaLabel={$i18n.t("views.calendar.duplicate.time")}
               on:change={(e) => { if (e.detail) updateEndTime(e.detail.getHours(), e.detail.getMinutes()); }}
             />
           </div>

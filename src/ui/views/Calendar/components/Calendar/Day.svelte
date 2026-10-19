@@ -188,6 +188,17 @@
     return bars.map((bar, i) => ({ ...bar, ...(slots[i] ?? { column: 0, totalColumns: 1 }) }));
   }
 
+  /**
+   * i3-calendar — side by side, a month cell holds this many bars: a phone's
+   * cell is ~3.4rem wide, so four columns were 8 px each. A bar past the
+   * limit is not drawn; the cell's "+N" opens the day with all of them.
+   */
+  $: maxBarColumns = isMobile ? 3 : 5;
+  $: shownBars = timedBars
+    .filter((b) => b.column < maxBarColumns)
+    .map((b) => ({ ...b, totalColumns: Math.min(b.totalColumns, maxBarColumns) }));
+  $: hiddenBarCount = timedBars.length - shownBars.length;
+
   // Get timed events with calculated positions for relative bars
   $: timedBars = (() => {
     if (!isVisible) return [];
@@ -212,7 +223,10 @@
         // Calculate percentages
         const topPercent = ((clampedStart - START_HOUR) / HOUR_RANGE) * 100;
         // v8.1: Reduced min height from 10% to 5% to prevent overlap of adjacent short events
-        // 5% of 14h range = ~42min visual minimum, still visible but less overlap
+        // 5% of 14h range = ~42min visual minimum, still visible but less overlap.
+        // i3-calendar: this is the ONLY minimum — the CSS min-heights (0.75rem,
+        // 1.25rem on touch) drew bars taller than the layout reserved, so bars
+        // it placed one under another overlapped.
         const MIN_HEIGHT_PERCENT = 5;
         const actualHeightPercent = ((clampedEnd - clampedStart) / HOUR_RANGE) * 100;
         const heightPercent = Math.max(MIN_HEIGHT_PERCENT, actualHeightPercent);
@@ -571,17 +585,18 @@
     <!-- CONTENT ZONE: Only TIMED events -->
     <!-- BARS MODE: Relative time bars (7:00-21:00 scale) -->
     {#if displayMode === 'bars' && timedBars.length > 0}
+      <!-- i3-calendar: the bars carry no title. In month and two-week view a
+           note is found by its colour and its place in the day's hours; the
+           title is the tooltip and the accessible name, and the day popup
+           lists every event by name. -->
       <div class="timed-bars-container" aria-label={$i18n.t("views.calendar.timed-events")}>
-        {#each timedBars as bar (bar.record.id)}
-          {@const gapPx = bar.totalColumns > 1 ? 4 : 0}
+        {#each shownBars as bar (bar.record.id)}
+          {@const gapPx = bar.totalColumns > 1 ? 2 : 0}
           {@const leftPercent = (bar.column / bar.totalColumns) * 100}
           {@const widthPercent = 100 / bar.totalColumns}
-          {@const isNarrow = bar.totalColumns > 1}
           {@const isLastColumn = bar.column === bar.totalColumns - 1}
           <button
             class="timed-bar"
-            class:narrow={isNarrow}
-            class:last-column={isLastColumn}
             type="button"
             style={`
               top: ${bar.topPercent}%;
@@ -592,13 +607,15 @@
             `}
             on:click={(e) => handleBarClick(e, bar.record)}
             title={`${bar.label}\n${bar.startTime} - ${bar.endTime}`}
-          >
-            <div class="timed-bar-content">
-              <span class="bar-label">{bar.label}</span>
-            </div>
-          </button>
+            aria-label={`${bar.label}, ${bar.startTime} - ${bar.endTime}`}
+          ></button>
         {/each}
       </div>
+      {#if hiddenBarCount > 0}
+        <button class="more-events-btn more-events-btn--bars" on:click|stopPropagation={() => onDayTap?.(date, records)}>
+          +{hiddenBarCount}
+        </button>
+      {/if}
     {:else if displayMode === 'list'}
       <!-- LIST MODE: Scrollable event list (Shift+wheel to scroll) -->
       <div class="event-scroll-area" bind:this={eventScrollArea} use:observeHeight={(h) => { scrollAreaHeight = h; }}>
@@ -812,117 +829,48 @@
     /* aspect-ratio: 1 / 2; — disabled, flex works better */
   }
   
+  /* i3-calendar: a bar is a colour segment at its true height — no padding,
+     no label, no min-height, so what is drawn is what the layout reserved. */
   .timed-bar {
     --bar-color: var(--interactive-accent);
     position: absolute;
     /* left and width are set via inline style for column layout */
     box-sizing: border-box;
-    background: color-mix(in srgb, var(--bar-color) 15%, transparent);
+    background: color-mix(in srgb, var(--bar-color) 45%, transparent);
     border: none;
     border-left: var(--ppp-border-width-thick, 0.125rem) solid var(--bar-color);
-    border-radius: var(--ppp-radius-md, 0.25rem);
-    padding: 0 0.25rem;
-    font-size: var(--ppp-font-size-xs, 0.6875rem);
-    line-height: 1;
+    border-radius: var(--ppp-radius-sm, 0.125rem);
+    padding: 0;
     overflow: hidden;
     cursor: pointer;
     transition: background var(--ppp-duration-fast, 0.1s) var(--ppp-ease-out, ease),
                 box-shadow var(--ppp-duration-fast, 0.1s) var(--ppp-ease-out, ease);
-    /* v8.0: Minimum height ensures bar is always visible */
-    min-height: 0.75rem;
     /* NO default margins - controlled via gap in width calculation */
     margin: 0;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
   }
 
-  .timed-bar-content {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    height: 100%;
-    overflow: hidden;
-    pointer-events: none;
+  .more-events-btn--bars {
+    align-self: flex-end;
+    flex: none;
   }
-  
+
   .timed-bar:hover {
-    background: color-mix(in srgb, var(--bar-color) 25%, transparent);
+    background: color-mix(in srgb, var(--bar-color) 65%, transparent);
     box-shadow: var(--shadow-s);
     z-index: 10;
   }
-  
+
   .timed-bar:active {
-    background: color-mix(in srgb, var(--bar-color) 35%, transparent);
+    background: color-mix(in srgb, var(--bar-color) 75%, transparent);
   }
   .timed-bar:focus-visible {
     outline: 0.125rem solid var(--bar-color);
-    outline-offset: 0.125rem;
+    outline-offset: 0.0625rem;
     z-index: 10;
   }
-  
-  /* Narrow bars (when multiple columns) - hide label if too narrow */
-  .timed-bar.narrow {
-    padding: 0.0625rem 0.125rem;
-  }
-  
-  .timed-bar.narrow .bar-label {
-    /* Hide text when bar is very narrow, show only colored bar */
-    font-size: 0.5625rem;
-    line-height: 1;
-  }
-  
-  /* When there are 3+ columns, hide label completely */
-  @container (max-width: 2.5rem) {
-    .bar-label {
-      display: none;
-    }
-  }
-  
-  .bar-label {
-    display: block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: var(--text-normal);
-    font-weight: 500;
-    /* Clamp to single line, hide if doesn't fit */
-    max-height: 1.1em;
-    line-height: 1.1;
-  }
-  
-  /* Touch device: ensure minimum tap target for timed bars */
-  @media (pointer: coarse) {
-    .timed-bar {
-      min-height: 1.25rem;
-    }
-  }
-  
-  /* D23 (17.10): a phone's month cell is ~3.4rem wide. A label does not fit a
-     bar there, and the coarse-pointer min-height (1.25rem) made bars the
-     layout placed one under another overlap — «ВизиВизи», text over text.
-     In a narrow cell the timeline is colour segments at their real height;
-     tapping the day lists the events, the tooltip names each bar. */
-  @container (max-width: 5em) {
-    .timed-bar {
-      min-height: 0.5em;
-      padding: 0;
-      border-radius: 0.2em;
-    }
-    .bar-label {
-      display: none;
-    }
-  }
 
-  /* Mobile responsive timed bars — v8.2: @container view-content */
-  @container view-content (max-width: 48rem) {
-    .timed-bar {
-      padding: 0.0625rem 0.1875rem;
-      font-size: var(--ppp-font-size-xs, 0.6875rem);
-      border-left-width: var(--ppp-border-width-thick, 0.125rem);
-    }
-    
-    .timed-bar:active {
-      background: color-mix(in srgb, var(--bar-color) 40%, transparent);
-    }
-  }
+  /* i3-calendar: the touch target is the day cell (a tap opens the day with
+     every event); a bar keeps its real height on touch screens too. */
 </style>
