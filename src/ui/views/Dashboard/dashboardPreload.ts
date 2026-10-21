@@ -81,7 +81,11 @@ export function collectReferencedSourceIds(
  */
 export type ExternalSourceState =
   | { readonly status: "loading" }
-  | { readonly status: "ready"; readonly frame: DataFrame }
+  /**
+   * i3-data: `writable` — the records are this dashboard's own project's notes
+   * (a block of it, read as a source), so edits through its api land right.
+   */
+  | { readonly status: "ready"; readonly frame: DataFrame; readonly writable?: boolean }
   | { readonly status: "unavailable" }
   | { readonly status: "error"; readonly message: string };
 

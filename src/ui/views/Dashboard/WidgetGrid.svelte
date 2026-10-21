@@ -1,11 +1,20 @@
 <script lang="ts">
   /**
-   * WidgetGrid — stack-mode renderer for the dashboard widget list.
+   * WidgetGrid — the renderer of the dashboard widget list.
    *
-   * Owns three render branches: empty state, DnD-enabled stack and read-only
-   * stack. B7: the dashboard is a page — blocks top to bottom, whatever the
+   * Owns three render branches: empty state, DnD-enabled page and read-only
+   * page. B7: the dashboard is a page — blocks in list order, whatever the
    * stored `layoutMode` says ("free" configs keep their JSON and render here
    * too). The one way in is the «+» before each block and at the end.
+   *
+   * i3-dash: the page has two shapes, chosen by the width of this canvas (not
+   * the device; layout/measureWidth.ts):
+   *  - wide → TILES: an N-column grid; a block spans its stored `layout.w`
+   *    (twelfths) × `layout.h` (rows), is resized from its corner handle with
+   *    snapping to cells and reordered by its grip; places follow list order
+   *    (layout/tileGrid.ts). Content scrolls inside its tile.
+   *  - narrow → STACK, as before, plus a sticky jump bar of block titles
+   *    (layout/BlockJumpBar.svelte) so a block below a tall one is one tap away.
    */
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import type { ExternalSourceState } from "./dashboardPreload";
@@ -15,20 +24,30 @@
   import type { WidgetDefinition, DatabaseViewConfig, WidgetType } from "./types";
 
   import { i18n } from "src/lib/stores/i18n";
-  import { createEventDispatcher } from "svelte";
+  import { createEventDispatcher, onDestroy } from "svelte";
   import { dragHandleZone, SOURCES, TRIGGERS, type DndEvent } from "svelte-dnd-action";
   import { Icon } from "obsidian-svelte";
   import { ignoreHostSwipe } from "src/ui/actions/ignoreHostSwipe";
   import { createReorderCollapse, type ReorderCollapse } from "./reorderCollapse";
+  import { measureWidth } from "./layout/measureWidth";
+  import { columnsFor, GAP_EM, nudgeSpan, packTiles, ROW_EM, rowsFor, spanFor, tileArea, tileSteps, withResized, type TileSpan } from "./layout/tileGrid";
+  import { startTileResize } from "./layout/tileResize";
+  import { jumpItems, jumpToBlock } from "./layout/blockJump";
+  import { createBlockProperties, provideBlockProperties } from "./layout/blockProperties";
 
   import WidgetHost from "./widgets/WidgetHost.svelte";
   import DashboardBlockPalette from "./widgets/DashboardBlockPalette.svelte";
   import EmptyState from "src/ui/components/EmptyState/EmptyState.svelte";
+  import BlockJumpBar from "./layout/BlockJumpBar.svelte";
 
   const dispatch = createEventDispatcher<{
     insert: { type: WidgetType; index: number };
     consider: DndEvent<WidgetDefinition>;
     finalize: DndEvent<WidgetDefinition>;
+    /** i3-dash: a resize — the whole list, positions repacked; the canvas saves it as is. */
+    layout: WidgetDefinition[];
+    /** i3-dash: «Properties» picked in a block menu (layout/blockProperties.ts). */
+    openProperties: void;
   }>();
 
   export let widgets: WidgetDefinition[];
@@ -50,6 +69,78 @@
   /** #136: per-source state, so a block can tell "loading" from "gone". */
   export let sourceStates: ReadonlyMap<string, ExternalSourceState> = new Map();
   export let project: ProjectDefinition;
+
+  provideBlockProperties(createBlockProperties(() => project.name, () => dispatch("openProperties")));
+
+  // ── i3-dash: tiles or stack, from this canvas's own width ──
+  let canvasEl: HTMLElement | null = null;
+  let widthPx = 0;
+  let fontPx = 16;
+  /** 0 = stack; otherwise the grid's column count. */
+  let columns = 0;
+  function onMeasure(width: number, font: number) {
+    widthPx = width;
+    fontPx = font;
+    columns = columnsFor(width / font, columns);
+  }
+  $: tileMode = columns > 0;
+  /** A resize in progress: the one block whose span is not its stored one yet. */
+  let resizing: { id: string; span: TileSpan } | null = null;
+  $: tileList = canDnd ? dndWidgets : widgets;
+  $: placements = tileMode ? packTiles(tileList.map((w) => spanOf(w, resizing, columns)), columns) : [];
+  /** A collapsed tile is its header: one row. A tile being resized shows the span it snaps to. */
+  function spanOf(w: WidgetDefinition, live: { id: string; span: TileSpan } | null, cols: number): TileSpan {
+    if (live && live.id === w.id) return live.span;
+    return { cols: spanFor(w.layout?.w, cols), rows: w.collapsed ? 1 : rowsFor(w.layout?.h) };
+  }
+  // Set as single properties (style: directives), never as a whole style
+  // attribute: reorderCollapse and the drag library write inline styles too.
+  $: tileColumns = tileMode ? String(columns) : undefined;
+  $: tileRow = tileMode ? `${ROW_EM}em` : undefined;
+  $: tileGap = tileMode ? `${GAP_EM}em` : undefined;
+  $: areas = placements.map((p) => tileArea(p));
+  /** Tiles get a resize handle on an editable page; pinned and collapsed ones do not (markup). */
+  $: canResize = tileMode && !readonly;
+
+  function commitSpan(id: string, from: TileSpan, to: TileSpan) {
+    if (from.cols === to.cols && from.rows === to.rows) return;
+    dispatch("layout", withResized(widgets, id, to, columns));
+  }
+
+  let stopResize: (() => void) | null = null;
+  onDestroy(() => stopResize?.());
+
+  function startResize(e: PointerEvent, widget: WidgetDefinition, index: number) {
+    const start = placements[index];
+    if (e.button !== 0 || !start || !canvasEl) return;
+    e.preventDefault();
+    e.stopPropagation();
+    stopResize?.();
+    const from: TileSpan = { cols: start.cols, rows: start.rows };
+    resizing = { id: widget.id, span: from };
+    stopResize = startTileResize({
+      win: canvasEl.ownerDocument.defaultView ?? window,
+      startX: e.clientX, startY: e.clientY, from, columns,
+      steps: tileSteps(widthPx, fontPx, columns),
+      onPreview: (span) => (resizing = { id: widget.id, span }),
+      onEnd: (span) => {
+        stopResize = null;
+        resizing = null;
+        if (span) commitSpan(widget.id, from, span);
+      },
+    });
+  }
+
+  function nudgeResize(e: KeyboardEvent, widget: WidgetDefinition, index: number) {
+    const start = placements[index];
+    const next = start ? nudgeSpan(start, e.key, columns) : null;
+    if (!start || !next) return;
+    e.preventDefault();
+    commitSpan(widget.id, start, next);
+  }
+
+  // ── i3-dash: the narrow page's jump bar ──
+  $: jumpList = !tileMode && widgets.length > 1 ? jumpItems(widgets) : [];
 
   // ── ios-g1 G1: widgets drag from the grip only ──
   //
@@ -83,7 +174,9 @@
       if (!(e.target instanceof Element) || !e.target.closest(GRIP_SELECTOR)) return;
       pressed = true;
       dragStarted = false;
-      tiles.begin(e.target);
+      // i3-dash: tiles have a bounded height already; collapsing them to their
+      // headers would only make the grid jump under the pointer.
+      if (!tileMode) tiles.begin(e.target);
     }
     function onConsider(e: Event) {
       // A real `consider` means a drag is under way; the library itself
@@ -156,12 +249,23 @@
     </svelte:fragment>
   </EmptyState>
   <slot name="empty-extra" />
-{:else if canDnd}
+{:else}
+  {#if jumpList.length > 0}
+    <BlockJumpBar items={jumpList} on:jump={(e) => jumpToBlock(canvasEl, e.detail)} />
+  {/if}
+  {#if canDnd}
   <!-- ios-g1: G1 grip-only drag (see the script), G2 interior swipes stay in
        the dashboard instead of opening Obsidian's drawers. -->
   <div
-    class="ppp-database-canvas ppp-database-canvas--stack"
+    bind:this={canvasEl}
+    class="ppp-database-canvas"
+    class:ppp-database-canvas--stack={!tileMode}
+    class:ppp-database-canvas--tiles={tileMode}
     class:ppp-database-canvas--reordering={reordering}
+    style:--ppp-tile-columns={tileColumns}
+    style:--ppp-tile-row={tileRow}
+    style:--ppp-tile-gap={tileGap}
+    use:measureWidth={onMeasure}
     use:dragHandleZone={{ items: dndWidgets, flipDurationMs: 200, type: "widgets" }}
     use:disarmAfterGripTap
     use:ignoreHostSwipe
@@ -169,10 +273,68 @@
     on:finalize={onFinalize}
   >
     {#each dndWidgets as widget, index (widget.id)}
-      <div class="ppp-block-slot">
-      <DashboardBlockPalette variant="between" {index} currentWidgets={dndWidgets} on:insert />
+      <div class="ppp-block-slot" style:grid-column={areas[index]?.column} style:grid-row={areas[index]?.row}>
+      <!-- i3-dash: in tiles a block is inserted with the «+» after the grid;
+           a «+» inside every tile would sit on top of its content. -->
+      {#if !tileMode}<DashboardBlockPalette variant="between" {index} currentWidgets={dndWidgets} on:insert />{/if}
       <WidgetHost
         reorderable={!widget.layout?.locked}
+        {widget}
+        frame={widget.type === "filter-tabs" ? frame : displayFrame}
+        {api}
+        {readonly}
+        {getRecordColor}
+        {fields}
+        {tableConfig}
+        isPrimaryDataTable={widget.id === primaryDataTableId}
+        {fieldPresets}
+        {activeFieldPresetId}
+        {availableSources}
+        {availableWidgets}
+        {rightFrames}
+        {sourceStates}
+        {project}
+        on:filter
+        on:configChange
+        on:tableConfigChange
+        on:fieldPresetsChange
+        on:removeWidget
+        on:duplicateWidget
+      />
+      {#if canResize && !widget.layout?.locked && !widget.collapsed}
+        <!-- i3-dash: drag the corner, the tile snaps to whole cells; arrow keys
+             change it by one cell. Outside the host, so a reorder collapse that
+             hides a tile's content leaves it alone. -->
+        <button
+          type="button"
+          class="ppp-tile-resize clickable-icon"
+          aria-label={$i18n.t("views.dashboard.widget.resize", { defaultValue: "Resize the block: drag, or use the arrow keys" })}
+          title={$i18n.t("views.dashboard.widget.resize", { defaultValue: "Resize the block: drag, or use the arrow keys" })}
+          on:pointerdown={(e) => startResize(e, widget, index)}
+          on:keydown={(e) => nudgeResize(e, widget, index)}
+        ><Icon name="move-diagonal-2" size="sm" /></button>
+      {/if}
+      </div>
+    {/each}
+  </div>
+  <div class="ppp-canvas-stack-add">
+    <DashboardBlockPalette index={dndWidgets.length} currentWidgets={dndWidgets} on:insert />
+  </div>
+  {:else}
+  <div
+    bind:this={canvasEl}
+    class="ppp-database-canvas"
+    class:ppp-database-canvas--stack={!tileMode}
+    class:ppp-database-canvas--tiles={tileMode}
+    style:--ppp-tile-columns={tileColumns}
+    style:--ppp-tile-row={tileRow}
+    style:--ppp-tile-gap={tileGap}
+    use:measureWidth={onMeasure}
+    use:ignoreHostSwipe
+  >
+    {#each widgets as widget, index (widget.id)}
+      <div class="ppp-block-slot" style:grid-column={areas[index]?.column} style:grid-row={areas[index]?.row}>
+      <WidgetHost
         {widget}
         frame={widget.type === "filter-tabs" ? frame : displayFrame}
         {api}
@@ -198,37 +360,7 @@
       </div>
     {/each}
   </div>
-  <div class="ppp-canvas-stack-add">
-    <DashboardBlockPalette index={dndWidgets.length} currentWidgets={dndWidgets} on:insert />
-  </div>
-{:else}
-  <div class="ppp-database-canvas ppp-database-canvas--stack" use:ignoreHostSwipe>
-    {#each widgets as widget (widget.id)}
-      <WidgetHost
-        {widget}
-        frame={widget.type === "filter-tabs" ? frame : displayFrame}
-        {api}
-        {readonly}
-        {getRecordColor}
-        {fields}
-        {tableConfig}
-        isPrimaryDataTable={widget.id === primaryDataTableId}
-        {fieldPresets}
-        {activeFieldPresetId}
-        {availableSources}
-        {availableWidgets}
-        {rightFrames}
-        {sourceStates}
-        {project}
-        on:filter
-        on:configChange
-        on:tableConfigChange
-        on:fieldPresetsChange
-        on:removeWidget
-        on:duplicateWidget
-      />
-    {/each}
-  </div>
+  {/if}
 {/if}
 
 <style>
@@ -246,6 +378,81 @@
     display: flex;
     flex-direction: column;
     gap: var(--ppp-space-md, 0.5rem);
+  }
+
+  /* i3-dash: the jump bar's target lands below the sticky bar, not under it. */
+  .ppp-database-canvas--stack :global(.ppp-widget-host) {
+    scroll-margin-top: 3em;
+  }
+
+  /* i3-dash: tiles. Columns, row and gap come from tileGrid.ts through the
+     inline custom properties, so the pointer math and the drawing agree.
+     A tile's height is its rows; its content scrolls inside it (the shell's
+     content box is the scroller). Nothing here contains overscroll: at the end
+     of a tile's content the wheel goes on to the page. */
+  .ppp-database-canvas--tiles {
+    display: grid;
+    grid-template-columns: repeat(var(--ppp-tile-columns), minmax(0, 1fr));
+    grid-auto-rows: var(--ppp-tile-row);
+    gap: var(--ppp-tile-gap);
+  }
+
+  .ppp-database-canvas--tiles .ppp-block-slot {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .ppp-database-canvas--tiles .ppp-block-slot > :global(.ppp-widget-host) {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .ppp-database-canvas--tiles :global(.ppp-widget-content) {
+    min-height: 0;
+  }
+
+  /* The corner handle: over the tile's bottom-right corner, em-sized because
+     it lives inside the canvas container. `touch-action: none` gives a pen or
+     finger drag to the resize instead of a pan. */
+  .ppp-tile-resize {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 1.5em;
+    height: 1.5em;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-s);
+    box-shadow: none;
+    cursor: nwse-resize;
+    touch-action: none;
+  }
+
+  .ppp-tile-resize:focus-visible {
+    outline: 0.125em solid var(--interactive-accent);
+    color: var(--text-normal);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .ppp-tile-resize:hover {
+      color: var(--text-normal);
+      background: var(--background-modifier-hover);
+    }
+  }
+
+  @media (pointer: coarse) {
+    .ppp-tile-resize {
+      width: var(--ppp-touch-target-min);
+      height: var(--ppp-touch-target-min);
+    }
   }
 
   /* Stack-canvas add row — always visible at list end */
@@ -268,7 +475,8 @@
   }
 
   /* DG-8 drop target: dashed outline + subtle fill on svelte-dnd-action placeholder */
-  :global(.ppp-database-canvas--stack [data-is-dnd-shadow-item-hint]) {
+  :global(.ppp-database-canvas--stack [data-is-dnd-shadow-item-hint]),
+  :global(.ppp-database-canvas--tiles [data-is-dnd-shadow-item-hint]) {
     border: 0.125rem dashed var(--interactive-accent);
     border-radius: 0.375rem;
     background: rgba(var(--interactive-accent-rgb, 122, 104, 238), 0.06);

@@ -1,0 +1,40 @@
+/**
+ * i3-props — the block's writes run one after another, in the order asked.
+ *
+ * The block used to guard its writer with a `writing` flag and return early
+ * while it was set, so a pin pressed during a value write — or a second chip
+ * removed before the first had landed — was silently dropped. Each write is
+ * now queued behind the one in flight. A failed write is reported and does
+ * not stop the ones after it.
+ */
+
+export interface WriteQueue {
+  /** Run `task` after every task queued before it; resolves when it is done. */
+  run(task: () => Promise<unknown>): Promise<void>;
+  /** Tasks queued or running. */
+  pending(): number;
+}
+
+export function createWriteQueue(onBusyChange?: (busy: boolean) => void): WriteQueue {
+  let tail: Promise<void> = Promise.resolve();
+  let count = 0;
+  return {
+    run(task) {
+      count += 1;
+      if (count === 1) onBusyChange?.(true);
+      const next = tail.then(async () => {
+        try {
+          await task();
+        } catch (error) {
+          console.error("[Projects+] note properties: write failed", error);
+        } finally {
+          count -= 1;
+          if (count === 0) onBusyChange?.(false);
+        }
+      });
+      tail = next;
+      return next;
+    },
+    pending: () => count,
+  };
+}

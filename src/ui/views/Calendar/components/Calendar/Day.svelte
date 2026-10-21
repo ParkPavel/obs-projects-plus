@@ -851,6 +851,15 @@
     touch-action: manipulation;
   }
 
+  /* i3-calendar: styles.css gives every plugin button a 2.75rem minimum on a
+     coarse pointer (.workspace-leaf-content[…] button, 0-2-1). That made each
+     bar 44 px tall on a phone, over the bars below it; this selector (0-3-0
+     with Svelte's class) outranks it, so a bar keeps its layout height. */
+  .timed-bars-container .timed-bar {
+    min-height: 0;
+    min-width: 0;
+  }
+
   .more-events-btn--bars {
     align-self: flex-end;
     flex: none;

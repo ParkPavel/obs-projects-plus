@@ -15,6 +15,7 @@
 
   import { createEventDispatcher } from "svelte";
   import { computeHostFrames } from "./hostFrames";
+  import { liveBlockSources, mergeBlockSources } from "./blockSources";
   import { frameParts } from "src/lib/stores/dataframe";
   import { projectSourceOptions } from "src/lib/datasources/namedSource";
   import { getConfigPanel } from "./configPanelRegistry";
@@ -71,14 +72,17 @@
   // ── Frame math ─ all of it, in one pure function (see hostFrames.ts) ──
   // #184: the project's own sources — what a block may point at instead of the merge.
   $: sourceOptions = projectSourceOptions(project);
-  $: frames = computeHostFrames({ widget, frame, fields, pipeline: currentPipeline, rightFrames,
-        sourceStates, parts: $frameParts, sources: sourceOptions.sources });
+  const liveBlocks = liveBlockSources(); // i3-data: blocks read as sources, live off the canvas registry
+  $: liveBlocks.watch(widget, project);
+  $: io = mergeBlockSources(sourceStates, rightFrames, $liveBlocks, availableSources);
+  $: frames = computeHostFrames({ widget, frame, fields, pipeline: currentPipeline, rightFrames: io.rightFrames,
+        sourceStates: io.sourceStates, parts: $frameParts, sources: sourceOptions.sources });
   $: ({ namedSource, scope, transformedFrame, pipelineInputRowCount, chartConfig, statsConfig,
         chartRightFrame, chartSeriesFrames, dbCall, pipelineSource, otherProject } = frames);
 
   $: ctx = buildRenderContext({
     widget, frame, transformedFrame, api, readonly, getRecordColor, fields, fieldPresets,
-    activeFieldPresetId, availableSources, availableWidgets: availableWidgets.filter((w) => w.id !== widget.id), project, tableConfig, isPrimaryDataTable,
+    activeFieldPresetId, availableSources: io.catalogue, availableWidgets: availableWidgets.filter((w) => w.id !== widget.id), project, tableConfig, isPrimaryDataTable,
     pipelineStepCount: currentPipeline.steps.length, pipelineInputRowCount, chartConfig,
     statsConfig, chartRightFrame, chartSeriesFrames, dbCall, scopeApplied: scope.applied, primaryActionSignal,
     namedSource, otherProject,
@@ -141,7 +145,7 @@
   <svelte:fragment slot="actions">
     <WidgetPrimaryAction action={primaryAction} on:primaryAction={handlePrimaryAction} />
     <!-- B7: one «⋯» menu. #194: `hasCog` stays false for `data-table`; data scope is the second reason. -->
-    <WidgetHeaderActions {readonly} {collapsed} isDatabase={widget.type === "database-call"}
+    <WidgetHeaderActions {readonly} {collapsed} {widget} isDatabase={widget.type === "database-call"}
       hasCog={(panelDescriptor.hasCog && (panelEntry !== undefined || widget.type === "database-call")) || hasDataScope(widget.type)}
       hasPipeline={hasPipelineButton(widget.type)} pipelineStepCount={currentPipeline.steps.length} locked={widget.layout.locked ?? false}
       on:toggleConfig={toggleConfig} on:togglePipeline={(e) => openPipeline(e.detail)}
@@ -167,7 +171,7 @@
     {#if showConfig && widget.type === "database-call"}
       <DatabaseCallSettings
         sourceConfig={dbCall.sourceConfig}
-        {availableSources}
+        availableSources={io.catalogue}
         availableWidgets={availableWidgets.filter((w) => w.id !== widget.id)}
         linkedSelection={dbCall.linkedSelection}
         linkedSelectionValidation={ctx.dbCallLinkedSelectionValidation}
@@ -192,9 +196,9 @@
         pipeline={currentPipeline}
         fields={pipelineSource.fields}
         source={pipelineSource}
-        {rightFrames}
+        rightFrames={io.rightFrames}
         sourceState={dbCall.source}
-        {availableSources}
+        availableSources={io.catalogue}
         intent={pipelineIntent}
         on:apply={(e) => patchWidget({ transform: e.detail })}
         on:save={handlePipelineSave}

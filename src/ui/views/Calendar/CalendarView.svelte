@@ -15,7 +15,7 @@
   import { formatDateForProject, getFilterValuesFromConditions } from "src/lib/helpers";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
-  import { activateRecord, openRecord, modeFromNewLeaf, PLAIN_MODE } from "src/lib/record/openRecord";
+  import { activateRecord, openRecord, modeFromNewLeaf } from "src/lib/record/openRecord";
   import { settings } from "src/lib/stores/settings";
   import { isMobileDevice } from "src/lib/stores/ui";
   import { agendaDrawer, close as closeAgendaDrawer } from "src/lib/stores/agendaDrawer";
@@ -27,7 +27,6 @@
     ViewLayout,
   } from "src/ui/components/Layout";
   import { CreateNoteModal } from "src/ui/modals/createNoteModal";
-  import { EditNoteModal } from "src/ui/modals/editNoteModal";
   import {
     getRecordColorContext,
   } from "src/ui/views/helpers";
@@ -67,8 +66,6 @@
    * hardcoded Russian shown to every locale; the words now come from the
    * registry and the Russian lives in ru.json where it belongs.
    */
-  const RENAME_FAILED = "PPP-301";
-  const EDITOR_SAVE_FAILED = "PPP-302";
   const DELETE_FAILED = "PPP-303";
   const DUPLICATE_FAILED = "PPP-304";
   const CHECK_FAILED = "PPP-305";
@@ -853,9 +850,13 @@
   // Final dateField: only startDateField (creation date is independent)
   $: dateField = startDateField;
   
+  // i3-calendar: found the way the processor finds the end it draws
+  // (processor.ts: the configured name, then endDate / end / due, whatever
+  // type was detected): an `endDate:` still empty, or an `end` property, is
+  // not a Date-typed field, and a resize of its strip had nowhere to write.
   $: endDateField =
-    resolveFieldByName(dateFields, config?.endDateField) ??
-    dateFields.find((field) => field.name === "endDate");
+    resolveFieldByName(fields.filter((f) => !f.repeated), config?.endDateField) ??
+    ["endDate", "end", "due"].map((n) => fields.find((f) => !f.repeated && f.name === n)).find((f) => f !== undefined);
 
   $: booleanField = resolveFieldByName(fields, config?.checkField, DataFieldType.Boolean) ??
     fields.find((field) => config?.checkField === field.name);
@@ -964,60 +965,12 @@
     void openRecord({ id: record.id }, modeFromNewLeaf(openMode), { app: app_instance });
   }
   
+  // i3-calendar: a record's settings are its properties block in the peek —
+  // the same YAML view a long press opens — not the older EditNoteModal,
+  // which showed a different, partial set of fields.
   function handleDayPopupRecordSettings(record: DataRecord) {
     showDayPopup = false;
-    const app_instance = get(app);
-    if (dataReadOnly) {
-      void openRecord({ id: record.id }, PLAIN_MODE, { app: app_instance });
-      return;
-    }
-    new EditNoteModal(
-      app_instance, 
-      fields, 
-      async (updatedRecord) => {
-        try {
-          // #161 — mirror the change locally only if it actually reached the
-          // file. `updateRecord` rolls its own store back and tells the user on
-          // failure; copying the value in here anyway would put it straight
-          // back on screen.
-          const saved = await api.updateRecord(updatedRecord, fields);
-          if (saved) {
-            // Force local update to trigger calendar re-render
-            frame = {
-              ...frame,
-              records: frame.records.map(r => r.id === updatedRecord.id ? updatedRecord : r)
-            };
-          }
-        } catch (e) {
-          calendarLogger.error('Failed to update record from modal', e);
-          new Notice(noticeFor(EDITOR_SAVE_FAILED));
-        }
-      },
-      record,
-      records,
-      // v3.0.8: Unified note open with modifier-based navigation
-      (openMode) => {
-        void openRecord({ id: record.id }, modeFromNewLeaf(openMode), { app: app_instance });
-      },
-      // v3.0.1: Rename note callback
-      async (newName: string) => {
-        try {
-          const file = app_instance.vault.getAbstractFileByPath(record.id);
-          if (file && 'parent' in file) {
-            const newPath = file.parent?.path 
-              ? `${file.parent.path}/${newName}.md`
-              : `${newName}.md`;
-            await app_instance.fileManager.renameFile(file as any, newPath);
-            new Notice(get(i18n).t("views.calendar.notices.renamed", { defaultValue: "Note renamed: {{name}}", name: newName }));
-          }
-        } catch (e) {
-          calendarLogger.error('Failed to rename note', e);
-          new Notice(noticeFor(RENAME_FAILED));
-        }
-      },
-      // v3.0.4: Autosave setting from project
-      project.autosave ?? true
-    ).open();
+    handleRecordClick(record);
   }
   
   async function handleDayPopupRecordDelete(record: DataRecord) {
@@ -1419,10 +1372,16 @@
       // (dnd/recordChangeUpdates.ts): it respects the time model, keeps the
       // duration on a move and writes the end time with or without an end-date field.
       const endRawValue = endDateField?.name ? record.values[endDateField.name] : undefined;
+      // i3-calendar: a strip stretched over more days needs somewhere to keep
+      // its end. Without an end field the builder dropped `options.endDate`
+      // and only the start was written, so a resize never saved. The end
+      // goes to the configured name or `endDate`, which the processor reads.
+      const spansDays = !!options?.endDate && !options.endDate.isSame(targetDate, 'day');
+      const endFieldName = endDateField?.name ?? (spansDays ? (config?.endDateField || 'endDate') : undefined);
       const built = buildRecordChangeUpdates({
         values: record.values,
         dateFieldName: dateField.name,
-        endDateFieldName: endDateField?.name,
+        endDateFieldName: endFieldName,
         startTimeFieldName,
         endTimeFieldName,
         targetDate,

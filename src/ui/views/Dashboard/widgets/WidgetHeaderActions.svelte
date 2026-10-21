@@ -11,8 +11,11 @@
   import { i18n } from "src/lib/stores/i18n";
   import { openContextMenu } from "src/lib/contextMenu";
   import { buildWidgetMenuEntries, type PipelineIntent } from "./widgetMenu";
+  import { useBlockProperties, type PropertiesTarget } from "../layout/blockProperties";
 
   export let readonly: boolean;
+  /** i3-dash: the block, so the menu can offer «Properties» of the source it reads. */
+  export let widget: PropertiesTarget | undefined = undefined;
   /** Widget type has a config panel (configPanelRegistry hasCog). */
   export let hasCog: boolean;
   /** Widget type supports the transform pipeline. */
@@ -34,9 +37,19 @@
     rename: void;
   }>();
 
+  // i3-dash: provided by the dashboard grid; absent when the header is rendered on its own.
+  const blockProperties = useBlockProperties();
+
+  function propertiesEntry(): { properties?: { label: string; open: () => void } } {
+    const source = widget && blockProperties ? blockProperties.sourceFor(widget) : null;
+    if (source === null || !blockProperties) return {};
+    const label = $i18n.t("views.dashboard.widget.menu-properties", { defaultValue: "Properties of «{{source}}»…", source });
+    return { properties: { label, open: blockProperties.open } };
+  }
+
   export function menuEntries() {
     return buildWidgetMenuEntries({
-      hasCog, isDatabase, hasPipeline, pipelineStepCount, locked, collapsed,
+      hasCog, isDatabase, hasPipeline, pipelineStepCount, locked, collapsed, ...propertiesEntry(),
       t: (k, d) => $i18n.t(k, { defaultValue: d }),
       onRename: () => dispatch("rename"),
       onConfigure: () => dispatch("toggleConfig"),

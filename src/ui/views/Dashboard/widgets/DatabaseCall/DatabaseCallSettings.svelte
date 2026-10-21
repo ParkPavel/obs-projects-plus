@@ -103,8 +103,9 @@
   <div class="ppp-cfg-list">
     <div class="ppp-cfg-item">
       <label class="ppp-cfg-field">
-        {$i18n.t("views.dashboard.database-call.settings.source", {
-          defaultValue: "Source project",
+        <!-- i3-data: the source catalogue — projects, their sources and saved selections, and this dashboard's blocks. -->
+        {$i18n.t("views.dashboard.database-call.settings.source-any", {
+          defaultValue: "Source",
         })}
         <select value={currentProjectId} on:change={handleSourceChange}>
           <option value="">
@@ -116,7 +117,7 @@
             <option value={src.id}>{src.name}</option>
           {/each}
         </select>
-        <span class="ppp-cfg-hint">{$i18n.t("views.dashboard.database-call.settings.source-hint", { defaultValue: "By default the block shows this view's records. Pick another project to show its data instead." })}</span>
+        <span class="ppp-cfg-hint">{$i18n.t("views.dashboard.database-call.settings.source-hint-any", { defaultValue: "By default the block shows this view's records. Pick another project, a saved selection, or another block of this page — its filtered rows, kept up to date." })}</span>
       </label>
     </div>
     {#if currentProjectId === ""}

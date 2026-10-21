@@ -55,6 +55,15 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   // Wave 2 mechanisms enter at measured sizes, existing ceilings never rise.
   { file: "ui/views/Dashboard/dashboardReorder.ts", maxLines: 15 },
   { file: "ui/views/Dashboard/dashboardReveal.ts", maxLines: 19 },
+  // i3-dash: the tile grid / jump bar / block «Properties» modules enter at
+  // their measured sizes; DashboardCanvas paid for its two new lines inside
+  // its own ceiling.
+  { file: "ui/views/Dashboard/layout/tileGrid.ts", maxLines: 166 },
+  { file: "ui/views/Dashboard/layout/tileResize.ts", maxLines: 47 },
+  { file: "ui/views/Dashboard/layout/measureWidth.ts", maxLines: 34 },
+  { file: "ui/views/Dashboard/layout/blockProperties.ts", maxLines: 53 },
+  { file: "ui/views/Dashboard/layout/blockJump.ts", maxLines: 29 },
+  { file: "ui/views/Dashboard/layout/BlockJumpBar.svelte", maxLines: 90 },
   { file: "ui/views/Dashboard/widgets/Stats/statsDefaults.ts", maxLines: 18 },
   { file: "ui/views/Dashboard/widgets/Stats/statsSparkline.ts", maxLines: 35 },
   { file: "ui/views/Dashboard/widgets/Stats/StatsWidget.svelte", maxLines: 100 },

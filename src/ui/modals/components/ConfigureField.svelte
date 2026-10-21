@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { baseRefOptions } from "src/lib/relations/baseRef";
+  import { sourceCatalogue } from "src/lib/relations/baseRef";
   import {
     Button,
     ModalButtonGroup,
@@ -303,8 +303,11 @@
 
   $: projectOptions = [
     { label: $i18n.t("modals.field.configure.relation.no-project"), value: "" },
-    // D19: a project's own sources are bases too.
-    ...baseRefOptions(effectiveProjects).map((o) => ({
+    // D19: a project's own sources are bases too. i3-data: and every
+    // dashboard block, as a filtered source (the one source catalogue).
+    ...sourceCatalogue(effectiveProjects, {
+      blockLabel: (title) => $i18n.t("views.dashboard.source-catalogue.block", { defaultValue: "Block «{{title}}» (filtered)", title }),
+    }).map((o) => ({
       label:
         o.value === currentProjectId
           ? `${o.label} ${$i18n.t("modals.field.configure.relation.this-project-suffix", { defaultValue: "(this project)" })}`

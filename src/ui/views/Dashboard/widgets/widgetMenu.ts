@@ -28,6 +28,8 @@ export function buildWidgetMenuEntries(opts: WidgetMenuHandlers & {
   locked: boolean;
   collapsed: boolean;
   t: (key: string, defaultValue: string) => string;
+  /** i3-dash: the schema dialog of the source this block reads, already labelled with it (layout/blockProperties.ts). */
+  properties?: { label: string; open: () => void };
 }): ContextMenuEntry[] {
   const { t, locked, collapsed, pipelineStepCount } = opts;
   const K = "views.dashboard.widget.";
@@ -35,6 +37,7 @@ export function buildWidgetMenuEntries(opts: WidgetMenuHandlers & {
     { title: t(`${K}menu-rename`, "Rename"), icon: "pencil", onClick: opts.onRename },
   ];
   if (opts.hasCog) e.push({ title: t(`${K}menu-source`, "Source and settings…"), icon: "database", onClick: opts.onConfigure });
+  if (opts.properties) e.push({ title: opts.properties.label, icon: "settings-2", onClick: opts.properties.open });
   if (opts.isDatabase) e.push({ title: t(`${K}menu-filter`, "Filter for all views of this block…"), icon: "filter", onClick: opts.onFilter });
   // i2-model (N27): the data-shaping steps sit behind one «Дополнительно…»
   // (the step editor offers group, pivot and combine). The menu was ten

@@ -13,7 +13,7 @@
   } from "obsidian-svelte";
   import FormulaEditor from "src/ui/components/FormulaEditor/FormulaEditor.svelte";
   import { isEmptyFieldValue } from "src/lib/relations/declaredFieldTypes";
-  import { baseRefOptions } from "src/lib/relations/baseRef";
+  import { sourceCatalogue } from "src/lib/relations/baseRef";
   import {
     FIELD_TYPE_GROUPS,
     ROLLUP_QUICK_FUNCTIONS,
@@ -308,10 +308,15 @@
   // target picker silently empty.
   $: effectiveProjects =
     availableProjects.length > 0 ? availableProjects : $settingsStore.projects;
+  // i3-data: the one source catalogue — projects, their sources and saved
+  // selections, and every dashboard block as a filtered source.
+  $: catalogue = sourceCatalogue(effectiveProjects, {
+    blockLabel: (title) => $i18n.t("views.dashboard.source-catalogue.block", { defaultValue: "Block «{{title}}» (filtered)", title }),
+  });
   $: projectOptions = [
     { label: $i18n.t("modals.field.configure.relation.no-project"), value: "" },
     // D19: a project's own sources are bases too («Кабинет · Активные клиенты»).
-    ...baseRefOptions(effectiveProjects).map((o) => ({
+    ...catalogue.map((o) => ({
       label:
         o.value === currentProjectId
           ? `${o.label} ${$i18n.t("modals.field.configure.relation.this-project-suffix")}`
@@ -337,7 +342,7 @@
   const CREATE_PREFIX = "create:";
   let pendingRelation: { name: string; targetProjectId: string; projectName: string } | null = null;
   $: createRelationOptions = onCreateRelation
-    ? baseRefOptions(effectiveProjects)
+    ? catalogue
         .filter((o) => o.value !== currentProjectId)
         .map((o) => ({
           label: $i18n.t("modals.field.create.flow.create-relation-option", {
@@ -512,7 +517,7 @@
   function handleRollupSourceChange(e: CustomEvent<string>) {
     if (e.detail.startsWith(CREATE_PREFIX)) {
       const projectId = e.detail.slice(CREATE_PREFIX.length);
-      const target = baseRefOptions(effectiveProjects).find((o) => o.value === projectId);
+      const target = catalogue.find((o) => o.value === projectId);
       if (!target) return;
       const name = newRelationFieldName(target.label, [...existingFields.map((f) => f.name), field.name]);
       pendingRelation = { name, targetProjectId: projectId, projectName: target.label };

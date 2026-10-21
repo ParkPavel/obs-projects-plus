@@ -25,13 +25,35 @@
    * Hidden, the name stays the value's tooltip.
    */
   export let showLabels = true;
+  /**
+   * i3-gallery: an empty value keeps its line (an empty row), so cards of one
+   * gallery row line their properties up and keep one height, as Notion and
+   * Bases cards do. Off by default: every other consumer is unchanged.
+   */
+  export let reserveEmpty = false;
 
   setContext<string>("sourcePath", record.id);
+
+  const isEmpty = (value: unknown): boolean =>
+    value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
+
+  /** i3-gallery: one item of a list value as chip text (a link reads as its name). */
+  function itemText(item: unknown): string {
+    if (item instanceof globalThis.Date) return item.toLocaleDateString();
+    return stripToDisplay(String(item));
+  }
 </script>
 
 {#each fields as field (field.name)}
   {@const value = record.values[field.name]}
-  {#if value !== undefined && value !== null}
+  {#if reserveEmpty && isEmpty(value)}
+    <div class="field-label ppp-card-meta-reserved" class:has-label={showLabels} aria-hidden="true" data-card-meta-reserved={field.name}>
+      {#if showLabels}
+        <div class="setting-item-description field-name">{field.name}</div>
+      {/if}
+      <span class="ppp-card-meta-blank">{" "}</span>
+    </div>
+  {:else if value !== undefined && value !== null}
     <div class="field-label" class:has-label={showLabels} title={showLabels ? undefined : field.name}>
       {#if showLabels}
         <div class="setting-item-description field-name">
@@ -48,6 +70,17 @@
       {:else if field.repeated}
         {#if field.type === DataFieldType.String}
           <Tags {field} {value} />
+        {:else if Array.isArray(value)}
+          <!-- i3-gallery: a list of numbers, dates, links … rendered nothing; each item is a chip now. -->
+          <span class="ppp-card-meta-relations" data-card-meta-list>
+            {#each value as item, i}
+              {#if item !== null && item !== undefined && item !== ""}
+                <span class="ppp-card-meta-chip" class:ppp-card-meta-chip--relation={field.type === DataFieldType.Relation}>{itemText(item)}</span>{#if i < value.length - 1}{" "}{/if}
+              {/if}
+            {/each}
+          </span>
+        {:else}
+          <span class="ppp-card-meta-chip">{itemText(value)}</span>
         {/if}
       {:else if field.type === DataFieldType.Boolean}
         <Checkbox {field} {value} />
@@ -115,6 +148,13 @@
     gap: 0.5em;
     align-items: baseline;
     margin-bottom: 0.25em;
+  }
+
+  /* i3-gallery: an empty value's reserved line is as tall as a chip line, so
+     a row of cards keeps one height whichever values each card has. */
+  .ppp-card-meta-blank {
+    display: inline-block;
+    min-height: 1.4em;
   }
 
   .field-name {

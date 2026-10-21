@@ -10,11 +10,20 @@
    * Writes: the frontmatter writer, one key per commit, only on change
    * (planValueWrite); overlay and types through their own writers. Reserved
    * keys (`pp_*`, `$*`) and calculated types are never edited here.
+   *
+   * i3-props: rename and delete in the row menu; nested values are read-only;
+   * every write is queued (writeQueue) instead of being dropped while another
+   * runs; lists edit as chips, select/status pick from the values the project
+   * uses, colours open the shared palette. Only the note's own frontmatter is
+   * written — never Obsidian's `.obsidian/types.json`.
    */
   import { onDestroy, onMount, tick } from "svelte";
+  import { get } from "svelte/store";
   import { TFile, type App, type EventRef } from "obsidian";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
+  import { settings } from "src/lib/stores/settings";
+  import { DEFAULT_COLOR } from "src/lib/stores/palettes";
   import {
     moveKey,
     readOverlay,
@@ -33,6 +42,7 @@
     type PropertyType,
   } from "src/lib/visualizer/propertyTypes";
   import { setPropertyType } from "src/lib/visualizer/propertyTypesWriter";
+  import { deleteProperty, renameProperty } from "src/lib/visualizer/propertyKeysWriter";
   import { buildLinkHref } from "src/lib/visualizer/linkRender";
   import { openContextMenu, type ContextMenuEntry } from "src/lib/contextMenu";
   import type { CellEditType, CellValue } from "src/lib/database/cellEditor";
@@ -42,15 +52,28 @@
   import type { InverseIndexStore } from "src/lib/relations/inverseIndexStore";
   import TextField from "src/ui/components/fields/TextField.svelte";
   import DateField from "src/ui/components/fields/DateField.svelte";
+  import ComboField from "src/ui/components/fields/ComboField.svelte";
+  import { namesToOptions, type ComboOption } from "src/ui/components/fields/comboOptions";
+  import { ColorPicker } from "src/ui/components/ColorPicker";
   import { RelationPickerModal, pathFromFile } from "src/ui/views/VisualizerPane/RelationPickerModal";
+  import ChipsEditor from "./ChipsEditor.svelte";
+  import { createWriteQueue } from "./writeQueue";
   import {
     dateToCellText,
     draftOf,
+    inScope,
+    isNestedValue,
     isReservedPropertyKey,
+    listItems,
+    noteScopeFor,
     parseStoredDate,
+    planListWrite,
     planValueWrite,
     validateNewPropertyName,
+    validateRename,
+    valuesForKey,
     visibleProperties,
+    type ListType,
   } from "./noteProperties";
 
   export let app: App;
@@ -64,14 +87,23 @@
   let overlay: NoteOverlay = EMPTY_OVERLAY;
   let showHidden = false;
   let collapsed = false;
-  let writing = false;
   let editingKey: string | null = null;
   let editError: string | null = null;
+  let renamingKey: string | null = null;
+  let renameError: string | null = null;
+  let paletteKey: string | null = null;
+  let choiceOptions: ComboOption[] = [];
   let adding = false;
   let addError: string | null = null;
   let inverseIndex: InverseIndex = new Map();
   let editField: TextField | null = null;
+  let comboField: ComboField | null = null;
   let addField: TextField | null = null;
+  let renameField: TextField | null = null;
+  let listEl: HTMLUListElement | null = null;
+
+  // i3-props: one queue for every write of this block, in the order asked.
+  const queue = createWriteQueue();
 
   $: t = $i18n.t.bind($i18n);
 
@@ -109,55 +141,102 @@
     return resolveType(entry.key, entry.value, typeOverrides);
   }
   function editable(entry: OverlayedEntry, type: PropertyType): type is CellEditType {
-    return !READONLY_TYPES.has(type) && !isReservedPropertyKey(entry.key);
+    // i3-props: a nested value stays read-only whatever type it is given.
+    return !READONLY_TYPES.has(type) && !isReservedPropertyKey(entry.key) && !isNestedValue(entry.value);
+  }
+  function isListType(type: PropertyType): type is ListType {
+    return type === "list" || type === "tags" || type === "relation";
   }
 
-  async function persistOverlay(next: NoteOverlay): Promise<void> {
-    if (writing) return;
+  // ── Writes (queued; the target file is the one the action was taken on) ──
+  function persistOverlay(next: NoteOverlay): Promise<void> {
     overlay = next;
-    writing = true;
-    try {
-      await writeOverlay(app, file, next);
-    } finally {
-      writing = false;
-    }
+    const target = file;
+    return queue.run(() => writeOverlay(app, target, next));
   }
 
-  async function writeKey(key: string, value: CellValue): Promise<void> {
-    writing = true;
-    try {
-      await writeCellValue(app, file, key, value);
-    } finally {
-      writing = false;
-    }
+  function writeKey(key: string, value: CellValue): Promise<void> {
+    const target = file;
+    return queue.run(() => writeCellValue(app, target, key, value));
+  }
+
+  function writeType(key: string, type: PropertyType | null): Promise<void> {
+    const target = file;
+    return queue.run(() => setPropertyType(app, target, key, type));
+  }
+
+  /**
+   * i3-props: the values `key` holds across this project's notes (the note's
+   * folder when no project holds it), the note's own value first.
+   */
+  function usedValues(key: string): string[] {
+    const scope = noteScopeFor(file.path, get(settings).projects ?? []);
+    const others = (app.vault.getMarkdownFiles?.() ?? [])
+      .filter((f) => f.path !== file.path && inScope(f.path, scope))
+      .map((f) => app.metadataCache.getFileCache(f)?.frontmatter as Record<string, unknown> | undefined);
+    return valuesForKey([frontmatter, ...others], key);
+  }
+
+  // ── Keyboard: rows ───────────────────────────────────────
+  async function focusRow(key: string): Promise<void> {
+    await tick();
+    const row = Array.from(listEl?.children ?? []).find((li) => (li as HTMLElement).dataset["rowKey"] === key);
+    row?.querySelector<HTMLElement>("[data-row-nav]")?.focus();
+  }
+
+  function onListKeydown(e: KeyboardEvent): void {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    const from = e.target as HTMLElement | null;
+    if (!from?.hasAttribute("data-row-nav") || !listEl) return;
+    const rows = Array.from(listEl.querySelectorAll<HTMLElement>("[data-row-nav]"));
+    const next = rows[rows.indexOf(from) + (e.key === "ArrowDown" ? 1 : -1)];
+    if (!next) return;
+    e.preventDefault();
+    next.focus();
   }
 
   // ── Value editing ────────────────────────────────────────
   async function startEdit(entry: OverlayedEntry, type: PropertyType): Promise<void> {
     if (!editable(entry, type) || type === "boolean" || type === "date" || type === "datetime") return;
+    if (type === "select" || type === "status") {
+      choiceOptions = namesToOptions(usedValues(entry.key));
+    }
     editingKey = entry.key;
     editError = null;
     await tick();
     editField?.focus();
+    comboField?.focus();
   }
 
-  function endEdit(): void {
+  function endEdit(refocus = false): void {
+    const key = editingKey;
     editingKey = null;
     editError = null;
+    if (refocus && key !== null) void focusRow(key);
   }
 
-  async function commitText(entry: OverlayedEntry, type: CellEditType, draft: string): Promise<void> {
+  async function commitText(
+    entry: OverlayedEntry,
+    type: CellEditType,
+    draft: string,
+    reason: string,
+  ): Promise<void> {
     const plan = planValueWrite(entry.value, draft, type);
     if (plan.kind === "invalid") {
       editError = t(plan.i18nKey);
       return;
     }
-    endEdit();
+    endEdit(reason === "enter" || reason === "select");
     if (plan.kind === "write") await writeKey(entry.key, plan.value);
   }
 
   function validDraft(type: CellEditType): (draft: string) => boolean {
     return (draft) => planValueWrite(null, draft, type).kind !== "invalid";
+  }
+
+  async function commitList(entry: OverlayedEntry, type: ListType, next: string[]): Promise<void> {
+    const plan = planListWrite(entry.value, next, type);
+    if (plan.kind === "write") await writeKey(entry.key, plan.value);
   }
 
   async function commitDate(entry: OverlayedEntry, type: CellEditType, next: Date | null): Promise<void> {
@@ -169,6 +248,57 @@
   async function commitBoolean(entry: OverlayedEntry, next: boolean): Promise<void> {
     if (entry.value === next) return;
     await writeKey(entry.key, next);
+  }
+
+  async function commitColor(entry: OverlayedEntry, hex: string): Promise<void> {
+    const plan = planValueWrite(entry.value, hex, "color");
+    if (plan.kind === "write") await writeKey(entry.key, plan.value);
+  }
+
+  function togglePalette(key: string): void {
+    paletteKey = paletteKey === key ? null : key;
+  }
+
+  function projectColors(key: string): string[] {
+    return usedValues(key).filter((v) => isColorValue(v));
+  }
+
+  // ── Rename / delete ──────────────────────────────────────
+  async function startRename(key: string): Promise<void> {
+    if (editingKey === key) endEdit();
+    renamingKey = key;
+    renameError = null;
+    await tick();
+    renameField?.select();
+  }
+
+  function endRename(refocus = false): void {
+    const key = renamingKey;
+    renamingKey = null;
+    renameError = null;
+    if (refocus && key !== null) void focusRow(key);
+  }
+
+  async function commitRename(from: string, raw: string, reason: string): Promise<void> {
+    const verdict = validateRename(from, raw, frontmatter);
+    if (!verdict.ok) {
+      if (verdict.reason === "empty") endRename(reason === "enter");
+      else renameError = t(`views.visualizer.block.errors.${verdict.reason}`);
+      return;
+    }
+    endRename();
+    const target = file;
+    const to = verdict.key;
+    await queue.run(() => renameProperty(app, target, from, to));
+    if (reason === "enter") void focusRow(to);
+  }
+
+  async function removeKey(key: string): Promise<void> {
+    if (editingKey === key) endEdit();
+    if (renamingKey === key) endRename();
+    if (paletteKey === key) paletteKey = null;
+    const target = file;
+    await queue.run(() => deleteProperty(app, target, key));
   }
 
   // ── New property ─────────────────────────────────────────
@@ -238,15 +368,27 @@
             title: t("views.visualizer.pane.types.auto"),
             icon: "wand-2",
             checked: typeOverrides[entry.key] === undefined,
-            onClick: () => void setPropertyType(app, file, entry.key, null),
+            onClick: () => void writeType(entry.key, null),
           },
           { separator: true },
           ...PROPERTY_TYPES.map((type) => ({
             title: t(`data-types.${type}`),
             checked: typeOverrides[entry.key] === type,
-            onClick: () => void setPropertyType(app, file, entry.key, type),
+            onClick: () => void writeType(entry.key, type),
           })),
         ],
+      },
+      { separator: true },
+      {
+        title: t("views.visualizer.block.actions.rename", { defaultValue: "Rename property" }),
+        icon: "pencil",
+        onClick: () => void startRename(entry.key),
+      },
+      {
+        title: t("views.visualizer.block.actions.delete", { defaultValue: "Delete property" }),
+        icon: "trash-2",
+        danger: true,
+        onClick: () => void removeKey(entry.key),
       },
     ];
     openContextMenu(items, event.currentTarget as HTMLElement, app);
@@ -288,7 +430,7 @@
     new RelationPickerModal(
       app,
       (chosen) => {
-        void appendRelationToFile(app, target, { path: pathFromFile(chosen) });
+        void queue.run(() => appendRelationToFile(app, target, { path: pathFromFile(chosen) }));
       },
       {
         excludePath: target.path,
@@ -298,12 +440,6 @@
   }
 
   // ── Display helpers ──────────────────────────────────────
-  function items(value: unknown): string[] {
-    if (Array.isArray(value)) return value.map((x) => String(x));
-    if (value === null || value === undefined || value === "") return [];
-    return [String(value)];
-  }
-
   function openLink(raw: string): void {
     void app.workspace.openLinkText(stripToPath(raw), file.path, false);
   }
@@ -336,6 +472,12 @@
       default: return "text";
     }
   }
+
+  function readOnlyTitle(entry: OverlayedEntry): string {
+    return isNestedValue(entry.value)
+      ? t("views.visualizer.block.nested", { defaultValue: "Nested value: edit it in the note's YAML" })
+      : t("views.visualizer.block.read-only");
+  }
 </script>
 
 <section class="ppp-note-props" aria-label={t("views.visualizer.block.title")}>
@@ -359,38 +501,94 @@
   </header>
 
   {#if !collapsed}
-    <ul class="ppp-note-props__list">
+    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+    <ul class="ppp-note-props__list" bind:this={listEl} on:keydown={onListKeydown}>
       {#each entries as entry, index (entry.key)}
         {@const type = typeOf(entry)}
         {@const canEdit = editable(entry, type)}
-        <li class="ppp-note-props__row" class:is-hidden={entry.hidden} class:is-pinned={entry.pinned}>
-          <button
-            type="button"
-            class="ppp-note-props__key"
-            title={`${entry.key} · ${t(`data-types.${type}`)}`}
-            on:click={(e) => rowMenu(e, entry, index)}
-          >
-            <Icon name={entry.pinned ? "pin" : iconFor(type)} size="sm" />
-            <span class="ppp-note-props__key-text">{entry.key}</span>
-          </button>
+        <li
+          class="ppp-note-props__row"
+          class:is-hidden={entry.hidden}
+          class:is-pinned={entry.pinned}
+          data-row-key={entry.key}
+        >
+          {#if renamingKey === entry.key}
+            <div class="ppp-note-props__rename">
+              <TextField
+                bind:this={renameField}
+                value={entry.key}
+                ariaLabel={t("views.visualizer.block.actions.rename", { defaultValue: "Rename property" })}
+                error={renameError !== null}
+                commitUnchanged
+                on:commit={(e) => commitRename(entry.key, e.detail.value, e.detail.reason)}
+                on:cancel={() => endRename(true)}
+              />
+              {#if renameError}
+                <span class="ppp-note-props__error" role="alert">{renameError}</span>
+              {/if}
+            </div>
+          {:else}
+            <button
+              type="button"
+              class="ppp-note-props__key"
+              title={`${entry.key} · ${t(`data-types.${type}`)}`}
+              on:click={(e) => rowMenu(e, entry, index)}
+            >
+              <Icon name={entry.pinned ? "pin" : iconFor(type)} size="sm" />
+              <span class="ppp-note-props__key-text">{entry.key}</span>
+            </button>
+          {/if}
 
           <div class="ppp-note-props__value">
             {#if canEdit && type === "boolean"}
               <input
                 type="checkbox"
                 class="ppp-note-props__check"
+                data-row-nav
                 checked={entry.value === true}
-                disabled={writing}
                 aria-label={entry.key}
                 on:change={(e) => commitBoolean(entry, e.currentTarget.checked)}
               />
             {:else if canEdit && (type === "date" || type === "datetime")}
-              <DateField
-                value={parseStoredDate(entry.value)}
-                withTime={type === "datetime"}
-                disabled={writing}
+              <!-- i3-props: arrows land on the row; Enter hands focus to the picker. -->
+              <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+              <div
+                class="ppp-note-props__date"
+                data-row-nav
+                role="group"
+                tabindex="-1"
+                aria-label={entry.key}
+                on:keydown={(e) => {
+                  if (e.key !== "Enter" || e.target !== e.currentTarget) return;
+                  e.preventDefault();
+                  e.currentTarget.querySelector<HTMLElement>("input, button")?.focus();
+                }}
+              >
+                <DateField
+                  value={parseStoredDate(entry.value)}
+                  withTime={type === "datetime"}
+                  ariaLabel={entry.key}
+                  on:change={(e) => commitDate(entry, type, e.detail)}
+                />
+              </div>
+            {:else if canEdit && editingKey === entry.key && isListType(type)}
+              <ChipsEditor
+                items={listItems(entry.value)}
+                {type}
                 ariaLabel={entry.key}
-                on:change={(e) => commitDate(entry, type, e.detail)}
+                on:change={(e) => commitList(entry, type, e.detail)}
+                on:done={(e) => endEdit(e.detail)}
+              />
+            {:else if canEdit && editingKey === entry.key && (type === "select" || type === "status")}
+              <ComboField
+                bind:this={comboField}
+                value={draftOf(entry.value, type)}
+                options={choiceOptions}
+                allowCustom
+                commitUnchanged
+                ariaLabel={entry.key}
+                on:commit={(e) => commitText(entry, type, e.detail.value, e.detail.reason)}
+                on:cancel={() => endEdit(true)}
               />
             {:else if canEdit && editingKey === entry.key}
               <TextField
@@ -400,8 +598,8 @@
                 validate={validDraft(type)}
                 commitUnchanged
                 inputMode={type === "number" ? "decimal" : type === "email" ? "email" : type === "url" ? "url" : type === "phone" ? "tel" : "text"}
-                on:commit={(e) => commitText(entry, type, e.detail.value)}
-                on:cancel={endEdit}
+                on:commit={(e) => commitText(entry, type, e.detail.value, e.detail.reason)}
+                on:cancel={() => endEdit(true)}
               />
               {#if editError}
                 <span class="ppp-note-props__error" role="alert">{editError}</span>
@@ -412,21 +610,29 @@
                 class="ppp-note-props__display"
                 class:is-editable={canEdit}
                 class:is-readonly={!canEdit}
-                role={canEdit ? "button" : undefined}
-                tabindex={canEdit ? 0 : undefined}
-                title={canEdit ? undefined : t("views.visualizer.block.read-only")}
+                data-row-nav
+                role={canEdit ? "button" : "group"}
+                tabindex={canEdit ? 0 : -1}
+                aria-label={canEdit ? undefined : entry.key}
+                title={canEdit ? undefined : readOnlyTitle(entry)}
                 on:click={() => canEdit && startEdit(entry, type)}
                 on:keydown={(e) => {
+                  if (e.target !== e.currentTarget) return;
                   if (canEdit && (e.key === "Enter" || e.key === " ")) {
                     e.preventDefault();
                     void startEdit(entry, type);
+                  } else if (e.key === "Escape" && paletteKey === entry.key) {
+                    e.preventDefault();
+                    paletteKey = null;
                   }
                 }}
               >
-                {#if items(entry.value).length === 0}
+                {#if isNestedValue(entry.value)}
+                  <code class="ppp-note-props__object">{JSON.stringify(entry.value)}</code>
+                {:else if listItems(entry.value).length === 0}
                   <span class="ppp-note-props__empty">{t("views.visualizer.block.empty")}</span>
                 {:else if Array.isArray(entry.value) || type === "relation" || type === "tags"}
-                  {#each items(entry.value) as item}
+                  {#each listItems(entry.value) as item}
                     {#if isWikilink(item)}
                       <button
                         type="button"
@@ -438,7 +644,19 @@
                     {/if}
                   {/each}
                 {:else if isColorValue(entry.value)}
-                  <span class="ppp-note-props__swatch" style:background={normalizeColor(entry.value) ?? ""} aria-hidden="true"></span>
+                  {#if canEdit}
+                    <button
+                      type="button"
+                      class="ppp-note-props__swatch is-button"
+                      style:background={normalizeColor(entry.value) ?? ""}
+                      aria-expanded={paletteKey === entry.key}
+                      aria-label={t("views.visualizer.block.color.palette", { defaultValue: "Color palette" })}
+                      title={t("views.visualizer.block.color.palette", { defaultValue: "Color palette" })}
+                      on:click|stopPropagation={() => togglePalette(entry.key)}
+                    ></button>
+                  {:else}
+                    <span class="ppp-note-props__swatch" style:background={normalizeColor(entry.value) ?? ""} aria-hidden="true"></span>
+                  {/if}
                   {String(entry.value)}
                 {:else if type === "url" || type === "email" || type === "phone"}
                   {@const link = buildLinkHref(entry.value, type)}
@@ -453,11 +671,20 @@
                   {:else}
                     {String(entry.value)}
                   {/if}
-                {:else if typeof entry.value === "object"}
-                  <code class="ppp-note-props__object">{JSON.stringify(entry.value)}</code>
                 {:else}
                   {String(entry.value)}
                 {/if}
+              </div>
+            {/if}
+            {#if canEdit && paletteKey === entry.key && isColorValue(entry.value)}
+              <!-- i3-props: the shared picker — its favourites are the calendar's. -->
+              <div class="ppp-note-props__palette">
+                <ColorPicker
+                  value={normalizeColor(entry.value) ?? DEFAULT_COLOR}
+                  projectPalette={projectColors(entry.key)}
+                  projectPaletteLabel={t("views.visualizer.block.color.project", { defaultValue: "Colors in this project" })}
+                  on:change={(e) => commitColor(entry, e.detail)}
+                />
               </div>
             {/if}
           </div>
@@ -491,7 +718,7 @@
         {/if}
       </div>
     {:else}
-      <button type="button" class="ppp-note-props__add" disabled={writing} on:click={startAdd}>
+      <button type="button" class="ppp-note-props__add" on:click={startAdd}>
         {t("views.visualizer.block.add")}
       </button>
     {/if}
@@ -525,35 +752,39 @@
   :global(.markdown-source-view:not(.is-live-preview) .ppp-note-props-host) {
     display: none;
   }
+  /* i3-props: sizes are in em of the block's own text, and the layout follows
+     the width of the note (the container), not of the window — a note in a
+     narrow split on a desktop stacks the same way a phone does. */
   .ppp-note-props {
+    container: ppp-note-props / inline-size;
     display: flex;
     flex-direction: column;
-    gap: 0.125rem;
-    margin: 0 0 1rem;
-    font-size: var(--font-ui-small, 0.875rem);
+    gap: 0.15em;
+    margin: 0 0 1.15em;
+    font-size: var(--font-ui-small, 0.875em);
   }
   .ppp-note-props__head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: 0.6em;
   }
   .ppp-note-props__title {
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.3em;
     background: transparent;
     border: 0;
     box-shadow: none;
-    padding: 0.25rem 0;
+    padding: 0.3em 0;
     color: var(--text-muted);
     font-weight: var(--font-semibold, 600);
     cursor: pointer;
   }
   .ppp-note-props__icon {
     flex: none;
-    min-width: 2rem;
-    min-height: 2rem;
+    min-width: 2.3em;
+    min-height: 2.3em;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -572,11 +803,11 @@
   }
   .ppp-note-props__row {
     display: grid;
-    grid-template-columns: minmax(7rem, 30%) minmax(0, 1fr) auto;
+    grid-template-columns: minmax(8em, 30%) minmax(0, 1fr) auto;
     align-items: center;
-    gap: 0.5rem;
-    min-height: 2rem;
-    border-radius: var(--radius-s, 0.25rem);
+    gap: 0.6em;
+    min-height: 2.3em;
+    border-radius: var(--radius-s, 0.3em);
   }
   .ppp-note-props__row.is-hidden {
     opacity: 0.55;
@@ -587,12 +818,12 @@
     display: inline-flex;
     justify-content: flex-start;
     align-items: center;
-    gap: 0.375rem;
+    gap: 0.45em;
     min-width: 0;
     background: transparent;
     border: 0;
     box-shadow: none;
-    padding: 0.25rem;
+    padding: 0.3em;
     color: var(--text-muted);
     text-align: left;
     cursor: pointer;
@@ -605,11 +836,17 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .ppp-note-props__rename {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15em;
+  }
   .ppp-note-props__value {
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.125rem;
+    gap: 0.15em;
   }
   /* i2-record (D05): a long value (a cover link) ran under «⋯» and off the
      screen; every value item ends in an ellipsis inside its column. */
@@ -624,17 +861,18 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.25rem;
-    min-height: 1.75rem;
-    padding: 0.125rem 0.375rem;
-    border-radius: var(--radius-s, 0.25rem);
+    gap: 0.3em;
+    min-height: 2em;
+    padding: 0.15em 0.45em;
+    border-radius: var(--radius-s, 0.3em);
     color: var(--text-normal);
     word-break: break-word;
   }
   .ppp-note-props__display.is-editable {
     cursor: text;
   }
-  .ppp-note-props__display.is-editable:focus-visible {
+  .ppp-note-props__display:focus-visible,
+  .ppp-note-props__date:focus-visible {
     outline: var(--ppp-border-width) solid var(--interactive-accent);
   }
   .ppp-note-props__display.is-readonly {
@@ -646,9 +884,9 @@
   .ppp-note-props__chip {
     display: inline-flex;
     align-items: center;
-    padding: 0 0.375rem;
-    min-height: 1.375rem;
-    border-radius: var(--radius-s, 0.25rem);
+    padding: 0 0.45em;
+    min-height: 1.6em;
+    border-radius: var(--radius-s, 0.3em);
     background: var(--background-modifier-hover);
     border: 0;
     box-shadow: none;
@@ -661,24 +899,35 @@
   }
   .ppp-note-props__swatch {
     display: inline-block;
-    width: 0.875rem;
-    height: 0.875rem;
-    border-radius: 0.1875rem;
+    flex: none;
+    width: 1em;
+    height: 1em;
+    padding: 0;
+    border-radius: 0.2em;
     border: var(--ppp-border-width) solid var(--background-modifier-border);
+    box-shadow: none;
+  }
+  .ppp-note-props__swatch.is-button {
+    width: 1.4em;
+    height: 1.4em;
+    cursor: pointer;
+  }
+  .ppp-note-props__palette {
+    max-width: 24em;
   }
   .ppp-note-props__link {
     color: var(--text-accent);
     word-break: break-all;
   }
   .ppp-note-props__object {
-    font-size: 0.8125rem;
+    font-size: 0.93em;
     color: var(--text-faint);
   }
   .ppp-note-props__check {
-    margin: 0.25rem 0.375rem;
+    margin: 0.3em 0.45em;
   }
   .ppp-note-props__error {
-    font-size: 0.75rem;
+    font-size: 0.85em;
     color: var(--text-error);
   }
   .ppp-note-props__add {
@@ -686,26 +935,51 @@
     background: transparent;
     border: 0;
     box-shadow: none;
-    padding: 0.25rem;
-    min-height: 2rem;
+    padding: 0.3em;
+    min-height: 2.3em;
     color: var(--text-faint);
     cursor: pointer;
   }
   .ppp-note-props__add-row {
     display: flex;
     flex-direction: column;
-    gap: 0.125rem;
-    max-width: 20rem;
+    gap: 0.15em;
+    max-width: 23em;
   }
   .ppp-note-props__linked {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.25rem;
-    padding-top: 0.25rem;
+    gap: 0.3em;
+    padding-top: 0.3em;
   }
   .ppp-note-props__linked-title {
     color: var(--text-muted);
-    margin-right: 0.25rem;
+    margin-right: 0.3em;
+  }
+  /* i3-props: a narrow note (a phone, a side split) puts the key above its
+     value, and the value wraps instead of ending in an ellipsis — on a phone
+     the ellipsis hid most of every value. */
+  @container ppp-note-props (max-width: 32em) {
+    .ppp-note-props__row {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas: "key more" "value value";
+      row-gap: 0;
+      padding-bottom: 0.3em;
+    }
+    .ppp-note-props__key,
+    .ppp-note-props__rename {
+      grid-area: key;
+    }
+    .ppp-note-props__value {
+      grid-area: value;
+    }
+    .ppp-note-props__icon {
+      grid-area: more;
+    }
+    .ppp-note-props__display > :global(*) {
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
   }
 </style>

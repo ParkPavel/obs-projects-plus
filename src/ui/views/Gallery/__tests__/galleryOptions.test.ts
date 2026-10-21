@@ -53,6 +53,11 @@ const DEFAULTS = {
   layout: "grid",
   coverAspectRatio: "16/10",
   showFieldLabels: true,
+  // i3-gallery: no sections, nothing folded, the cover preview, full cards.
+  groupByField: undefined,
+  collapsedGroups: [],
+  cardPreview: "cover",
+  compact: false,
 };
 
 describe("normalizeGalleryConfig — absent config", () => {

@@ -283,6 +283,13 @@
   button.projects-calendar-event-bar {
     cursor: pointer;
   }
+
+  /* i3-calendar: outranks styles.css's coarse-pointer 2.75rem button minimum
+     (0-2-1), which drew a 15-minute event an hour and more tall. */
+  button.projects-calendar-event-bar.projects-calendar-event-bar {
+    min-height: 0;
+    min-width: 0;
+  }
   
   button.projects-calendar-event-bar:hover {
     background: color-mix(in srgb, var(--event-color) 25%, transparent);

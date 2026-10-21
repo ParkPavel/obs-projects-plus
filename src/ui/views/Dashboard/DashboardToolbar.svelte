@@ -7,24 +7,17 @@
   export let showFormulaBar: boolean;
 
   const dispatch = createEventDispatcher<{
-    openSchema: void;
     toggleFormulaBar: void;
   }>();
 </script>
 
 <div class="ppp-database-toolbar">
   {#if !readonly}
-    <!-- B7: no «Add widget» here — blocks are added with the «+» on the page itself. -->
-    <button
-      class="ppp-toolbar-btn clickable-icon"
-      on:click={() => dispatch("openSchema")}
-      aria-label={$i18n.t("views.dashboard.canvas.schema")}
-      title={$i18n.t("views.dashboard.canvas.schema-tip", {
-        defaultValue: "Manage project fields — types, relations, rollups",
-      })}
-    >
-      <Icon name="settings-2" size="sm" /><span class="ppp-toolbar-label">{$i18n.t("views.dashboard.canvas.schema")}</span>
-    </button>
+    <!-- B7: no «Add widget» here — blocks are added with the «+» on the page itself.
+         i3-dash: no «Properties» either. It opened the schema of the dashboard's
+         own project with nothing saying so, on a page whose blocks may read other
+         projects; it is now in the menu of each block that reads this project,
+         named after it (layout/blockProperties.ts). The command palette keeps it. -->
     <button
       class="ppp-toolbar-btn clickable-icon"
       on:click={() => dispatch("toggleFormulaBar")}

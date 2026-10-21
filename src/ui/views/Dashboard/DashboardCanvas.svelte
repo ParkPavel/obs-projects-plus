@@ -31,6 +31,7 @@
   import { createSelectionStore, bindEscapeClear, SELECTION_CONTEXT_KEY, type SelectionStore } from "./canvasSelectionStore";
   import { createConfigEcho } from "./dashboardConfigEcho";
   import { reorderWidgets } from "./dashboardReorder";
+  import { withPackedLayout } from "./layout/tileGrid";
   import { createWidgetReveal } from "./dashboardReveal";
 
   export let project: ProjectDefinition;
@@ -118,7 +119,7 @@
   function handleDndFinalize(e: CustomEvent<DndEvent<WidgetDefinition>>) {
     dndWidgets = reorderWidgets(widgets, e.detail.items);
     if (!effectiveConfig) return;
-    saveConfig({ ...effectiveConfig, widgets: dndWidgets.filter((w) => w.id !== SHADOW_PLACEHOLDER_ITEM_ID.toString()) });
+    saveConfig({ ...effectiveConfig, widgets: withPackedLayout(dndWidgets.filter((w) => w.id !== SHADOW_PLACEHOLDER_ITEM_ID.toString())) });
   }
   $: primaryDataTableId = effectiveConfig?.widgets.find((w) => w.type === "data-table" || w.type === "database-call")?.id ?? "";
   const selectionStore: SelectionStore = createSelectionStore();
@@ -139,9 +140,7 @@
   <ViewContent>
     <div class="ppp-database-root" bind:this={rootEl} role="region" aria-label={$i18n.t("views.dashboard.name")}>
       <div class="ppp-toolbar-row">
-        <DashboardToolbar {readonly} {showFormulaBar}
-          on:openSchema={() => schemaController.openSchema()}
-          on:toggleFormulaBar={() => (showFormulaBar = !showFormulaBar)} />
+        <DashboardToolbar {readonly} {showFormulaBar} on:toggleFormulaBar={() => (showFormulaBar = !showFormulaBar)} />
         {#if isRecalculating}<span class="ppp-recalc-dot" aria-label={$i18n.t("views.dashboard.canvas.recalculating", { defaultValue: "Recalculating…" })} aria-live="polite" />{/if}
       </div>
       {#if !readonly && quickActions.length > 0}
@@ -174,6 +173,7 @@
         on:tableConfigChange={widgetController.handleTableConfigChange}
         on:fieldPresetsChange={handleFieldPresetsChange}
         on:removeWidget={(e) => widgetController.removeWidget(e.detail)}
+        on:openProperties={() => schemaController.openSchema()} on:layout={(e) => effectiveConfig && saveConfig({ ...effectiveConfig, widgets: e.detail })}
       ><!-- B7: suggestions only as a quiet offer on an empty page, never above blocks; a linked block needs a block to link to. -->
         <svelte:fragment slot="empty-extra">{#if !readonly}<SmartSuggestionBus fields={frame.fields} {widgets} dismissed={[...(effectiveConfig?.dismissedSuggestions ?? []), "relation-block"]} context={{ hostProjectId: project.id, projects: $settings.projects ?? [], hostViewFiltered: narrowsFrame(globalFilter) }}
           on:accept={suggest.accept} on:dismissForever={suggest.dismiss} />{/if}</svelte:fragment>

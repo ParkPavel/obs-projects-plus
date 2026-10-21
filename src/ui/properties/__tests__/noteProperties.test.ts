@@ -116,6 +116,67 @@ describe("B2 a single-key write leaves every other key untouched", () => {
   });
 });
 
+describe("i3-props rules", () => {
+  const {
+    chipItem,
+    isNestedValue,
+    noteScopeFor,
+    planListWrite,
+    validateRename,
+    valuesForKey,
+  } = require("../noteProperties");
+
+  it("treats an object, or a list holding one, as nested", () => {
+    expect(isNestedValue({ a: 1 })).toBe(true);
+    expect(isNestedValue([{ a: 1 }, "x"])).toBe(true);
+    expect(isNestedValue(["a", 1])).toBe(false);
+    expect(isNestedValue(null)).toBe(false);
+    expect(isNestedValue("x")).toBe(false);
+  });
+
+  it("validates a rename like a new property; the same name is nothing to do", () => {
+    const fm = { status: "x", owner: "y" };
+    expect(validateRename("status", "status", fm)).toEqual({ ok: false, reason: "empty" });
+    expect(validateRename("status", "owner", fm)).toEqual({ ok: false, reason: "exists" });
+    expect(validateRename("status", "pp_x", fm)).toEqual({ ok: false, reason: "reserved" });
+    expect(validateRename("status", "$x", fm)).toEqual({ ok: false, reason: "reserved" });
+    expect(validateRename("status", " ", fm)).toEqual({ ok: false, reason: "empty" });
+    expect(validateRename("status", " state ", fm)).toEqual({ ok: true, key: "state" });
+  });
+
+  it("keeps a comma inside a chip and writes lists as arrays", () => {
+    expect(chipItem(" Smith, John ", "list")).toBe("Smith, John");
+    expect(chipItem("#a", "tags")).toBe("a");
+    expect(chipItem("Note", "relation")).toBe("[[Note]]");
+    expect(chipItem("[[Note]]", "relation")).toBe("[[Note]]");
+    expect(chipItem("  ", "list")).toBeNull();
+    expect(planListWrite(["Smith, John"], ["Smith, John", "Doe"], "list")).toEqual({
+      kind: "write",
+      value: ["Smith, John", "Doe"],
+    });
+    expect(planListWrite(["Smith, John"], ["Smith, John"], "list")).toEqual({ kind: "skip" });
+  });
+
+  it("scopes values to the deepest folder project, else the note's folder", () => {
+    const projects = [
+      { dataSource: { kind: "folder", config: { path: "Work", recursive: true } } },
+      { dataSource: { kind: "folder", config: { path: "Work/Sub", recursive: false } } },
+      { dataSource: { kind: "tag", config: { tag: "x" } } },
+    ];
+    expect(noteScopeFor("Work/Sub/a.md", projects)).toEqual({ folder: "Work/Sub", recursive: false });
+    expect(noteScopeFor("Work/Deep/b/a.md", projects)).toEqual({ folder: "Work", recursive: true });
+    expect(noteScopeFor("Home/a.md", projects)).toEqual({ folder: "Home", recursive: false });
+  });
+
+  it("collects distinct scalar and list values of a key, skipping objects", () => {
+    expect(valuesForKey([{ s: "open" }, { s: ["done", "open"] }, { s: { x: 1 } }, null, { s: 3 }], "s")).toEqual([
+      "open",
+      "done",
+      "3",
+    ]);
+  });
+});
+
 describe("B2 setting default", () => {
   it("replaces Obsidian's properties block by default", () => {
     const { DEFAULT_PREFERENCES } = require("src/settings/v4/settings");

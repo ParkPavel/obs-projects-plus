@@ -43,7 +43,12 @@
   }
   $: follow(value);
 
-  function onCommit(text: string): void {
+  function onCommit(raw: string): void {
+    // i3-settings: «Enddate» typed where `endDate` exists is that field, not a
+    // new empty property beside it the calendar would never read.
+    const t = raw.trim();
+    const text = fields.find((f) => f.name === t)?.name ?? fields.find((f) => f.name.toLowerCase() === t.toLowerCase())?.name ?? t;
+    typed = text;
     if (text === committed) return;
     committed = text;
     dispatch("change", text);

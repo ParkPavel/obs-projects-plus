@@ -61,6 +61,12 @@ const buildOptions = {
         "document.": `activeDocument.`,
         "multiScroller.destroy()": `multiScroller?.destroy()`,
         "scheduleDZForRemovalAfterDrop(node, destroyDz);": `if (node === originDropZone || node === shadowElDropZone) { handleDrop(); return; } scheduleDZForRemovalAfterDrop(node, destroyDz);`,
+        // i3-board: `dragHandle` subscribed to the shared arming store and never
+        // unsubscribed, so every remounted card or column grip stayed a live
+        // subscriber holding its detached DOM; each press then ran all of them.
+        // Repeated column drags grew that set until the app hung (iPhone, PC).
+        "isItemsDragDisabled.subscribe(function (disabled) {": `var pppHandleCb; isItemsDragDisabled.subscribe(pppHandleCb = function (disabled) {`,
+        'handle.removeEventListener("keydown", handleKeyDown);': `handle.removeEventListener("keydown", handleKeyDown); isItemsDragDisabled.unsubscribe(pppHandleCb);`,
       },
     }),
     logWarningsPlugin,

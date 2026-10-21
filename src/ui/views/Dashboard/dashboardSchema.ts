@@ -11,6 +11,11 @@
 // A factory keeps the component thin and testable in isolation while
 // preserving the live-projection semantics callers had inline (latest
 // fields/projects are read at modal-open time via closures).
+//
+// i3-dash: entry points are the «Properties of «project»…» item of a block
+// menu that reads this project (layout/blockProperties.ts) and the command
+// palette (dashboardCommands.ts). The toolbar button is gone: it did not say
+// whose properties it edited. The dialog and its flows are unchanged.
 
 import type { App } from "obsidian";
 import { Notice } from "obsidian";

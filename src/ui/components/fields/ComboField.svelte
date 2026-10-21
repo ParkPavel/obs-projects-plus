@@ -124,22 +124,34 @@
     const anchor = rootEl.getBoundingClientRect();
     const box = popupEl.getBoundingClientRect();
     const bounds = visibleViewport(view);
+    // i3-input: a field scrolled out of the visible area takes its list with
+    // it — the list closes instead of staying pinned to the edge, cut off from
+    // its field; a tap or a key on the field opens it again.
+    if (anchor.height > 0 && (anchor.bottom < bounds.top + margin || anchor.top > bounds.bottom - margin)) {
+      hide();
+      return;
+    }
     const below = Math.max(0, bounds.bottom - margin - anchor.bottom - gap);
     const above = Math.max(0, anchor.top - gap - bounds.top - margin);
-    let top = anchor.bottom + gap;
-    // Flip above the anchor when the list does not fit below and does above.
-    if (box.height > below && above > below) {
-      top = anchor.top - gap - Math.min(box.height, above);
-    }
-    const height = Math.max(0, bounds.height - 2 * margin);
+    // The list's own height, not the one the last placement capped it to:
+    // measured after a cap, it always "fitted" below and never flipped.
+    const natural = Math.min(popupEl.scrollHeight || box.height, 12 * base);
+    // i3-input: on a touch screen the keyboard is below the field, so the list
+    // opens above it whenever a few rows fit there.
+    const coarse = view.matchMedia?.("(pointer: coarse)").matches ?? false;
+    const goAbove = coarse ? above >= Math.min(natural, 6 * base) || above > below : natural > below && above > below;
     const width = Math.max(0, bounds.width - 2 * margin);
-    top = Math.min(Math.max(top, bounds.top + margin), Math.max(bounds.top + margin, bounds.bottom - margin - Math.min(box.height, height)));
+    const maxHeight = goAbove ? above : below;
+    const top = goAbove ? anchor.top - gap - Math.min(natural, above) : anchor.bottom + gap;
     const left = Math.min(Math.max(anchor.left, bounds.left + margin), Math.max(bounds.left + margin, bounds.right - Math.min(Math.max(box.width, anchor.width), width) - margin));
-    popupStyle = `top: ${remAt(top, base)}; left: ${remAt(left, base)}; min-width: ${remAt(Math.min(anchor.width, width), base)}; max-width: ${remAt(width, base)}; max-height: ${remAt(Math.max(0, bounds.bottom - margin - top), base)};`;
+    popupStyle = `top: ${remAt(top, base)}; left: ${remAt(left, base)}; min-width: ${remAt(Math.min(anchor.width, width), base)}; max-width: ${remAt(width, base)}; max-height: ${remAt(Math.max(0, maxHeight), base)};`;
   }
   $: if (expanded && popupEl && shown) void place();
 
-  function onViewChange(): void {
+  function onViewChange(e?: Event): void {
+    // i3-input: the list scrolling its own rows is not a move of the field;
+    // re-placing on it re-capped the list mid-flick and made it jump.
+    if (e && popupEl && e.target instanceof Node && popupEl.contains(e.target)) return;
     if (expanded) void place();
   }
   function watch(view: Window | null): void {
@@ -168,7 +180,9 @@
     const view = rootEl?.ownerDocument.defaultView;
     if (!expanded || !rootEl || !view?.requestAnimationFrame) return;
     const r = rootEl.getBoundingClientRect();
-    const key = `${r.top}|${r.left}|${r.width}`;
+    const vv = view.visualViewport;
+    // A pan of the visual viewport (iOS) moves the visible area, not the field.
+    const key = `${r.top}|${r.left}|${r.width}|${vv?.offsetTop ?? 0}|${vv?.height ?? 0}`;
     if (key !== lastAnchor) {
       lastAnchor = key;
       void place();
@@ -468,6 +482,9 @@
     max-width: var(--ppp-popup-max-w, 24rem);
     max-height: 12rem;
     overflow-y: auto;
+    /* i3-input: a flick at the list's end does not scroll the page under it. */
+    overscroll-behavior: contain;
+    touch-action: pan-y;
     padding: var(--ppp-space-2, 0.25rem);
     background: var(--background-primary);
     border: 0.0625rem solid var(--background-modifier-border);

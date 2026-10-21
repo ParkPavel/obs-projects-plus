@@ -80,8 +80,14 @@ describe("keyboard-visible viewport, not the covered layout viewport", () => {
       expect(parseFloat(popup.style.left) * 16).toBeLessThanOrEqual(92);
       expect(popup.style.maxHeight).not.toBe("");
       const before = popup.style.top;
-      viewport.height = 100; viewport.dispatchEvent(new Event("resize")); await settle();
+      // i3-input: the keyboard leaves the field visible but little room below
+      // it — the list moves above the field.
+      viewport.height = 300; viewport.dispatchEvent(new Event("resize")); await settle();
       expect(popup.style.top).not.toBe(before);
+      // A keyboard that covers the field itself closes the list instead of
+      // pinning it to the visible edge, away from its field.
+      viewport.height = 100; viewport.dispatchEvent(new Event("resize")); await settle();
+      expect(document.querySelector(".ppp-combo-popup")).toBeNull();
       view.unmount();
     } finally { rect.mockRestore(); }
   });

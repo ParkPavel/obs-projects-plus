@@ -283,9 +283,10 @@ describe("cards-g5 — grid span", () => {
     await reportAndFrame(observer, 640);
     expect(prop(m.card(ALPHA), "grid-column")).toMatch(/^span 2/);
 
-    // Narrower than one column: no span at all.
+    // i3-gallery: a phone-narrow grid (≤ 30rem) is two columns whatever the
+    // card width, so the span is capped to two there.
     await reportAndFrame(observer, 280);
-    expect(prop(m.card(ALPHA), "grid-column")).toBe("");
+    expect(prop(m.card(ALPHA), "grid-column")).toMatch(/^span 2/);
 
     // Wide again: the saved three come back, because nothing was rewritten.
     await reportAndFrame(observer, 1000);

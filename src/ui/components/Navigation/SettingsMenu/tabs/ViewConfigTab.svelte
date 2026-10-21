@@ -954,9 +954,20 @@
     cursor: pointer;
   }
   .field-item input[type="checkbox"] {
+    flex: none;
     width: 1rem;
     height: 1rem;
     margin: 0;
+  }
+  /* i3-settings: one line per field — the name left-aligned after its box. */
+  .field-item-label > span,
+  .field-item--hidden > span {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
   }
 
   /* DG-3: draggable field row */
@@ -977,6 +988,10 @@
   }
   .field-item-label {
     display: flex;
+    /* i3-settings: the tab's `label` rule is a column; without this the box
+       sat centred above its name, one tall row per field on a phone. */
+    flex-direction: row;
+    min-width: 0;
     align-items: center;
     gap: 0.5rem;
     flex: 1;

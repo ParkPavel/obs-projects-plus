@@ -215,6 +215,10 @@ describe("cards-g5 — snapping and grid math", () => {
     // Narrower than one column: one column of the container's width.
     expect(gridColumnCount(200, 300, 24)).toBe(1);
     expect(gridColumnCount(0, 300, 24)).toBe(1);
+    // i3-gallery: a narrow gallery (≤ 480 here) holds two columns of any saved width.
+    expect(gridColumnCount(370, 300, 12, 480)).toBe(2);
+    expect(gridColumnCount(370, 200, 12, 480)).toBe(2);
+    expect(gridColumnCount(370, 100, 12, 480)).toBe(3);
   });
 
   it("caps a span to the columns there are, keeping it when unmeasured", () => {

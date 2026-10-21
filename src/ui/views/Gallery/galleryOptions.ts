@@ -14,6 +14,7 @@
 
 import { toNumber } from "src/lib/engine/numeric";
 import type {
+  GalleryCardPreview,
   GalleryConfig,
   GalleryCoverAspectRatio,
   GalleryFitStyle,
@@ -44,12 +45,24 @@ export const GALLERY_FIT_STYLES: readonly GalleryFitStyle[] = ["cover", "contain
 export const GALLERY_SIZE_PRESETS = { s: 200, m: 300, l: 400 } as const;
 export type GallerySizePreset = keyof typeof GALLERY_SIZE_PRESETS;
 
+/**
+ * i3-gallery — the width slider's range, in CSS pixels (the unit `cardWidth`
+ * is stored in). Bases sizes a card by its width the same way; the presets
+ * stay as quick choices inside this range.
+ */
+export const GALLERY_WIDTH_RANGE = { min: 120, max: 640, step: 10 } as const;
+
+/** i3-gallery: the card preview modes, in the order the panel offers them. */
+export const GALLERY_CARD_PREVIEWS: readonly GalleryCardPreview[] = ["cover", "property", "content"];
+
 export const GALLERY_DEFAULTS = {
   layout: "grid",
   coverAspectRatio: "16/10",
   fitStyle: "cover",
   showFieldLabels: true,
   cardWidth: GALLERY_SIZE_PRESETS.m,
+  cardPreview: "cover",
+  compact: false,
 } as const;
 
 function oneOf<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
@@ -79,6 +92,9 @@ export function normalizeGalleryConfig(
   const include = Array.isArray(c.includeFields)
     ? c.includeFields.filter((name): name is string => typeof name === "string")
     : [];
+  const collapsed = Array.isArray(c.collapsedGroups)
+    ? c.collapsedGroups.filter((key): key is string => typeof key === "string")
+    : [];
   return {
     coverField: fieldName(c.coverField),
     iconField: fieldName(c.iconField),
@@ -88,7 +104,47 @@ export function normalizeGalleryConfig(
     layout: oneOf(c.layout, GALLERY_LAYOUTS, GALLERY_DEFAULTS.layout),
     coverAspectRatio: oneOf(c.coverAspectRatio, GALLERY_ASPECT_RATIOS, GALLERY_DEFAULTS.coverAspectRatio),
     showFieldLabels: typeof c.showFieldLabels === "boolean" ? c.showFieldLabels : GALLERY_DEFAULTS.showFieldLabels,
+    groupByField: fieldName(c.groupByField),
+    collapsedGroups: collapsed,
+    cardPreview: oneOf(c.cardPreview, GALLERY_CARD_PREVIEWS, GALLERY_DEFAULTS.cardPreview),
+    compact: c.compact === true,
   };
+}
+
+/**
+ * i3-gallery: a slider value (the input's string, or a number) clamped to
+ * the range and snapped to its step; anything unreadable is the default.
+ */
+export function clampCardWidth(value: unknown): number {
+  const { min, max, step } = GALLERY_WIDTH_RANGE;
+  const width = toNumber(value);
+  if (width === null) return GALLERY_DEFAULTS.cardWidth;
+  return Math.min(max, Math.max(min, Math.round(width / step) * step));
+}
+
+/**
+ * i3-gallery — `includeFields` with `name` moved to the place of `target`
+ * (a drag dropped on another shown property). Saved names the frame lacks
+ * keep their places, as with `moveIncludedField`; an unknown name or target,
+ * or a drop on itself, returns the list unchanged (deduplicated).
+ */
+export function dropIncludedField(
+  includeFields: readonly string[],
+  name: string,
+  target: string
+): string[] {
+  const list = [...new Set(includeFields)];
+  const from = list.indexOf(name);
+  const to = list.indexOf(target);
+  if (from < 0 || to < 0 || from === to) return list;
+  list.splice(from, 1);
+  list.splice(to, 0, name);
+  return list;
+}
+
+/** i3-gallery: `collapsedGroups` with `key` folded or unfolded. */
+export function toggleCollapsedGroup(collapsed: readonly string[], key: string): string[] {
+  return collapsed.includes(key) ? collapsed.filter((k) => k !== key) : [...collapsed, key];
 }
 
 /**

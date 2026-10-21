@@ -143,6 +143,29 @@
     }
     isDraggingColumns = true;
     dndUnpinnedColumns = e.detail.items;
+    armDragWatchdog();
+  }
+
+  /**
+   * i3-board — a column drag that never ends. When the pressed grip is
+   * removed before the release (the column re-renders as the drag starts),
+   * the release never reaches the window, the library waits for it forever
+   * and refuses every later drag in every zone. If neither a consider nor a
+   * finalize comes for a few seconds, the release is sent for it and the
+   * board leaves its drag state.
+   */
+  const DRAG_WATCHDOG_MS = 8000;
+  let dragWatchdog: ReturnType<typeof setTimeout> | undefined;
+  function armDragWatchdog() {
+    clearTimeout(dragWatchdog);
+    dragWatchdog = setTimeout(() => {
+      dragWatchdog = undefined;
+      if (!isDraggingColumns) return;
+      const view = containerEl?.ownerDocument.defaultView ?? window;
+      // The library ends a drag on the window's mouseup and touchend alike.
+      view.dispatchEvent(new MouseEvent("mouseup"));
+      releaseColumnDrag();
+    }, DRAG_WATCHDOG_MS);
   }
 
   function handleDndFinalize(e: CustomEvent<DndEvent<Column>>) {
@@ -152,9 +175,17 @@
       isDraggingColumns = false;
       return;
     }
+    clearTimeout(dragWatchdog);
     dndUnpinnedColumns = e.detail.items;
     const newUnpinned = filterShadowColumns(dndUnpinnedColumns);
-    pendingColumnOrder = [...pinnedColumns, ...newUnpinned].map((col) => col.id);
+    const order = [...pinnedColumns, ...newUnpinned].map((col) => col.id);
+    // i3-board: a column dropped where it was writes nothing. Every attempt
+    // used to save the view and the field options and rebuild every column.
+    if (hasMatchingOrder(columns, order)) {
+      releaseColumnDrag();
+      return;
+    }
+    pendingColumnOrder = order;
     // Dispatch after flip animation completes to prevent reactive cascade mid-animation
     clearTimeout(finalizeTimeout);
     finalizeTimeout = setTimeout(() => {
@@ -196,6 +227,7 @@
       pendingColumnOrder = undefined;
     }
     clearTimeout(finalizeTimeout);
+    clearTimeout(dragWatchdog);
     isDraggingColumns = false;
   });
 
@@ -429,8 +461,15 @@
           outline: "none",
         },
         transformDraggedElement: (element) => {
-          if (!element) return;
+          // i3-board: the library calls this first while its clone is not in the
+          // document yet; that clone measures 0×0, and pinning it to 0rem put
+          // the hit point (the clone's centre) at the column's top-left corner —
+          // half a column away from the finger, so an expanded column never
+          // landed anywhere (a collapsed one, 3rem wide, barely noticed). The
+          // library has already sized the clone from the real column in px.
+          if (!element || !element.isConnected) return;
           const rect = element.getBoundingClientRect();
+          if (rect.width === 0 || rect.height === 0) return;
           const root = rootFontPx(element.ownerDocument);
           const width = remAt(rect.width, root);
           const height = remAt(rect.height, root);

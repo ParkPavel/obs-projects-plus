@@ -64,7 +64,8 @@ export function buildRenderContext(input: RenderContextInput): WidgetRenderConte
     dbCallLinkedSelection: dbCall.linkedSelection,
     dbCallSource: dbCall.source,
     dbCallScopeApplied: !dbCall.isExternal && scopeApplied,
-    dbCallUsesLinkedSource: dbCall.isExternal,
+    // i3-data: a block of this project read as a source holds this project's notes — writable.
+    dbCallUsesLinkedSource: dbCall.isExternal && !(dbCall.source.kind === "ready" && dbCall.source.writable === true),
     // F3b: a master-side link lives in the MASTER's frame (this dashboard's)
     // and must point at the project the block reads.
     dbCallLinkedSelectionValidation: dbCall.linkedSelection

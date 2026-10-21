@@ -22,9 +22,26 @@ export function bumpExternalFrameInvalidation(): void {
  * refresh every reader, not only a renamed project (Codex review of 316d058).
  */
 export function projectsCacheKey(
-  projects: ReadonlyArray<{ id: string; name: string; dataSource?: unknown; fieldConfig?: unknown }>
+  projects: ReadonlyArray<{ id: string; name: string; dataSource?: unknown; fieldConfig?: unknown; additionalSources?: unknown; views?: unknown }>
 ): string {
   return projects
-    .map((p) => `${p.id}|${p.name}|${JSON.stringify(p.dataSource ?? null)}|${JSON.stringify(p.fieldConfig ?? null)}`)
+    .map((p) => `${p.id}|${p.name}|${JSON.stringify(p.dataSource ?? null)}|${JSON.stringify(p.fieldConfig ?? null)}|${JSON.stringify(p.additionalSources ?? null)}|${blockSignature(p.views)}`)
     .join("\u0001");
+}
+
+/**
+ * i3-data: what decides a block's frame when it is read as a source — the
+ * dashboard's filter and formulas, each block's source, filter and pipeline.
+ * Only these: a column width or an active tab must not refetch every frame.
+ */
+function blockSignature(views: unknown): string {
+  if (!Array.isArray(views)) return "";
+  return JSON.stringify(views.map((v: { id?: unknown; filter?: unknown; config?: { widgets?: unknown; formulaFields?: unknown } }) => {
+    const raw = v?.config?.widgets;
+    const widgets = Array.isArray(raw) ? (raw as Array<Record<string, unknown>>) : [];
+    const blocks = widgets
+      .filter((w) => w?.["type"] === "database-call")
+      .map((w) => [w["id"], w["sourceConfig"] ?? null, (w["config"] as { subFilter?: unknown } | undefined)?.subFilter ?? null, w["transform"] ?? null]);
+    return blocks.length > 0 ? [v?.id, v?.filter ?? null, v?.config?.formulaFields ?? null, blocks] : null;
+  }));
 }

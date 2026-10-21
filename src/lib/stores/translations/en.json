@@ -609,6 +609,19 @@
                     "empty": "Empty",
                     "read-only": "Calculated, read only",
                     "type": "Property type",
+                    "actions": {
+                        "rename": "Rename property",
+                        "delete": "Delete property"
+                    },
+                    "nested": "Nested value: edit it in the note's YAML",
+                    "chips": {
+                        "add": "Add item",
+                        "remove": "Remove {{item}}"
+                    },
+                    "color": {
+                        "palette": "Color palette",
+                        "project": "Colors in this project"
+                    },
                     "errors": {
                         "exists": "A property with this name already exists",
                         "reserved": "Names starting with pp_ or $ are reserved",
@@ -2372,6 +2385,44 @@
             "text": "Create the demo — three linked projects with tables, boards, calendars and charts — or start your own project from a folder, a tag or a query.",
             "create-demo": "Create demo: three linked projects",
             "create-project": "Create project"
+        }
+    },
+    "views": {
+        "dashboard": {
+            "canvas": {
+                "jump-bar": "Blocks on this page"
+            },
+            "widget": {
+                "resize": "Resize the block: drag, or use the arrow keys",
+                "menu-properties": "Properties of «{{source}}»…"
+            },
+            "source-catalogue": {
+                "block": "Block «{{title}}» (filtered)",
+                "cycle": "Circular source: this block reads itself through another block. Pick a different source."
+            },
+            "database-call": {
+                "settings": {
+                    "source-any": "Source",
+                    "source-hint-any": "By default the block shows this view's records. Pick another project, a saved selection, or another block of this page — its filtered rows, kept up to date."
+                }
+            }
+        },
+        "gallery": {
+            "group": {
+                "no-value": "No value"
+            },
+            "show-more": "Show more ({{n}})",
+            "card-panel": {
+                "width-value": "{{value}} px",
+                "preview": "Card preview",
+                "preview-options": {
+                    "cover": "Cover or first image",
+                    "property": "Cover property only",
+                    "content": "Page content"
+                },
+                "compact": "Title only",
+                "group-by": "Group by"
+            }
         }
     }
 }

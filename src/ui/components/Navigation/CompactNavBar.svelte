@@ -1,5 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
+  import { Platform } from "obsidian";
+  import { moveToViewHeader } from "src/ui/actions/moveToViewHeader";
   import type { ViewDefinition, ViewId } from "src/settings/settings";
   import AddViewButton from "./AddViewButton.svelte";
   import ViewSwitcher from "./ViewSwitcher.svelte";
@@ -40,11 +42,14 @@
   this decision scans the file for them and cannot tell a mention from a use.
 -->
 <nav class="compact-navbar">
-  <ViewSwitcher
-    {views}
-    activeViewId={viewId}
-    onSelect={(id) => dispatch("viewChange", id)}
-  />
+  <!-- i3-nav: on a phone the tabs live in the leaf header (moveToViewHeader). -->
+  <div class="compact-navbar-tabs" use:moveToViewHeader={Platform.isPhone === true}>
+    <ViewSwitcher
+      {views}
+      activeViewId={viewId}
+      onSelect={(id) => dispatch("viewChange", id)}
+    />
+  </div>
 
   <div class="right">
     <SaveStatusChip />
@@ -77,6 +82,30 @@
     -webkit-backdrop-filter: blur(0.625rem) saturate(180%);
     border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
     flex-shrink: 0;
+  }
+
+  /* The tab strip's wrapper takes the room the strip took before it. */
+  .compact-navbar-tabs {
+    display: flex;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  /* i3-nav: in the leaf header (a phone) the strip fills the title's place
+     and the plugin bar keeps only the tools, at the end of the row. */
+  :global(.ppp-tabs-in-header .view-header-title) {
+    display: none;
+  }
+  :global(.ppp-tabs-in-header .view-header-title-container) {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+  }
+  :global(.ppp-tabs-in-header .view-header-title-container > .compact-navbar-tabs) {
+    width: 100%;
+  }
+  :global(.ppp-tabs-in-header .compact-navbar) {
+    justify-content: flex-end;
   }
 
   /* ios-l1 L3: the actions take their own width first and never shrink; the

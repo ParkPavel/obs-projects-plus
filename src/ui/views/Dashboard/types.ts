@@ -31,6 +31,14 @@ export type WidgetType =
   | "text"
   | "divider";
 
+/**
+ * i3-dash: a block's cell in the dashboard tile grid (layout/tileGrid.ts).
+ * `w` is in twelfths of a row (the screen shows N columns chosen from the
+ * container's width and the block spans w/12 of them, snapped to whole
+ * columns); `h` is in grid rows. `x`/`y` are the block's place in the 12-column
+ * packing of the list order, rewritten on every reorder or resize — order is
+ * the source of truth, so the narrow stack and the wide tiles agree.
+ */
 export interface WidgetLayout {
   x: number;
   y: number;
@@ -365,6 +373,11 @@ export type QuickActionConfig = ToggleFormulaQuickAction;
 
 export interface DatabaseViewConfig {
   readonly widgets: WidgetDefinition[];
+  /**
+   * i3-dash: carried, not read. Tiles or stack is decided by the canvas's
+   * width at render time (WidgetGrid), so one stored page reads well in a wide
+   * pane and on a phone; stored values of both kinds stay as they are.
+   */
   readonly layoutMode: "free" | "stack";
   readonly layoutVersion: number;
   readonly table: DataTableConfig;

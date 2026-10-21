@@ -153,7 +153,9 @@ describe("#C4 Board and Calendar consume the guard, not just receive it", () => 
     // B10: a click opens a read-only peek on a read-only source; the editor
     // (day window settings) still falls back to opening the note.
     expect(calendarView).toMatch(/activateRecord\(\{ id: entry\.id, readonly: dataReadOnly \|\| readonly \}/);
-    expect(calendarView).toMatch(/if \(dataReadOnly\) \{[\s\S]*?openRecord\(\{ id: record\.id \}, PLAIN_MODE/);
+    // i3-calendar: the day window's settings open the same peek, so its
+    // read-only flag covers them too (no separate editor any more).
+    expect(calendarView).toMatch(/function handleDayPopupRecordSettings\(record: DataRecord\) \{\s*showDayPopup = false;\s*handleRecordClick\(record\);/);
   });
 
   it("Calendar's infinite views lose onRecordChange/onRecordAdd, not just gain a Notice", () => {
@@ -203,7 +205,10 @@ describe("#137 the pipeline editor reads the block's own source", () => {
   it("live counters execute with the same right-frames the runtime uses", () => {
     // Without them a `join` preview resolves no right frame and reports
     // different numbers than the widget behind the popup.
-    expect(host).toMatch(/<PipelineEditor[\s\S]*?\{rightFrames\}/);
+    // i3-data: the runtime's right-frames are the preloaded ones merged with
+    // live block sources (`io`), and the editor gets exactly those.
+    expect(host).toMatch(/rightFrames: io\.rightFrames/);
+    expect(host).toMatch(/<PipelineEditor[\s\S]*?rightFrames=\{io\.rightFrames\}/);
     // i2-perf: one pass, each step on the previous output — still with the runtime's right-frames.
     expect(editor).toMatch(/scheduleCounts\(source as DataFrame \| null, steps, rightFrames\)/);
     expect(editor).toMatch(/executeTransform\(current, \{ steps: \[step\] \}, \{ rightFrames: right \}\)/);
