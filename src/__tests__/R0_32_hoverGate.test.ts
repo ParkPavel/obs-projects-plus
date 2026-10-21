@@ -73,7 +73,8 @@ import {
 // 3.7.2: B1b 208, B2 202 (visualizer pane removed), B7 200 (shell toolbar removed);
 // integration p372-rc re-measured on the merged tree.
 // B10 189: DayPopup moved onto FloatingPopup; its own hover rules left with it.
-const UNGATED_HOVER_BUDGET = 189;
+// i3 180: month bars lost their labels; the duplicate window took Obsidian's buttons.
+const UNGATED_HOVER_BUDGET = 180;
 
 /**
  * Components ios-t1 migrated. Each must carry no ungated `:hover` at all: a

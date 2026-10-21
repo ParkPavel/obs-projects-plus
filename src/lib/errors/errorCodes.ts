@@ -236,6 +236,9 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "Failed to save changes",
     cause:
       "The note editor could not write its changes back to the file, so what is on screen is ahead of what is on disk.",
+    // i3: the calendar's day window no longer opens the old note editor (its
+    // settings open the properties block, which reports its own failures).
+    status: "retired",
   },
   {
     code: "PPP-303",

@@ -82,7 +82,7 @@ export function dashboardsOf(project: ProjectDefinition): StoredDashboard[] {
     out.push({
       viewId: view.id,
       viewName: view.name,
-      filter: view.filter as FilterDefinition | undefined,
+      filter: view.filter,
       config,
       widgets: widgets.filter((w): w is StoredWidget => !!w && typeof (w as StoredWidget).id === "string"),
     });

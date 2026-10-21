@@ -145,7 +145,7 @@ export function coverOf(
  * ending in an ellipsis when cut. Empty when the note has no prose.
  */
 export function firstParagraph(markdown: string, max = 280): string {
-  let text = markdown.replace(/^﻿/, "");
+  let text = markdown.replace(/^\uFEFF/, "");
   text = text.replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/, "");
   text = text.replace(/```[\s\S]*?(?:```|$)/g, "\n\n").replace(/%%[\s\S]*?%%/g, "").replace(/<!--[\s\S]*?-->/g, "");
   for (const block of text.split(/\r?\n\s*\r?\n/)) {

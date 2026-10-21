@@ -93,9 +93,9 @@ describe("B10 — the calendar routes every plain activation to the peek", () =>
     expect(sidebar).toMatch(/onRecordClick\?\.\(id, event\)/);
   });
 
-  it("the old editor stays, as the day window's settings entry only", () => {
-    expect(view.match(/new EditNoteModal\(/g)).toHaveLength(1);
-    expect(fnBody(view, /function handleDayPopupRecordSettings\(/)).toMatch(/new EditNoteModal\(/);
+  it("i3: the day window's settings open the same peek; the old editor is gone from the calendar", () => {
+    expect(view).not.toMatch(/new EditNoteModal\(/);
+    expect(fnBody(view, /function handleDayPopupRecordSettings\(/)).toMatch(/handleRecordClick\(record\)/);
   });
 });
 

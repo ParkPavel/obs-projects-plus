@@ -993,7 +993,16 @@
                     "title": "卡片",
                     "cover": "封面",
                     "fields": "属性",
-                    "close": "关闭"
+                    "close": "关闭",
+                    "width-value": "{{value}} px",
+                    "preview": "卡片预览",
+                    "preview-options": {
+                        "cover": "封面或第一张图片",
+                        "property": "仅封面属性",
+                        "content": "页面内容"
+                    },
+                    "compact": "仅标题",
+                    "group-by": "分组依据"
                 },
                 "card-more": "“{{name}}”的更多操作",
                 "cover-broken": "未找到图片",
@@ -1023,7 +1032,11 @@
                 "empty": "该视图还没有数据。",
                 "empty-hint": "创建一篇笔记以开始",
                 "records_other": "条记录",
-                "cover-alt": "标题"
+                "cover-alt": "标题",
+                "group": {
+                    "no-value": "无值"
+                },
+                "show-more": "显示更多 ({{n}})"
             },
             "dashboard": {
                 "name": "数据库",
@@ -1086,7 +1099,8 @@
                     "show-formula-bar-tip": "显示公式编辑器 — 提示、实时预览、语法检查",
                     "add-widget": "添加组件",
                     "error-add-field": "添加字段失败。请重试。",
-                    "error-reopen-schema": "重新打开模式失败。"
+                    "error-reopen-schema": "重新打开模式失败。",
+                    "jump-bar": "本页的区块"
                 },
                 "field-presets": {
                     "label": "布局",
@@ -1160,7 +1174,9 @@
                         "column-count-title": "可见列",
                         "grouped": "已分组",
                         "grouped-title": "按“{{field}}”分组"
-                    }
+                    },
+                    "resize": "调整区块大小：拖动或使用方向键",
+                    "menu-properties": "«{{source}}» 的属性…"
                 },
                 "quick": {
                     "group": "快速操作",
@@ -1343,7 +1359,9 @@
                         "relation-missing-hint": "没有关联字段指向关联块所属的项目 - 请添加一个以便按其筛选。",
                         "relation-open-schema": "打开模式编辑器",
                         "title": "数据来源",
-                        "subtitle": "从其他项目加载数据，而不是使用当前视图。"
+                        "subtitle": "从其他项目加载数据，而不是使用当前视图。",
+                        "source-any": "数据源",
+                        "source-hint-any": "默认情况下，区块显示此视图的记录。可选择其他项目、已保存的选择或本页的其他区块——其筛选后的行会保持最新。"
                     },
                     "tab-add": "添加视图",
                     "tab-rename": "重命名",
@@ -1788,6 +1806,10 @@
                     "label": "跟随选择来源",
                     "none": "— 不跟随 —",
                     "field": "通过关联字段"
+                },
+                "source-catalogue": {
+                    "block": "区块 «{{title}}»（已筛选）",
+                    "cycle": "循环数据源：此区块通过另一个区块读取自身。请选择其他数据源。"
                 }
             }
         },
@@ -2487,44 +2509,6 @@
             "text": "创建演示——三个带有表格、看板、日历和图表的关联项目——或从文件夹、标签或查询开始你自己的项目。",
             "create-demo": "创建演示：三个关联项目",
             "create-project": "创建项目"
-        }
-    },
-    "views": {
-        "dashboard": {
-            "canvas": {
-                "jump-bar": "本页的区块"
-            },
-            "widget": {
-                "resize": "调整区块大小：拖动或使用方向键",
-                "menu-properties": "«{{source}}» 的属性…"
-            },
-            "source-catalogue": {
-                "block": "区块 «{{title}}»（已筛选）",
-                "cycle": "循环数据源：此区块通过另一个区块读取自身。请选择其他数据源。"
-            },
-            "database-call": {
-                "settings": {
-                    "source-any": "数据源",
-                    "source-hint-any": "默认情况下，区块显示此视图的记录。可选择其他项目、已保存的选择或本页的其他区块——其筛选后的行会保持最新。"
-                }
-            }
-        },
-        "gallery": {
-            "group": {
-                "no-value": "无值"
-            },
-            "show-more": "显示更多 ({{n}})",
-            "card-panel": {
-                "width-value": "{{value}} px",
-                "preview": "卡片预览",
-                "preview-options": {
-                    "cover": "封面或第一张图片",
-                    "property": "仅封面属性",
-                    "content": "页面内容"
-                },
-                "compact": "仅标题",
-                "group-by": "分组依据"
-            }
         }
     }
 }
