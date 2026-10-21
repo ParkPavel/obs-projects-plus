@@ -94,7 +94,9 @@ export function chipItem(raw: string, type: ListType): string | null {
 export function listItems(value: unknown): string[] {
   if (Array.isArray(value)) return value.filter((x) => x !== null && x !== undefined).map((x) => String(x));
   if (value === null || value === undefined || value === "") return [];
-  return [typeof value === "object" ? JSON.stringify(value) : String(value)];
+  if (typeof value === "object") return [JSON.stringify(value)];
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return [String(value)];
+  return [];
 }
 
 /**
