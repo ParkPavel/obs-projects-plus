@@ -227,6 +227,8 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "The note could not be renamed.",
     cause:
       "Obsidian refused the rename — usually the new name is already taken, or holds characters the file system does not allow.",
+    // i3: the old note editor that renamed notes is no longer opened by any view.
+    status: "retired",
   },
   {
     code: "PPP-302",

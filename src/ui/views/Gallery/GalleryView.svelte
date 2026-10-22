@@ -6,12 +6,11 @@
   import { createDataRecord } from "src/lib/dataApi";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
-  import { openRecord, modeFromNewLeaf, PLAIN_MODE } from "src/lib/record/openRecord";
+  import { openRecord } from "src/lib/record/openRecord";
   import { Notice } from "obsidian";
   import type { ViewApi } from "src/lib/viewApi";
   import CenterBox from "src/ui/modals/components/CenterBox.svelte";
   import { CreateNoteModal } from "src/ui/modals/createNoteModal";
-  import { EditNoteModal } from "src/ui/modals/editNoteModal";
 
   import {
     CARD_FRAME_OVERRIDE_CAP,
@@ -40,11 +39,6 @@
   import { revealMore } from "./revealMore";
   import { toRem } from "src/ui/utils/cssLength";
   import { ignoreHostSwipe } from "src/ui/actions/ignoreHostSwipe";
-  import { noticeFor } from "src/lib/errors/errorText";
-  import { logError } from "src/lib/errors/errorLog";
-
-  /** #202 — the same event as the Calendar's rename failure, so the same code. */
-  const RENAME_FAILED = "PPP-301";
 
   export let project: ProjectDefinition;
   export let frame: DataFrame;
@@ -133,45 +127,15 @@
     windowSize += GALLERY_WINDOW_STEP;
   };
 
+  /**
+   * The card's editor entry. i3-close: the note's properties block in the
+   * peek — the editor the calendar and the board use — instead of the older
+   * EditNoteModal. The peek is read-only only on read-only DATA (#C4): the
+   * generic `readonly` is always true for a standalone Dataview gallery, whose
+   * notes stay editable.
+   */
   function handleRecordClick(record: DataRecord) {
-    // #142/#C4 — a read-only-DATA gallery still opens the note; it just does
-    // not offer an editor whose writes would land in the wrong project.
-    if (dataReadOnly) {
-      void openRecord({ id: record.id }, PLAIN_MODE, { app: $app });
-      return;
-    }
-    new EditNoteModal(
-      $app,
-      fields,
-      (record) => api.updateRecord(record, fields),
-      record,
-      records,
-      // v3.0.8: Unified note open with modifier-based navigation
-      (openMode) => {
-        void openRecord({ id: record.id }, modeFromNewLeaf(openMode), { app: $app });
-      },
-      // v3.0.1: Rename note callback
-      async (newName: string) => {
-        try {
-          const file = $app.vault.getAbstractFileByPath(record.id);
-          if (file && 'parent' in file) {
-            const newPath = file.parent?.path
-              ? `${file.parent.path}/${newName}.md`
-              : `${newName}.md`;
-            await $app.fileManager.renameFile(file as any, newPath);
-          }
-        } catch (e) {
-          // #202, from the adversarial review: the code names the EVENT, and it
-          // must not swallow the CAUSE. The notice stays one sentence with one
-          // code; the reason goes to the console, which is where the code page
-          // tells people to look.
-          logError(RENAME_FAILED, record.id, e);
-          new Notice(noticeFor(RENAME_FAILED));
-        }
-      },
-      // v3.0.4: Autosave setting from project
-      project.autosave ?? true
-    ).open();
+    void openRecord({ id: record.id, readonly: dataReadOnly }, "peek", { app: $app });
   }
 
   function addRecord() {

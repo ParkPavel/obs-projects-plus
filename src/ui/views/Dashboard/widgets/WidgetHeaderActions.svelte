@@ -12,10 +12,11 @@
   import { openContextMenu } from "src/lib/contextMenu";
   import { buildWidgetMenuEntries, type PipelineIntent } from "./widgetMenu";
   import { useBlockProperties, type PropertiesTarget } from "../layout/blockProperties";
+  import { useBlockInsert } from "../layout/blockInsert";
 
   export let readonly: boolean;
   /** i3-dash: the block, so the menu can offer «Properties» of the source it reads. */
-  export let widget: PropertiesTarget | undefined = undefined;
+  export let widget: (PropertiesTarget & { id?: string }) | undefined = undefined;
   /** Widget type has a config panel (configPanelRegistry hasCog). */
   export let hasCog: boolean;
   /** Widget type supports the transform pipeline. */
@@ -47,9 +48,20 @@
     return { properties: { label, open: blockProperties.open } };
   }
 
+  // i3-close: «Insert block after», offered by the grid in tiles only; the
+  // palette opens at this menu button, the block's own place on the page.
+  const blockInsert = useBlockInsert();
+  let menuBtn: HTMLButtonElement | null = null;
+
+  function insertEntry(): { onInsertAfter?: () => void } {
+    const id = widget?.id;
+    if (id === undefined || !blockInsert?.available()) return {};
+    return { onInsertAfter: () => blockInsert.after(id, menuBtn) };
+  }
+
   export function menuEntries() {
     return buildWidgetMenuEntries({
-      hasCog, isDatabase, hasPipeline, pipelineStepCount, locked, collapsed, ...propertiesEntry(),
+      hasCog, isDatabase, hasPipeline, pipelineStepCount, locked, collapsed, ...propertiesEntry(), ...insertEntry(),
       t: (k, d) => $i18n.t(k, { defaultValue: d }),
       onRename: () => dispatch("rename"),
       onConfigure: () => dispatch("toggleConfig"),
@@ -69,6 +81,7 @@
       title={$i18n.t("views.dashboard.widget.locked", { defaultValue: "Position pinned" })}><Icon name="lock" size="sm" /></span>
   {/if}
   <button
+    bind:this={menuBtn}
     class="ppp-widget-menu-btn clickable-icon"
     on:click={(e) => openContextMenu(menuEntries(), e)}
     aria-label={$i18n.t("views.dashboard.widget.menu", { defaultValue: "Block menu" })}

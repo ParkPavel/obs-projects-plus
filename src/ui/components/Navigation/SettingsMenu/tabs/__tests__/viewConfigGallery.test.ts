@@ -49,7 +49,11 @@ function mount(config: Record<string, unknown> = {}) {
     fit: () => q<HTMLSelectElement>('select[data-gallery-option="fit"]'),
     labels: () => q<HTMLInputElement>('input[data-gallery-option="labels"]'),
     preset: (size: string) => q<HTMLButtonElement>(`button[data-gallery-size="${size}"]`),
-    width: () => q<HTMLInputElement>('input[data-gallery-option="card-width"]'),
+    // i3-close: the width is the shared slider of the gallery's «Card» panel.
+    width: () => q<HTMLInputElement>("input[data-gcp-width]"),
+    preview: () => q<HTMLSelectElement>("select[data-gcp-preview]"),
+    group: () => q<HTMLSelectElement>("select[data-gcp-group]"),
+    compact: () => q<HTMLButtonElement>("button[data-gcp-compact]"),
     destroy() {
       component.$destroy();
       target.remove();
@@ -105,20 +109,48 @@ describe("cards-g3 — each gallery control emits a partial update", () => {
     await tick();
     expect(m.preset("s")).toHaveAttribute("aria-pressed", "true");
     expect(m.preset("m")).toHaveAttribute("aria-pressed", "false");
-    expect(m.width().value).toBe("200");
     m.preset("l").click();
     expect(m.updates).toEqual([{ cardWidth: 200 }, { cardWidth: 400 }]);
     m.destroy();
   });
 
-  it("the width field still writes any width, and a custom width presses no preset", async () => {
+  it("the width slider writes a snapped width on release, and a custom width presses no preset", async () => {
     const m = mount();
+    expect(m.width().type).toBe("range");
     m.width().value = "250";
     m.width().dispatchEvent(new Event("input", { bubbles: true }));
-    m.width().dispatchEvent(new FocusEvent("blur"));
+    expect(m.updates).toEqual([]);
+    m.width().dispatchEvent(new Event("change", { bubbles: true }));
     await tick();
     expect(m.updates).toEqual([{ cardWidth: 250 }]);
+    m.component.$set({ view: galleryView({ cardWidth: 250 }) });
+    await tick();
+    expect(m.width().value).toBe("250");
     for (const size of ["s", "m", "l"]) expect(m.preset(size)).toHaveAttribute("aria-pressed", "false");
+    m.destroy();
+  });
+
+  it("i3-close: card preview, title only and group by are offered and write their keys", async () => {
+    const m = mount();
+    expect(Array.from(m.preview().options).map((o) => o.value)).toEqual(["cover", "property", "content"]);
+    expect(m.preview().value).toBe("cover");
+    expect(Array.from(m.group().options).map((o) => o.value)).toEqual(["", "status", "cover"]);
+    expect(m.compact()).toHaveAttribute("aria-checked", "false");
+
+    choose(m.preview(), "content");
+    m.compact().click();
+    choose(m.group(), "status");
+    expect(m.updates).toEqual([
+      { cardPreview: "content" },
+      { compact: true },
+      { groupByField: "status", collapsedGroups: undefined },
+    ]);
+
+    m.component.$set({ view: galleryView({ cardPreview: "property", compact: true, groupByField: "status" }) });
+    await tick();
+    expect(m.preview().value).toBe("property");
+    expect(m.compact()).toHaveAttribute("aria-checked", "true");
+    expect(m.group().value).toBe("status");
     m.destroy();
   });
 

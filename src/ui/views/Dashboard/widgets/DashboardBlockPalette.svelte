@@ -19,8 +19,11 @@
   export let index: number;
   /** `end` is always visible; `between` reveals on hover/focus (pointer: fine). */
   export let variant: "between" | "end" = "end";
+  /** i3-close: open from outside too (a tile's «Insert block after»). */
+  export let open = false;
+  /** i3-close: where the menu opens when it was not opened by this «+». */
+  export let anchorEl: HTMLElement | null = null;
 
-  let open = false;
   let triggerEl: HTMLButtonElement | null = null;
 
   const dispatch = createEventDispatcher<{ insert: { type: WidgetType; index: number } }>();
@@ -45,7 +48,7 @@
     aria-haspopup="menu"
   ><Icon name="plus" size="sm" />{#if variant === "end"}<span>{$i18n.t("views.dashboard.insert.add", { defaultValue: "Add block" })}</span>{/if}</button>
 
-  <FloatingPopup {triggerEl} bind:open placement="bottom-start" role="menu" ariaLabel={label}>
+  <FloatingPopup triggerEl={anchorEl ?? triggerEl} bind:open placement="bottom-start" role="menu" ariaLabel={label}>
     <div class="ppp-block-insert__list">
       {#each choices as choice (choice.type)}
         <button

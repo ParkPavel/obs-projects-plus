@@ -616,7 +616,8 @@
                     "nested": "Nested value: edit it in the note's YAML",
                     "chips": {
                         "add": "Add item",
-                        "remove": "Remove {{item}}"
+                        "remove": "Remove {{item}}",
+                        "pick-note": "Choose a note"
                     },
                     "color": {
                         "palette": "Color palette",
@@ -768,7 +769,9 @@
                     "cancel": "Cancel",
                     "confirm": "Duplicate",
                     "time": "Time",
-                    "today": "Today"
+                    "today": "Today",
+                    "start-time": "Start time",
+                    "end-time": "End time"
                 },
                 "agenda": {
                     "title": "Agenda",
@@ -1047,8 +1050,6 @@
                     "hide-formula-bar": "Hide formula bar",
                     "show-formula-bar": "Show formula bar",
                     "formula-builder": "Formulas",
-                    "schema": "Properties",
-                    "schema-tip": "Base properties: types, relations, rollups and formulas",
                     "filter-bridge-global": "Global filter: {{count}} condition(s)",
                     "filter-bridge-local": "Local: {{field}} = {{value}}",
                     "filter-bridge-clear": "Clear local filter",
@@ -1167,6 +1168,7 @@
                     "menu-join": "Combine with another source…",
                     "menu-collapse": "Collapse",
                     "menu-duplicate": "Duplicate",
+                    "menu-insert-after": "Insert block after",
                     "locked": "Position pinned",
                     "expand": "Expand",
                     "collapse": "Collapse widget",

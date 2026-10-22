@@ -236,9 +236,11 @@ describe("cards-g3 — cover ratio and fit", () => {
     expect(openRecord).toHaveBeenCalledWith(expect.objectContaining({ id: records[1]?.id }), "peek", expect.anything());
 
     // The title link opens through its own handler and stops the click there.
-    EditNoteModal.mockClear();
+    openRecord.mockClear();
     m.card(1).querySelector<HTMLElement>("a.internal-link")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(EditNoteModal).toHaveBeenCalledTimes(1);
+    // i3-close: the editor entry is the properties block in the peek.
+    expect(openRecord).toHaveBeenCalledTimes(1);
+    expect(openRecord).toHaveBeenLastCalledWith(expect.objectContaining({ id: records[1]?.id }), "peek", expect.anything());
 
     openRecord.mockClear();
     body.dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey: true }));

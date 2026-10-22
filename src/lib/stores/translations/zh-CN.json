@@ -645,7 +645,8 @@
                     "nested": "嵌套值：请在笔记的 YAML 中编辑",
                     "chips": {
                         "add": "添加项目",
-                        "remove": "移除 {{item}}"
+                        "remove": "移除 {{item}}",
+                        "pick-note": "选择笔记"
                     },
                     "color": {
                         "palette": "调色板",
@@ -765,7 +766,9 @@
                     "cancel": "取消",
                     "confirm": "复制",
                     "time": "时间",
-                    "today": "今天"
+                    "today": "今天",
+                    "start-time": "开始时间",
+                    "end-time": "结束时间"
                 },
                 "navigation": {
                     "aria-label": "日历导航",
@@ -1086,8 +1089,6 @@
                     "hide-formula-bar": "隐藏公式栏",
                     "show-formula-bar": "显示公式栏",
                     "formula-builder": "公式",
-                    "schema": "属性",
-                    "schema-tip": "管理项目字段 — 类型、关系、汇总",
                     "filter-bridge-global": "全局筛选器：{{count}} 个条件",
                     "filter-bridge-local": "本地：{{field}} = {{value}}",
                     "filter-bridge-clear": "清除本地筛选器",
@@ -1123,6 +1124,7 @@
                     "menu-join": "与其他数据源合并…",
                     "menu-collapse": "折叠",
                     "menu-duplicate": "复制",
+                    "menu-insert-after": "在后面插入块",
                     "locked": "位置已固定",
                     "expand": "展开",
                     "collapse": "折叠组件",

@@ -215,7 +215,8 @@ describe("B9 — a tap on a gallery card opens the record in the peek", () => {
     expect(openRecord).not.toHaveBeenCalled();
     // Its first entry is the editor, as with the long press.
     (helpers.showMobileNavMenu.mock.calls[0]?.[3] as () => void)();
-    expect(EditNoteModal).toHaveBeenCalledTimes(1);
+    // i3-close: the editor entry is the properties block in the peek.
+    expect(openRecord).toHaveBeenLastCalledWith(expect.objectContaining({ id: "notes/Gamma.md" }), "peek", expect.anything());
     m.component.$destroy();
   });
 });

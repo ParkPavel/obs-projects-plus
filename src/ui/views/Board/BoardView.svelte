@@ -10,12 +10,11 @@
   import { notUndefined } from "src/lib/helpers";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
-  import { activateRecord, openRecord, modeFromNewLeaf, PLAIN_MODE } from "src/lib/record/openRecord";
+  import { activateRecord } from "src/lib/record/openRecord";
   import { Notice } from "obsidian";
   import type { ViewApi } from "src/lib/viewApi";
   import type { ProjectDefinition } from "src/settings/settings";
   import { CreateNoteModal } from "src/ui/modals/createNoteModal";
-  import { EditNoteModal } from "src/ui/modals/editNoteModal";
   import {
     getRecordColorContext,
     sortRecordsContext,
@@ -46,11 +45,6 @@
   import { settings } from "src/lib/stores/settings";
   import type { FilterCondition } from "src/settings/settings";
   import { getFilterValuesFromConditions } from "src/lib/helpers";
-  import { noticeFor } from "src/lib/errors/errorText";
-  import { logError } from "src/lib/errors/errorLog";
-
-  /** #202 — the same event as the Calendar's rename failure, so the same code. */
-  const RENAME_FAILED = "PPP-301";
 
   export let project: ProjectDefinition;
   export let frame: DataFrame;
@@ -108,46 +102,15 @@
     void activateRecord({ id: record.id, readonly: dataReadOnly || readonly }, undefined, { app: $app });
   };
 
-  /** The note editor, one explicit entry away: the card's pencil. */
+  /**
+   * The card's pencil. i3-close: it opens the note's properties block in the
+   * peek — the editor the calendar uses too — instead of the older
+   * EditNoteModal, which showed a different, partial set of fields. The peek
+   * is read-only only on read-only DATA (#C4), as the editor was: a Dataview
+   * board's generic `readonly` never stopped editing a card's note.
+   */
   const handleRecordEdit: OnRecordClick = (record) => {
-    if (dataReadOnly) {
-      void openRecord({ id: record.id }, PLAIN_MODE, { app: $app });
-      return;
-    }
-    new EditNoteModal(
-      $app,
-      fields,
-      (record) => api.updateRecord(record, fields),
-      record,
-      records,
-      // v3.0.8: Unified note open with modifier-based navigation
-      (openMode) => {
-        void openRecord({ id: record.id }, modeFromNewLeaf(openMode), { app: $app });
-      },
-      // v3.0.1: Rename note callback
-      async (newName: string) => {
-        try {
-          const file = $app.vault.getAbstractFileByPath(record.id);
-          if (file && 'parent' in file) {
-            const newPath = file.parent?.path 
-              ? `${file.parent.path}/${newName}.md`
-              : `${newName}.md`;
-            await $app.fileManager.renameFile(file as any, newPath);
-          }
-        } catch (e) {
-          // #202, from the adversarial review: the code names the EVENT, and it
-          // must not swallow the CAUSE. This used to show the thrown message,
-          // and a name collision, a permission error and an illegal filename
-          // ask for three different things from the user. The notice stays one
-          // sentence with one code; the reason goes to the console, which is
-          // where the code page tells people to look.
-          logError(RENAME_FAILED, record.id, e);
-          new Notice(noticeFor(RENAME_FAILED));
-        }
-      },
-      // v3.0.4: Autosave setting from project
-      project.autosave ?? true
-    ).open();
+    void activateRecord({ id: record.id, readonly: dataReadOnly }, undefined, { app: $app });
   };
 
   const handleRecordCheck =

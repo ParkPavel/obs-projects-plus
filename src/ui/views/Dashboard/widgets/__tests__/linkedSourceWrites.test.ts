@@ -108,12 +108,10 @@ describe("#142/#C4 the gallery branch is guarded too", () => {
     // sets restores that standalone editing while keeping the external-block
     // guarantee: viewing stays available, only the editor whose writes would
     // land in the wrong project is withheld.
-    expect(gallery).toMatch(
-      /if \(dataReadOnly\) \{[\s\S]*?openRecord\(\{ id: record\.id \}, PLAIN_MODE[\s\S]*?return;/
-    );
-    expect(gallery).not.toMatch(
-      /if \(readonly\) \{[\s\S]*?openRecord\(\{ id: record\.id \}, PLAIN_MODE/
-    );
+    // i3-close: the editor is the properties block in the peek; its read-only
+    // flag is dataReadOnly alone, never the generic flag.
+    expect(gallery).toMatch(/function handleRecordClick\(record: DataRecord\) \{\s*void openRecord\(\{ id: record\.id, readonly: dataReadOnly \}, "peek"/);
+    expect(gallery).not.toMatch(/readonly: dataReadOnly \|\| readonly \}, "peek"/);
   });
 
   it("the block hands the gallery the same combined readonly as the others, plus dataReadOnly", () => {
@@ -145,7 +143,8 @@ describe("#C4 Board and Calendar consume the guard, not just receive it", () => 
 
   it("Board declares the prop and guards click, check and drag-update", () => {
     expect(boardView).toMatch(/export let dataReadOnly: boolean = false;/);
-    expect(boardView).toMatch(/if \(dataReadOnly\) \{[\s\S]*?openRecord\(\{ id: record\.id \}, PLAIN_MODE/);
+    // i3-close: the pencil opens the properties block in the peek, read-only on read-only data.
+    expect(boardView).toMatch(/const handleRecordEdit: OnRecordClick = \(record\) => \{\s*void activateRecord\(\{ id: record\.id, readonly: dataReadOnly \}/);
   });
 
   it("Calendar declares the prop and guards click, check and drag-change", () => {

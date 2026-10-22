@@ -73,6 +73,7 @@
     validateRename,
     valuesForKey,
     visibleProperties,
+    withPickedRelation,
     type ListType,
   } from "./noteProperties";
 
@@ -237,6 +238,28 @@
   async function commitList(entry: OverlayedEntry, type: ListType, next: string[]): Promise<void> {
     const plan = planListWrite(entry.value, next, type);
     if (plan.kind === "write") await writeKey(entry.key, plan.value);
+  }
+
+  /**
+   * i3-close: a relation chip chosen from the vault — the same note picker
+   * the block menu's «Add relation» opens. Opening it takes focus, which ends
+   * the chip edit; the chosen note is written to this property and the edit
+   * resumes on it, so several notes can be added in a row.
+   */
+  function pickRelationItem(entry: OverlayedEntry, current: string[]): void {
+    const key = entry.key;
+    new RelationPickerModal(
+      app,
+      (chosen) => {
+        void commitList(entry, "relation", withPickedRelation(current, pathFromFile(chosen))).then(() => {
+          editingKey = key;
+        });
+      },
+      {
+        excludePath: file.path,
+        placeholder: t("views.visualizer.pane.actions.pick-relation-placeholder"),
+      },
+    ).open();
   }
 
   async function commitDate(entry: OverlayedEntry, type: CellEditType, next: Date | null): Promise<void> {
@@ -576,8 +599,10 @@
                 items={listItems(entry.value)}
                 {type}
                 ariaLabel={entry.key}
+                pickable={type === "relation"}
                 on:change={(e) => commitList(entry, type, e.detail)}
                 on:done={(e) => endEdit(e.detail)}
+                on:pick={(e) => pickRelationItem(entry, e.detail)}
               />
             {:else if canEdit && editingKey === entry.key && (type === "select" || type === "status")}
               <ComboField

@@ -87,16 +87,26 @@
     return match ? { h: parseInt(match[1] ?? "0", 10), m: parseInt(match[2] ?? "0", 10) } : null;
   }
 
+  // i3-close: the end never falls before the start. A later start carries
+  // the end with it (the duration is kept); an end before the start is not
+  // taken, and the field shows the kept end again.
+  let endInputKey = 0;
   function updateStartTime(h: number, m: number) {
     if (store.editedTime) {
-      const newStart = store.editedTime.startTime.hour(h).minute(m);
+      const { startTime, endTime } = store.editedTime;
+      const newStart = startTime.hour(h).minute(m);
       duplicateStore.setStartTime(newStart);
+      if (!endTime.isAfter(newStart)) duplicateStore.setEndTime(newStart.add(Math.max(15, endTime.diff(startTime, "minute")), "minute"));
     }
   }
-  
+
   function updateEndTime(h: number, m: number) {
     if (store.editedTime) {
       const newEnd = store.editedTime.endTime.hour(h).minute(m);
+      if (!newEnd.isAfter(store.editedTime.startTime)) {
+        endInputKey += 1;
+        return;
+      }
       duplicateStore.setEndTime(newEnd);
     }
   }
@@ -190,19 +200,21 @@
               type="time"
               class="time-input"
               value={editedTime.startTime.format("HH:mm")}
-              aria-label={$i18n.t("views.calendar.duplicate.time")}
+              aria-label={$i18n.t("views.calendar.duplicate.start-time")}
               on:change={(e) => { const t = parseClock(e.currentTarget.value); if (t) updateStartTime(t.h, t.m); }}
             />
           </div>
           <span class="time-sep">—</span>
           <div class="time-field">
-            <input
-              type="time"
-              class="time-input"
-              value={editedTime.endTime.format("HH:mm")}
-              aria-label={$i18n.t("views.calendar.duplicate.time")}
-              on:change={(e) => { const t = parseClock(e.currentTarget.value); if (t) updateEndTime(t.h, t.m); }}
-            />
+            {#key endInputKey}
+              <input
+                type="time"
+                class="time-input"
+                value={editedTime.endTime.format("HH:mm")}
+                aria-label={$i18n.t("views.calendar.duplicate.end-time")}
+                on:change={(e) => { const t = parseClock(e.currentTarget.value); if (t) updateEndTime(t.h, t.m); }}
+              />
+            {/key}
           </div>
         </div>
       {/if}

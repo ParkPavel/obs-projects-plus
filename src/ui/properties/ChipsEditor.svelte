@@ -13,6 +13,11 @@
    *
    * The text entry is the kit's TextField (R0.36 / R0_FIELDS); the chip keys
    * are read in the capture phase, before the field's own Enter and Escape.
+   *
+   * i3-close: a relation editor given `pickable` also offers the vault's note
+   * picker. Its button reports `pick` with the list as it stands (what was
+   * typed is added first); the consumer opens the picker and writes the
+   * chosen note. Typing a name stays the fallback.
    */
   import { createEventDispatcher, onMount } from "svelte";
   import { Icon } from "obsidian-svelte";
@@ -24,10 +29,12 @@
   export let items: string[] = [];
   export let type: ListType = "list";
   export let ariaLabel = "";
+  /** i3-close: offer the note picker beside the text entry (relations only). */
+  export let pickable = false;
 
   // `done` carries whether the row takes focus back: a key ended the edit
   // (true), or focus already went elsewhere and must stay there (false).
-  const dispatch = createEventDispatcher<{ change: string[]; done: boolean }>();
+  const dispatch = createEventDispatcher<{ change: string[]; done: boolean; pick: string[] }>();
 
   let field: TextField | null = null;
   let rootEl: HTMLDivElement | null = null;
@@ -74,6 +81,12 @@
     if (item === null || list.includes(item)) return false;
     emit([...list, item]);
     return true;
+  }
+
+  /** i3-close: the typed text first, then the list as it stands to the picker. */
+  function pick(): void {
+    addTyped();
+    dispatch("pick", [...list]);
   }
 
   function remove(index: number): void {
@@ -137,6 +150,17 @@
     placeholder={t("views.visualizer.block.chips.add", { defaultValue: "Add item" })}
     on:input={(e) => (text = e.detail)}
   />
+  {#if pickable && type === "relation"}
+    <button
+      type="button"
+      class="ppp-chips__pick clickable-icon"
+      data-chips-pick
+      aria-label={t("views.visualizer.block.chips.pick-note", { defaultValue: "Choose a note" })}
+      title={t("views.visualizer.block.chips.pick-note", { defaultValue: "Choose a note" })}
+      on:mousedown|preventDefault
+      on:click|stopPropagation={pick}
+    ><Icon name="search" size="xs" /></button>
+  {/if}
 </div>
 
 <style>
@@ -165,7 +189,8 @@
     min-width: 0;
     overflow-wrap: anywhere;
   }
-  .ppp-chips__remove {
+  .ppp-chips__remove,
+  .ppp-chips__pick {
     display: inline-flex;
     align-items: center;
     justify-content: center;

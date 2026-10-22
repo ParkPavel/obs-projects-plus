@@ -365,7 +365,8 @@ describe("cards-g2 — long press on the media (touch)", () => {
     const [, target, , onModal] = helpers.showMobileNavMenu.mock.calls[0] as [unknown, { id: string }, Event, () => void];
     expect(target).toEqual({ id: "notes/Alpha.md" });
     onModal();
-    expect(EditNoteModal).toHaveBeenCalledTimes(1);
+    // i3-close: the editor entry is the properties block in the peek.
+    expect(openRecord).toHaveBeenLastCalledWith(expect.objectContaining({ id: "notes/Alpha.md" }), "peek", expect.anything());
     m.destroy();
   });
 
@@ -436,8 +437,9 @@ describe("cards-g2 — the title link", () => {
   it("a plain click opens the editor, without also counting as a media click", () => {
     const m = mountGallery();
     m.link(0).dispatchEvent(click());
-    expect(EditNoteModal).toHaveBeenCalledTimes(1);
-    expect(openRecord).not.toHaveBeenCalled();
+    // i3-close: the editor entry is the properties block in the peek, once.
+    expect(openRecord).toHaveBeenCalledTimes(1);
+    expect(openRecord).toHaveBeenLastCalledWith(expect.objectContaining({ id: "notes/Alpha.md" }), "peek", expect.anything());
     m.destroy();
   });
 

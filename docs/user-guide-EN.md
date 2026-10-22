@@ -84,7 +84,7 @@ Open a record through its name or card. In the Dashboard table, a normal click o
 
 A Dashboard is a workspace made of blocks. Start with one data block: select its source and display mode, such as a table. Add charts, metrics, and other blocks as you need them.
 
-In a table you can edit writable cells, choose columns, sort, and filter records. The schema configures field types, including text, number, checkbox, status, list, formula, and relation. Older saved Table and Database views are converted to Dashboard on load; they are not separate new installation modes.
+In a table you can edit writable cells, choose columns, sort, and filter records. A block's “Properties” entry configures field types, including text, number, checkbox, status, list, formula, and relation. Older saved Table and Database views are converted to Dashboard on load; they are not separate new installation modes.
 
 In the 3.7.1 stabilization candidate, Enter commits an edit and Escape cancels it; accepting an IME candidate does not close the cell. For numbers, use a decimal point without thousands separators. A malformed number or incomplete date is marked invalid and does not erase the stored value; intentionally clearing a valid control is still allowed. The record name opens the note, Alt-click opens its preview, and the name is keyboard accessible.
 
@@ -138,7 +138,7 @@ client: "[[Clients/Maria Ivanova]]"
 
 The links in your frontmatter are the relation's data. Configuring a relation leaves them alone: it only tells the plugin where to resolve them. The plugin rewrites a link only when you change the value yourself — in a table cell or in the record editor — and then it writes the new one back to the frontmatter.
 
-**From links to a relation.** Open “Schema,” find the row of the field you want, and choose “Configure.” Set “Type” to “Relation,” then pick the “Target project” — the base its links resolve in. The “Link database…” button opens the wizard, which previews the outcome before anything is saved — “Matched: 3; Not found: 0; Ambiguous: 0” — so a mismatch is visible in advance. A property that already exists as text becomes a relation; your notes are not rewritten.
+**From links to a relation.** In the menu of a block that reads the project, choose “Properties of «project»…”, find the row of the field you want, and choose “Configure.” Set “Type” to “Relation,” then pick the “Target project” — the base its links resolve in. The “Link database…” button opens the wizard, which previews the outcome before anything is saved — “Matched: 3; Not found: 0; Ambiguous: 0” — so a mismatch is visible in advance. A property that already exists as text becomes a relation; your notes are not rewritten.
 
 A formula, a rollup, the record's identifier and a derived property cannot become a relation: their values are computed or belong elsewhere, and a relation would overwrite what produces them. The wizard refuses with one wording for all four — computed, or identifying the record — without naming which case applied.
 

@@ -18,6 +18,7 @@
     sizePresetOf,
     type GallerySizePreset,
   } from "src/ui/views/Gallery/galleryOptions";
+  import GalleryCardOptions from "src/ui/views/Gallery/components/CardPanel/GalleryCardOptions.svelte";
   import { BOARD_THUMBNAIL_LAYOUTS, normalizeThumbnailLayout } from "src/ui/views/Board/types";
   import {
     normalizeCardFrames,
@@ -566,23 +567,11 @@
           </div>
         </div>
 
-        <!-- svelte-ignore a11y-label-has-associated-control -->
-        <label>
-          {$i18n.t("settings-menu.view-config.gallery.card-width")}
-          <NumberField
-            data-gallery-option="card-width"
-            value={cardWidth}
-            placeholder="300"
-            on:commit={(e) => {
-              // cards-g3: the typed width reaches the preset state too.
-              const width = e.detail;
-              if (width === null || width <= 0) return;
-              cardWidth = width;
-              emitUpdate({ cardWidth: width });
-            }}
-          />
-          <span class="hint">{$i18n.t("settings-menu.view-config.gallery.hints.card-width")}</span>
-        </label>
+        <!-- i3-close: width, card preview, title only and group by are the very
+             rows of the gallery's own «Card» panel (one component, two places). -->
+        <div class="gallery-card-options" data-gallery-section="card-options">
+          <GalleryCardOptions {fields} config={view?.config} onPatch={emitUpdate} />
+        </div>
 
         <label>
           {$i18n.t("settings-menu.view-config.gallery.aspect-ratio")}
@@ -882,6 +871,7 @@
   .header { font-weight: 600; }
   .muted { opacity: 0.7; font-size: 0.875rem; }
   .group { display: flex; flex-direction: column; gap: 0.625rem; }
+  .gallery-card-options { display: flex; flex-direction: column; gap: 0.625em; }
   .quick-links {
     display: flex;
     gap: 0.375rem;

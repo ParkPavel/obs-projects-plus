@@ -20,6 +20,7 @@ import {
   type CellValue,
 } from "src/lib/database/cellEditor";
 import { parseTypedDate } from "src/lib/helpers/typedDate";
+import { formatWikilink, parseWikilink } from "src/lib/engine/wikilink";
 
 export function isReservedPropertyKey(key: string): boolean {
   return key.startsWith("pp_") || key.startsWith("$");
@@ -88,6 +89,18 @@ export function chipItem(raw: string, type: ListType): string | null {
   if (type === "tags") return text.replace(/^#+/, "") || null;
   if (type === "relation" && !/^\[\[.*\]\]$/.test(text)) return `[[${text}]]`;
   return text;
+}
+
+/**
+ * i3-close: the relation list with a note chosen in the picker appended as
+ * `[[path]]` (vault path without `.md`). A note the list already links to —
+ * by any alias or spelling of the same path — leaves the list unchanged.
+ */
+export function withPickedRelation(items: readonly string[], path: string): string[] {
+  const target = path.trim();
+  if (target === "") return [...items];
+  const present = items.some((item) => parseWikilink(item)?.path === target || item.trim() === target);
+  return present ? [...items] : [...items, formatWikilink({ path: target })];
 }
 
 /** i3-props: the items of a list value as text, one chip each. */

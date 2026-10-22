@@ -274,6 +274,12 @@
       // Dataview loading) can be retried on next access.
       if (df === null) externalFrameCache.delete(id);
       return df;
+    }, (error: unknown) => {
+      // i3-close: a rejected resolution (a circular block source) is not
+      // cached either; it reads as no frame, so no caller waits on it forever.
+      externalFrameCache.delete(id);
+      console.warn("[Projects+] external frame unavailable:", id, error);
+      return null;
     });
     externalFrameCache.set(id, promise);
     return promise;

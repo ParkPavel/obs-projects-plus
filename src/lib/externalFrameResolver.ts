@@ -155,7 +155,7 @@ function narrows(filter: FilterDefinition | undefined): filter is FilterDefiniti
  * i3-data — a database-call block as a base, read from its stored config: its
  * source (another project, a source of this one, another block, or the
  * dashboard's own frame with the dashboard's formulas and view filter), its
- * block filter, and its transform pipeline when that needs no other frame.
+ * block filter, and its transform pipeline (a join's right side resolved too).
  * The live frame (canvas selection included) comes from the canvas registry
  * instead; this is the same answer where no canvas is open — relations,
  * rollups, another dashboard, a collapsed block.
@@ -184,8 +184,17 @@ async function resolveBlockFrame(ref: string, deps: ResolverDeps, ctx: ResolveCo
   const subFilter = block.config?.["subFilter"] as FilterDefinition | undefined;
   if (narrows(subFilter)) frame = applyFilter(frame, subFilter);
   const pipeline = block.transform as TransformPipeline | undefined;
-  if (pipeline && pipeline.steps.length > 0 && pipeline.steps.every((s) => s.type !== "join")) {
-    frame = executeTransform(frame, pipeline).data;
+  if (pipeline && pipeline.steps.length > 0) {
+    // i3-close: a join step's right side is resolved like any other base,
+    // through the same trail, so a join back into this block is a cycle.
+    const rightFrames = new Map<string, DataFrame>();
+    for (const step of pipeline.steps) {
+      const right = step.type === "join" ? (step as { rightSourceId?: string }).rightSourceId : undefined;
+      if (!right || rightFrames.has(right)) continue;
+      const rightFrame = await resolveExternalFrame(right, deps, next);
+      if (rightFrame) rightFrames.set(right, rightFrame);
+    }
+    frame = executeTransform(frame, pipeline, { rightFrames }).data;
   }
   return frame;
 }

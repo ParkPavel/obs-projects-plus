@@ -34,6 +34,7 @@
   import { startTileResize } from "./layout/tileResize";
   import { jumpItems, jumpToBlock } from "./layout/blockJump";
   import { createBlockProperties, provideBlockProperties } from "./layout/blockProperties";
+  import { insertIndexAfter, provideBlockInsert } from "./layout/blockInsert";
 
   import WidgetHost from "./widgets/WidgetHost.svelte";
   import DashboardBlockPalette from "./widgets/DashboardBlockPalette.svelte";
@@ -71,6 +72,20 @@
   export let project: ProjectDefinition;
 
   provideBlockProperties(createBlockProperties(() => project.name, () => dispatch("openProperties")));
+
+  // ── i3-close: «Insert block after» in a tile's menu (layout/blockInsert.ts) ──
+  // The end palette opens at the tile with the position after it; the choice
+  // goes out as the same `insert` the in-between «+» of the stack sends.
+  let paletteOpen = false;
+  let insertAt: { index: number; anchor: HTMLElement | null } | null = null;
+  $: if (!paletteOpen) insertAt = null;
+  provideBlockInsert({
+    available: () => tileMode && canDnd && !readonly,
+    after: (id, anchor) => {
+      insertAt = { index: insertIndexAfter(dndWidgets.map((w) => w.id), id), anchor };
+      paletteOpen = true;
+    },
+  });
 
   // ── i3-dash: tiles or stack, from this canvas's own width ──
   let canvasEl: HTMLElement | null = null;
@@ -275,7 +290,8 @@
     {#each dndWidgets as widget, index (widget.id)}
       <div class="ppp-block-slot" style:grid-column={areas[index]?.column} style:grid-row={areas[index]?.row}>
       <!-- i3-dash: in tiles a block is inserted with the «+» after the grid;
-           a «+» inside every tile would sit on top of its content. -->
+           a «+» inside every tile would sit on top of its content.
+           i3-close: or after a given tile, from its menu (layout/blockInsert.ts). -->
       {#if !tileMode}<DashboardBlockPalette variant="between" {index} currentWidgets={dndWidgets} on:insert />{/if}
       <WidgetHost
         reorderable={!widget.layout?.locked}
@@ -318,7 +334,13 @@
     {/each}
   </div>
   <div class="ppp-canvas-stack-add">
-    <DashboardBlockPalette index={dndWidgets.length} currentWidgets={dndWidgets} on:insert />
+    <DashboardBlockPalette
+      index={insertAt?.index ?? dndWidgets.length}
+      anchorEl={insertAt?.anchor ?? null}
+      bind:open={paletteOpen}
+      currentWidgets={dndWidgets}
+      on:insert
+    />
   </div>
   {:else}
   <div

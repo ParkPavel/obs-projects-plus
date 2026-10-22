@@ -66,6 +66,21 @@ describe("a database-call block as a base", () => {
     const out = await resolveExternalFrame("p::block:v1:A", deps([p]));
     expect(out?.records.map((r) => r.id)).toEqual(["C/Anna.md", "C/Boris.md"]);
   });
+
+  it("i3-close: a block whose pipeline joins another project reads that project as its right side", async () => {
+    frames = {
+      p: clients,
+      tariffs: { fields: [field("status", "string"), field("rate", "number")], records: [{ id: "T/a.md", values: { status: "active", rate: 7 } }] },
+    };
+    const p = project("p", { views: [dashboard([{
+      id: "A", type: "database-call", title: "С тарифом", config: {},
+      transform: { steps: [{ type: "join", rightSourceId: "tariffs", on: { leftKey: "status", rightKey: "status" }, how: "inner" }] },
+    }])] });
+    const out = await resolveExternalFrame("p::block:v1:A", deps([p, project("tariffs")]));
+    // An inner join on status: the two active clients match the one tariff.
+    expect(out?.records).toHaveLength(2);
+    expect(queries).toContain("tariffs");
+  });
 });
 
 describe("multi-level rollups", () => {

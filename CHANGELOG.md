@@ -8,6 +8,58 @@ Downloadable versions and their publication dates are listed in
 The version in [manifest.json](https://github.com/ParkPavel/obs-projects-plus/blob/main/manifest.json) identifies this source tree; it does not
 mean that a new release has been published.
 
+## 3.7.2 — unreleased
+
+### Safety and stability
+
+- Dragging board columns can no longer hang Obsidian: a handler leak is closed, a column dropped where it
+  was writes nothing, and a drag that never ends is released on its own.
+- The calendar no longer freezes on the month view: day cells create no hidden frames and at most 24 months
+  stay in memory.
+
+### Calendar
+
+- Month and two weeks: event bars are proportional to time and no longer overlap (on phones too); labels
+  are gone — an event is found by its colour and place in the day, its title is the tooltip and in the day
+  window. Extra columns go behind "+N". Multi-day strips are thin colour bands, packed per week.
+- Week and day: an event shorter than an hour (from 15 minutes) is drawn at its length; an overnight event is
+  drawn in parts per day; an event of 24 hours or more lives in the all-day row.
+- Stretching a multi-day event over more days is saved; without an end field `endDate` is created.
+- A record's "Settings" in the day window open the note's properties block. The duplicate window follows
+  Obsidian's modals: a time field and an action footer.
+
+### Note properties
+
+- Rename and delete a property; lists and tags as separate items (a comma inside an item is kept); status
+  picked from the values the project uses; a colour palette with shared favourites; arrow keys move between
+  rows. Nested values are read-only. Only the note's own frontmatter is written.
+
+### Board
+
+- Columns drag by their grip again; the column menu has Move left / Move right.
+- Pinning a column is a view setting and no longer follows the status options.
+
+### Dashboard and data
+
+- A wide dashboard is a tile grid: resize a block by its corner, snapping to the grid. On a phone it is a
+  stack with a jump bar of block titles.
+- A source's "Properties" moved from the toolbar into the block menu.
+- Tables: the first column is pinned only from its header menu; a scroll that reaches the table's edge
+  carries on into the page; option pills read on any background; lists and dates in formulas show by type.
+- A filtered dashboard block can be the source of another block, a chart or a relation; loops are refused.
+  Rollups read rollups (up to three levels); formulas run in dependency order.
+
+### Gallery
+
+- Cover from a list value or the note's first image, a text preview, grouping by a field, a width slider, a
+  title-only mode and lazy images. Two cards a row on a phone.
+
+### Phone and fields
+
+- The view tabs sit in the header in place of "Projects".
+- The suggestion list opens above its field, follows it and keeps typed text. Search no longer overwrites
+  what is being typed. The field list in view settings is one line per field.
+
 ## 3.7.0 — 2026-10-05
 
 ### Cards and gallery
