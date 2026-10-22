@@ -2,8 +2,8 @@
  * i3-props — rename and delete carry the key's own bookkeeping (`pp_overlay`,
  * `pp_types`) with it, keep the YAML order, and never rewrite a value.
  */
-import { deleteKeyIn, renameKeyIn } from "../propertyKeys";
-import { deleteProperty, renameProperty } from "../propertyKeysWriter";
+import { deleteKeyIn, renameKeyIn, reorderKeysIn } from "../propertyKeys";
+import { deleteProperty, renameProperty, reorderProperties } from "../propertyKeysWriter";
 
 function sample(): Record<string, unknown> {
   return {
@@ -58,6 +58,65 @@ describe("i3-props deleteKeyIn", () => {
 
   it("is false for a key that is not there", () => {
     expect(deleteKeyIn({ a: 1 }, "b")).toBe(false);
+  });
+});
+
+describe("i3-final reorderKeysIn", () => {
+  it("writes the new order into the YAML, nested values untouched, pp_* at the end", () => {
+    const nested = { owner: { name: "x" } };
+    const fm: Record<string, unknown> = {
+      pp_types: { status: "status" },
+      title: "A",
+      status: "open",
+      meta: nested,
+      due: "2026-10-21",
+    };
+    expect(reorderKeysIn(fm, ["due", "title", "meta", "status"])).toBe(true);
+    expect(Object.keys(fm)).toEqual(["due", "title", "meta", "status", "pp_types"]);
+    expect(fm["meta"]).toBe(nested);
+    expect(fm["pp_types"]).toEqual({ status: "status" });
+  });
+
+  it("clears the overlay order of the moved keys; hidden keys keep their slot", () => {
+    const fm: Record<string, unknown> = {
+      a: 1,
+      secret: 2,
+      b: 3,
+      c: 4,
+      pp_overlay: { hidden: ["secret"], order: ["c", "a", "secret"] },
+    };
+    expect(reorderKeysIn(fm, ["c", "b", "a"])).toBe(true);
+    expect(Object.keys(fm)).toEqual(["c", "secret", "b", "a", "pp_overlay"]);
+    expect(fm["pp_overlay"]).toEqual({ hidden: ["secret"], order: ["secret"] });
+  });
+
+  it("orders pinned keys in pp_overlay.pinned and leaves their YAML place alone", () => {
+    const fm: Record<string, unknown> = {
+      a: 1,
+      p: 2,
+      q: 3,
+      b: 4,
+      pp_overlay: { pinned: ["p", "q"] },
+    };
+    expect(reorderKeysIn(fm, ["q", "p", "b", "a"])).toBe(true);
+    expect(Object.keys(fm)).toEqual(["b", "p", "q", "a", "pp_overlay"]);
+    expect(fm["pp_overlay"]).toEqual({ pinned: ["q", "p"] });
+  });
+
+  it("is false and changes nothing when the order is already the YAML order", () => {
+    const fm: Record<string, unknown> = { a: 1, b: 2, pp_types: {} };
+    const before = JSON.stringify(fm);
+    expect(reorderKeysIn(fm, ["a", "b", "missing", "pp_types"])).toBe(false);
+    expect(JSON.stringify(fm)).toBe(before);
+  });
+
+  it("writes through one processFrontMatter", async () => {
+    const fm: Record<string, unknown> = { a: 1, b: 2 };
+    const processFrontMatter = jest.fn(async (_f: unknown, fn: (f: Record<string, unknown>) => void) => fn(fm));
+    const app = { fileManager: { processFrontMatter } } as never;
+    expect(await reorderProperties(app, { path: "a.md" } as never, ["b", "a"])).toBe(true);
+    expect(Object.keys(fm)).toEqual(["b", "a"]);
+    expect(processFrontMatter).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -42,9 +42,13 @@ export {
   validateFormulaExpression,
   getFormulaFunctions,
   isStyledValue,
+  createFormulaPass,
 } from "./extendedEvaluator";
 export type {
   StyledValue,
   FormulaResult,
+  FormulaPass,
 } from "./extendedEvaluator";
+// i3-final: the criteria language of SUMIF / COUNTIF / the *IFS family
+export { compileCriterion, matchingRows } from "./criteria";
 

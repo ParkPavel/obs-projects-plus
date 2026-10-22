@@ -6,6 +6,7 @@
   import NumberField from "src/ui/components/fields/NumberField.svelte";
   import FieldComboInput from "./FieldComboInput.svelte";
   import SettingsSection from "./SettingsSection.svelte";
+  import FieldPropertiesList from "./FieldPropertiesList.svelte";
   import { Icon } from "obsidian-svelte";
   import { getFieldIcon } from "./filterHelpers";
   import {
@@ -126,16 +127,6 @@
     emitUpdate({ table: { ...tableConfig, ...partial } });
   }
 
-  function handleFieldVisibilityChange(fieldName: string, visible: boolean) {
-    const newFieldConfig = {
-      ...fieldConfig,
-      [fieldName]: {
-        ...fieldConfig[fieldName],
-        hide: !visible,
-      },
-    };
-    emitTableUpdate({ fieldConfig: newFieldConfig });
-  }
 
   // chrome-filters: "Fields on the card". The card shows the selected fields
   // in the saved `includeFields` order (GalleryView reads the same helper);
@@ -184,50 +175,14 @@
   // Number fields for Board order sync
   $: numberFields = fields.filter(f => f.type === "number" || f.type === "Number");
 
-  // Hidden fields for Database view
-  $: orderFields = (tableConfig["orderFields"] as string[]) ?? [];
-  $: hiddenFields = fields.filter(f => fieldConfig[f.name]?.hide);
-  $: visibleFields = (() => {
-    const all = fields.filter(f => !fieldConfig[f.name]?.hide);
-    if (orderFields.length === 0) return all;
-    return [...all].sort((a, b) => {
-      const ia = orderFields.indexOf(a.name);
-      const ib = orderFields.indexOf(b.name);
-      if (ia === -1 && ib === -1) return 0;
-      if (ia === -1) return 1;
-      if (ib === -1) return -1;
-      return ia - ib;
-    });
-  })();
-
-  // DG-3: drag-to-reorder visible fields
-  let fieldDragIndex: number | null = null;
-  let fieldDragOverIndex: number | null = null;
-
-  function onFieldDragStart(index: number, e: DragEvent) {
-    fieldDragIndex = index;
-    e.dataTransfer!.effectAllowed = "move";
-  }
-
-  function onFieldDragOver(index: number, e: DragEvent) {
-    e.preventDefault();
-    e.dataTransfer!.dropEffect = "move";
-    fieldDragOverIndex = index;
-  }
-
-  function onFieldDrop(index: number, e: DragEvent) {
-    e.preventDefault();
-    if (fieldDragIndex === null || fieldDragIndex === index) {
-      fieldDragIndex = null; fieldDragOverIndex = null; return;
-    }
-    const arr = [...visibleFields];
-    const [moved] = arr.splice(fieldDragIndex, 1);
-    arr.splice(index, 0, moved!);
-    fieldDragIndex = null; fieldDragOverIndex = null;
-    emitTableUpdate({ orderFields: arr.map(f => f.name) });
-  }
-
-  function onFieldDragEnd() { fieldDragIndex = null; fieldDragOverIndex = null; }
+  // i3-final (B4): the «Properties» list (FieldPropertiesList) edits the
+  // field list of THIS view's table settings — `fieldConfig[*].hide` and
+  // `orderFields` of `view.config.table` (the flat config of a legacy table
+  // view). For a dashboard that list is the default of every table tab of its
+  // database-call blocks: a tab without its own choice for a field follows it,
+  // a tab that hid, showed or reordered columns itself keeps its own
+  // (`DatabaseCall/fieldLayout.ts` holds the rule and the write-back).
+  $: orderFields = (tableConfig["orderFields"] as string[] | undefined) ?? [];
 </script>
 
 <div class="section">
@@ -801,64 +756,12 @@
           <span class="hint">{$i18n.t("settings-menu.view-config.shared.hints.icon-field", { defaultValue: "Field with an emoji or lucide icon name. Shown as a per-record icon." })}</span>
         </label>
 
-        <div class="field-list">
-          <span class="field-list-label">{$i18n.t("settings-menu.view-config.table.hide-fields")}</span>
-          <span class="hint">{$i18n.t("settings-menu.view-config.table.hints.hide-fields")}</span>
-          {#each visibleFields as field, index}
-            <div
-              class="field-item field-item--draggable"
-              class:field-item--drag-over={fieldDragOverIndex === index}
-              draggable="true"
-              on:dragstart={(e) => onFieldDragStart(index, e)}
-              on:dragover={(e) => onFieldDragOver(index, e)}
-              on:drop={(e) => onFieldDrop(index, e)}
-              on:dragend={onFieldDragEnd}
-            >
-              <span class="field-drag-handle" aria-hidden="true">⠿</span>
-              <label class="field-item-label">
-                <input
-                  class="ppp-touch-target"
-                  type="checkbox"
-                  checked={true}
-                  on:change={(e) => handleFieldVisibilityChange(field.name, e.currentTarget.checked)}
-                />
-                <span>{field.name}</span>
-              </label>
-            </div>
-          {/each}
-        </div>
-
-        {#if hiddenFields.length > 0}
-          <div class="field-list field-list--hidden">
-            <span class="field-list-label field-list-label--hidden">
-              {$i18n.t("settings-menu.view-config.table.hidden-fields", { defaultValue: "Hidden fields" })}
-              ({hiddenFields.length})
-            </span>
-            {#each hiddenFields as field}
-              <label class="field-item field-item--hidden">
-                <input
-                  class="ppp-touch-target"
-                  type="checkbox"
-                  checked={false}
-                  on:change={(e) => handleFieldVisibilityChange(field.name, e.currentTarget.checked)}
-                />
-                <span>{field.name}</span>
-              </label>
-            {/each}
-            <button
-              class="show-all-btn"
-              on:click={() => {
-                const newFieldConfig = { ...fieldConfig };
-                for (const f of hiddenFields) {
-                  newFieldConfig[f.name] = { ...newFieldConfig[f.name], hide: false };
-                }
-                emitTableUpdate({ fieldConfig: newFieldConfig });
-              }}
-            >
-              {$i18n.t("settings-menu.view-config.table.show-all", { defaultValue: "Show all fields" })}
-            </button>
-          </div>
-        {/if}
+        <FieldPropertiesList
+          {fields}
+          {fieldConfig}
+          {orderFields}
+          on:change={(e) => emitTableUpdate(e.detail)}
+        />
       </div>
     {/if}
   {:else}
@@ -933,83 +836,9 @@
     font-weight: 500;
     margin-bottom: 0.25rem;
   }
-  .field-item {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.5rem;
-    min-height: 2rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.375rem;
-    cursor: pointer;
-  }
-  .field-item input[type="checkbox"] {
-    flex: none;
-    width: 1rem;
-    height: 1rem;
-    margin: 0;
-  }
-  /* i3-settings: one line per field — the name left-aligned after its box. */
-  .field-item-label > span,
-  .field-item--hidden > span {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    text-align: left;
-  }
-
-  /* DG-3: draggable field row */
-  .field-item--draggable {
-    cursor: default;
-  }
-  .field-item--drag-over {
-    border-top: 0.125rem solid var(--interactive-accent);
-    border-radius: 0;
-  }
-  .field-drag-handle {
-    color: var(--text-faint);
-    opacity: 0;
-    cursor: grab;
-    font-size: 0.875rem;
-    flex-shrink: 0;
-    transition: opacity 100ms ease;
-  }
-  .field-item-label {
-    display: flex;
-    /* i3-settings: the tab's `label` rule is a column; without this the box
-       sat centred above its name, one tall row per field on a phone. */
-    flex-direction: row;
-    min-width: 0;
-    align-items: center;
-    gap: 0.5rem;
-    flex: 1;
-    cursor: pointer;
-  }
-  .field-list--hidden {
-    margin-top: 0.5rem;
-    padding-top: 0.5rem;
-    border-top: var(--ppp-border-width) dashed var(--background-modifier-border);
-  }
   .field-list-label--hidden {
     color: var(--text-faint);
     font-size: 0.8125rem;
-  }
-  .field-item--hidden span {
-    opacity: 0.5;
-    text-decoration: line-through;
-  }
-  .show-all-btn {
-    margin-top: 0.25rem;
-    padding: 0.375rem 0.75rem;
-    font-size: 0.75rem;
-    color: var(--interactive-accent);
-    background: transparent;
-    border: var(--ppp-border-width) dashed var(--interactive-accent);
-    border-radius: 0.375rem;
-    cursor: pointer;
-    text-align: center;
   }
 
   /* chrome-filters: "Fields on the card" — one row per field: its kind (a
@@ -1094,18 +923,6 @@
     select:hover, .section :global(input.ppp-text-field):hover {
       border-color: var(--interactive-accent);
     }
-    .field-item:hover {
-      background: var(--background-modifier-hover);
-    }
-    .field-item--draggable:hover .field-drag-handle {
-      opacity: 0.6;
-    }
-    .field-drag-handle:hover {
-      opacity: 1 !important;
-    }
-    .show-all-btn:hover {
-      background: var(--background-modifier-hover);
-    }
     .card-field-btn:not(:disabled):hover {
       color: var(--text-normal);
       background: var(--background-modifier-hover);
@@ -1113,16 +930,8 @@
   }
 
   /* ios-t1: each checkbox carries `.ppp-touch-target` (tokens.css), a finger
-     square centred on the box. Field rows grow to a target tall so the squares
-     of neighbouring rows meet instead of overlapping. The drag handle is the
-     row's HTML drag, which touch never starts, so it steps aside. */
+     square centred on the box. */
   @media (pointer: coarse) {
-    .field-item {
-      min-height: var(--ppp-touch-target-min);
-    }
-    .field-drag-handle {
-      display: none;
-    }
     .quick-link-btn {
       min-height: var(--ppp-touch-target-min);
     }

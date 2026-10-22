@@ -25,7 +25,7 @@
   //     on:commit={() => handleApply()}
   //   />
 
-  import { createEventDispatcher, onDestroy } from "svelte";
+  import { afterUpdate, createEventDispatcher, onDestroy } from "svelte";
   import { suggestIndexCache } from "src/lib/engine/formulaSuggestIndex";
   import { debounceLatest } from "src/lib/engine/debounceLatest";
   import {
@@ -35,6 +35,7 @@
   import {
     getFormulaMetadata,
     findEnclosingCall,
+    localizedFormulaDoc,
     type FormulaMetadata,
   } from "src/lib/dashboard-engine/formulaMetadata";
   import { i18n } from "src/lib/stores/i18n";
@@ -44,13 +45,17 @@
   // ── Snippets catalog (default) ──────────────────────────────
   // Small built-in catalog for empty-state Ctrl+Space discovery. Each surface
   // (FormulaBar / YamlVisualizer / custom) can override via `snippets` prop.
+  // i3-final: descriptions in the reader's language (they were Russian for
+  // everyone); CONCAT is not a function of the engine, the conditional
+  // aggregates are.
   const DEFAULT_SNIPPETS: FormulaSnippet[] = [
-    { label: "SUM(field)", insert: "SUM(", description: "Сумма значений поля" },
-    { label: "AVG(field)", insert: "AVG(", description: "Среднее значение" },
-    { label: "COUNT()", insert: "COUNT(", description: "Количество записей" },
-    { label: "IF(cond, then, else)", insert: "IF(", description: "Условное выражение" },
-    { label: "TODAY()", insert: "TODAY()", description: "Сегодняшняя дата" },
-    { label: "CONCAT(a, b)", insert: "CONCAT(", description: "Склейка строк" },
+    { label: "SUM(@column)", insert: "SUM(@", description: $i18n.t("views.dashboard.formula.snippet-sum") },
+    { label: "AVG(@column)", insert: "AVG(@", description: $i18n.t("views.dashboard.formula.snippet-avg") },
+    { label: "COUNT()", insert: "COUNT(", description: $i18n.t("views.dashboard.formula.snippet-count") },
+    { label: "IF(cond, then, else)", insert: "IF(", description: $i18n.t("views.dashboard.formula.snippet-if") },
+    { label: "TODAY()", insert: "TODAY()", description: $i18n.t("views.dashboard.formula.snippet-today") },
+    { label: 'SUMIF(@range, ">0", @sum_range)', insert: "SUMIF(@", description: $i18n.t("views.dashboard.formula.snippet-sumif") },
+    { label: 'COUNTIF(@range, "done")', insert: "COUNTIF(@", description: $i18n.t("views.dashboard.formula.snippet-countif") },
   ];
 
   // ── Props ───────────────────────────────────────────────────
@@ -150,6 +155,9 @@
       highlightEl.scrollLeft = textareaEl.scrollLeft;
     }
   }
+  // i3-final: a value set from outside (a snippet, a parent) moves the
+  // textarea's scroll without a scroll event; the layer follows after render.
+  afterUpdate(syncScroll);
   /**
    * True when Ctrl+Space forced suggestions open without a cursor word.
    * Auto-resets when the user types (cursorWord appears) or cancels (Esc/insert).
@@ -364,7 +372,7 @@
     <div class="ppp-fc-input-stack" class:ppp-fc-input-stack--disabled={disabled}>
       {#if highlight}
         <div class="ppp-fc-highlight" bind:this={highlightEl} aria-hidden="true">
-          {#each highlightSegments as seg}<span class={seg.cls}>{seg.text}</span>{/each}
+          {#each highlightSegments as seg}<span class={seg.cls}>{seg.text}</span>{/each}{#if value.endsWith("\n")}<span>{" "}</span>{/if}
         </div>
       {/if}
       <textarea
@@ -391,9 +399,9 @@
         <code class="ppp-fc-signature-code">{activeSignature.signature}</code>
         <span class="ppp-fc-signature-meta">
           <span>{$i18n.t("views.dashboard.formula.signature-returns")}: <strong>{activeSignature.returnType}</strong></span>
-          <span>{activeSignature.category}</span>
+          <span>{$i18n.t(`views.dashboard.formula.help-category.${activeSignature.category}`)}</span>
         </span>
-        <p class="ppp-fc-signature-doc">{activeSignature.doc}</p>
+        <p class="ppp-fc-signature-doc">{localizedFormulaDoc(activeSignature.name, activeSignature.doc, (key, options) => $i18n.t(key, options))}</p>
       </div>
     {/if}
 
@@ -407,7 +415,9 @@
       offsetRem={0.25}
       role="listbox"
       autoFocus={false}
-      ariaLabel={snippetsMode ? "Formula snippets" : "Formula suggestions"}
+      ariaLabel={snippetsMode
+        ? $i18n.t("views.dashboard.formula.snippets-label")
+        : $i18n.t("views.dashboard.formula.suggestions-label")}
       on:close={() => { showSuggestions = false; forceOpen = false; }}
     >
       {#if snippetsMode}
@@ -478,41 +488,56 @@
     position: relative;
   }
 
-  .ppp-fc-textarea {
-    width: 100%;
+  /* Highlight overlay (#077). The underlay paints colored tokens; the
+     textarea sits on top with transparent text but a visible caret.
+     i3-final: the glyphs drifted off the caret because the two layers had
+     different boxes — a 0.0625rem border under a var(--ppp-border-width) one,
+     and a textarea scrollbar narrowing the text column the layer kept. Both
+     layers now take every box and text metric from this ONE rule, and both
+     reserve the same scrollbar gutter, so a line wraps at the same glyph in
+     each and the layer is scrolled with the textarea (syncScroll). */
+  .ppp-fc-textarea,
+  .ppp-fc-highlight {
+    margin: 0;
     padding: 0.5rem;
     border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
-    background: var(--background-secondary);
-    color: var(--text-normal);
     font-family: var(--font-monospace);
     font-size: var(--font-ui-small);
+    font-weight: normal;
+    font-style: normal;
+    font-variant-ligatures: none;
     line-height: 1.4;
     letter-spacing: normal;
-    resize: vertical;
-    min-height: 4rem;
+    word-spacing: normal;
+    text-indent: 0;
+    text-transform: none;
+    tab-size: 4;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    scrollbar-gutter: stable;
     box-sizing: border-box;
   }
 
-  /* Highlight overlay (#077). The underlay paints colored tokens; the
-     textarea sits on top with transparent text but a visible caret.
-     Typography MUST match the textarea exactly so glyphs align 1:1. */
+  .ppp-fc-textarea {
+    display: block;
+    width: 100%;
+    background: var(--background-secondary);
+    color: var(--text-normal);
+    resize: vertical;
+    min-height: 4rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
   .ppp-fc-highlight {
     position: absolute;
     inset: 0;
-    margin: 0;
-    padding: 0.5rem;
-    border: 0.0625rem solid transparent;
-    border-radius: var(--radius-s, 0.25rem);
-    font-family: var(--font-monospace);
-    font-size: var(--font-ui-small);
-    line-height: 1.4;
-    letter-spacing: normal;
-    white-space: pre-wrap;
-    word-break: break-word;
+    border-color: transparent;
+    background: var(--background-secondary);
     overflow: hidden;
     pointer-events: none;
-    box-sizing: border-box;
     color: var(--text-normal);
   }
 
@@ -521,8 +546,6 @@
     background: transparent;
     color: transparent;
     caret-color: var(--text-normal);
-    white-space: pre-wrap;
-    word-break: break-word;
   }
 
   .ppp-fc-input-stack--disabled .ppp-fc-highlight {

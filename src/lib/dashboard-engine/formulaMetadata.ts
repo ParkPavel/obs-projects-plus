@@ -129,9 +129,15 @@ const M: Record<string, FormulaMetadata> = {
   QUARTILE: { name: "QUARTILE", signature: "QUARTILE(values, quart)", returnType: "number", doc: "Quartile (0..4).", category: "statistical" },
   CORREL: { name: "CORREL", signature: "CORREL(xs, ys)", returnType: "number", doc: "Pearson correlation coefficient.", category: "statistical" },
   RANK: { name: "RANK", signature: "RANK(value, values, asc?)", returnType: "number", doc: "Rank of value within list.", category: "statistical" },
-  SUMIF: { name: "SUMIF", signature: "SUMIF(values, predicate)", returnType: "number", doc: "Sum of values where predicate holds.", category: "statistical" },
-  COUNTIF: { name: "COUNTIF", signature: "COUNTIF(values, predicate)", returnType: "number", doc: "Count of values where predicate holds.", category: "statistical" },
-  AVERAGEIF: { name: "AVERAGEIF", signature: "AVERAGEIF(values, predicate)", returnType: "number", doc: "Mean of values where predicate holds.", category: "statistical" },
+  // i3-final: Excel criteria — 5, ">10", "<=5", "done", "<>x", "a*", "?b", "".
+  SUMIF: { name: "SUMIF", signature: "SUMIF(@range, criteria, @sum_range?)", returnType: "number", doc: "Sum of the cells (or of @sum_range on the same rows) that meet the criteria.", category: "statistical" },
+  COUNTIF: { name: "COUNTIF", signature: "COUNTIF(@range, criteria)", returnType: "number", doc: "Number of cells that meet the criteria.", category: "statistical" },
+  AVERAGEIF: { name: "AVERAGEIF", signature: "AVERAGEIF(@range, criteria, @average_range?)", returnType: "number", doc: "Mean of the cells (or of @average_range) that meet the criteria.", category: "statistical" },
+  SUMIFS: { name: "SUMIFS", signature: "SUMIFS(@sum_range, @range1, criteria1, ...)", returnType: "number", doc: "Sum of @sum_range on the rows that meet every criteria pair.", category: "statistical" },
+  COUNTIFS: { name: "COUNTIFS", signature: "COUNTIFS(@range1, criteria1, ...)", returnType: "number", doc: "Number of rows that meet every criteria pair.", category: "statistical" },
+  AVERAGEIFS: { name: "AVERAGEIFS", signature: "AVERAGEIFS(@average_range, @range1, criteria1, ...)", returnType: "number", doc: "Mean of @average_range on the rows that meet every criteria pair.", category: "statistical" },
+  MINIFS: { name: "MINIFS", signature: "MINIFS(@min_range, @range1, criteria1, ...)", returnType: "number", doc: "Smallest value of @min_range on the matching rows (0 if none).", category: "statistical" },
+  MAXIFS: { name: "MAXIFS", signature: "MAXIFS(@max_range, @range1, criteria1, ...)", returnType: "number", doc: "Largest value of @max_range on the matching rows (0 if none).", category: "statistical" },
 
   // ── Array / higher-order ───────────────────────────────────
   MAP: { name: "MAP", signature: "MAP(array, var, expr)", returnType: "array", doc: "Maps each item via expression. Example: `MAP(sets, s, s.weight)`.", category: "array" },
@@ -155,6 +161,21 @@ const M: Record<string, FormulaMetadata> = {
 export function getFormulaMetadata(name: string): FormulaMetadata | undefined {
   if (!name) return undefined;
   return M[name.toUpperCase()];
+}
+
+/**
+ * i3-final: a function's description in the reader's language. Translations
+ * live under `formula-docs.<NAME>`; a function without one keeps its English
+ * doc rather than showing the key.
+ */
+export function localizedFormulaDoc(
+  name: string,
+  fallback: string,
+  t: (key: string, options: { defaultValue: string }) => string
+): string {
+  const key = `formula-docs.${name.toUpperCase()}`;
+  const text = t(key, { defaultValue: fallback });
+  return text && text !== key ? text : fallback;
 }
 
 /**

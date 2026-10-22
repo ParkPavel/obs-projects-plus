@@ -22,8 +22,14 @@ export function humanFormulaError(raw: string, fields: readonly string[] = []): 
   if (/Unexpected token: OPERATOR/.test(raw)) return t("operator");
   if ((m = /^Unexpected character at position \d+: (.)$/.exec(raw))) return t("character", { char: m[1]! });
   if (/^Expected \w+ but got \w+/.test(raw)) return t("bracket");
-  if ((m = /^(\w+) expects (\d+) arguments?$/.exec(raw))) return t("arguments", { name: m[1]!, count: m[2]! });
-  return raw;
+  // i3-final: «DATE_ADD expects 3 arguments (date, amount, unit)» is the same sentence.
+  if ((m = /^(\w+) expects (\d+) arguments?(?: \(.*\))?$/.exec(raw))) return t("arguments", { name: m[1]!, count: m[2]! });
+  if (/^Unexpected token: \w+$/.test(raw)) return t("token");
+  if (/^Missing argument at index \d+$/.test(raw)) return t("missing-argument");
+  if ((m = /^Unknown operator: (.+)$/.exec(raw))) return t("unknown-operator", { op: m[1]! });
+  // i3-final: nothing reaches the person in the parser's English alone — an
+  // unrecognised message is framed in their language, its detail kept.
+  return t("invalid", { detail: raw });
 }
 
 /** A field whose name starts like the unknown one, ignoring case — a hint, not a correction. */

@@ -33,6 +33,8 @@ mean that a new release has been published.
 - Rename and delete a property; lists and tags as separate items (a comma inside an item is kept); status
   picked from the values the project uses; a colour palette with shared favourites; arrow keys move between
   rows. Nested values are read-only. Only the note's own frontmatter is written.
+- Properties reorder by drag (or Alt+Up/Down) and the order is written to the note's YAML; Tab moves to the
+  next value. The board pencil and gallery editing open the same block.
 
 ### Board
 
@@ -48,6 +50,13 @@ mean that a new release has been published.
   carries on into the page; option pills read on any background; lists and dates in formulas show by type.
 - A filtered dashboard block can be the source of another block, a chart or a relation; loops are refused.
   Rollups read rollups (up to three levels); formulas run in dependency order.
+- A board, calendar or gallery tab in a block can be linked to a project view: it takes that view's
+  settings, sort and filter; "Unlink" keeps them in the tab.
+- "Properties" in view settings: search, show and hide by the eye icon, order by drag; the list applies to
+  the dashboard's tables unless a table set a column itself.
+- Spreadsheet formulas: SUMIF, COUNTIF, AVERAGEIF, SUMIFS, COUNTIFS, AVERAGEIFS, MINIFS, MAXIFS; a
+  column aggregate is computed once; fields named in Cyrillic or any other script work in formulas; the
+  formula editor's highlight sits on the caret.
 
 ### Gallery
 

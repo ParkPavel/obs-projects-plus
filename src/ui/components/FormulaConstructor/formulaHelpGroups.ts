@@ -6,6 +6,8 @@ import {
 export interface HelpEntry {
   readonly signature: string;
   readonly doc?: string;
+  /** i3-final: the function name, so the panel can show its doc translated. */
+  readonly name?: string;
 }
 
 export interface HelpGroup {
@@ -29,7 +31,7 @@ export function groupFormulaMetadata(): HelpGroup[] {
   const byCategory = new Map<FormulaCategory, HelpEntry[]>();
   for (const meta of getAllFormulaMetadata()) {
     const bucket = byCategory.get(meta.category) ?? [];
-    bucket.push({ signature: meta.signature, doc: meta.doc });
+    bucket.push({ signature: meta.signature, doc: meta.doc, name: meta.name });
     byCategory.set(meta.category, bucket);
   }
   const groups: HelpGroup[] = [];

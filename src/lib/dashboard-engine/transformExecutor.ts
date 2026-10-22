@@ -25,7 +25,7 @@ import type {
 import { matchesFilterConditions } from "src/lib/engine/filterEvaluator";
 import { isNumeric, toNumber, toNumbers } from "src/lib/engine/numeric";
 import { aggregate, type RollupFunction } from "src/lib/engine/aggregate";
-import { evaluateFormulaValue } from "./formulaEngine";
+import { createFormulaPass, evaluateFormulaValue } from "./formulaEngine";
 import { isUnsafePattern, MAX_REGEX_PATTERN_LENGTH } from "src/lib/helpers/regexSafety";
 import { joinKey } from "./joinKey";
 import dayjs from "dayjs";
@@ -475,6 +475,9 @@ function executeCompute(
 ): DataFrame {
   // First pass: compute all values to infer types
   const columnValues: (DataValue | undefined | null)[][] = step.columns.map(() => []);
+  // i3-final: `df` is not changed while this step runs, so a column aggregate
+  // (`SUM(@amount)`) is computed once for the step instead of once per record.
+  const pass = createFormulaPass(df);
 
   const newRecords = df.records.map((record) => {
     const newValues = { ...record.values };
@@ -484,7 +487,7 @@ function executeCompute(
       try {
         // Build a DataRecord that includes previously computed columns in this step
         const evalRecord: DataRecord = { id: record.id, values: newValues };
-        const result = evaluateFormulaValue(col.expression, evalRecord, df);
+        const result = evaluateFormulaValue(col.expression, evalRecord, df, pass);
         newValues[col.name] = result;
         columnValues[ci]!.push(result);
       } catch {

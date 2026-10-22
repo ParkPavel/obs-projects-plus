@@ -1,5 +1,5 @@
 import type { TransformPipeline } from "src/lib/dashboard-engine/transformTypes";
-import type { FilterOperator, FilterDefinition } from "src/settings/base/settings";
+import type { FilterOperator, FilterDefinition, SortDefinition } from "src/settings/base/settings";
 import type { DataSource } from "src/settings/v3/settings";
 
 // ── Widget Types ──────────────────────────────────────────────
@@ -168,6 +168,19 @@ export interface ViewTab {
     | "stats";
   /** View-specific settings (DataTableConfig | BoardConfig | ...). */
   readonly config: Record<string, unknown>;
+  /**
+   * i3-final (B3): a project view this tab follows, like Notion's linked view
+   * or a Bases `![[File.base#View]]` embed. While set, the tab's config, sort
+   * and filter are read live from that view of the source project, and config
+   * edits are written back to it; `config` above is left as it was. Unlinking
+   * copies the view's config, sort and filter into the tab (`linkedView.ts`).
+   * Absent on every tab stored before it — those keep working unchanged.
+   */
+  readonly linkedViewId?: string;
+  /** i3-final (B3): the tab's own sort, set when a linked view is unlinked. */
+  readonly sort?: SortDefinition;
+  /** i3-final (B3): the tab's own filter, AND-ed under the block's filter. */
+  readonly filter?: FilterDefinition;
 }
 
 // ── DataTable Config ──────────────────────────────────────────

@@ -5,6 +5,8 @@
    * Renders ViewTabBar + active tab's view (Table/Board/Calendar/...).
    * Each tab owns its config; switching preserves state. Sprint 2 MVP
    * reuses parent frame; independent source loading deferred to S3+.
+   * i3-final: a tab may instead follow a project view (`linkedView.ts`), and
+   * a table tab takes the dashboard's field list as its default (`fieldLayout.ts`).
    */
   import { createEventDispatcher } from "svelte";
   import type {
@@ -58,6 +60,11 @@
   import { CreateNoteModal } from "src/ui/modals/createNoteModal";
   import { createDataRecord } from "src/lib/dataApi";
   import { app } from "src/lib/stores/obsidian";
+  import { settings } from "src/lib/stores/settings";
+  import type { ViewDefinition } from "src/settings/base/settings";
+  import { isRenderableTab, linkTab, resolveTabView, scopeTabFrame, sortTabRecords, unlinkTab } from "./linkedView";
+  import { tabLinkMenu } from "./tabLinkMenu";
+  import { detachInherited, inheritFieldLayout } from "./fieldLayout";
 
   export let frame: DataFrame;
   export let api: ViewApi;
@@ -134,6 +141,8 @@
    * for, presented as if it were theirs.
    */
   export let sourceState: BlockSource = { kind: "parent", frame: { fields: [], records: [] } as unknown as DataFrame };
+  /** i3-final (B4): the dashboard view's table settings; its field list is the default of every table tab (fieldLayout.ts). */
+  export let dashboardTableConfig: DataTableConfig | undefined = undefined;
 
   const dispatch = createEventDispatcher<{
     configChange: Record<string, unknown>;
@@ -222,7 +231,25 @@
   $: tabs = (config["viewTabs"] as ViewTab[]) ?? [];
   $: activeTabId = String(config["activeTabId"] ?? tabs[0]?.id ?? "");
   $: activeTab = tabs.find((t) => t.id === activeTabId) ?? tabs[0];
-  $: activeTabTableConfig = activeTab?.config as DataTableConfig | undefined;
+
+  // i3-final (B3): a tab may follow a view of the project it reads (the source
+  // project for a linked-source block, else this one). Its config, sort and
+  // filter then come from that view, live; `effectiveFrame` already carries the
+  // block's own filter, so the view's filter narrows it further (AND).
+  $: sourceProjectId = sourceState.kind === "ready" ? sourceState.projectId : project?.id;
+  $: sourceViews = ($settings.projects.find((p) => p.id === sourceProjectId) ?? project)?.views ?? ([] as ViewDefinition[]);
+  $: resolvedTab = activeTab ? resolveTabView(activeTab, sourceViews) : undefined;
+  $: tabScope = scopeTabFrame(effectiveFrame, resolvedTab, hasSubFilter || autoFilter !== null || masterSelected);
+  $: activeTabTableConfig = inheritFieldLayout(resolvedTab?.config as DataTableConfig | undefined, dashboardTableConfig);
+
+  function replaceTab(next: ViewTab) {
+    dispatch("configChange", { ...config, viewTabs: tabs.map((t) => (t.id === next.id ? next : t)) });
+  }
+  $: tabMenuExtras = (tab: ViewTab) =>
+    tabLinkMenu(tab, sourceViews, (key, fallback) => $i18n.t(key, { defaultValue: fallback }), {
+      link: (t, view) => replaceTab(linkTab(t, view)),
+      unlink: (t) => replaceTab(unlinkTab(t, sourceViews)),
+    });
 
   function handleTabSwitch(e: CustomEvent<string>) {
     dispatch("configChange", {
@@ -340,9 +367,12 @@
 
   function handleDataTableConfigChange(e: CustomEvent<DataTableConfig>) {
     if (!activeTab) return;
+    // i3-final (B4): store only what the tab says itself, not the dashboard's
+    // field list it was shown with — or that list would freeze into the tab.
+    const own = detachInherited(e.detail, activeTab.config as DataTableConfig, dashboardTableConfig);
     const updatedTabs = tabs.map((t) =>
       t.id === activeTab.id
-        ? { ...t, config: e.detail as unknown as Record<string, unknown> }
+        ? { ...t, config: own as unknown as Record<string, unknown> }
         : t
     );
     dispatch("configChange", {
@@ -353,6 +383,12 @@
 
   function handleViewConfigChange(cfg: Record<string, unknown>) {
     if (!activeTab) return;
+    // i3-final (B3): a followed view is edited where it lives, so the project
+    // view and every block following it change together.
+    if (resolvedTab?.link === "live" && resolvedTab.view && sourceProjectId) {
+      settings.updateViewConfig(sourceProjectId, resolvedTab.view.id, cfg);
+      return;
+    }
     dispatch("configChange", {
       ...config,
       viewTabs: tabs.map((t) =>
@@ -381,15 +417,19 @@
     });
   }
 
-  // Derived helpers for embedded Board/Calendar/Gallery
-  $: getRecord = (id: string) =>
-    effectiveFrame.records.find((r) => r.id === id);
-  const sortRecords = (records: ReadonlyArray<DataRecord>) => [...records];
-  $: boardConfig = (activeTab?.config ?? {}) as BoardConfig;
-  $: calendarConfig = (activeTab?.config ?? undefined) as CalendarConfig | undefined;
-  $: galleryConfig = (activeTab?.config ?? undefined) as GalleryConfig | undefined;
+  // Derived helpers for embedded Board/Calendar/Gallery. i3-final (B3): they
+  // read the tab's resolved view (linked or own) and its sorted, filtered
+  // frame; the board learns that sort and filter are active, like a project
+  // board does, instead of a fixed «no sort, no filter» and an identity sort.
+  $: viewFrame = tabScope.frame;
+  $: getRecord = (id: string) => viewFrame.records.find((r) => r.id === id);
+  $: tabSort = resolvedTab?.sort;
+  $: sortRecords = (records: ReadonlyArray<DataRecord>): DataRecord[] => sortTabRecords(records, tabSort);
+  $: boardConfig = (resolvedTab?.config ?? {}) as BoardConfig;
+  $: calendarConfig = resolvedTab?.config as CalendarConfig | undefined;
+  $: galleryConfig = resolvedTab?.config as GalleryConfig | undefined;
   let dataVersion = 0;
-  $: { void effectiveFrame; dataVersion++; }
+  $: { void viewFrame; dataVersion++; }
 
   function handleBoardConfigChange(cfg: BoardConfig) {
     handleViewConfigChange(cfg as unknown as Record<string, unknown>);
@@ -504,6 +544,7 @@
       {tabs}
       {activeTabId}
       {readonly}
+      menuExtras={tabMenuExtras}
       on:tabSwitch={handleTabSwitch}
       on:tabAdd={handleTabAdd}
       on:tabRemove={handleTabRemove}
@@ -570,6 +611,20 @@
               field: linkedSelection?.relationField ?? "",
               reason: linkedSelectionValidation ?? "",
             })}
+      </span>
+    {/if}
+    {#if resolvedTab?.link === "live" && resolvedTab.view}
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--linked" data-tab-link="live">
+        {$i18n.t("views.dashboard.database-call.linked-view-label", {
+          defaultValue: "Follows the project view {{name}}",
+          name: resolvedTab.view.name,
+        })}
+      </span>
+    {:else if resolvedTab?.link === "missing"}
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--broken" data-tab-link="missing">
+        {$i18n.t("views.dashboard.database-call.linked-view-missing", {
+          defaultValue: "The linked view was deleted — this tab shows its own settings",
+        })}
       </span>
     {/if}
     <div
@@ -659,7 +714,7 @@
         {:else if activeTab.viewType === "board" && project}
           <BoardView
             {project}
-            frame={effectiveFrame}
+            frame={viewFrame}
             {api}
             readonly={readonly || sourceReadOnly}
             dataReadOnly={sourceReadOnly}
@@ -668,13 +723,14 @@
             {getRecord}
             config={boardConfig}
             onConfigChange={handleBoardConfigChange}
-            hasSort={false}
-            hasFilter={false}
+            hasSort={tabScope.hasSort}
+            hasFilter={tabScope.hasFilter}
+            filterConditions={tabScope.filterConditions}
           />
         {:else if activeTab.viewType === "calendar" && project}
           <CalendarView
             {project}
-            frame={effectiveFrame}
+            frame={viewFrame}
             {api}
             readonly={readonly || sourceReadOnly}
             dataReadOnly={sourceReadOnly}
@@ -686,7 +742,7 @@
         {:else if activeTab.viewType === "gallery" && project}
           <GalleryView
             {project}
-            frame={effectiveFrame}
+            frame={viewFrame}
             {api}
             readonly={readonly || sourceReadOnly}
             dataReadOnly={sourceReadOnly}
@@ -694,13 +750,28 @@
             config={galleryConfig}
             onConfigChange={handleGalleryConfigChange}
           />
+        {:else if !isRenderableTab(activeTab)}
+          <!--
+            i3-final (B3): list, timeline, chart and stats tabs were never
+            creatable here; a stored one says what it is and what to do,
+            instead of a placeholder line promising a future.
+          -->
+          <EmptyState
+            icon="layout-grid"
+            title={$i18n.t("views.dashboard.database-call.tab-unavailable", {
+              defaultValue: "This kind of view cannot be shown in a block"
+            })}
+            hint={$i18n.t("views.dashboard.database-call.tab-unavailable-hint", {
+              defaultValue: "Delete this view from the tab menu, or add a table, board, calendar or gallery view."
+            })}
+          />
         {:else}
-          <div class="ppp-database-call-placeholder">
-            <span>{$i18n.t("views.dashboard.database-call.view-not-implemented", {
-              defaultValue: "{{viewType}} view not yet implemented",
-              viewType: $i18n.t(`views.${activeTab.viewType}.name`, { defaultValue: activeTab.viewType })
-            })}</span>
-          </div>
+          <EmptyState
+            icon="folder-x"
+            title={$i18n.t("views.dashboard.database-call.tab-needs-project", {
+              defaultValue: "This view needs a project to show"
+            })}
+          />
         {/if}
       {/if}
     </div>
@@ -721,17 +792,6 @@
     flex-direction: column;
   }
 
-  .ppp-database-call-placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem;
-    color: var(--text-faint);
-    font-style: italic;
-    font-family: var(--font-monospace);
-    font-size: var(--font-ui-smaller);
-  }
-
   .ppp-dbc-filter-label {
     display: inline-block;
     padding: 0.125rem 0.5rem;
@@ -748,6 +808,12 @@
   .ppp-dbc-filter-label--canvas {
     color: var(--interactive-accent);
     background: color-mix(in srgb, var(--interactive-accent) 12%, var(--background-secondary));
+  }
+
+  /* i3-final (B3): a tab following a project view says which one. */
+  .ppp-dbc-filter-label--linked {
+    color: var(--text-muted);
+    background: var(--background-secondary);
   }
 
   .ppp-dbc-filter-label--broken {

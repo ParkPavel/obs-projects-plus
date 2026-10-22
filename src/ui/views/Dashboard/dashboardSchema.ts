@@ -16,6 +16,11 @@
 // menu that reads this project (layout/blockProperties.ts) and the command
 // palette (dashboardCommands.ts). The toolbar button is gone: it did not say
 // whose properties it edited. The dialog and its flows are unchanged.
+//
+// i3-final: the schema dialog stays open while a field is created,
+// configured or deleted — those dialogs open over it — and its list refreshes
+// in place after the write (and again when the canvas frame catches up, via
+// `refresh`), with focus back on the edited row.
 
 import type { App } from "obsidian";
 import { Notice } from "obsidian";
@@ -67,6 +72,11 @@ export interface SchemaController {
   openSchema(): void;
   openCreateField(): void;
   /**
+   * i3-final: the project's fields changed (the canvas calls this when its
+   * frame does). An open schema dialog shows them in place.
+   */
+  refresh(): void;
+  /**
    * CV-2 (2026-08-28) — the schema writes became awaited in #144, which
    * introduced a gap the synchronous version could not have: the user closes
    * the dashboard while a bulk field write is in flight, the write finishes,
@@ -80,6 +90,52 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
   let schemaModal: SchemaModal | null = null;
   /** False once the owning view is gone; nothing may open after that. */
   let alive = true;
+  /**
+   * i3-final: the row that takes focus once the list shows the last write —
+   * `present` waits for the name to appear (add, rename), `absent` for it to
+   * go (delete, focus then moves to the row now at `index`).
+   */
+  let pendingFocus: { name: string; index: number; expect: "present" | "absent" } | null = null;
+
+  function schemaIsOpen(): boolean {
+    return alive && schemaModal?.isOpen === true;
+  }
+
+  /** i3-final: put the live fields into the open dialog; focus follows the edit. */
+  function showFields(): void {
+    if (!schemaIsOpen() || !schemaModal) return;
+    const fields = deps.getFields();
+    const want = pendingFocus;
+    const present = want !== null && fields.some((f) => f.name === want.name);
+    if (want && present === (want.expect === "present")) {
+      pendingFocus = null;
+      schemaModal.setFields(fields, { name: want.name, index: want.index });
+    } else {
+      schemaModal.setFields(fields);
+    }
+  }
+
+  /**
+   * i3-final: after a write made from the dialog — it stayed open under the
+   * field dialog, so its list refreshes in place (now, and again when the
+   * frame catches up through `refresh`). With no dialog open (an add from the
+   * command palette) the schema opens, as before.
+   */
+  function afterWrite(focus: { name: string; expect: "present" | "absent"; index?: number }): void {
+    if (!alive) return;
+    if (!schemaIsOpen()) {
+      reopenSchema();
+      return;
+    }
+    pendingFocus = {
+      name: focus.name,
+      expect: focus.expect,
+      index: focus.index ?? deps.getFields().findIndex((f) => f.name === focus.name),
+    };
+    tick()
+      .then(showFields)
+      .catch((err) => console.warn("[Projects+] schema refresh failed", err));
+  }
   const relationSetup = createRelationSetupController({
     app: deps.app, api: deps.api, getProjectId: deps.getProjectId, getFrame: () => ({ fields: deps.getFields(), records: deps.getRecords() as never }),
     getProjects: deps.getProjects, t: deps.t,
@@ -117,7 +173,7 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
           const type = isEmptyFieldValue(value) ? declaredPropertyType(field) : undefined;
           persistFieldTypeConfig(type ? { ...field, typeConfig: { ...field.typeConfig, type } } : field, createdHere);
           if (outcome && outcome.failed.length + outcome.missing.length > 0) return false;
-          reopenSchema();
+          afterWrite({ name: field.name, expect: "present" });
           return true;
         } catch (err) {
           new Notice(noticeFor(ADD_FIELD_FAILED));
@@ -181,7 +237,7 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
           }
         }
         persistFieldTypeConfig(next);
-        reopenSchema();
+        afterWrite({ name: next.name, expect: "present" });
       },
       deps.getProjects(),
       deps.getProjectId(),
@@ -200,6 +256,7 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
   }
 
   function openDeleteField(field: DataField) {
+    const index = deps.getFields().findIndex((f) => f.name === field.name);
     new ConfirmDialogModal(
       deps.app,
       deps.t("modals.schema.delete-confirm.title"),
@@ -210,13 +267,20 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
         // every note is reported before the schema claims the field is gone.
         await deps.api.deleteField(field.name);
         settings.deleteFieldConfig(deps.getProjectId(), field.name);
-        reopenSchema();
+        afterWrite({ name: field.name, expect: "absent", index });
       }
     ).open();
   }
 
+  // i3-final: the schema dialog no longer closes for an edit — the field
+  // dialogs open over it and the list refreshes in place (afterWrite).
   function openSchema() {
     if (!alive) return;
+    if (schemaIsOpen()) {
+      showFields();
+      return;
+    }
+    pendingFocus = null;
     schemaModal = new SchemaModal(
       deps.app,
       deps.t("modals.schema.title"),
@@ -224,11 +288,9 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
       deps.getProjects(),
       deps.getProjectId(),
       (field) => {
-        schemaModal?.close();
         openConfigureField(field);
       },
       (field) => {
-        schemaModal?.close();
         // #150 — this entry point used to drop `displayField` and the inverse
         // name: the wizard opened without them, and saving from here wrote a
         // config that had silently lost both. The other two entry points
@@ -245,11 +307,9 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
         });
       },
       () => {
-        schemaModal?.close();
         openCreateField();
       },
       (field) => {
-        schemaModal?.close();
         openDeleteField(field);
       }
     );
@@ -272,8 +332,10 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
   return {
     openSchema,
     openCreateField,
+    refresh: showFields,
     dispose() {
       alive = false;
+      pendingFocus = null;
       schemaModal?.close();
       schemaModal = null;
     },

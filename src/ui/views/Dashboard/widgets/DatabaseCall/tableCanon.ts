@@ -42,7 +42,7 @@ const DEFAULT_WIDTH_REM: Partial<Record<DataFieldType, number>> = {
   [DataFieldType.Rollup]: 8,
 };
 
-function primaryFieldName(fields: readonly DataField[]): string {
+export function primaryFieldName(fields: readonly { name: string; identifier?: boolean }[]): string {
   return (
     fields.find((f) => f.identifier)?.name ??
     fields.find((f) => f.name === "name")?.name ??
@@ -57,7 +57,7 @@ function primaryFieldName(fields: readonly DataField[]): string {
  */
 const DEFAULT_HIDDEN = new Set(["path"]);
 
-function isVisible(
+export function isVisible(
   name: string,
   primary: string,
   cfg: { hide?: boolean } | undefined

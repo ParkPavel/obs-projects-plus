@@ -8,7 +8,21 @@
             "operator": "A sign is missing a value next to it — put a number, a property or a function there",
             "character": "Unexpected character '{{char}}'",
             "bracket": "A bracket or a comma is missing",
-            "arguments": "{{name}} takes {{count}} value(s)"
+            "arguments": "{{name}} takes {{count}} value(s)",
+            "token": "Something is out of place here — check the brackets and commas",
+            "missing-argument": "A function is missing a value",
+            "unknown-operator": "Unknown sign «{{op}}»",
+            "invalid": "The formula cannot be read: {{detail}}"
+        },
+        "formula-docs": {
+            "SUMIF": "Sum of the cells (or of the third column on the same rows) that meet the condition: 5, \">10\", \"done\", \"<>x\", \"a*\".",
+            "COUNTIF": "How many cells meet the condition: 5, \">10\", \"done\", \"<>x\", \"a*\", \"\" for blanks.",
+            "AVERAGEIF": "Average of the cells (or of the third column) that meet the condition. Empty if nothing matches.",
+            "SUMIFS": "Sum of the first column on the rows that meet every column–condition pair.",
+            "COUNTIFS": "How many rows meet every column–condition pair.",
+            "AVERAGEIFS": "Average of the first column on the rows that meet every pair.",
+            "MINIFS": "Smallest value of the first column on the matching rows (0 if none).",
+            "MAXIFS": "Largest value of the first column on the matching rows (0 if none)."
         },
         "data-types": {
             "string": "Text",
@@ -627,7 +641,8 @@
                         "exists": "A property with this name already exists",
                         "reserved": "Names starting with pp_ or $ are reserved",
                         "empty": "Enter a name"
-                    }
+                    },
+                    "reorder": "Drag to reorder (Alt+↑ / Alt+↓)"
                 }
             },
             "developer": {
@@ -1145,7 +1160,15 @@
                     "filtered-by-canvas": "Filtered by canvas selection",
                     "relation-not-configured": "Relation not configured",
                     "relation-broken": "Relation broken",
-                    "filter-master": "Showing what {{name}} links through {{field}}"
+                    "filter-master": "Showing what {{name}} links through {{field}}",
+                    "link-view": "Link to view",
+                    "link-view-none": "No views of this type in the project",
+                    "unlink-view": "Unlink and keep settings",
+                    "linked-view-label": "Follows the project view {{name}}",
+                    "linked-view-missing": "The linked view was deleted — this tab shows its own settings",
+                    "tab-unavailable": "This kind of view cannot be shown in a block",
+                    "tab-unavailable-hint": "Delete this view from the tab menu, or add a table, board, calendar or gallery view.",
+                    "tab-needs-project": "This view needs a project to show"
                 },
                 "field-presets": {
                     "label": "Layout",
@@ -1270,7 +1293,16 @@
                     "debug-cursor": "Cursor position",
                     "debug-copy": "Copy error",
                     "debug-dismiss": "Dismiss",
-                    "runtime-error": "Runtime error"
+                    "runtime-error": "Runtime error",
+                    "snippet-sum": "Sum of a column",
+                    "snippet-avg": "Average value",
+                    "snippet-count": "Number of records",
+                    "snippet-if": "Conditional value",
+                    "snippet-today": "Today's date",
+                    "snippet-sumif": "Sum where a condition holds",
+                    "snippet-countif": "Count where a condition holds",
+                    "suggestions-label": "Formula suggestions",
+                    "snippets-label": "Formula templates"
                 },
                 "pipeline": {
                     "intent": {
@@ -2272,10 +2304,19 @@
                 "table": {
                     "hide-fields": "Hide fields",
                     "hints": {
-                        "hide-fields": "Select which fields to hide in the table"
+                        "hide-fields": "Select which fields to hide in the table",
+                        "properties": "Show, hide and order the columns of the tables in this view. A table that set a column itself keeps its own choice."
                     },
                     "hidden-fields": "Hidden fields",
-                    "show-all": "Show all fields"
+                    "show-all": "Show all fields",
+                    "properties": "Properties",
+                    "search-properties": "Search properties",
+                    "shown-fields": "Shown in the table",
+                    "move-field": "Move {{name}}: drag, or press the up and down arrow keys",
+                    "hide-field": "Hide {{name}}",
+                    "show-field": "Show {{name}}",
+                    "primary-field": "The title column is always shown",
+                    "no-matching-properties": "No properties match"
                 },
                 "shared": {
                     "icon-field": "Icon field",

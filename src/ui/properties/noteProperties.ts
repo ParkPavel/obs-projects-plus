@@ -37,6 +37,31 @@ export function visibleProperties(
   );
 }
 
+/**
+ * i3-final: the shown keys after moving `key` to slot `to` (a drag drop, or
+ * Alt+↑/↓). A key stays in its own region — pinned rows among pinned, the
+ * rest among the rest; hidden rows do not move. Null when nothing moves.
+ */
+export function reorderedKeys(
+  entries: readonly Pick<OverlayedEntry, "key" | "pinned" | "hidden">[],
+  key: string,
+  to: number,
+): string[] | null {
+  const shown = entries.filter((e) => !e.hidden);
+  const from = shown.findIndex((e) => e.key === key);
+  const moving = shown[from];
+  if (!moving) return null;
+  const pinnedCount = shown.filter((e) => e.pinned).length;
+  const lo = moving.pinned ? 0 : pinnedCount;
+  const hi = moving.pinned ? pinnedCount - 1 : shown.length - 1;
+  const target = Math.min(hi, Math.max(lo, Math.round(to)));
+  if (target === from) return null;
+  const keys = shown.map((e) => e.key);
+  keys.splice(from, 1);
+  keys.splice(target, 0, key);
+  return keys;
+}
+
 export type NewPropertyName =
   | { ok: true; key: string }
   | { ok: false; reason: "empty" | "exists" | "reserved" };

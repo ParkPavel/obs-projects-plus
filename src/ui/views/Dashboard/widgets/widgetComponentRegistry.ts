@@ -64,6 +64,8 @@ export interface WidgetRenderContext {
   readonly availableWidgets: Array<{ id: string; title: string }>;
   readonly project: ProjectDefinition | undefined;
   readonly effectiveTableConfig: DataTableConfig | undefined;
+  /** i3-final (B4): the dashboard view's own table settings — its field list is every table tab's default. */
+  readonly dashboardTableConfig: DataTableConfig | undefined;
   readonly pipelineStepCount: number;
   readonly pipelineInputRowCount: number;
   readonly chartConfig: ChartConfig | null;
@@ -181,6 +183,7 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
       // so a data write would land in the wrong project. Config writes stay.
       sourceReadOnly: c.dbCallUsesLinkedSource,
       sourceState: c.dbCallSource,
+      dashboardTableConfig: c.dashboardTableConfig,
     }),
   },
   "cover-banner": {

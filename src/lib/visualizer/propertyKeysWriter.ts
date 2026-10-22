@@ -6,7 +6,7 @@
  */
 
 import type { App, TFile } from "obsidian";
-import { deleteKeyIn, renameKeyIn } from "./propertyKeys";
+import { deleteKeyIn, renameKeyIn, reorderKeysIn } from "./propertyKeys";
 
 type ProcessFn = (
   file: TFile,
@@ -30,6 +30,11 @@ async function apply(app: App, file: TFile, fn: (fm: Record<string, unknown>) =>
 
 export function renameProperty(app: App, file: TFile, from: string, to: string): Promise<boolean> {
   return apply(app, file, (fm) => renameKeyIn(fm, from, to));
+}
+
+/** i3-final: the YAML key order (and the overlay that goes with it) in one write. */
+export function reorderProperties(app: App, file: TFile, order: readonly string[]): Promise<boolean> {
+  return apply(app, file, (fm) => reorderKeysIn(fm, order));
 }
 
 export function deleteProperty(app: App, file: TFile, key: string): Promise<boolean> {

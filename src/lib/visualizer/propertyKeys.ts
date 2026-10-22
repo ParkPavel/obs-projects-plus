@@ -25,14 +25,17 @@ function replaceAll(fm: Record<string, unknown>, entries: [string, unknown][]): 
 }
 
 /** Map every overlay list through `fn`; drops `pp_overlay` once nothing is left in it. */
-function rewriteOverlay(fm: Record<string, unknown>, fn: (list: string[]) => string[]): void {
+function rewriteOverlay(
+  fm: Record<string, unknown>,
+  fn: (list: string[], name: (typeof OVERLAY_LISTS)[number]) => string[],
+): void {
   const raw = fm[OVERLAY_KEY];
   if (!isPlainObject(raw)) return;
   const next: Record<string, unknown> = { ...raw };
   for (const name of OVERLAY_LISTS) {
     const list = next[name];
     if (!Array.isArray(list)) continue;
-    const mapped = fn(list.filter((x): x is string => typeof x === "string"));
+    const mapped = fn(list.filter((x): x is string => typeof x === "string"), name);
     if (mapped.length > 0) next[name] = mapped;
     else delete next[name];
   }
@@ -66,6 +69,70 @@ export function renameKeyIn(fm: Record<string, unknown>, from: string, to: strin
   rewriteOverlay(fm, (list) => list.map((k) => (k === from ? to : k)));
   rewriteTypes(fm, from, to);
   return true;
+}
+
+function isReservedKey(key: string): boolean {
+  return key.startsWith("pp_") || key.startsWith("$");
+}
+
+/** Put `ordered` into the slots that its own keys occupy in `list`; other items stay. */
+function fillSlots(list: readonly string[], ordered: readonly string[]): string[] {
+  const moving = new Set(ordered);
+  let i = 0;
+  return list.map((k) => (moving.has(k) ? (ordered[i++] ?? k) : k));
+}
+
+/**
+ * i3-final: reorder the note's properties to `order` (the keys as the block
+ * shows them after a drag, pinned first) — in the YAML itself.
+ *
+ *  - Unpinned keys of `order` are written in that order into the slots they
+ *    already hold in the YAML; a key not named (a hidden one) keeps its slot.
+ *  - Their `pp_overlay.order` entries are cleared: from now on the YAML order
+ *    is the truth for them, not the overlay.
+ *  - Pinned keys show first whatever the YAML says, so their new order goes to
+ *    `pp_overlay.pinned`; their YAML place is left alone.
+ *  - Reserved keys (`pp_*`, `$*`) go to the end, in their own order.
+ *
+ * Values are moved as they are (a nested object stays the same object).
+ * Returns false — and changes nothing — when nothing would change.
+ */
+export function reorderKeysIn(fm: Record<string, unknown>, order: readonly string[]): boolean {
+  const before = Object.keys(fm);
+  const overlayBefore = JSON.stringify(fm[OVERLAY_KEY] ?? null);
+  const rawOverlay = fm[OVERLAY_KEY];
+  const pinnedList = isPlainObject(rawOverlay) && Array.isArray(rawOverlay["pinned"])
+    ? rawOverlay["pinned"].filter((x): x is string => typeof x === "string")
+    : [];
+  const pinned = new Set(pinnedList);
+  const seen = new Set<string>();
+  const wanted = order.filter((k) => {
+    if (seen.has(k) || isReservedKey(k) || !Object.prototype.hasOwnProperty.call(fm, k)) return false;
+    seen.add(k);
+    return true;
+  });
+  const movedPinned = wanted.filter((k) => pinned.has(k));
+  const movedPlain = wanted.filter((k) => !pinned.has(k));
+  const plainSet = new Set(movedPlain);
+
+  const user = before.filter((k) => !isReservedKey(k) && !pinned.has(k));
+  const nextUser = fillSlots(user, movedPlain);
+  // Pinned keys keep their YAML slots among the user keys.
+  let u = 0;
+  const nextKeys = before
+    .filter((k) => !isReservedKey(k))
+    .map((k) => (pinned.has(k) ? k : (nextUser[u++] ?? k)));
+  nextKeys.push(...before.filter((k) => isReservedKey(k)));
+
+  const keysChanged = nextKeys.some((k, i) => k !== before[i]);
+  if (keysChanged) replaceAll(fm, nextKeys.map((k): [string, unknown] => [k, fm[k]]));
+  rewriteOverlay(fm, (list, name) => {
+    if (name === "order") return list.filter((k) => !plainSet.has(k));
+    if (name === "pinned") return fillSlots(list, movedPinned);
+    return list;
+  });
+  const overlayChanged = JSON.stringify(fm[OVERLAY_KEY] ?? null) !== overlayBefore;
+  return keysChanged || overlayChanged;
 }
 
 /** Delete `key` in place, with its overlay and type entries. False when absent. */

@@ -15,6 +15,12 @@ jest.mock("src/lib/contextMenu", () => ({
   },
 }));
 
+// i3-final: the barrel's re-exported default is not a constructor under the
+// test transform; the component itself is.
+jest.mock("src/ui/components/ColorPicker", () => ({
+  ColorPicker: jest.requireActual("src/ui/components/ColorPicker/ColorPicker.svelte").default,
+}));
+
 import "@testing-library/jest-dom";
 import { render } from "@testing-library/svelte";
 import { tick } from "svelte";
@@ -27,6 +33,7 @@ const NotePropertiesBlock = require("../NotePropertiesBlock.svelte").default;
 
 function setup(fm: Record<string, unknown>) {
   const file = new TFile("Notes/a.md");
+  const getMarkdownFiles = jest.fn(() => [file, new TFile("Notes/b.md")]);
   const listeners: Array<(f: TFile) => void> = [];
   const processFrontMatter = jest.fn(async (_f: unknown, fn: (f: Record<string, unknown>) => void) => {
     fn(fm);
@@ -42,11 +49,19 @@ function setup(fm: Record<string, unknown>) {
       offref: () => undefined,
     },
     fileManager: { processFrontMatter },
-    vault: { getMarkdownFiles: () => [], getAbstractFileByPath: () => null },
+    vault: { getMarkdownFiles, getAbstractFileByPath: () => null },
     workspace: { openLinkText: jest.fn(), getLeaf: jest.fn() },
   };
   const result = render(NotePropertiesBlock, { props: { app, file } });
-  return { ...result, processFrontMatter };
+  return { ...result, processFrontMatter, getMarkdownFiles };
+}
+
+function keyWith(el: HTMLElement, k: string, mods: KeyboardEventInit): void {
+  el.dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true, cancelable: true, ...mods }));
+}
+
+function editorOf(key: string): HTMLInputElement | null {
+  return row(key).querySelector<HTMLInputElement>("input");
 }
 
 async function flush(): Promise<void> {
@@ -180,5 +195,102 @@ describe("i3-props NotePropertiesBlock", () => {
     mockMenus[1]?.find((e) => e.title === "Delete property")?.onClick?.();
     await flush();
     expect(fm).toEqual({});
+  });
+});
+
+describe("i3-final NotePropertiesBlock", () => {
+  const shownKeys = () =>
+    Array.from(document.querySelectorAll<HTMLElement>("li[data-row-key]")).map((li) => li.dataset["rowKey"]);
+
+  it("Alt+↓ on the grip writes the new order into the YAML, pp_* kept at the end", async () => {
+    const nested = { deep: [1, 2] };
+    const fm: Record<string, unknown> = { one: "x", two: nested, three: "z", pp_types: { one: "text" } };
+    const { processFrontMatter } = setup(fm);
+    await tick();
+    const grip = row("one").querySelector<HTMLElement>("[data-row-grip]") as HTMLElement;
+    grip.focus();
+    keyWith(grip, "ArrowDown", { altKey: true });
+    await flush();
+    expect(Object.keys(fm)).toEqual(["two", "one", "three", "pp_types"]);
+    expect(fm["two"]).toBe(nested);
+    expect(processFrontMatter).toHaveBeenCalledTimes(1);
+    expect(shownKeys()).toEqual(["two", "one", "three"]);
+    expect(document.activeElement).toBe(row("one").querySelector("[data-row-grip]"));
+  });
+
+  it("a grip drag (pointer events) drops the row where the pointer is and clears its overlay order", async () => {
+    const fm: Record<string, unknown> = {
+      one: "a",
+      two: "b",
+      three: "c",
+      four: "d",
+      pp_overlay: { order: ["one", "two"] },
+    };
+    setup(fm);
+    await tick();
+    document.querySelectorAll<HTMLElement>("li[data-row-key]").forEach((li, i) => {
+      li.getBoundingClientRect = () => ({ top: i * 30, height: 30, bottom: i * 30 + 30, left: 0, right: 100, width: 100, x: 0, y: i * 30, toJSON: () => ({}) });
+    });
+    const grip = row("one").querySelector<HTMLElement>("[data-row-grip]") as HTMLElement;
+    grip.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, cancelable: true, button: 0, clientY: 10 }));
+    grip.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, cancelable: true, clientY: 80 }));
+    await tick();
+    expect(row("one")).toHaveClass("is-dragging");
+    expect(row("four")).toHaveClass("is-drop-before");
+    grip.dispatchEvent(new MouseEvent("pointerup", { bubbles: true, cancelable: true, clientY: 80 }));
+    await flush();
+    expect(Object.keys(fm)).toEqual(["two", "three", "one", "four"]);
+    expect("pp_overlay" in fm).toBe(false);
+    expect(row("one")).not.toHaveClass("is-dragging");
+  });
+
+  it("Tab commits the open value and opens the next one; Shift+Tab goes back; Escape cancels", async () => {
+    const fm: Record<string, unknown> = { one: "x", flag: true, two: "y", meta: { a: 1 }, three: "z" };
+    setup(fm);
+    await tick();
+    (row("one").querySelector(".ppp-note-props__display") as HTMLElement).click();
+    await flush();
+    const first = editorOf("one") as HTMLInputElement;
+    expect(document.activeElement).toBe(first);
+    type(first, "changed");
+    key(first, "Tab");
+    await flush();
+    expect(fm["one"]).toBe("changed");
+    expect(editorOf("one")).toBeNull();
+    // A checkbox is focused, not opened; the nested value is skipped.
+    expect(document.activeElement).toBe(row("flag").querySelector("input[type=checkbox]"));
+
+    (row("two").querySelector(".ppp-note-props__display") as HTMLElement).click();
+    await flush();
+    key(editorOf("two") as HTMLInputElement, "Tab");
+    await flush();
+    const third = editorOf("three") as HTMLInputElement;
+    expect(document.activeElement).toBe(third);
+
+    keyWith(third, "Tab", { shiftKey: true });
+    await flush();
+    const back = editorOf("two") as HTMLInputElement;
+    expect(document.activeElement).toBe(back);
+
+    type(back, "never");
+    key(back, "Escape");
+    await flush();
+    expect(editorOf("two")).toBeNull();
+    expect(fm["two"]).toBe("y");
+    expect(fm["three"]).toBe("z");
+  });
+
+  it("reads the vault once for the palette, however often it opens or renders", async () => {
+    const fm: Record<string, unknown> = { tint: "#ff0000", other: "x" };
+    const { getMarkdownFiles } = setup(fm);
+    await tick();
+    const swatch = () => row("tint").querySelector<HTMLButtonElement>(".ppp-note-props__swatch.is-button") as HTMLButtonElement;
+    swatch().click();
+    await flush();
+    swatch().click();
+    await flush();
+    swatch().click();
+    await flush();
+    expect(getMarkdownFiles).toHaveBeenCalledTimes(1);
   });
 });

@@ -47,6 +47,24 @@ describe("moveToViewHeader", () => {
     action.destroy();
   });
 
+  it("i3-final: a strip mounted before its leaf is in the document moves once the header appears", () => {
+    const frames: FrameRequestCallback[] = [];
+    const raf = window.requestAnimationFrame;
+    window.requestAnimationFrame = (cb: FrameRequestCallback) => { frames.push(cb); return frames.length; };
+    try {
+      const tabs = document.createElement("div");
+      const action = moveToViewHeader(tabs, true);
+      const { leaf, title, bar } = leafWithHeader();
+      bar.replaceChildren(tabs);
+      frames.shift()?.(0);
+      expect(tabs.parentElement).toBe(title);
+      expect(leaf.classList.contains("ppp-tabs-in-header")).toBe(true);
+      action.destroy();
+    } finally {
+      window.requestAnimationFrame = raf;
+    }
+  });
+
   it("stays put when the leaf has no header", () => {
     document.body.innerHTML = `<nav class="bar"><div class="tabs"></div></nav>`;
     const tabs = document.querySelector<HTMLElement>(".tabs")!;

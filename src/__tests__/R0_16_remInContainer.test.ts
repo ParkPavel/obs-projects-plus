@@ -139,7 +139,8 @@ const WINDOW_ANCHORED = [
 // Integration p372-rc: re-measured on the merged tree.
 // → 760 (3.7.2 i2): the in-between «+» lost its translate and sizes in em.
 // → 691 (3.7.2 i3): month bars and multi-day strips lost their labels and per-width text sizes.
-const REM_IN_CONTAINER_BUDGET = 691;
+// → 690 (3.7.2 i3-final): the database-call block's «not implemented» placeholder left for an EmptyState.
+const REM_IN_CONTAINER_BUDGET = 690;
 
 /** A length in `rem`. `0.5rem`, `.5rem` and `1.5rem` all count once. */
 const REM_LENGTH = /\b\d*\.?\d+rem\b/g;

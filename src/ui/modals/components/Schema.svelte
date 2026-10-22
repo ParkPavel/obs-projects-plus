@@ -18,6 +18,7 @@
     ModalLayout,
     SettingItem,
   } from "obsidian-svelte";
+  import { tick } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { aggregationLabel, type AggregationName } from "src/lib/dashboard-engine/aggregationOptions";
   import {
@@ -53,6 +54,21 @@
   // Reserve currentProjectId to silence unused-prop warnings while keeping
   // the API stable for future self-relation diagnostics.
   void currentProjectId;
+
+  let listEl: HTMLUListElement | null = null;
+
+  /**
+   * i3-final: the dialog stays open while a field is edited, so focus goes
+   * back to the edited row once the list shows the write — or, when that row
+   * is gone (a delete), to the row now in its place.
+   */
+  export async function focusField(name: string, previousIndex = -1): Promise<void> {
+    await tick();
+    const rows = Array.from(listEl?.querySelectorAll<HTMLElement>("li[data-schema-field]") ?? []);
+    const row = rows.find((li) => li.dataset["schemaField"] === name)
+      ?? (previousIndex >= 0 ? rows[Math.min(previousIndex, rows.length - 1)] : undefined);
+    row?.querySelector<HTMLElement>("button")?.focus();
+  }
 
   $: projectNameById = new Map(
     availableProjects.map((p) => [p.id, p.name] as const)
@@ -162,9 +178,9 @@
         {$i18n.t("modals.schema.empty")}
       </p>
     {:else}
-      <ul class="ppp-schema-list">
+      <ul class="ppp-schema-list" bind:this={listEl}>
         {#each fields as field (field.name)}
-          <li class="ppp-schema-row">
+          <li class="ppp-schema-row" data-schema-field={field.name}>
             <span
               class="ppp-schema-badge"
               aria-hidden="true"

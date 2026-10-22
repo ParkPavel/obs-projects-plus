@@ -5,6 +5,7 @@
   // outside the metadata registry (e.g. Calendar agenda IS_OVERDUE/HAS_ANY_OF).
 
   import { i18n } from "src/lib/stores/i18n";
+  import { localizedFormulaDoc } from "src/lib/dashboard-engine/formulaMetadata";
   import { groupFormulaMetadata } from "./formulaHelpGroups";
 
   export let extraCategories: ReadonlyArray<{
@@ -17,6 +18,11 @@
 
   $: categoryTitle = (category: string) =>
     $i18n.t(`views.dashboard.formula.help-category.${category}`);
+  // i3-final: a function's doc in the reader's language when one is written.
+  $: entryDoc = (entry: { name?: string; doc?: string }) =>
+    entry.name && entry.doc
+      ? localizedFormulaDoc(entry.name, entry.doc, (key, options) => $i18n.t(key, options))
+      : entry.doc;
 </script>
 
 <div class="ppp-fhp">
@@ -35,7 +41,7 @@
             <code class="ppp-fhp-code">{entry.signature}</code>
           {/if}
           {#if entry.doc}
-            <span class="ppp-fhp-doc">{entry.doc}</span>
+            <span class="ppp-fhp-doc">{entryDoc(entry)}</span>
           {/if}
         </div>
       {/each}

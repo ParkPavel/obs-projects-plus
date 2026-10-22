@@ -17,6 +17,9 @@ import Schema from "./components/Schema.svelte";
  */
 export class SchemaModal extends Modal {
   component?: Schema;
+  /** i3-final: true from open to close — the controller edits in place while it is. */
+  isOpen = false;
+  private current: DataField[];
 
   constructor(
     app: App,
@@ -30,16 +33,33 @@ export class SchemaModal extends Modal {
     readonly onDelete: (field: DataField) => void
   ) {
     super(app);
+    this.current = fields;
     // Shared plugin modal root: phone input size, reduced motion (tokens.css).
     this.containerEl.addClass("ppp-modal");
   }
 
+  /**
+   * i3-final: show `fields` without closing — an edit made from this dialog
+   * refreshes the list in place. `focus.name` is the row that takes focus
+   * (the edited field, under its new name after a rename); when that row is
+   * gone (a delete) the row now at `focus.index` takes it.
+   */
+  setFields(fields: DataField[], focus?: { name: string; index: number }): void {
+    this.current = fields;
+    if (!this.component) return;
+    this.component.$set({ fields });
+    // The component's exported function, typed here: lint reads a .svelte import as `any`.
+    const view = this.component as unknown as { focusField(name: string, index: number): Promise<void> };
+    if (focus) void view.focusField(focus.name, focus.index);
+  }
+
   onOpen() {
+    this.isOpen = true;
     this.component = new Schema({
       target: this.contentEl,
       props: {
         title: this.title,
-        fields: this.fields,
+        fields: this.current,
         availableProjects: this.availableProjects,
         currentProjectId: this.currentProjectId,
         onConfigure: (field: DataField) => {
@@ -58,8 +78,10 @@ export class SchemaModal extends Modal {
   }
 
   onClose() {
+    this.isOpen = false;
     if (this.component) {
       this.component.$destroy();
+      delete this.component;
     }
   }
 }

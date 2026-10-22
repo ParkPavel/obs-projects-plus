@@ -25,6 +25,7 @@ import type { DbCallView } from "./linkedSourceState";
 export type RenderContextInput = Omit<
   WidgetRenderContext,
   | "effectiveTableConfig"
+  | "dashboardTableConfig"
   | "dbCallFrame"
   | "dbCallFields"
   | "dbCallSourceConfig"
@@ -54,6 +55,7 @@ export function buildRenderContext(input: RenderContextInput): WidgetRenderConte
     effectiveTableConfig: isPrimaryDataTable
       ? tableConfig
       : (widget.config as { table?: DataTableConfig })?.table ?? tableConfig,
+    dashboardTableConfig: tableConfig,
     // An external source is read whole: the host's transform pipeline never ran
     // on it, so reporting a step count would describe work that did not happen.
     pipelineStepCount: dbCall.isExternal ? 0 : pipelineStepCount,

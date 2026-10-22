@@ -24,7 +24,7 @@ import {
   type DataValue,
   type Optional,
 } from "src/lib/dataframe/dataframe";
-import { evaluateFormulaValue } from "src/lib/formula/extendedEvaluator";
+import { createFormulaPass, evaluateFormulaValue } from "src/lib/formula/extendedEvaluator";
 import { resolveFieldName } from "src/lib/formula/formulaErrors";
 import { parseFormula, type FormulaNode } from "src/lib/helpers/formulaParser";
 import type { FormulaFieldDef } from "src/ui/views/Dashboard/types";
@@ -117,10 +117,14 @@ export function applyFormulaFields(
   for (const def of ordered) {
     // The frame as computed so far: column references read finished columns.
     const current: DataFrame = { ...frame, records };
+    // i3-final: one pass per formula column — `SUM(@amount)` is computed once
+    // for the column, not once per record (was O(N²) on large tables). The
+    // pass belongs to `current`, which no later formula reuses.
+    const pass = createFormulaPass(current);
     records = records.map((record) => {
       let value: Optional<DataValue>;
       try {
-        value = evaluateFormulaValue(def.expression, record, current);
+        value = evaluateFormulaValue(def.expression, record, current, pass);
       } catch {
         value = null;
       }

@@ -93,6 +93,8 @@ const FUNCTIONS = [
   'DAYS', 'HOURS', 'MINUTES', 'TO_DAYS', 'TO_HOURS', 'WORKDAYS',
   // Conditional Aggregation
   'SUMIF', 'COUNTIF', 'AVERAGEIF',
+  // i3-final: several criteria at once, as in Excel / Google Sheets
+  'SUMIFS', 'COUNTIFS', 'AVERAGEIFS', 'MINIFS', 'MAXIFS',
   // Visual formatting
   'STYLE',
   // List iteration
@@ -104,6 +106,15 @@ const FUNCTIONS = [
   // Notion 2.0 special
   'PROP', 'ID',
 ];
+
+/**
+ * i3-final — a field name is letters of any script, digits and `_`. ASCII
+ * only (as before) meant a property named «сумма» or «客户» could not be
+ * written in a formula at all, neither bare nor as `@column`. A name with
+ * spaces or punctuation still goes through PROP("…").
+ */
+const IDENT_START = /[\p{L}_]/u;
+const IDENT_PART = /[\p{L}\p{N}_]/u;
 
 export function tokenize(formula: string): Token[] {
   const tokens: Token[] = [];
@@ -229,7 +240,7 @@ export function tokenize(formula: string): Token[] {
       let value = '';
       while (i < formula.length) {
         const ch = formula[i];
-        if (!ch || !/[a-zA-Z0-9_]/.test(ch)) break;
+        if (!ch || !IDENT_PART.test(ch)) break;
         value += ch;
         i++;
       }
@@ -240,11 +251,11 @@ export function tokenize(formula: string): Token[] {
     }
 
     // Identifiers (functions, fields, booleans, null)
-    if (/[a-zA-Z_]/.test(char)) {
+    if (IDENT_START.test(char)) {
       let value = '';
       while (i < formula.length) {
         const ch = formula[i];
-        if (!ch || !/[a-zA-Z0-9_]/.test(ch)) break;
+        if (!ch || !IDENT_PART.test(ch)) break;
         value += ch;
         i++;
       }

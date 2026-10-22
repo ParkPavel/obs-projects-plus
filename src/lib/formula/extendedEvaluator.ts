@@ -9,6 +9,7 @@ import { type FormulaNode, parseFormula, tokenize } from "src/lib/helpers/formul
 import { isUnsafePattern, MAX_REGEX_INPUT_LENGTH, MAX_REGEX_PATTERN_LENGTH } from "src/lib/helpers/regexSafety";
 import { aggregate, type RollupFunction } from "src/lib/engine/aggregate";
 import { isNumeric, toNumber, toNumbers } from "src/lib/engine/numeric";
+import { compileCriterion, matchingRows, numbersPerCell, type CriterionPair } from "./criteria";
 import dayjs from "dayjs";
 
 // ── Numeric coercion (#180a) ─────────────────────────────────
@@ -113,10 +114,93 @@ export interface FormulaResult {
 
 // ── Extended function registry ───────────────────────────────
 
+/**
+ * i3-final: `range` reads an argument as a RANGE — a `@column` gives every cell
+ * of that column in row order (blanks and text kept, so ranges stay aligned),
+ * a list value gives its items, and a single value gives null.
+ */
+type RangeOf = (node: FormulaNode) => readonly unknown[] | null;
+
 type FormulaFn = (
   args: FormulaNode[],
-  evaluate: (node: FormulaNode) => Optional<DataValue>
+  evaluate: (node: FormulaNode) => Optional<DataValue>,
+  range: RangeOf
 ) => Optional<DataValue>;
+
+// ── Conditional aggregation (i3-final) ───────────────────────
+
+type ConditionalKind = "sum" | "count" | "avg" | "min" | "max";
+
+/**
+ * The numbers in the chosen rows of `values`; text, blanks and logical values
+ * are ignored as in Excel. Arithmetic only — the cells were read as numbers
+ * once per range (`numbersPerCell`).
+ */
+function reduceRows(kind: ConditionalKind, values: readonly unknown[], rows: readonly number[]): number | null {
+  if (kind === "count") return rows.length;
+  const view = numbersPerCell(values);
+  let sum = 0, n = 0, min = Infinity, max = -Infinity;
+  for (const i of rows) {
+    for (const v of view[i] ?? []) {
+      sum += v;
+      n++;
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+  }
+  if (kind === "sum") return sum;
+  if (kind === "avg") return n ? sum / n : null;
+  // MINIFS / MAXIFS answer 0 when nothing matches, as Excel and Sheets do.
+  if (n === 0) return 0;
+  return kind === "min" ? min : max;
+}
+
+/**
+ * SUMIF / COUNTIF / AVERAGEIF. Excel form `F(range, criteria, [values])` when
+ * the first argument is a range; otherwise the older variadic form
+ * `F(v1, v2, …, criteria)` that existing formulas were written in.
+ */
+function singleCriterion(kind: ConditionalKind): FormulaFn {
+  return (args, evaluate, range) => {
+    if (args.length < 2) return null;
+    const first = args.length <= 3 ? range(args[0] as FormulaNode) : null;
+    if (first) {
+      const criteria = evaluate(args[1] as FormulaNode);
+      const values = args[2] ? (range(args[2]) ?? [evaluate(args[2])]) : first;
+      const rows = matchingRows([{ range: first, criteria, test: compileCriterion(criteria) }]);
+      return reduceRows(kind, values, rows);
+    }
+    const test = compileCriterion(evaluate(args[args.length - 1] as FormulaNode));
+    const cells: unknown[] = [];
+    for (const a of args.slice(0, -1)) {
+      const v = evaluate(a);
+      for (const c of Array.isArray(v) ? v : [v]) if (test(c)) cells.push(c);
+    }
+    return reduceRows(kind, cells, cells.map((_, i) => i));
+  };
+}
+
+/**
+ * SUMIFS / AVERAGEIFS / MINIFS / MAXIFS `(values, range1, criteria1, …)` and
+ * COUNTIFS `(range1, criteria1, …)`: a row counts when every pair matches.
+ */
+function multiCriteria(kind: ConditionalKind): FormulaFn {
+  return (args, evaluate, range) => {
+    const offset = kind === "count" ? 0 : 1;
+    const pairCount = (args.length - offset) / 2;
+    if (pairCount < 1 || !Number.isInteger(pairCount)) return null;
+    const pairs: CriterionPair[] = [];
+    for (let p = 0; p < pairCount; p++) {
+      const node = args[offset + p * 2] as FormulaNode;
+      const criteria = evaluate(args[offset + p * 2 + 1] as FormulaNode);
+      pairs.push({ range: range(node) ?? [evaluate(node)], criteria, test: compileCriterion(criteria) });
+    }
+    const rows = matchingRows(pairs);
+    if (kind === "count") return rows.length;
+    const target = args[0] as FormulaNode;
+    return reduceRows(kind, range(target) ?? [evaluate(target)], rows);
+  };
+}
 
 // ── Financial helpers ────────────────────────────────────────
 
@@ -906,38 +990,15 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   },
 
   // ── Conditional Aggregation ────────────────────────────────
-  SUMIF: (args, evaluate) => {
-    if (args.length < 2) return null;
-    const criteria = argNumber(evaluate(args[args.length - 1] as FormulaNode));
-    let sum = 0;
-    for (let i = 0; i < args.length - 1; i++) {
-      const val = argNumber(evaluate(args[i] as FormulaNode));
-      if (!isNaN(val) && val === criteria) sum += val;
-    }
-    return sum;
-  },
-
-  COUNTIF: (args, evaluate) => {
-    if (args.length < 2) return null;
-    const criteria = String(evaluate(args[args.length - 1] as FormulaNode));
-    let count = 0;
-    for (let i = 0; i < args.length - 1; i++) {
-      const val = String(evaluate(args[i] as FormulaNode));
-      if (val === criteria) count++;
-    }
-    return count;
-  },
-
-  AVERAGEIF: (args, evaluate) => {
-    if (args.length < 2) return null;
-    const criteria = argNumber(evaluate(args[args.length - 1] as FormulaNode));
-    let sum = 0, count = 0;
-    for (let i = 0; i < args.length - 1; i++) {
-      const val = argNumber(evaluate(args[i] as FormulaNode));
-      if (!isNaN(val) && val === criteria) { sum += val; count++; }
-    }
-    return count > 0 ? sum / count : null;
-  },
+  // i3-final: Excel criteria (">10", "done", "a*", "<>x") over @columns.
+  SUMIF: singleCriterion("sum"),
+  COUNTIF: singleCriterion("count"),
+  AVERAGEIF: singleCriterion("avg"),
+  SUMIFS: multiCriteria("sum"),
+  COUNTIFS: multiCriteria("count"),
+  AVERAGEIFS: multiCriteria("avg"),
+  MINIFS: multiCriteria("min"),
+  MAXIFS: multiCriteria("max"),
 
   // ── Aggregate-aware functions (REFACTOR-103: delegate to aggregate kernel) ──
   SUM: (args, evaluate) => kernelAggregate(args, evaluate, "sum"),
@@ -988,27 +1049,53 @@ function parsedFormula(expression: string): FormulaNode {
   return entry;
 }
 
+/**
+ * i3-final: one evaluation pass over a frame — every record of a formula
+ * column, computed against the SAME frame object. `SUM(@amount)` has one value
+ * for the whole pass, yet it used to be recomputed for each record: O(N²),
+ * seconds on a 2000-row table. A pass remembers, keyed by the parsed
+ * expression's node (the AST cache keeps it stable) within this frame:
+ *   - each column read by `@name`, raw and numeric;
+ *   - the value of every call that reads columns and nothing record-specific.
+ * The caller owns the lifetime: a new pass for a new or changed frame.
+ */
+export interface FormulaPass {
+  readonly frame: DataFrame | undefined;
+  readonly rawColumns: Map<string, readonly unknown[]>;
+  readonly numericColumns: Map<string, readonly number[]>;
+  readonly frameValues: Map<FormulaNode, Optional<DataValue>>;
+}
+
+export function createFormulaPass(frame?: DataFrame): FormulaPass {
+  return { frame, rawColumns: new Map(), numericColumns: new Map(), frameValues: new Map() };
+}
+
 export function evaluateFormulaValue(
   expression: string,
   record: DataRecord,
-  dataFrame?: DataFrame
+  dataFrame?: DataFrame,
+  pass?: FormulaPass
 ): Optional<DataValue> {
-  return evaluateFormulaWithError(expression, record, dataFrame).value;
+  return evaluateFormulaWithError(expression, record, dataFrame, pass).value;
 }
 
 export function evaluateFormulaWithError(
   expression: string,
   record: DataRecord,
-  dataFrame?: DataFrame
+  dataFrame?: DataFrame,
+  pass?: FormulaPass
 ): FormulaResult {
   try {
     const ast = parsedFormula(expression);
-    const value = evaluateNode(ast, record, dataFrame);
+    // A pass built for another frame would answer for the wrong rows.
+    const own = pass && pass.frame === dataFrame ? pass : createFormulaPass(dataFrame);
+    const value = evaluateNode(ast, record, dataFrame, undefined, 0, own);
     return { value };
   } catch (e) {
+    // i3-final: the preview's error is shown to the person — in their language.
     return {
       value: null,
-      error: e instanceof Error ? e.message : String(e),
+      error: humanFormulaError(e instanceof Error ? e.message : String(e), Object.keys(record.values)),
     };
   }
 }
@@ -1042,23 +1129,77 @@ export function getFormulaFunctions(): string[] {
 const MAX_EVAL_DEPTH = 64;
 const MAX_LIST_ITEMS = 10_000;
 
+/** Calls whose value can differ between records even when no field is named. */
+const RECORD_BOUND = new Set(["ID", "PROP", "RANDOM_INT", "LET", "LETS", "MAP", "FILTER", "REDUCE"]);
+
+type NodeShape = { readonly constant: boolean; readonly readsColumn: boolean };
+const shapeMemo = new WeakMap<FormulaNode, NodeShape>();
+
+/**
+ * i3-final: whether a node has ONE value for the whole frame (it names no
+ * field and no record-bound function) and reads a column — the calls a pass
+ * computes once. A scope variable (LET, MAP) is a `field` node, so anything
+ * that uses one is record-bound by construction.
+ */
+function shapeOf(n: FormulaNode): NodeShape {
+  const memo = shapeMemo.get(n);
+  if (memo) return memo;
+  let shape: NodeShape;
+  switch (n.type) {
+    case "literal": shape = { constant: true, readsColumn: false }; break;
+    case "column_ref": shape = { constant: true, readsColumn: true }; break;
+    case "field": shape = { constant: false, readsColumn: false }; break;
+    default: {
+      const kids = n.type === "operator" ? [n.left, n.right] : n.type === "array" ? n.items : n.args;
+      const shapes = kids.map(shapeOf);
+      shape = {
+        constant: shapes.every((s) => s.constant) && !(n.type === "function" && RECORD_BOUND.has(n.name)),
+        readsColumn: shapes.some((s) => s.readsColumn),
+      };
+    }
+  }
+  shapeMemo.set(n, shape);
+  return shape;
+}
+
 function evaluateNode(
   node: FormulaNode,
   record: DataRecord,
-  dataFrame?: DataFrame,
-  scope?: Map<string, DataValue>,
-  depth: number = 0
+  dataFrame: DataFrame | undefined,
+  scope: Map<string, DataValue> | undefined,
+  depth: number,
+  pass: FormulaPass
 ): Optional<DataValue> {
   if (depth > MAX_EVAL_DEPTH) return null;
-  const columnCache = new Map<string, number[]>();
+
+  // i3-final: a column is read once per pass, in the frame's own key spelling.
+  function rawColumn(name: string): readonly unknown[] {
+    let col = pass.rawColumns.get(name);
+    if (!col) {
+      if (!dataFrame) return [];
+      const key = resolveFieldName(name, dataFrame.fields.map((f) => f.name)) ?? name;
+      // Frozen: the pass's own snapshot, which lets criteria remember scans.
+      col = Object.freeze(dataFrame.records.map((r) => r.values[key]));
+      pass.rawColumns.set(name, col);
+    }
+    return col;
+  }
 
   function resolveColumn(name: string): number[] {
-    if (columnCache.has(name)) return columnCache.get(name)!;
-    if (!dataFrame) return [];
-    // A whole column of user data — the plainest Class-A site in the file.
-    const vals = toNumbers(dataFrame.records.map(r => r.values[name]));
-    columnCache.set(name, vals);
-    return vals;
+    let col = pass.numericColumns.get(name);
+    if (!col) {
+      // A whole column of user data — the plainest Class-A site in the file.
+      col = toNumbers(rawColumn(name));
+      pass.numericColumns.set(name, col);
+    }
+    // A copy: the value may be stored in a record, and records must not share it.
+    return col.slice();
+  }
+
+  function rangeOf(n: FormulaNode): readonly unknown[] | null {
+    if (n.type === "column_ref") return rawColumn(n.name);
+    const v = evaluate(n);
+    return Array.isArray(v) ? v : null;
   }
 
   function evaluate(n: FormulaNode): Optional<DataValue> {
@@ -1131,128 +1272,139 @@ function evaluateNode(
       }
 
       case "function": {
-        if (n.name === "LET") {
-          if (n.args.length < 3) return null;
-          const nameNode = n.args[0] as FormulaNode;
-          const varName =
-            nameNode.type === "literal" ? String(nameNode.value) :
-            nameNode.type === "field" ? nameNode.name : null;
-          if (!varName) return null;
-          const value = evaluate(n.args[1] as FormulaNode);
-          const childScope = new Map<string, DataValue>(scope ?? []);
-          childScope.set(varName, value as DataValue);
-          return evaluateNode(n.args[2] as FormulaNode, record, dataFrame, childScope, depth + 1);
-        }
-
-        if (n.name === "PROP") {
-          // PROP("FieldName") — Notion 2.0 alias for a field reference
-          if (n.args.length < 1) return null;
-          const nameArg = n.args[0] as FormulaNode;
-          const fieldName =
-            nameArg.type === "literal" ? String(nameArg.value) :
-            nameArg.type === "field" ? nameArg.name : null;
-          if (!fieldName) return null;
-          if (scope?.has(fieldName)) return scope.get(fieldName);
-          const v = record.values[fieldName];
-          return (v === undefined ? null : v);
-        }
-
-        if (n.name === "ID") {
-          // ID() — returns the unique identifier of the current record
-          return record.id;
-        }
-
-        if (n.name === "LETS") {
-          // LETS(name1, val1, name2, val2, ..., expr) — multi-bind LET
-          // requires at least 3 args and odd total count
-          if (n.args.length < 3 || n.args.length % 2 === 0) return null;
-          let currentScope = new Map<string, DataValue>(scope ?? []);
-          const pairCount = (n.args.length - 1) / 2;
-          for (let p = 0; p < pairCount; p++) {
-            const nameNode = n.args[p * 2] as FormulaNode;
-            const varName =
-              nameNode.type === "literal" ? String(nameNode.value) :
-              nameNode.type === "field" ? nameNode.name : null;
-            if (!varName) return null;
-            const val = evaluateNode(n.args[p * 2 + 1] as FormulaNode, record, dataFrame, currentScope, depth + 1);
-            currentScope = new Map<string, DataValue>(currentScope);
-            currentScope.set(varName, val as DataValue);
-          }
-          return evaluateNode(n.args[n.args.length - 1] as FormulaNode, record, dataFrame, currentScope, depth + 1);
-        }
-
-        if (n.name === "STYLE") {
-          if (n.args.length < 1) return null;
-          const text = String(evaluate(n.args[0] as FormulaNode) ?? "");
-          const color = n.args[1] ? String(evaluate(n.args[1]) ?? "") : undefined;
-          const weight = n.args[2] ? String(evaluate(n.args[2]) ?? "") : undefined;
-          const cssClass = buildSafeClass(color, weight);
-          return { __styled: true, text, cssClass } as unknown as DataValue;
-        }
-
-        if (n.name === "MAP") {
-          if (n.args.length < 3) return null;
-          const listVal = evaluate(n.args[0] as FormulaNode);
-          const rawList: unknown[] = Array.isArray(listVal) ? (listVal) : (listVal != null ? [listVal] : []);
-          const list = rawList.length > MAX_LIST_ITEMS ? rawList.slice(0, MAX_LIST_ITEMS) : rawList;
-          const iterNameNode = n.args[1] as FormulaNode;
-          const iterName =
-            iterNameNode.type === "literal" ? String(iterNameNode.value) :
-            iterNameNode.type === "field" ? iterNameNode.name : "item";
-          return list.map(item => {
-            const iterScope = new Map<string, DataValue>(scope ?? []);
-            iterScope.set(iterName, item as DataValue);
-            return evaluateNode(n.args[2] as FormulaNode, record, dataFrame, iterScope, depth + 1);
-          });
-        }
-
-        if (n.name === "FILTER") {
-          if (n.args.length < 3) return null;
-          const listVal = evaluate(n.args[0] as FormulaNode);
-          const rawList: unknown[] = Array.isArray(listVal) ? (listVal) : (listVal != null ? [listVal] : []);
-          const list = rawList.length > MAX_LIST_ITEMS ? rawList.slice(0, MAX_LIST_ITEMS) : rawList;
-          const iterNameNode = n.args[1] as FormulaNode;
-          const iterName =
-            iterNameNode.type === "literal" ? String(iterNameNode.value) :
-            iterNameNode.type === "field" ? iterNameNode.name : "item";
-          return list.filter(item => {
-            const iterScope = new Map<string, DataValue>(scope ?? []);
-            iterScope.set(iterName, item as DataValue);
-            return Boolean(evaluateNode(n.args[2] as FormulaNode, record, dataFrame, iterScope, depth + 1));
-          }) as unknown as DataValue;
-        }
-
-        if (n.name === "REDUCE") {
-          if (n.args.length < 5) return null;
-          const listVal = evaluate(n.args[0] as FormulaNode);
-          const rawList: unknown[] = Array.isArray(listVal) ? (listVal) : (listVal != null ? [listVal] : []);
-          const list = rawList.length > MAX_LIST_ITEMS ? rawList.slice(0, MAX_LIST_ITEMS) : rawList;
-          const iterNameNode = n.args[1] as FormulaNode;
-          const iterName =
-            iterNameNode.type === "literal" ? String(iterNameNode.value) :
-            iterNameNode.type === "field" ? iterNameNode.name : "item";
-          const accNameNode = n.args[2] as FormulaNode;
-          const accName =
-            accNameNode.type === "literal" ? String(accNameNode.value) :
-            accNameNode.type === "field" ? accNameNode.name : "acc";
-          let acc: DataValue = evaluate(n.args[3] as FormulaNode) as DataValue;
-          for (const item of list) {
-            const iterScope = new Map<string, DataValue>(scope ?? []);
-            iterScope.set(iterName, item as DataValue);
-            iterScope.set(accName, acc);
-            acc = evaluateNode(n.args[4] as FormulaNode, record, dataFrame, iterScope, depth + 1) as DataValue;
-          }
-          return acc;
-        }
-
-        const fn = EXTENDED_FUNCTIONS[n.name];
-        if (fn) return fn(n.args, evaluate);
-        return null;
+        const shape = shapeOf(n);
+        if (!shape.constant || !shape.readsColumn) return callFunction(n);
+        // i3-final: once per pass. Only a plain value is kept — a list would
+        // be one array shared by every record that stores it.
+        if (pass.frameValues.has(n)) return pass.frameValues.get(n);
+        const value = callFunction(n);
+        if (value === null || typeof value !== "object") pass.frameValues.set(n, value);
+        return value;
       }
 
       default:
         return null;
     }
+  }
+
+  function callFunction(n: Extract<FormulaNode, { type: "function" }>): Optional<DataValue> {
+    if (n.name === "LET") {
+      if (n.args.length < 3) return null;
+      const nameNode = n.args[0] as FormulaNode;
+      const varName =
+        nameNode.type === "literal" ? String(nameNode.value) :
+        nameNode.type === "field" ? nameNode.name : null;
+      if (!varName) return null;
+      const value = evaluate(n.args[1] as FormulaNode);
+      const childScope = new Map<string, DataValue>(scope ?? []);
+      childScope.set(varName, value as DataValue);
+      return evaluateNode(n.args[2] as FormulaNode, record, dataFrame, childScope, depth + 1, pass);
+    }
+
+    if (n.name === "PROP") {
+      // PROP("FieldName") — Notion 2.0 alias for a field reference
+      if (n.args.length < 1) return null;
+      const nameArg = n.args[0] as FormulaNode;
+      const fieldName =
+        nameArg.type === "literal" ? String(nameArg.value) :
+        nameArg.type === "field" ? nameArg.name : null;
+      if (!fieldName) return null;
+      if (scope?.has(fieldName)) return scope.get(fieldName);
+      const v = record.values[fieldName];
+      return (v === undefined ? null : v);
+    }
+
+    if (n.name === "ID") {
+      // ID() — returns the unique identifier of the current record
+      return record.id;
+    }
+
+    if (n.name === "LETS") {
+      // LETS(name1, val1, name2, val2, ..., expr) — multi-bind LET
+      // requires at least 3 args and odd total count
+      if (n.args.length < 3 || n.args.length % 2 === 0) return null;
+      let currentScope = new Map<string, DataValue>(scope ?? []);
+      const pairCount = (n.args.length - 1) / 2;
+      for (let p = 0; p < pairCount; p++) {
+        const nameNode = n.args[p * 2] as FormulaNode;
+        const varName =
+          nameNode.type === "literal" ? String(nameNode.value) :
+          nameNode.type === "field" ? nameNode.name : null;
+        if (!varName) return null;
+        const val = evaluateNode(n.args[p * 2 + 1] as FormulaNode, record, dataFrame, currentScope, depth + 1, pass);
+        currentScope = new Map<string, DataValue>(currentScope);
+        currentScope.set(varName, val as DataValue);
+      }
+      return evaluateNode(n.args[n.args.length - 1] as FormulaNode, record, dataFrame, currentScope, depth + 1, pass);
+    }
+
+    if (n.name === "STYLE") {
+      if (n.args.length < 1) return null;
+      const text = String(evaluate(n.args[0] as FormulaNode) ?? "");
+      const color = n.args[1] ? String(evaluate(n.args[1]) ?? "") : undefined;
+      const weight = n.args[2] ? String(evaluate(n.args[2]) ?? "") : undefined;
+      const cssClass = buildSafeClass(color, weight);
+      return { __styled: true, text, cssClass } as unknown as DataValue;
+    }
+
+    if (n.name === "MAP") {
+      if (n.args.length < 3) return null;
+      const listVal = evaluate(n.args[0] as FormulaNode);
+      const rawList: unknown[] = Array.isArray(listVal) ? (listVal) : (listVal != null ? [listVal] : []);
+      const list = rawList.length > MAX_LIST_ITEMS ? rawList.slice(0, MAX_LIST_ITEMS) : rawList;
+      const iterNameNode = n.args[1] as FormulaNode;
+      const iterName =
+        iterNameNode.type === "literal" ? String(iterNameNode.value) :
+        iterNameNode.type === "field" ? iterNameNode.name : "item";
+      return list.map(item => {
+        const iterScope = new Map<string, DataValue>(scope ?? []);
+        iterScope.set(iterName, item as DataValue);
+        return evaluateNode(n.args[2] as FormulaNode, record, dataFrame, iterScope, depth + 1, pass);
+      });
+    }
+
+    if (n.name === "FILTER") {
+      if (n.args.length < 3) return null;
+      const listVal = evaluate(n.args[0] as FormulaNode);
+      const rawList: unknown[] = Array.isArray(listVal) ? (listVal) : (listVal != null ? [listVal] : []);
+      const list = rawList.length > MAX_LIST_ITEMS ? rawList.slice(0, MAX_LIST_ITEMS) : rawList;
+      const iterNameNode = n.args[1] as FormulaNode;
+      const iterName =
+        iterNameNode.type === "literal" ? String(iterNameNode.value) :
+        iterNameNode.type === "field" ? iterNameNode.name : "item";
+      return list.filter(item => {
+        const iterScope = new Map<string, DataValue>(scope ?? []);
+        iterScope.set(iterName, item as DataValue);
+        return Boolean(evaluateNode(n.args[2] as FormulaNode, record, dataFrame, iterScope, depth + 1, pass));
+      }) as unknown as DataValue;
+    }
+
+    if (n.name === "REDUCE") {
+      if (n.args.length < 5) return null;
+      const listVal = evaluate(n.args[0] as FormulaNode);
+      const rawList: unknown[] = Array.isArray(listVal) ? (listVal) : (listVal != null ? [listVal] : []);
+      const list = rawList.length > MAX_LIST_ITEMS ? rawList.slice(0, MAX_LIST_ITEMS) : rawList;
+      const iterNameNode = n.args[1] as FormulaNode;
+      const iterName =
+        iterNameNode.type === "literal" ? String(iterNameNode.value) :
+        iterNameNode.type === "field" ? iterNameNode.name : "item";
+      const accNameNode = n.args[2] as FormulaNode;
+      const accName =
+        accNameNode.type === "literal" ? String(accNameNode.value) :
+        accNameNode.type === "field" ? accNameNode.name : "acc";
+      let acc: DataValue = evaluate(n.args[3] as FormulaNode) as DataValue;
+      for (const item of list) {
+        const iterScope = new Map<string, DataValue>(scope ?? []);
+        iterScope.set(iterName, item as DataValue);
+        iterScope.set(accName, acc);
+        acc = evaluateNode(n.args[4] as FormulaNode, record, dataFrame, iterScope, depth + 1, pass) as DataValue;
+      }
+      return acc;
+    }
+
+    const fn = EXTENDED_FUNCTIONS[n.name];
+    if (fn) return fn(n.args, evaluate, rangeOf);
+    return null;
   }
 
   return evaluate(node);

@@ -15,11 +15,22 @@ export function moveToViewHeader(node: HTMLElement, enabled: boolean) {
   let leaf: HTMLElement | null = null;
   let title: HTMLElement | null = null;
 
+  // i3-final: a view can mount before its leaf is in the document; then the
+  // header is not there yet. A few frames later it is — a bounded retry.
+  let retry = 0;
+  let tries = 0;
   function attach(): void {
     if (placeholder) return;
     leaf = node.closest<HTMLElement>(".workspace-leaf-content");
     title = leaf?.querySelector<HTMLElement>(".view-header-title-container") ?? null;
-    if (!leaf || !title) return;
+    if (!leaf || !title) {
+      const view = node.ownerDocument.defaultView;
+      if (tries < 10 && view?.requestAnimationFrame) {
+        tries += 1;
+        retry = view.requestAnimationFrame(() => { retry = 0; attach(); });
+      }
+      return;
+    }
     placeholder = node.ownerDocument.createComment("ppp-view-tabs");
     node.before(placeholder);
     title.appendChild(node);
@@ -27,6 +38,9 @@ export function moveToViewHeader(node: HTMLElement, enabled: boolean) {
   }
 
   function detach(): void {
+    if (retry) node.ownerDocument.defaultView?.cancelAnimationFrame(retry);
+    retry = 0;
+    tries = 0;
     if (!placeholder) return;
     if (placeholder.parentNode) placeholder.replaceWith(node);
     else node.remove();

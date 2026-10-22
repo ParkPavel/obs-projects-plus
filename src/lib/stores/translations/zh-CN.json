@@ -8,7 +8,21 @@
             "operator": "运算符旁缺少值——请填入数字、属性或函数",
             "character": "无法识别的字符“{{char}}”",
             "bracket": "缺少括号或逗号",
-            "arguments": "{{name}} 需要 {{count}} 个值"
+            "arguments": "{{name}} 需要 {{count}} 个值",
+            "token": "这里有多余的内容 — 请检查括号和逗号",
+            "missing-argument": "函数缺少一个值",
+            "unknown-operator": "无法识别的符号「{{op}}」",
+            "invalid": "无法读取公式：{{detail}}"
+        },
+        "formula-docs": {
+            "SUMIF": "满足条件的单元格之和（或同一行第三列之和）：5、\">10\"、\"完成\"、\"<>x\"、\"a*\"。",
+            "COUNTIF": "满足条件的单元格数量：5、\">10\"、\"完成\"、\"<>x\"、\"a*\"，\"\" 表示空白。",
+            "AVERAGEIF": "满足条件的单元格（或第三列）的平均值。无匹配时为空。",
+            "SUMIFS": "在满足所有「列 — 条件」对的行上，第一列之和。",
+            "COUNTIFS": "满足所有「列 — 条件」对的行数。",
+            "AVERAGEIFS": "在满足所有条件对的行上，第一列的平均值。",
+            "MINIFS": "匹配行中第一列的最小值（无匹配时为 0）。",
+            "MAXIFS": "匹配行中第一列的最大值（无匹配时为 0）。"
         },
         "data-types": {
             "string": "文本",
@@ -656,7 +670,8 @@
                         "exists": "已存在同名属性",
                         "reserved": "以 pp_ 或 $ 开头的名称为保留名称",
                         "empty": "请输入名称"
-                    }
+                    },
+                    "reorder": "拖动以调整顺序（Alt+↑ / Alt+↓）"
                 }
             },
             "developer": {
@@ -1232,7 +1247,16 @@
                     "debug-cursor": "光标位置",
                     "debug-copy": "复制错误",
                     "debug-dismiss": "关闭",
-                    "runtime-error": "运行时错误"
+                    "runtime-error": "运行时错误",
+                    "snippet-sum": "列的总和",
+                    "snippet-avg": "平均值",
+                    "snippet-count": "记录数",
+                    "snippet-if": "条件取值",
+                    "snippet-today": "今天的日期",
+                    "snippet-sumif": "按条件求和",
+                    "snippet-countif": "按条件计数",
+                    "suggestions-label": "公式提示",
+                    "snippets-label": "公式模板"
                 },
                 "block-filter": {
                     "aria": "区块筛选",
@@ -1393,7 +1417,15 @@
                     "filtered-by-canvas": "按画布选择筛选",
                     "relation-not-configured": "未配置关联",
                     "relation-broken": "关联已失效",
-                    "filter-master": "显示 {{name}} 通过 {{field}} 链接的内容"
+                    "filter-master": "显示 {{name}} 通过 {{field}} 链接的内容",
+                    "link-view": "关联到视图",
+                    "link-view-none": "项目中没有此类型的视图",
+                    "unlink-view": "取消关联并保留设置",
+                    "linked-view-label": "跟随项目视图“{{name}}”",
+                    "linked-view-missing": "关联的视图已被删除——此标签页显示其自身的设置",
+                    "tab-unavailable": "此类视图无法在块中显示",
+                    "tab-unavailable-hint": "请在标签页菜单中删除此视图，或添加表格、看板、日历或画廊视图。",
+                    "tab-needs-project": "此视图需要一个项目才能显示"
                 },
                 "group": {
                     "empty": "（空）"
@@ -2369,10 +2401,19 @@
                 "table": {
                     "hide-fields": "隐藏字段",
                     "hints": {
-                        "hide-fields": "选择要在表格中隐藏的字段"
+                        "hide-fields": "选择要在表格中隐藏的字段",
+                        "properties": "显示、隐藏并排序此视图中表格的列。已单独设置某列的表格保留其自身的选择。"
                     },
                     "hidden-fields": "隐藏的字段",
-                    "show-all": "显示所有字段"
+                    "show-all": "显示所有字段",
+                    "properties": "属性",
+                    "search-properties": "搜索属性",
+                    "shown-fields": "在表格中显示",
+                    "move-field": "移动“{{name}}”：拖动，或按上下方向键",
+                    "hide-field": "隐藏“{{name}}”",
+                    "show-field": "显示“{{name}}”",
+                    "primary-field": "标题列始终显示",
+                    "no-matching-properties": "没有匹配的属性"
                 },
                 "shared": {
                     "icon-field": "图标字段",

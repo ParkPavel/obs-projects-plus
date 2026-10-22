@@ -87,7 +87,7 @@
   const unsubCommands = subscribeCanvasCommands(() => schemaController.openSchema(), () => schemaController.openCreateField());
   onDestroy(() => { unsubCommands(); schemaController.dispose(); }); // CV-2: nothing opens after the view is gone
   let isRecalculating = false, showFormulaBar = false, activeFilterTab: ActiveFilterTab | null = null;
-  $: { void frame; isRecalculating = true; void Promise.resolve().then(() => { isRecalculating = false; }); }
+  $: { void frame; isRecalculating = true; schemaController.refresh(); /* i3-final: an open schema follows */ void Promise.resolve().then(() => { isRecalculating = false; }); }
   $: fieldNames = frame.fields.map((f) => f.name);
   $: previewRecord = frame.records[0];
   function handleFilterTab(e: CustomEvent<{ field: string; value: string | null }>) {

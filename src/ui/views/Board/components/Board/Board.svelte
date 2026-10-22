@@ -156,12 +156,32 @@
    */
   const DRAG_WATCHDOG_MS = 8000;
   let dragWatchdog: ReturnType<typeof setTimeout> | undefined;
+  // i3-final: a consider event comes only when the shadow moves, so holding a
+  // column still is not "no events". Any pointer movement during the drag
+  // re-arms the watchdog; only a drag nothing is moving ends on its own.
+  let watchedView: Window | null = null;
+  const onDragActivity = () => { if (isDraggingColumns) armDragWatchdog(); };
+  function watchActivity(view: Window | null) {
+    if (view === watchedView) return;
+    for (const type of ["pointermove", "touchmove", "mousemove"]) {
+      watchedView?.removeEventListener(type, onDragActivity, true);
+      view?.addEventListener(type, onDragActivity, { capture: true, passive: true });
+    }
+    watchedView = view;
+  }
+  function disarmDragWatchdog() {
+    clearTimeout(dragWatchdog);
+    dragWatchdog = undefined;
+    watchActivity(null);
+  }
   function armDragWatchdog() {
     clearTimeout(dragWatchdog);
+    const view = containerEl?.ownerDocument.defaultView ?? window;
+    watchActivity(view);
     dragWatchdog = setTimeout(() => {
       dragWatchdog = undefined;
+      watchActivity(null);
       if (!isDraggingColumns) return;
-      const view = containerEl?.ownerDocument.defaultView ?? window;
       // The library ends a drag on the window's mouseup and touchend alike.
       view.dispatchEvent(new MouseEvent("mouseup"));
       releaseColumnDrag();
@@ -169,13 +189,13 @@
   }
 
   function handleDndFinalize(e: CustomEvent<DndEvent<Column>>) {
+    disarmDragWatchdog();
     if (rejectedColumnDrag) {
       dndUnpinnedColumns = rejectedColumnDrag;
       rejectedColumnDrag = undefined;
       isDraggingColumns = false;
       return;
     }
-    clearTimeout(dragWatchdog);
     dndUnpinnedColumns = e.detail.items;
     const newUnpinned = filterShadowColumns(dndUnpinnedColumns);
     const order = [...pinnedColumns, ...newUnpinned].map((col) => col.id);
@@ -227,7 +247,7 @@
       pendingColumnOrder = undefined;
     }
     clearTimeout(finalizeTimeout);
-    clearTimeout(dragWatchdog);
+    disarmDragWatchdog();
     isDraggingColumns = false;
   });
 

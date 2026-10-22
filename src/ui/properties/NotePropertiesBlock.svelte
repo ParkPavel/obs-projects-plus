@@ -16,6 +16,11 @@
    * runs; lists edit as chips, select/status pick from the values the project
    * uses, colours open the shared palette. Only the note's own frontmatter is
    * written — never Obsidian's `.obsidian/types.json`.
+   *
+   * i3-final: rows reorder by their grip (pointer, so touch too) or Alt+↑/↓,
+   * and the order is written into the YAML itself (reorderKeysIn); Tab and
+   * Shift+Tab commit the open editor and open the next / previous value; the
+   * values other notes hold are memoized (usedValuesCache).
    */
   import { onDestroy, onMount, tick } from "svelte";
   import { get } from "svelte/store";
@@ -25,7 +30,6 @@
   import { settings } from "src/lib/stores/settings";
   import { DEFAULT_COLOR } from "src/lib/stores/palettes";
   import {
-    moveKey,
     readOverlay,
     toggleHidden,
     togglePinned,
@@ -42,7 +46,8 @@
     type PropertyType,
   } from "src/lib/visualizer/propertyTypes";
   import { setPropertyType } from "src/lib/visualizer/propertyTypesWriter";
-  import { deleteProperty, renameProperty } from "src/lib/visualizer/propertyKeysWriter";
+  import { deleteProperty, renameProperty, reorderProperties } from "src/lib/visualizer/propertyKeysWriter";
+  import { reorderKeysIn } from "src/lib/visualizer/propertyKeys";
   import { buildLinkHref } from "src/lib/visualizer/linkRender";
   import { openContextMenu, type ContextMenuEntry } from "src/lib/contextMenu";
   import type { CellEditType, CellValue } from "src/lib/database/cellEditor";
@@ -58,10 +63,10 @@
   import { RelationPickerModal, pathFromFile } from "src/ui/views/VisualizerPane/RelationPickerModal";
   import ChipsEditor from "./ChipsEditor.svelte";
   import { createWriteQueue } from "./writeQueue";
+  import { createUsedValuesCache } from "./usedValuesCache";
   import {
     dateToCellText,
     draftOf,
-    inScope,
     isNestedValue,
     isReservedPropertyKey,
     listItems,
@@ -69,9 +74,9 @@
     parseStoredDate,
     planListWrite,
     planValueWrite,
+    reorderedKeys,
     validateNewPropertyName,
     validateRename,
-    valuesForKey,
     visibleProperties,
     withPickedRelation,
     type ListType,
@@ -103,8 +108,21 @@
   let renameField: TextField | null = null;
   let listEl: HTMLUListElement | null = null;
 
+  // i3-final: the colours other notes use, read once when the palette opens.
+  let paletteColors: string[] = [];
+  // i3-final: a grip drag in progress — the row, its pointer, the slot it would land in.
+  let dragKey: string | null = null;
+  let dragPointer: number | null = null;
+  let dropIndex: number | null = null;
+
   // i3-props: one queue for every write of this block, in the order asked.
   const queue = createWriteQueue();
+  // i3-final: other notes' values, kept until the metadata cache reports a change.
+  const usedCache = createUsedValuesCache({
+    files: () => app.vault.getMarkdownFiles?.() ?? [],
+    frontmatterOf: (f) =>
+      app.metadataCache.getFileCache(f as TFile)?.frontmatter as Record<string, unknown> | undefined,
+  });
 
   $: t = $i18n.t.bind($i18n);
 
@@ -116,11 +134,14 @@
   $: refresh(file);
 
   let metaRef: EventRef | null = null;
+  let resolvedRef: EventRef | null = null;
   let unsubInverse: (() => void) | null = null;
   onMount(() => {
     metaRef = app.metadataCache.on("changed", (changed: TFile) => {
+      usedCache.invalidateSoon();
       if (changed.path === file.path) refresh(file);
     });
+    resolvedRef = app.metadataCache.on("resolved", () => usedCache.invalidateSoon());
     if (inverseIndexStore) {
       unsubInverse = inverseIndexStore.subscribe((idx) => {
         inverseIndex = idx;
@@ -129,6 +150,8 @@
   });
   onDestroy(() => {
     if (metaRef) app.metadataCache.offref(metaRef);
+    if (resolvedRef) app.metadataCache.offref(resolvedRef);
+    usedCache.dispose();
     unsubInverse?.();
   });
 
@@ -172,22 +195,167 @@
    */
   function usedValues(key: string): string[] {
     const scope = noteScopeFor(file.path, get(settings).projects ?? []);
-    const others = (app.vault.getMarkdownFiles?.() ?? [])
-      .filter((f) => f.path !== file.path && inScope(f.path, scope))
-      .map((f) => app.metadataCache.getFileCache(f)?.frontmatter as Record<string, unknown> | undefined);
-    return valuesForKey([frontmatter, ...others], key);
+    return usedCache.get(file.path, frontmatter, key, scope);
   }
 
   // ── Keyboard: rows ───────────────────────────────────────
-  async function focusRow(key: string): Promise<void> {
+  async function focusRow(key: string, grip = false): Promise<void> {
     await tick();
     const row = Array.from(listEl?.children ?? []).find((li) => (li as HTMLElement).dataset["rowKey"] === key);
-    row?.querySelector<HTMLElement>("[data-row-nav]")?.focus();
+    row?.querySelector<HTMLElement>(grip ? "[data-row-grip]" : "[data-row-nav]")?.focus();
+  }
+
+  /**
+   * i3-final: Tab / Shift+Tab inside an open editor (Notion-like). Read in the
+   * capture phase so the intent is known before the field acts: a ComboField
+   * commits on Tab itself, a TextField or the chips do not — those are
+   * committed by taking focus away, the same path a click elsewhere takes.
+   * Then the next editable value opens (a checkbox or a date gets focus).
+   * Escape still cancels through each field's own handler.
+   */
+  function onListKeydownCapture(e: KeyboardEvent): void {
+    if (e.key !== "Tab" || e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
+    const key = editingKey;
+    if (key === null || rowKeyOf(e.target) !== key) return;
+    e.preventDefault();
+    void tabFrom(key, e.shiftKey ? -1 : 1, e.target as HTMLElement);
+  }
+
+  function neighbour(key: string, dir: -1 | 1): OverlayedEntry | null {
+    const at = entries.findIndex((en) => en.key === key);
+    for (let i = at + dir; at >= 0 && i >= 0 && i < entries.length; i += dir) {
+      const candidate = entries[i];
+      if (candidate && editable(candidate, typeOf(candidate))) return candidate;
+    }
+    return null;
+  }
+
+  async function tabFrom(key: string, dir: -1 | 1, from: HTMLElement): Promise<void> {
+    // Let the field's own Tab handling run first (ComboField commits on it).
+    await Promise.resolve();
+    if (editingKey === key) {
+      const entry = entries.find((en) => en.key === key);
+      const type = entry ? typeOf(entry) : null;
+      // A draft the type refuses stays open with its error, as Enter would.
+      if (entry && type && editable(entry, type) && !isListType(type) && from instanceof HTMLInputElement) {
+        const plan = planValueWrite(entry.value, from.value, type);
+        if (plan.kind === "invalid") {
+          editError = t(plan.i18nKey);
+          return;
+        }
+      }
+      if (from.isConnected) from.blur();
+      await tick();
+      if (editingKey === key) endEdit();
+    }
+    const next = neighbour(key, dir);
+    if (!next) {
+      void focusRow(key);
+      return;
+    }
+    const type = typeOf(next);
+    if (type === "boolean" || type === "date" || type === "datetime") void focusRow(next.key);
+    else await startEdit(next, type);
+  }
+
+  // ── Reorder (grip drag, Alt+↑/↓) ─────────────────────────
+  function shownIndex(key: string): number {
+    return entries.filter((en) => !en.hidden).findIndex((en) => en.key === key);
+  }
+
+  /**
+   * i3-final: write the new order into the YAML (one processFrontMatter), and
+   * show it at once — the block rebuilds its copy the same way the writer does.
+   */
+  async function moveTo(key: string, to: number): Promise<void> {
+    const keys = reorderedKeys(entries, key, to);
+    if (!keys) return;
+    if (frontmatter) {
+      const next = { ...frontmatter };
+      if (reorderKeysIn(next, keys)) {
+        frontmatter = next;
+        overlay = readOverlay(next);
+      }
+    }
+    const target = file;
+    await queue.run(() => reorderProperties(app, target, keys));
+  }
+
+  function moveBy(key: string, step: -1 | 1): Promise<void> {
+    const at = shownIndex(key);
+    return at < 0 ? Promise.resolve() : moveTo(key, at + step);
+  }
+
+  /** The slot a drag at `y` lands in: how many other shown rows sit above it. */
+  function slotAt(key: string, y: number): number {
+    const rows = Array.from(listEl?.querySelectorAll<HTMLElement>("li[data-row-key]:not(.is-hidden)") ?? []);
+    return rows.filter((li) => {
+      if (li.dataset["rowKey"] === key) return false;
+      const box = li.getBoundingClientRect();
+      return box.top + box.height / 2 < y;
+    }).length;
+  }
+
+  function onGripDown(e: PointerEvent, key: string): void {
+    if (e.button !== 0 || dragKey !== null) return;
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    if (editingKey !== null) endEdit();
+    dragKey = key;
+    dragPointer = e.pointerId;
+    dropIndex = shownIndex(key);
+  }
+
+  function onGripMove(e: PointerEvent): void {
+    if (dragKey === null || e.pointerId !== dragPointer) return;
+    e.preventDefault();
+    dropIndex = slotAt(dragKey, e.clientY);
+  }
+
+  function onGripUp(e: PointerEvent): void {
+    if (dragKey === null || e.pointerId !== dragPointer) return;
+    const key = dragKey;
+    const to = slotAt(key, e.clientY);
+    endDrag();
+    void moveTo(key, to);
+  }
+
+  function endDrag(): void {
+    dragKey = null;
+    dragPointer = null;
+    dropIndex = null;
+  }
+
+  /** Where the drop line shows: before the row the dragged one would precede. */
+  function dropMarkerFor(key: string | null, to: number | null): { key: string; after: boolean } | null {
+    if (key === null || to === null) return null;
+    const keys = reorderedKeys(entries, key, to);
+    if (!keys) return null;
+    const at = keys.indexOf(key);
+    const below = keys[at + 1];
+    if (below !== undefined) return { key: below, after: false };
+    const above = keys[at - 1];
+    return above !== undefined ? { key: above, after: true } : null;
+  }
+  $: dropMarker = dropMarkerFor(dragKey, dropIndex);
+
+  function rowKeyOf(el: EventTarget | null): string | null {
+    const li = (el as HTMLElement | null)?.closest?.<HTMLElement>("li[data-row-key]");
+    return li?.dataset["rowKey"] ?? null;
   }
 
   function onListKeydown(e: KeyboardEvent): void {
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
     const from = e.target as HTMLElement | null;
+    // i3-final: Alt+↑/↓ moves the row itself — the keyboard twin of the grip.
+    if (e.altKey && !e.ctrlKey && !e.metaKey) {
+      const key = rowKeyOf(from);
+      if (key === null || key === editingKey || key === renamingKey) return;
+      e.preventDefault();
+      const onGrip = from?.hasAttribute("data-row-grip") ?? false;
+      void moveBy(key, e.key === "ArrowDown" ? 1 : -1).then(() => focusRow(key, onGrip));
+      return;
+    }
     if (!from?.hasAttribute("data-row-nav") || !listEl) return;
     const rows = Array.from(listEl.querySelectorAll<HTMLElement>("[data-row-nav]"));
     const next = rows[rows.indexOf(from) + (e.key === "ArrowDown" ? 1 : -1)];
@@ -280,6 +448,8 @@
 
   function togglePalette(key: string): void {
     paletteKey = paletteKey === key ? null : key;
+    // i3-final: read once on open, not on every render of the open palette.
+    paletteColors = paletteKey === null ? [] : projectColors(paletteKey);
   }
 
   function projectColors(key: string): string[] {
@@ -373,13 +543,14 @@
         title: t("views.visualizer.pane.actions.move-up"),
         icon: "arrow-up",
         disabled: entry.hidden || index === 0,
-        onClick: () => void persistOverlay(moveKey(overlay, visibleKeys, entry.key, -1)),
+        // i3-final: the menu moves write the YAML order too, as the grip does.
+        onClick: () => void moveBy(entry.key, -1),
       },
       {
         title: t("views.visualizer.pane.actions.move-down"),
         icon: "arrow-down",
         disabled: entry.hidden || index >= visibleKeys.length - 1,
-        onClick: () => void persistOverlay(moveKey(overlay, visibleKeys, entry.key, 1)),
+        onClick: () => void moveBy(entry.key, 1),
       },
       { separator: true },
       {
@@ -525,7 +696,12 @@
 
   {#if !collapsed}
     <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-    <ul class="ppp-note-props__list" bind:this={listEl} on:keydown={onListKeydown}>
+    <ul
+      class="ppp-note-props__list"
+      bind:this={listEl}
+      on:keydown|capture={onListKeydownCapture}
+      on:keydown={onListKeydown}
+    >
       {#each entries as entry, index (entry.key)}
         {@const type = typeOf(entry)}
         {@const canEdit = editable(entry, type)}
@@ -533,8 +709,28 @@
           class="ppp-note-props__row"
           class:is-hidden={entry.hidden}
           class:is-pinned={entry.pinned}
+          class:is-dragging={dragKey === entry.key}
+          class:is-drop-before={dropMarker?.key === entry.key && !dropMarker.after}
+          class:is-drop-after={dropMarker?.key === entry.key && dropMarker.after}
           data-row-key={entry.key}
         >
+          {#if entry.hidden}
+            <span class="ppp-note-props__grip is-placeholder" aria-hidden="true"></span>
+          {:else}
+            <!-- i3-final: pointer events, so a finger drags as a mouse does; Alt+↑/↓ from the keyboard. -->
+            <button
+              type="button"
+              class="ppp-note-props__grip clickable-icon"
+              data-row-grip
+              aria-label={`${entry.key}: ${t("views.visualizer.block.reorder", { defaultValue: "Drag to reorder (Alt+↑ / Alt+↓)" })}`}
+              title={t("views.visualizer.block.reorder", { defaultValue: "Drag to reorder (Alt+↑ / Alt+↓)" })}
+              on:pointerdown={(e) => onGripDown(e, entry.key)}
+              on:pointermove={onGripMove}
+              on:pointerup={onGripUp}
+              on:pointercancel={endDrag}
+              on:lostpointercapture={(e) => e.pointerId === dragPointer && endDrag()}
+            ><Icon name="grip-vertical" size="sm" /></button>
+          {/if}
           {#if renamingKey === entry.key}
             <div class="ppp-note-props__rename">
               <TextField
@@ -706,7 +902,7 @@
               <div class="ppp-note-props__palette">
                 <ColorPicker
                   value={normalizeColor(entry.value) ?? DEFAULT_COLOR}
-                  projectPalette={projectColors(entry.key)}
+                  projectPalette={paletteColors}
                   projectPaletteLabel={t("views.visualizer.block.color.project", { defaultValue: "Colors in this project" })}
                   on:change={(e) => commitColor(entry, e.detail)}
                 />
@@ -828,7 +1024,7 @@
   }
   .ppp-note-props__row {
     display: grid;
-    grid-template-columns: minmax(8em, 30%) minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(8em, 30%) minmax(0, 1fr) auto;
     align-items: center;
     gap: 0.6em;
     min-height: 2.3em;
@@ -836,6 +1032,54 @@
   }
   .ppp-note-props__row.is-hidden {
     opacity: 0.55;
+  }
+  /* i3-final: the grip. touch-action none — a finger on it drags the row
+     instead of scrolling the note. */
+  .ppp-note-props__grip {
+    flex: none;
+    width: 1.6em;
+    min-height: 2.3em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    color: var(--text-faint);
+    cursor: grab;
+    touch-action: none;
+    opacity: 0.5;
+  }
+  .ppp-note-props__grip:focus-visible,
+  .ppp-note-props__row.is-dragging .ppp-note-props__grip {
+    opacity: 1;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .ppp-note-props__row:hover .ppp-note-props__grip {
+      opacity: 1;
+    }
+  }
+  /* A finger has no hover: the grip stays fully visible. */
+  @media (pointer: coarse) {
+    .ppp-note-props__grip {
+      opacity: 1;
+    }
+  }
+  .ppp-note-props__grip.is-placeholder {
+    cursor: default;
+  }
+  .ppp-note-props__row.is-dragging {
+    background: var(--background-modifier-hover);
+  }
+  .ppp-note-props__row.is-dragging .ppp-note-props__grip {
+    cursor: grabbing;
+  }
+  .ppp-note-props__row.is-drop-before {
+    box-shadow: inset 0 0.15em 0 var(--interactive-accent);
+  }
+  .ppp-note-props__row.is-drop-after {
+    box-shadow: inset 0 -0.15em 0 var(--interactive-accent);
   }
   .ppp-note-props__key {
     /* i2-record (N10): Obsidian centres button content, so each key sat at a
@@ -987,10 +1231,13 @@
      the ellipsis hid most of every value. */
   @container ppp-note-props (max-width: 32em) {
     .ppp-note-props__row {
-      grid-template-columns: minmax(0, 1fr) auto;
-      grid-template-areas: "key more" "value value";
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-areas: "grip key more" "value value value";
       row-gap: 0;
       padding-bottom: 0.3em;
+    }
+    .ppp-note-props__grip {
+      grid-area: grip;
     }
     .ppp-note-props__key,
     .ppp-note-props__rename {

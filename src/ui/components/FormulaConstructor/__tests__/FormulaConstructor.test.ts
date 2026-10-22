@@ -206,6 +206,37 @@ describe("FormulaConstructor", () => {
 			expect(underlay?.textContent).toBe("valid §§ bad");
 		});
 
+		// i3-final: a textarea shows a last empty line after a trailing newline;
+		// a pre-wrap div does not unless something follows it. Without the
+		// filler the layer is one line shorter and scrolls out of step.
+		test("highlight on: a trailing newline keeps its line in the underlay", () => {
+			const { container } = render(FormulaConstructor, {
+				props: { value: "SUM(@a)\n", fields: [], highlight: true },
+			});
+			expect(container.querySelector(".ppp-fc-highlight")?.textContent).toBe("SUM(@a)\n ");
+		});
+
+		// i3-final: glyphs sit over the caret only when both layers have the
+		// same box. One shared rule carries every box and text metric.
+		test("highlight layer and textarea share one box rule", () => {
+			const fs = jest.requireActual<typeof import("fs")>("fs");
+			const path = jest.requireActual<typeof import("path")>("path");
+			const source = fs.readFileSync(path.join(__dirname, "..", "FormulaConstructor.svelte"), "utf8");
+			const shared = /\.ppp-fc-textarea,\s*\.ppp-fc-highlight\s*\{([^}]*)\}/.exec(source)?.[1] ?? "";
+			for (const decl of [
+				"border: var(--ppp-border-width) solid",
+				"padding: 0.5rem",
+				"font-family: var(--font-monospace)",
+				"line-height: 1.4",
+				"white-space: pre-wrap",
+				"scrollbar-gutter: stable",
+				"box-sizing: border-box",
+			]) {
+				expect(shared).toContain(decl);
+			}
+			expect(source).not.toMatch(/0\.0625rem solid transparent/);
+		});
+
 		test("highlight on: reconstructed underlay text equals the source value", () => {
 			const expr = 'AND(status = "Active", priority >= 5)';
 			const { container } = render(FormulaConstructor, {
