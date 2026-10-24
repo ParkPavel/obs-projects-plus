@@ -25,9 +25,6 @@ jest.mock("src/lib/record/openRecord", () => ({
   ...jest.requireActual("src/lib/record/openRecord"),
   openRecord: jest.fn(() => Promise.resolve()),
 }));
-jest.mock("src/ui/modals/editNoteModal", () => ({
-  EditNoteModal: jest.fn().mockImplementation(() => ({ open: jest.fn() })),
-}));
 jest.mock("src/ui/modals/createNoteModal", () => ({
   CreateNoteModal: jest.fn().mockImplementation(() => ({ open: jest.fn() })),
 }));

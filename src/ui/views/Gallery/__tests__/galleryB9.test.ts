@@ -20,9 +20,6 @@ jest.mock("src/lib/record/openRecord", () => ({
   ...jest.requireActual("src/lib/record/openRecord"),
   openRecord: jest.fn(() => Promise.resolve()),
 }));
-jest.mock("src/ui/modals/editNoteModal", () => ({
-  EditNoteModal: jest.fn().mockImplementation(() => ({ open: jest.fn() })),
-}));
 jest.mock("src/ui/modals/createNoteModal", () => ({
   CreateNoteModal: jest.fn().mockImplementation(() => ({ open: jest.fn() })),
 }));
@@ -97,7 +94,6 @@ type Mounted = { $destroy(): void };
 type ComponentClass = new (options: { target: HTMLElement; props: Record<string, unknown> }) => Mounted;
 
 const { openRecord } = require("src/lib/record/openRecord") as { openRecord: jest.Mock };
-const { EditNoteModal } = require("src/ui/modals/editNoteModal") as { EditNoteModal: jest.Mock };
 const helpers = require("src/ui/views/helpers") as { showMobileNavMenu: jest.Mock; handleHoverLink: jest.Mock };
 const { app } = require("src/lib/stores/obsidian") as { app: { set(value: unknown): void } };
 const GalleryView = require("../GalleryView.svelte").default as ComponentClass;
@@ -154,7 +150,6 @@ beforeAll(() => {
 
 beforeEach(() => {
   openRecord.mockClear();
-  EditNoteModal.mockClear();
   helpers.showMobileNavMenu.mockClear();
 });
 
@@ -168,7 +163,6 @@ describe("B9 — a tap on a gallery card opens the record in the peek", () => {
     m.card(0).querySelector<HTMLElement>(".projects--gallery--card__body")?.dispatchEvent(click());
     expect(openRecord).toHaveBeenCalledTimes(1);
     expect(openRecord).toHaveBeenCalledWith(expect.objectContaining({ id: "notes/Alpha.md" }), "peek", expect.anything());
-    expect(EditNoteModal).not.toHaveBeenCalled();
     m.component.$destroy();
   });
 

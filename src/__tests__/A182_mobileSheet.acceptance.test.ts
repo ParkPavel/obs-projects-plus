@@ -24,10 +24,11 @@
  * They are the reason the fourth is only one line.
  */
 
-import { findChrome, renderProbe, svelteStyle, unscope } from "./support/renderProbe";
+import { describeWithChrome, findChrome, renderProbe, svelteStyle, unscope } from "./support/renderProbe";
 
 const chrome = findChrome();
-const describeIfChrome = chrome ? describe : describe.skip;
+// w4-p00: without a browser the suite reports BLOCKED instead of vanishing.
+const describeIfChrome = describeWithChrome;
 
 if (!chrome) {
   console.warn("A182: no Chrome found (set CHROME_PATH) — #182's acceptance did NOT run.");

@@ -25,9 +25,6 @@ jest.mock("src/lib/record/openRecord", () => ({
   ...jest.requireActual("src/lib/record/openRecord"),
   openRecord: jest.fn(() => Promise.resolve()),
 }));
-jest.mock("src/ui/modals/editNoteModal", () => ({
-  EditNoteModal: jest.fn().mockImplementation(() => ({ open: jest.fn() })),
-}));
 jest.mock("src/ui/modals/createNoteModal", () => ({
   CreateNoteModal: jest.fn().mockImplementation(() => ({ open: jest.fn() })),
 }));
@@ -223,12 +220,10 @@ describe("cards-g3 — cover ratio and fit", () => {
   });
 
   it("with no media area the whole card opens the record, once, and modifiers still route", () => {
-    const { EditNoteModal } = require("src/ui/modals/editNoteModal") as { EditNoteModal: jest.Mock };
     const { openRecord } = require("src/lib/record/openRecord") as { openRecord: jest.Mock };
     const m = mountGallery({ coverAspectRatio: "none" });
     const body = m.card(1).querySelector<HTMLElement>(".projects--gallery--card__body") as HTMLElement;
 
-    EditNoteModal.mockClear();
     openRecord.mockClear();
     body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     // B9: the plain open is the peek.

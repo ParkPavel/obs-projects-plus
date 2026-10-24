@@ -11,14 +11,15 @@
  * CLAUDE.md names three times: a conclusion stronger than the thing measured.
  */
 
-import { findChrome, renderProbe, svelteStyle, unscope, SRC_ROOT } from "./support/renderProbe";
+import { describeWithChrome, findChrome, renderProbe, svelteStyle, unscope, SRC_ROOT } from "./support/renderProbe";
 import * as fs from "fs";
 import * as path from "path";
 
 import { restoreDataTableConfig } from "src/ui/views/Dashboard/widgets/legacyMigration";
 
 const chrome = findChrome();
-const describeIfChrome = chrome ? describe : describe.skip;
+// w4-p00: without a browser the suite reports BLOCKED instead of vanishing.
+const describeIfChrome = describeWithChrome;
 
 if (!chrome) {
   console.warn("A169 weight: no Chrome found (set CHROME_PATH) — the visual acceptance did NOT run.");

@@ -30,6 +30,8 @@ mean that a new release has been published.
 
 ### Note properties
 
+- The Projects Plus properties block is shown at the top of every Markdown note in place of Obsidian's
+  built-in Properties. Turn it off in the plugin settings: "Properties in the note header".
 - Rename and delete a property; lists and tags as separate items (a comma inside an item is kept); status
   picked from the values the project uses; a colour palette with shared favourites; arrow keys move between
   rows. Nested values are read-only. Only the note's own frontmatter is written.

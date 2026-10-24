@@ -32,6 +32,7 @@
  * this file exists so that it is the only thing left for one.
  */
 
+import { describe, it } from "@jest/globals";
 import { execFileSync } from "child_process";
 import * as fs from "fs";
 import * as os from "os";
@@ -117,15 +118,102 @@ export interface ProbeSpec {
 export type ProbeResult = Record<string, Record<string, string>>;
 
 /**
+ * w4-p00 (audit F02, F26): a probe that could not run is BLOCKED — a fact about
+ * the machine, not about the product — and it is never a pass and never a quiet
+ * skip. The message starts with "BLOCKED:" so a reader of a red run can tell
+ * the two apart without opening the stack, and `artifacts` names a folder that
+ * outlives the run: the page that was loaded and what the browser said.
+ */
+export class ProbeBlockedError extends Error {
+  readonly artifacts: string | null;
+
+  constructor(message: string, artifacts: string | null = null) {
+    super(`BLOCKED: ${message}${artifacts ? ` — artifacts: ${artifacts}` : ""}`);
+    this.name = "ProbeBlockedError";
+    this.artifacts = artifacts;
+  }
+}
+
+/**
+ * `describe` for a suite that needs the browser. Without one the suite does
+ * not vanish: it reports a single BLOCKED failure. Skipping is a decision a
+ * person makes out loud, with PPP_ALLOW_NO_BROWSER=1.
+ */
+export function describeWithChrome(name: string, body: () => void): void {
+  if (findChrome()) {
+    describe(name, body);
+    return;
+  }
+  if (process.env["PPP_ALLOW_NO_BROWSER"] === "1") {
+    console.warn(`${name}: no Chrome — skipped on purpose (PPP_ALLOW_NO_BROWSER=1); this acceptance did NOT run.`);
+    describe.skip(name, body);
+    return;
+  }
+  describe(name, () => {
+    it("BLOCKED — no browser to run this acceptance", () => {
+      throw new ProbeBlockedError(
+        "no Chrome found; set CHROME_PATH, or PPP_ALLOW_NO_BROWSER=1 to skip on purpose"
+      );
+    });
+  });
+}
+
+/** Keep what a failed launch leaves behind; the run's own temp dir is removed. */
+function saveFailure(page: string, files: Record<string, string>): string | null {
+  try {
+    const out = fs.mkdtempSync(path.join(os.tmpdir(), "ppp-probe-failure-"));
+    fs.writeFileSync(path.join(out, "probe.html"), page, "utf8");
+    for (const [name, text] of Object.entries(files)) {
+      fs.writeFileSync(path.join(out, name), text, "utf8");
+    }
+    return out;
+  } catch {
+    return null;
+  }
+}
+
+/** What `execFileSync` knows about a process that did not finish cleanly. */
+function launchFailure(err: unknown): { summary: string; stderr: string; stdout: string } {
+  const e = (typeof err === "object" && err !== null ? err : {}) as {
+    status?: unknown;
+    signal?: unknown;
+    code?: unknown;
+    stderr?: unknown;
+    stdout?: unknown;
+    message?: unknown;
+  };
+  const text = (v: unknown): string => (typeof v === "string" ? v : Buffer.isBuffer(v) ? v.toString("utf8") : "");
+  const parts = [
+    typeof e.status === "number" ? `exit ${e.status}` : null,
+    typeof e.signal === "string" ? `signal ${e.signal}` : null,
+    typeof e.code === "string" ? e.code : null,
+  ].filter((p): p is string => p !== null);
+  const stderr = text(e.stderr);
+  const tail = stderr.trim().split(/\r?\n/).slice(-3).join(" | ");
+  return {
+    summary: `${parts.join(", ") || text(e.message) || "unknown failure"}${tail ? `: ${tail}` : ""}`,
+    stderr,
+    stdout: text(e.stdout),
+  };
+}
+
+export interface ProbeOptions {
+  /** The browser to launch; `null` means "there is none". Defaults to `findChrome()`. */
+  readonly chrome?: string | null;
+}
+
+/**
  * Render `spec` in headless Chrome and return the computed values asked for.
  *
  * Throws rather than returning a default when the browser is missing or the
  * page fails: a probe that silently returns nothing would turn every assertion
- * that follows into a claim about an empty object.
+ * that follows into a claim about an empty object. A browser that is missing
+ * or does not run throws `ProbeBlockedError`; a page that ran and did not
+ * report is a plain failure, with the page and its output kept.
  */
-export function renderProbe(spec: ProbeSpec): ProbeResult {
-  const chrome = findChrome();
-  if (!chrome) throw new Error("no Chrome found; set CHROME_PATH");
+export function renderProbe(spec: ProbeSpec, options: ProbeOptions = {}): ProbeResult {
+  const chrome = options.chrome !== undefined ? options.chrome : findChrome();
+  if (!chrome) throw new ProbeBlockedError("no Chrome found; set CHROME_PATH");
 
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ppp-probe-"));
   try {
@@ -187,28 +275,44 @@ export function renderProbe(spec: ProbeSpec): ProbeResult {
     // So a launch timeout is retried once, with a longer window, and only then
     // reported. A second timeout is still a failure: this hides contention, not
     // a browser that cannot run at all.
-    const dom = withBrowserLock(() => {
-      try {
-        return execFileSync(chrome, args, {
-          encoding: "utf8",
-          timeout: 60_000,
-          maxBuffer: 32 * 1024 * 1024,
-          stdio: ["ignore", "pipe", "ignore"],
-        });
-      } catch (err) {
-        if (!isLaunchTimeout(err)) throw err;
-        return execFileSync(chrome, args, {
-          encoding: "utf8",
-          timeout: 180_000,
-          maxBuffer: 32 * 1024 * 1024,
-          stdio: ["ignore", "pipe", "ignore"],
-        });
-      }
-    });
+    // stderr is piped, not ignored (F26): when the browser dies, what it said
+    // is the only diagnosis there is.
+    let dom: string;
+    try {
+      dom = withBrowserLock(() => {
+        try {
+          return execFileSync(chrome, args, {
+            encoding: "utf8",
+            timeout: 60_000,
+            maxBuffer: 32 * 1024 * 1024,
+            stdio: ["ignore", "pipe", "pipe"],
+          });
+        } catch (err) {
+          if (!isLaunchTimeout(err)) throw err;
+          return execFileSync(chrome, args, {
+            encoding: "utf8",
+            timeout: 180_000,
+            maxBuffer: 32 * 1024 * 1024,
+            stdio: ["ignore", "pipe", "pipe"],
+          });
+        }
+      });
+    } catch (err) {
+      const failure = launchFailure(err);
+      const artifacts = saveFailure(page, {
+        "stderr.txt": failure.stderr,
+        "stdout.txt": failure.stdout,
+        "launch.txt": `${chrome}\n${args.join("\n")}\n\n${failure.summary}\n`,
+      });
+      throw new ProbeBlockedError(`the browser did not run (${failure.summary})`, artifacts);
+    }
 
     const m = /<title>PROBE([\s\S]*?)<\/title>/.exec(dom);
     if (!m || !m[1]) {
-      throw new Error("the probe page did not report — its script did not run");
+      const artifacts = saveFailure(page, { "dom.html": dom });
+      throw new Error(
+        `the probe page did not report — its script did not run${artifacts ? ` — artifacts: ${artifacts}` : ""}`
+      );
     }
     return JSON.parse(decodeEntities(m[1])) as ProbeResult;
   } finally {

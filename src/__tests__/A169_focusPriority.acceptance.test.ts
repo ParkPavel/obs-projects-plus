@@ -15,11 +15,12 @@
 import { execFileSync } from "child_process";
 import * as path from "path";
 
-import { findChrome, renderProbe, svelteStyle, unscope, SRC_ROOT } from "./support/renderProbe";
+import { describeWithChrome, findChrome, renderProbe, svelteStyle, unscope, SRC_ROOT } from "./support/renderProbe";
 import { focusableWithin } from "src/lib/a11y/focusTrap";
 
 const chrome = findChrome();
-const describeIfChrome = chrome ? describe : describe.skip;
+// w4-p00: without a browser the suite reports BLOCKED instead of vanishing.
+const describeIfChrome = describeWithChrome;
 
 if (!chrome) {
   console.warn("A169: no Chrome found (set CHROME_PATH) — the keyboard acceptance did NOT run.");

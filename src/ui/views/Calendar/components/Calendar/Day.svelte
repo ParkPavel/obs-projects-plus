@@ -855,7 +855,8 @@
      coarse pointer (.workspace-leaf-content[…] button, 0-2-1). That made each
      bar 44 px tall on a phone, over the bars below it; this selector (0-3-0
      with Svelte's class) outranks it, so a bar keeps its layout height. */
-  .timed-bars-container .timed-bar {
+  .timed-bars-container .timed-bar,
+  .day-cell .more-events-btn {
     min-height: 0;
     min-width: 0;
   }
