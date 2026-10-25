@@ -2319,6 +2319,8 @@
                     "interval": "Інтервал",
                     "layout": "Макет",
                     "time-format": "Формат часу",
+                    "creation-duration": "Тривалість нової події",
+                    "minutes": "{{count}} хв",
                     "timezone": "Часовий пояс",
                     "show-agenda": "Показати агенду",
                     "hide-agenda": "Сховати агенду",

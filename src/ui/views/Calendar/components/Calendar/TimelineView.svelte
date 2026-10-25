@@ -65,7 +65,9 @@
   export let fixedAllDayHeight: number | undefined = undefined; // v3.0.3: Sync with shared axis
   export let onRecordClick: ((record: DataRecord) => void) | undefined;
   /** Callback when user wants to add a record. Receives date and optional time (HH:mm) */
-  export let onRecordAdd: ((date: dayjs.Dayjs, startTime?: string) => void) | undefined;
+  export let onRecordAdd: ((date: dayjs.Dayjs, startTime?: string, endTime?: string) => void) | undefined;
+  /** w4-p07: the length a tap creates (the view setting), shown by the preview. */
+  export let creationDuration = 60;
   export let onDayTap: ((date: dayjs.Dayjs, records: DataRecord[], event?: MouseEvent | TouchEvent) => void) | undefined;
   export let isMobile: boolean = false;
   export let now: dayjs.Dayjs | null = null;
@@ -586,21 +588,43 @@
     {/if}
     
     <!-- Header row with day names (below AllDay section) -->
+    <!-- w4-p07 (audit F09): on a phone a tap on empty time creates (the
+         preview, then the form), as in Apple and Google calendars; the day's
+         records open from its header. Before, the day took every tap and the
+         creation preview could not be reached. -->
     <div class="projects-calendar-timeline-days-header" class:sticky-mobile={isMobile}>
       {#each days as day}
-        <div 
-          class="projects-calendar-day-header" 
-          class:today={isToday(day)}
-          class:weekend={day.day() === 0 || day.day() === 6}
-          data-date={day.format('YYYY-MM-DD')}
-        >
-          <div class="projects-calendar-day-name">
-            {day.format('ddd')}
+        {#if isMobile && onDayTap}
+          <button
+            type="button"
+            class="projects-calendar-day-header opens-day"
+            class:today={isToday(day)}
+            class:weekend={day.day() === 0 || day.day() === 6}
+            data-date={day.format('YYYY-MM-DD')}
+            on:click={() => handleDayTap(day)}
+          >
+            <div class="projects-calendar-day-name">
+              {day.format('ddd')}
+            </div>
+            <div class="projects-calendar-day-date">
+              {day.format('D')}
+            </div>
+          </button>
+        {:else}
+          <div
+            class="projects-calendar-day-header"
+            class:today={isToday(day)}
+            class:weekend={day.day() === 0 || day.day() === 6}
+            data-date={day.format('YYYY-MM-DD')}
+          >
+            <div class="projects-calendar-day-name">
+              {day.format('ddd')}
+            </div>
+            <div class="projects-calendar-day-date">
+              {day.format('D')}
+            </div>
           </div>
-          <div class="projects-calendar-day-date">
-            {day.format('D')}
-          </div>
-        </div>
+        {/if}
       {/each}
     </div>
     
@@ -623,8 +647,9 @@
             {endHour}
             {timezone}
             {onRecordClick}
-            onRecordAdd={onRecordAdd ? (d, time) => onRecordAdd(d, time) : undefined}
-            onDayTap={isMobile ? () => handleDayTap(day) : undefined}
+            onRecordAdd={onRecordAdd ? (d, time, end) => onRecordAdd(d, time, end) : undefined}
+            {creationDuration}
+            onDayTap={isMobile && !onRecordAdd ? () => handleDayTap(day) : undefined}
             {isMobile}
             isToday={isToday(day)}
             hourHeightRem={HOUR_HEIGHT_REM}
@@ -809,6 +834,27 @@
     border-right: var(--ppp-border-width) solid var(--background-modifier-border);
     padding: 0.5rem;
     transition: background-color 0.2s ease;
+  }
+
+  /* w4-p07: on a phone the header is a button that opens the day; it keeps
+     the header's look — no capsule, fill or shadow from Obsidian's button. */
+  .projects-calendar-day-header.opens-day {
+    appearance: none;
+    -webkit-appearance: none;
+    min-width: 0;
+    height: auto;
+    margin: 0;
+    border-top: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: inherit;
+    font: inherit;
+    white-space: normal;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
   }
   
   .projects-calendar-day-header:last-child {

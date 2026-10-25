@@ -21,6 +21,8 @@
   } from "src/ui/views/Gallery/galleryOptions";
   import GalleryCardOptions from "src/ui/views/Gallery/components/CardPanel/GalleryCardOptions.svelte";
   import { BOARD_THUMBNAIL_LAYOUTS, normalizeThumbnailLayout } from "src/ui/views/Board/types";
+  import type { CalendarConfig } from "src/ui/views/Calendar/types";
+  import { CREATION_DURATIONS, DEFAULT_CREATION_DURATION, creationDurationOf } from "src/ui/views/Calendar/creationRange";
   import {
     normalizeCardFrames,
     normalizeHeightRem,
@@ -46,6 +48,8 @@
   $: interval = (view?.config?.["interval"] as string) ?? (view?.config?.["displayMode"] as string) ?? "month";
   $: displayMode = (view?.config?.["displayMode"] as string) ?? "headers";
   $: timeFormat = (view?.config?.["timeFormat"] as string) ?? "24h";
+  // w4-p07 (decision 24.10 #14): the length a tap on the time grid creates.
+  $: creationDuration = creationDurationOf(view?.config as CalendarConfig | undefined);
   $: timezone = (view?.config?.["timezone"] as string) ?? "local";
   $: agendaOpen = (view?.config?.["agendaOpen"] as boolean | undefined) !== false;
   $: freezeAll = (view?.config?.["freezeAll"] as boolean) ?? (view?.config?.["freezeColumns"] as boolean) ?? false;
@@ -215,6 +219,19 @@
           <select value={timeFormat} on:change={(e) => emitUpdate({ timeFormat: e.currentTarget.value })}>
             <option value="24h">24h</option>
             <option value="12h">12h</option>
+          </select>
+        </label>
+
+        <label>
+          {$i18n.t('settings-menu.view-config.calendar.creation-duration')}
+          <select
+            data-calendar-option="creationDuration"
+            value={creationDuration}
+            on:change={(e) => emitUpdate({ creationDuration: CREATION_DURATIONS[e.currentTarget.selectedIndex] ?? DEFAULT_CREATION_DURATION })}
+          >
+            {#each CREATION_DURATIONS as minutes}
+              <option value={minutes}>{$i18n.t('settings-menu.view-config.calendar.minutes', { count: minutes })}</option>
+            {/each}
           </select>
         </label>
 

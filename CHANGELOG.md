@@ -24,6 +24,9 @@ mean that a new release has been published.
   window. Extra columns go behind "+N". Multi-day strips are thin colour bands, packed per week.
 - Week and day: an event shorter than an hour (from 15 minutes) is drawn at its length; an overnight event is
   drawn in parts per day; an event of 24 hours or more lives in the all-day row.
+- Week and day: a drag over the time grid creates the event over exactly that range (it was always one hour);
+  on a phone a tap on empty time opens the creation preview, and the day opens from its header. The length
+  a tap or click creates is a view setting: 15, 30, 60 (default), 90 or 120 minutes.
 - Stretching a multi-day event over more days is saved; without an end field `endDate` is created.
 - A record's "Settings" in the day window open the note's properties block. The duplicate window follows
   Obsidian's modals: a time field and an action footer.

@@ -27,6 +27,8 @@
   export let onRecordClick: ((record: DataRecord) => void) | undefined;
   /** Callback when user wants to add a record. Receives date and optional time (HH:mm) */
   export let onRecordAdd: ((date: dayjs.Dayjs, startTime?: string, endTime?: string) => void) | undefined;
+  /** w4-p07: the length a tap creates (the view setting); the preview shows it. */
+  export let creationDuration: number = DND_CONSTANTS.CREATION_DEFAULT_DURATION;
   export let onDayTap: (() => void) | undefined;
   export let isMobile: boolean = false;
   export let isToday: boolean = false;
@@ -225,14 +227,15 @@
       DND_CONSTANTS.SNAP_INTERVAL_DEFAULT
     );
     previewStartMinutes = tapMinutes;
-    previewEndMinutes = Math.min(tapMinutes + DND_CONSTANTS.CREATION_DEFAULT_DURATION, endHour * 60);
+    previewEndMinutes = Math.min(tapMinutes + creationDuration, endHour * 60);
     previewVisible = true;
   }
 
   function handlePreviewConfirm(startTime: string, endTime: string): void {
     previewVisible = false;
+    // w4-p07 (F08): the end shown by the preview is the end written.
     if (onRecordAdd) {
-      onRecordAdd(day, startTime);
+      onRecordAdd(day, startTime, endTime);
     }
   }
 

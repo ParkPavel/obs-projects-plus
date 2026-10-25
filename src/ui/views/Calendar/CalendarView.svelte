@@ -45,6 +45,7 @@
   import { DayPopup } from "./components/DayPopup";
   import { DuplicatePopup } from "./components/DuplicatePopup";
   import type { CalendarConfig, ProcessedCalendarData, ProcessedRecord } from "./types";
+  import { creationDurationOf, creationEnd } from "./creationRange";
   import type { CalendarInterval } from "./calendar";
   import { processCalendarData } from "./processor";
   import { calendarLogger } from "./logger";
@@ -1504,7 +1505,7 @@
    * @param date - The date to create the record on
    * @param startTime - Optional start time (HH:mm format or dayjs with time)
    */
-  function handleRecordAdd(date: dayjs.Dayjs, startTime?: string) {
+  function handleRecordAdd(date: dayjs.Dayjs, startTime?: string, endTime?: string) {
     if (!dateField) {
       new Notice(noticeFor(DATE_REQUIRED));
       return;
@@ -1564,15 +1565,13 @@
               frontmatterValues[timeFieldName] = startTime;
             }
             
-            // Auto-fill endTime (1 hour after startTime) if both fields configured
+            // w4-p07 (F08): the end chosen on the grid (a drag, a confirmed
+            // preview), otherwise the view's creation length — not always
+            // start + 1 hour, which made the note ignore the draft.
             const endTimeFieldName = config?.endTimeField || 'endTime';
-            if (startTime && endTimeFieldName) {
-              // Parse startTime and add 1 hour
-              const timeParts = startTime.split(':').map(Number);
-              const hours = timeParts[0] ?? 0;
-              const minutes = timeParts[1] ?? 0;
-              const endHours = (hours + 1) % 24;
-              frontmatterValues[endTimeFieldName] = `${endHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+            const end = creationEnd(startTime, endTime, config);
+            if (end && endTimeFieldName) {
+              frontmatterValues[endTimeFieldName] = end;
             }
             
             return api.addRecord(
@@ -1883,6 +1882,7 @@
               onRecordChange={dataReadOnly ? undefined : handleRecordChange}
               onRecordCheck={onRecordCheckWrapper}
               onRecordAdd={dataReadOnly ? undefined : handleRecordAdd}
+              creationDuration={creationDurationOf(config)}
               onDayTap={handleDayTap}
               {isMobile}
               {now}

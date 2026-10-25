@@ -11,6 +11,12 @@ export interface CalendarConfig {
   readonly startTimeField?: string;  // default: "startTime"
   readonly endTimeField?: string;    // default: "endTime"
   readonly eventColorField?: string; // default: "eventColor" (hex color for event bars)
+  /**
+   * w4-p07 (decision 24.10 #14): the length of an event created by a tap or
+   * click on the time grid, in minutes (15/30/60/90/120). Default 60. A drag
+   * over the grid sets its own length.
+   */
+  readonly creationDuration?: number;
   readonly startHour?: number;       // default: 6 (timeline start hour)
   readonly endHour?: number;         // default: 22 (timeline end hour)
   // Creation date field — auto-filled when creating notes, NOT used for event start detection

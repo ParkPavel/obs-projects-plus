@@ -37,7 +37,9 @@
   export let onRecordClick: ((record: DataRecord) => void) | undefined;
   export let onRecordChange: ((date: dayjs.Dayjs, record: DataRecord, options?: RecordChangeOptions) => void) | undefined;
   export let onRecordCheck: ((record: DataRecord, checked: boolean) => void) | undefined;
-  export let onRecordAdd: ((date: dayjs.Dayjs) => void) | undefined;
+  export let onRecordAdd: ((date: dayjs.Dayjs, startTime?: string, endTime?: string) => void) | undefined;
+  /** w4-p07: the view's creation length, for the timeline's creation preview. */
+  export let creationDuration = 60;
   export let onDayTap: ((date: dayjs.Dayjs, records: DataRecord[], event?: MouseEvent | TouchEvent) => void) | undefined;
   export let onScrollToCurrent: ((callback: () => void) => void) | undefined;
   export let onScrollToDate: ((callback: (date: dayjs.Dayjs) => void) => void) | undefined;
@@ -954,6 +956,7 @@
             {onRecordClick}
             {onRecordChange}
             {onRecordAdd}
+            {creationDuration}
             {onDayTap}
             {isMobile}
             {now}

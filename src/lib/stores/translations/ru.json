@@ -2317,6 +2317,8 @@
                     "interval": "Интервал",
                     "layout": "Разметка",
                     "time-format": "Формат времени",
+                    "creation-duration": "Длительность нового события",
+                    "minutes": "{{count}} мин",
                     "timezone": "Часовой пояс",
                     "show-agenda": "Показать Agenda",
                     "hide-agenda": "Скрыть Agenda",

@@ -2192,6 +2192,8 @@
                     "interval": "Interval",
                     "layout": "Layout",
                     "time-format": "Time format",
+                    "creation-duration": "New event length",
+                    "minutes": "{{count}} min",
                     "timezone": "Timezone",
                     "show-agenda": "Show agenda",
                     "hide-agenda": "Hide agenda",

@@ -2289,6 +2289,8 @@
                     "interval": "时间间隔",
                     "layout": "布局",
                     "time-format": "时间格式",
+                    "creation-duration": "新事件时长",
+                    "minutes": "{{count}} 分钟",
                     "timezone": "时区",
                     "show-agenda": "显示日程",
                     "hide-agenda": "隐藏日程",
