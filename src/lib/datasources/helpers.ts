@@ -9,7 +9,7 @@ import {
 } from "../dataframe/dataframe";
 import { stripToPath as stripWikiLink } from "src/lib/engine/wikilink";
 import { toNumber } from "src/lib/engine/numeric";
-import { parseStoredDate } from "src/lib/helpers/dateShape";
+import { dateAsText, parseStoredDate } from "src/lib/helpers/dateShape";
 import { markTouched, touchedKeys } from "src/lib/recordDiff";
 
 /**
@@ -77,7 +77,8 @@ export function parseRecords(
           break;
         case DataFieldType.String:
           if (value instanceof Date) {
-            record.values[field.name] = dayjs(value).format("YYYY-MM-DD");
+            // w4-p01 (F06): the time is kept — this cut it to YYYY-MM-DD.
+            record.values[field.name] = dateAsText(value);
           } else if (value !== null && value !== undefined && typeof value === "object" && !Array.isArray(value)) {
             // /skip: Nested YAML objects (e.g. version: {major:1}) → JSON string so value is visible in editor
             try {

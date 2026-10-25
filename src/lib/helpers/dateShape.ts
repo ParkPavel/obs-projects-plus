@@ -234,6 +234,18 @@ function timeTail(date: Date, withTime: boolean): string {
 }
 
 /**
+ * w4-p01 (F06) — a Date as text, for a field read as String: the spelling it
+ * was stored in when that is known, otherwise the local day with its time
+ * (`2026-10-24T14:35:27`). The time is never dropped; a value at exact
+ * midnight reads as its day, because a Date alone cannot tell the two apart.
+ */
+export function dateAsText(date: Date): string {
+  const source = sourceText(date);
+  if (source) return source.write(source.day);
+  return formatLocalDay(date) + timeTail(date, false);
+}
+
+/**
  * The stored value as the date control's `YYYY-MM-DD`, or "" when there is no
  * day to show. Never `String(value)`: see the header.
  */
