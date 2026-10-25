@@ -7,8 +7,7 @@
  */
 
 import { DataFieldType, type DataFrame, type DataValue } from "src/lib/dataframe/dataframe";
-import { applyRollupColumns } from "src/lib/relations/rollupColumns";
-import type { FieldConfigRelationMap } from "src/lib/relations/relationTargets";
+import { applyComputedColumns } from "src/lib/relations/computedColumns";
 import { CABINET_FOLDER, DEMO_NAMES, FINANCE_FOLDER, TRACKER_FOLDER, type DemoFile } from "../demoShared";
 import { CABINET_CLIENTS, CABINET_ROLLUPS, CABINET_SERVICES, buildCabinetCovers, buildCabinetNotes, cabinetFieldConfig } from "../demoCabinet";
 import { TRACKER_PEOPLE, buildTrackerNotes } from "../demoTracker";
@@ -43,12 +42,19 @@ const financeNotes = buildFinanceNotes();
 const cabinetRaw = frameOf(cabinetNotes, CABINET_FOLDER, ["client", "service"]);
 const trackerRaw = frameOf(trackerNotes, TRACKER_FOLDER, ["person"]);
 const financeRaw = frameOf(financeNotes, FINANCE_FOLDER, ["category"]);
-const cabinet = applyRollupColumns(cabinetRaw, cabinetFieldConfig(ids) as unknown as FieldConfigRelationMap, ids.cabinetId, new Map([[ids.trackerId, trackerRaw]]));
-const finance = applyRollupColumns(financeRaw, financeFieldConfig(ids) as unknown as FieldConfigRelationMap, ids.financeId, new Map());
+// w4-p01b: computed as the plugin computes a project — formulas and rollups in
+// dependency order — and checked against values derived here from the notes'
+// own fields (status, paid, price, kind, amount), not from computed copies.
+const cabinetConfig = cabinetFieldConfig(ids) as never;
+const cabinet = applyComputedColumns(cabinetRaw, cabinetConfig, ids.cabinetId, new Map([[ids.trackerId, trackerRaw]]));
+const finance = applyComputedColumns(financeRaw, financeFieldConfig(ids) as never, ids.financeId, new Map());
 
 const ofType = (frame: DataFrame, type: string) => frame.records.filter((r) => r.values["type"] === type);
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 const num = (v: unknown) => (typeof v === "number" ? v : 0);
+const held = (v: { values: Record<string, unknown> }) => v.values["status"] === "проведён";
+const paidOf = (v: { values: Record<string, unknown> }) => (held(v) && v.values["paid"] === true ? num(v.values["price"]) : 0);
+const debtOf = (v: { values: Record<string, unknown> }) => (held(v) && v.values["paid"] !== true ? num(v.values["price"]) : 0);
 const linking = (frame: DataFrame, field: string, name: string) => frame.records.filter((r) => r.values[field] === `[[${name}]]`);
 
 describe("scale: each project at least the size of the old demo", () => {
@@ -102,12 +108,12 @@ describe("the client card is computed from the notes that link the client", () =
   test.each(CABINET_CLIENTS.map((c) => [c.name] as const))("%s", (name) => {
     const card = cabinet.records.find((r) => r.id === `${CABINET_FOLDER}/${name}.md`)!.values;
     const visits = linking(cabinetRaw, "client", name);
-    const held = visits.filter((v) => v.values["status"] === "проведён");
-    expect(card[CABINET_ROLLUPS.sessions]).toBe(held.length);
-    expect(card[CABINET_ROLLUPS.paid]).toBe(sum(visits.map((v) => num(v.values["paidAmount"]))));
-    const debt = sum(visits.map((v) => num(v.values["debt"])));
+    const done = visits.filter(held);
+    expect(card[CABINET_ROLLUPS.sessions]).toBe(done.length);
+    expect(card[CABINET_ROLLUPS.paid]).toBe(sum(visits.map(paidOf)));
+    const debt = sum(visits.map(debtOf));
     if (debt > 0) expect(card[CABINET_ROLLUPS.debt]).toBe(debt);
-    const ordered = [...held].sort((a, b) => String(a.values["date"]).localeCompare(String(b.values["date"])));
+    const ordered = [...done].sort((a, b) => String(a.values["date"]).localeCompare(String(b.values["date"])));
     expect(card[CABINET_ROLLUPS.last]).toBe(ordered[ordered.length - 1]!.values["wellbeingAfter"]);
 
     const log = linking(trackerRaw, "person", name);
@@ -127,8 +133,8 @@ describe("the client card is computed from the notes that link the client", () =
     for (const s of CABINET_SERVICES) {
       const card = cabinet.records.find((r) => r.id === `${CABINET_FOLDER}/${s.name}.md`)!.values;
       const visits = linking(cabinetRaw, "service", s.name);
-      expect(card[CABINET_ROLLUPS.revenue]).toBe(sum(visits.map((v) => num(v.values["paidAmount"]))));
-      expect(card[CABINET_ROLLUPS.serviceSessions]).toBe(visits.filter((v) => v.values["status"] === "проведён").length);
+      expect(card[CABINET_ROLLUPS.revenue]).toBe(sum(visits.map(paidOf)));
+      expect(card[CABINET_ROLLUPS.serviceSessions]).toBe(visits.filter(held).length);
       expect(card[CABINET_ROLLUPS.serviceSessions]).toBeGreaterThan(0);
     }
   });
@@ -136,11 +142,32 @@ describe("the client card is computed from the notes that link the client", () =
 
 describe("the practice's profit", () => {
   test("net = payments of held visits − expenses, and profit is positive over the half-year", () => {
-    const payments = sum(ofType(cabinetRaw, "visit").map((v) => num(v.values["paidAmount"])));
+    const payments = sum(ofType(cabinetRaw, "visit").map(paidOf));
     const expenses = sum(ofType(cabinetRaw, "expense").map((e) => num(e.values["amount"])));
-    const net = sum(cabinetRaw.records.map((r) => num(r.values["net"])));
+    const net = sum(cabinet.records.map((r) => num(r.values["net"])));
     expect(net).toBe(payments - expenses);
     expect(net).toBeGreaterThan(0);
+  });
+
+  test("the notes carry no computed money: it follows status, payment and price", () => {
+    for (const v of ofType(cabinetRaw, "visit")) {
+      for (const key of ["sessions", "paidAmount", "debt", "net"]) expect(v.values).not.toHaveProperty(key);
+    }
+  });
+
+  test("unticking a payment moves the client's total and debt (acceptance 26.10, N4)", () => {
+    const visit = ofType(cabinetRaw, "visit").find((v) => held(v) && v.values["paid"] === true)!;
+    const client = String(visit.values["client"]).replace(/^\[\[|\]\]$/g, "");
+    const cardOf = (frame: DataFrame) => frame.records.find((r) => r.id === `${CABINET_FOLDER}/${client}.md`)!.values;
+    const before = cardOf(cabinet);
+    const changed: DataFrame = {
+      ...cabinetRaw,
+      records: cabinetRaw.records.map((r) => (r === visit ? { ...r, values: { ...r.values, paid: false } } : r)),
+    };
+    const after = cardOf(applyComputedColumns(changed, cabinetConfig, ids.cabinetId, new Map([[ids.trackerId, trackerRaw]])));
+    const price = num(visit.values["price"]);
+    expect(after[CABINET_ROLLUPS.paid]).toBe(num(before[CABINET_ROLLUPS.paid]) - price);
+    expect(after[CABINET_ROLLUPS.debt]).toBe(num(before[CABINET_ROLLUPS.debt]) + price);
   });
 });
 
@@ -156,10 +183,26 @@ describe("the budget", () => {
   });
 
   test("balance = income − expenses", () => {
-    const income = sum(financeRaw.records.map((r) => num(r.values["income"])));
-    const expense = sum(financeRaw.records.map((r) => num(r.values["expense"])));
-    expect(sum(financeRaw.records.map((r) => num(r.values["balance"])))).toBe(income - expense);
+    const ops = ofType(financeRaw, "op");
+    const income = sum(ops.filter((o) => o.values["kind"] === "Доход").map((o) => num(o.values["amount"])));
+    const expense = sum(ops.filter((o) => o.values["kind"] === "Расход").map((o) => num(o.values["amount"])));
+    expect(sum(finance.records.map((r) => num(r.values["income"])))).toBe(income);
+    expect(sum(finance.records.map((r) => num(r.values["expense"])))).toBe(expense);
+    expect(sum(finance.records.map((r) => num(r.values["balance"])))).toBe(income - expense);
     expect(income - expense).toBeGreaterThan(0);
+  });
+
+  test("an operation's income, expense and balance follow its amount", () => {
+    const op = ofType(financeRaw, "op").find((o) => o.values["kind"] === "Расход")!;
+    expect(op.values).not.toHaveProperty("expense");
+    const changed: DataFrame = {
+      ...financeRaw,
+      records: financeRaw.records.map((r) => (r === op ? { ...r, values: { ...r.values, amount: 777 } } : r)),
+    };
+    const out = applyComputedColumns(changed, financeFieldConfig(ids) as never, ids.financeId, new Map());
+    const row = out.records.find((r) => r.id === op.id)!.values;
+    expect(row["expense"]).toBe(777);
+    expect(row["balance"]).toBe(-777);
   });
 });
 

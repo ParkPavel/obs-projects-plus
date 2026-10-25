@@ -50,7 +50,7 @@ function firstNonNull(
 }
 
 /** Every field or column name an expression mentions (unparseable → none). */
-function referencedNames(expression: string): string[] {
+export function referencedNames(expression: string): string[] {
   let ast: FormulaNode;
   try { ast = parseFormula(expression); } catch { return []; }
   const out: string[] = [];

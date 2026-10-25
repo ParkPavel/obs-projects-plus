@@ -11,8 +11,8 @@ import type { ProjectDefinition, ProjectsPluginPreferences } from "src/settings/
 import type { FilterDefinition } from "src/settings/base/settings";
 import type { IFileSystem } from "src/lib/filesystem/filesystem";
 import { createDataSource } from "src/lib/datasources";
-import { applyDeclaredFieldTypes, formulaPropertiesOf } from "src/lib/relations/declaredFieldTypes";
-import { applyRollupColumns } from "src/lib/relations/rollupColumns";
+import { applyDeclaredFieldTypes } from "src/lib/relations/declaredFieldTypes";
+import { applyComputedColumns } from "src/lib/relations/computedColumns";
 import { extractRelationTargetIds, type FieldConfigRelationMap } from "src/lib/relations/relationTargets";
 import { baseRefId, parseBaseRef } from "src/lib/relations/baseRef";
 import { BLOCK_SOURCE_PREFIX, MAX_BLOCK_CHAIN, blockAt } from "src/lib/relations/blockRefs";
@@ -121,9 +121,9 @@ export async function resolveExternalFrame(
       : await resolveExternalFrame(id, deps, { ...ctx, trail }).catch(() => null);
     if (frame) targets.set(id, frame);
   }
-  // i2-data (R3) / i3-data: the base's formula properties, after its rollups
-  // so they can read them — as View.svelte computes them for the host frame.
-  return applyFormulaFields(applyRollupColumns(base, fieldConfig, projectId, targets), formulaPropertiesOf(fieldConfig));
+  // i2-data (R3) / i3-data / w4-p01b: the base's formulas and rollups in
+  // dependency order — as View.svelte computes them for the host frame.
+  return applyComputedColumns(base, fieldConfig, projectId, targets);
 }
 
 /**

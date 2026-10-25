@@ -51,7 +51,11 @@ mean that a new release has been published.
 - Tables: the first column is pinned only from its header menu; a scroll that reaches the table's edge
   carries on into the page; option pills read on any background; lists and dates in formulas show by type.
 - A filtered dashboard block can be the source of another block, a chart or a relation; loops are refused.
-  Rollups read rollups (up to three levels); formulas run in dependency order.
+  Rollups read rollups (up to three levels); formulas run in dependency order. A rollup can total a
+  formula of its own project (a client sums its visits' `IF(paid, price)`), and a formula can read a rollup.
+- Values read from Dataview keep 0, false and empty text; a date and time read as text keeps its time.
+- The demo projects compute a visit's payment, debt and session and an operation's income, expense and
+  balance with project formulas, so a change to a note moves the totals.
 - A board, calendar or gallery tab in a block can be linked to a project view: it takes that view's
   settings, sort and filter; "Unlink" keeps them in the tab.
 - "Properties" in view settings: search, show and hide by the eye icon, order by drag; the list applies to

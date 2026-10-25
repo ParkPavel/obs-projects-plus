@@ -11,10 +11,8 @@
   } from "src/settings/settings";
   import { applyFilter, matchesCondition } from "./filterFunctions";
   import { enrichFrameWithAllRelations } from "src/lib/engine/crossProjectResolver";
-  import { applyRollupColumns } from "./rollupColumns";
-  import { applyFormulaFields } from "src/lib/dashboard-engine/applyFormulaFields";
+  import { applyComputedColumns } from "src/lib/relations/computedColumns";
   import { guarded } from "src/lib/errors/guarded";
-  import { formulaPropertiesOf } from "src/lib/relations/declaredFieldTypes";
   import { externalFrameInvalidation } from "src/lib/stores/externalFrameInvalidation";
   import { applyDeclaredFieldTypes, conditionFieldsKnown, extractRelationTargetIds, getRecordColor as computeRecordColor } from "./viewHelpers";
 
@@ -183,9 +181,10 @@
         : declaredFrame;
     // Rollup values are folded in under the field's own name, so filter, sort
     // and cell renderers all see the aggregate without a separate column.
-    // i2-data (R3): a formula property of the base is computed here, after
-    // rollups, so it can read them; before, it was stored and never computed.
-    return applyFormulaFields(applyRollupColumns(enriched, fc, project.id, externalFramesMap), formulaPropertiesOf(fc));
+    // i2-data (R3): a formula property of the base is computed here.
+    // w4-p01b: in dependency order — a rollup may read a formula of this
+    // project, and a formula may read a rollup (computedColumns.ts).
+    return applyComputedColumns(enriched, fc, project.id, externalFramesMap);
   });
 
   $: filteredFrame = guarded("filter", enrichedFrame, () => applyFilter(enrichedFrame, viewFilter));

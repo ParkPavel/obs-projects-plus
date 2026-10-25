@@ -168,19 +168,14 @@ export function buildCabinetVisits(): Record<string, DemoFile> {
         color: service.color,
       };
       if (status === "проведён") {
-        const paid = random() > 0.07;
         const noise = () => Math.round(random() * 2 - 1);
-        fm["sessions"] = 1;
         fm["doneDate"] = dayOf(day);
-        fm["paid"] = paid;
+        fm["paid"] = random() > 0.07;
         fm["wellbeingBefore"] = clamp(ramp(c.before[0], c.before[1], k, done) + noise(), 1, 10);
         fm["wellbeingAfter"] = clamp(ramp(c.after[0], c.after[1], k, done) + noise(), 1, 10);
-        if (paid) {
-          fm["paidAmount"] = service.price;
-          fm["net"] = service.price;
-        } else {
-          fm["debt"] = service.price;
-        }
+        // w4-p01b: sessions, paidAmount, debt and net are the project's
+        // formulas (cabinetFieldConfig), not numbers written here — they
+        // follow status, paid and price when the note changes.
         k++;
       }
       fm["tags"] = ["visit"];
@@ -201,7 +196,7 @@ export function buildCabinetExpenses(): Record<string, DemoFile> {
     for (let d = e.from; d < 0; d += e.every) {
       const amount = e.min === e.max ? e.min : Math.round((e.min + random() * (e.max - e.min)) / 100) * 100;
       out[`Расход ${e.category} ${seq(++n, 2)}`] = {
-        frontmatter: { type: "expense", date: dayOf(d), category: e.category, amount, net: -amount, tags: ["expense"] },
+        frontmatter: { type: "expense", date: dayOf(d), category: e.category, amount, tags: ["expense"] },
         content: "",
       };
     }
@@ -241,6 +236,13 @@ export function cabinetFieldConfig(ids: DemoIds): { [field: string]: FieldConfig
     endTime: { time: true },
     client: { relation: { targetProjectId: ids.cabinetId } },
     service: { relation: { targetProjectId: ids.cabinetId } },
+    // w4-p01b: a visit's money, from its own status, payment and price — the
+    // same formulas a user would write; empty (not 0) where they do not apply,
+    // so an average or an «is not empty» filter sees only real payments.
+    sessions: { formula: 'IF(AND(type = "visit", status = "проведён"), 1)' },
+    paidAmount: { formula: 'IF(AND(type = "visit", status = "проведён", paid), price)' },
+    debt: { formula: 'IF(AND(type = "visit", status = "проведён", NOT(paid)), price)' },
+    net: { formula: 'IF(type = "expense", 0 - amount, paidAmount)' },
     // A client's card, from its visits in this project…
     [R.sessions]: back(ids.cabinetId, "client", "sessions", "sum"),
     [R.paid]: back(ids.cabinetId, "client", "paidAmount", "sum"),
