@@ -252,7 +252,7 @@
     (column: string) => {
       new CreateNoteModal($app, project, (name, templatePath) => {
         const filterValues = getFilterValuesFromConditions(filterConditions, field?.name);
-        api.addRecord(
+        return api.addRecord(
           createDataRecord(
             name,
             project,

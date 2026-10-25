@@ -350,7 +350,7 @@
     const p = project;
     if (!p) return;
     new CreateNoteModal($app, p, (name, templatePath) => {
-      api.addRecord(createDataRecord(name, p), fields, templatePath);
+      return api.addRecord(createDataRecord(name, p), fields, templatePath);
     }).open();
   }
 

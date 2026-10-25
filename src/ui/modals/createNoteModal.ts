@@ -23,11 +23,15 @@ export class CreateNoteModal extends Modal {
   constructor(
     app: App,
     readonly project: ProjectDefinition,
+    /**
+     * w4-p02 (F14): returns the write. The window waits for it, closes on
+     * success and stays open with the error and the typed name on a refusal.
+     */
     readonly onSave: (
       name: string,
       templatePath: string,
       project: ProjectDefinition
-    ) => void,
+    ) => void | Promise<unknown>,
     /** Optional context for template interpolation (date/time from calendar) */
     readonly context?: CreateNoteContext
   ) {
@@ -81,12 +85,14 @@ export class CreateNoteModal extends Modal {
               get(i18n).t("modals.note.create.untitled")
             ),
         project: this.project,
-        onSave: (
+        // Closed only once the note is written; a refusal reaches the form,
+        // which shows it and keeps what was typed (CreateNote.svelte).
+        onSave: async (
           name: string,
           templatePath: string,
           project: ProjectDefinition
         ) => {
-          this.onSave(name, templatePath, project);
+          await this.onSave(name, templatePath, project);
           this.close();
         },
       },

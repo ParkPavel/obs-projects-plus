@@ -141,7 +141,7 @@
   function addRecord() {
     new CreateNoteModal($app, project, (name, templatePath, project) => {
       const filterValues = getFilterValuesFromConditions(filterConditions);
-      api.addRecord(
+      return api.addRecord(
         createDataRecord(name, project, Object.keys(filterValues).length > 0 ? filterValues : undefined),
         fields,
         templatePath

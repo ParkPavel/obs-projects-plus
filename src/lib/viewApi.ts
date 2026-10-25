@@ -76,13 +76,24 @@ export class ViewApi {
    * `body` is the text under the frontmatter of the new note; a duplicate
    * passes the source's so the copy is not created empty.
    */
-  addRecord(record: DataRecord, fields: DataField[], templatePath: string, body?: string): Promise<void> {
-    if (this.dataSource.includes(record.id)) {
+  async addRecord(record: DataRecord, fields: DataField[], templatePath: string, body?: string): Promise<void> {
+    // w4-p02 (F19): the row is shown while the note is written and taken back
+    // if the create is refused — before, a refused create left a phantom row.
+    // Only this row: a record already in the frame under the same id is
+    // neither duplicated nor removed.
+    const shown =
+      this.dataSource.includes(record.id) && !get(dataFrame).records.some((r) => r.id === record.id);
+    if (shown) {
       dataFrame.addRecord(record);
     }
-    // Returned, not voided: a caller that awaits (the calendar duplicate) must
-    // see a failed create instead of reporting a copy that does not exist.
-    return this.dataApi.createNote(record, fields ?? [], templatePath, body);
+    // Rethrown, not swallowed: a caller that awaits (the create form, the
+    // calendar duplicate) must see a failed create and keep what was typed.
+    try {
+      await this.dataApi.createNote(record, fields ?? [], templatePath, body);
+    } catch (error) {
+      if (shown) dataFrame.deleteRecord(record.id);
+      throw error;
+    }
   }
 
   /**

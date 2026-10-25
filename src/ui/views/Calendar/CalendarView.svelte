@@ -1575,14 +1575,18 @@
               frontmatterValues[endTimeFieldName] = `${endHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
             }
             
-            api.addRecord(
+            return api.addRecord(
               createDataRecord(effectiveName, project, frontmatterValues),
               fields,
               templatePath
             );
           }
+          return undefined;
         } catch (error) {
+          // w4-p02: logged and handed on — the form shows it and keeps the
+          // name instead of closing as if the note had been created.
           calendarLogger.error('Error adding new record', error, { component: 'CalendarView', action: 'addRecord' });
+          throw error;
         }
       }, context).open();
     } catch (error) {

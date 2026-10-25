@@ -331,6 +331,8 @@
                     "name-taken-error": "已经存在一个同名文件。",
                     "empty-name-error": "文件名不能为空。",
                     "dot-start-error": "文件名不能以句点开头。",
+                    "save-error": "无法创建笔记：{{message}}",
+                    "creating": "正在创建…",
                     "create": "新建笔记",
                     "readonly": {
                         "title": "只读项目",

@@ -25,11 +25,32 @@
     name: string,
     templatePath: string,
     project: ProjectDefinition
-  ) => void;
+  ) => void | Promise<unknown>;
 
   let templatePath = project.templates.at(0) ?? "";
 
   $: nameError = validateName(name);
+
+  // w4-p02 (F14): the form waits for the write. While it runs the button is
+  // off (a second press does not create a second note); a refusal is shown
+  // here and the typed name and choices stay for another try.
+  let saving = false;
+  let saveError = "";
+
+  async function submit() {
+    if (saving || nameError) return;
+    saving = true;
+    saveError = "";
+    try {
+      await onSave(name, templatePath, project);
+    } catch (error) {
+      saveError = $i18n.t("modals.note.create.save-error", {
+        message: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      saving = false;
+    }
+  }
 
   // Explicit reactive statement for project options to ensure Select component
   // properly detects changes when projects are updated or added
@@ -103,12 +124,12 @@
         value={name}
         on:input={({ detail: value }) => (name = value)}
         autoFocus
-        error={!!nameError}
-        helperText={nameError}
+        error={!!nameError || !!saveError}
+        helperText={nameError || saveError}
         on:keydown={(ev) => {
           if (ev.key === "Enter" && !nameError) {
             ev.preventDefault();
-            onSave(name, templatePath, project);
+            void submit();
           }
         }}
       />
@@ -149,12 +170,10 @@
   <ModalButtonGroup>
     <Button
       variant={"primary"}
-      disabled={!!nameError}
-      on:click={() => {
-        onSave(name, templatePath, project);
-      }}
+      disabled={!!nameError || saving}
+      on:click={() => void submit()}
     >
-      {$i18n.t("modals.note.create.create")}
+      {saving ? $i18n.t("modals.note.create.creating") : $i18n.t("modals.note.create.create")}
     </Button>
   </ModalButtonGroup>
 </ModalLayout>
