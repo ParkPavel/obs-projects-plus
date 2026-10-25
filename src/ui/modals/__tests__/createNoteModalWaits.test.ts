@@ -9,7 +9,10 @@
 import { Modal } from "obsidian";
 type ProjectDefinition = import("src/settings/settings").ProjectDefinition;
 
-type FormProps = { onSave: (name: string, templatePath: string, project: ProjectDefinition) => Promise<void> };
+type FormProps = {
+  onSave: (name: string, templatePath: string, project: ProjectDefinition) => Promise<void>;
+  chooseProject: boolean;
+};
 let form: FormProps | undefined;
 
 jest.mock("src/ui/modals/components/CreateNote.svelte", () => ({
@@ -70,5 +73,20 @@ describe("CreateNoteModal — closes after the write, not before", () => {
     const { close } = open(() => Promise.reject(new Error("vault refused")));
     await expect(form!.onSave("Note", "", project)).rejects.toThrow("vault refused");
     expect(close).not.toHaveBeenCalled();
+  });
+});
+
+// w4-p03 (audit F15, decision 24.10 #7): from a view the project is fixed —
+// the form offered a choice the views then ignored, writing to their own
+// project. Only the general command offers it.
+describe("CreateNoteModal — the project choice", () => {
+  it("is not offered from a view", () => {
+    open(() => Promise.resolve());
+    expect(form!.chooseProject).toBe(false);
+  });
+
+  it("is offered from the general command", () => {
+    new CreateNoteModal({} as never, project, () => Promise.resolve(), { chooseProject: true }).onOpen();
+    expect(form!.chooseProject).toBe(true);
   });
 });

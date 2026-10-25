@@ -323,7 +323,9 @@ export default class ProjectsPlusPlugin extends Plugin {
               (name, templatePath, project) => {
                 const record = createDataRecord(name, project);
                 return get(api).createNote(record, [], templatePath);
-              }
+              },
+              // The general command is the one place a project is picked.
+              { chooseProject: true }
             ).open();
           }
 

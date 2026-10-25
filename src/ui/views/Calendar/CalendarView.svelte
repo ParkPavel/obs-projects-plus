@@ -1529,7 +1529,7 @@
         try {
           if (dateField) {
             // Build frontmatter values with auto-filled date/time
-            const frontmatterValues: Record<string, Date | string> = {
+            const frontmatterValues: Record<string, Date | string | number | boolean> = {
               ...getFilterValuesFromConditions(filterConditions),
             };
             

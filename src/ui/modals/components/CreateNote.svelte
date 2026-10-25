@@ -21,6 +21,8 @@
 
   export let name: string;
   export let project: ProjectDefinition;
+  /** w4-p03: the project is picked only from the general command. */
+  export let chooseProject = false;
   export let onSave: (
     name: string,
     templatePath: string,
@@ -135,21 +137,23 @@
       />
     </SettingItem>
 
-    <SettingItem
-      name={$i18n.t("modals.note.create.project.name")}
-      description={$i18n.t("modals.note.create.project.description") ?? ""}
-    >
-      <Select
-        value={project.id}
-        on:change={({ detail: id }) => {
-          const res = $settings.projects.find((w) => w.id === id);
-          if (res) {
-            project = res;
-          }
-        }}
-        options={projectOptions}
-      />
-    </SettingItem>
+    {#if chooseProject}
+      <SettingItem
+        name={$i18n.t("modals.note.create.project.name")}
+        description={$i18n.t("modals.note.create.project.description") ?? ""}
+      >
+        <Select
+          value={project.id}
+          on:change={({ detail: id }) => {
+            const res = $settings.projects.find((w) => w.id === id);
+            if (res) {
+              project = res;
+            }
+          }}
+          options={projectOptions}
+        />
+      </SettingItem>
+    {/if}
 
     {#if project.templates.length}
       <SettingItem

@@ -12,6 +12,7 @@
   import { applyFilter, matchesCondition } from "./filterFunctions";
   import { enrichFrameWithAllRelations } from "src/lib/engine/crossProjectResolver";
   import { applyComputedColumns } from "src/lib/relations/computedColumns";
+  import { prefillConditions } from "src/lib/helpers";
   import { guarded } from "src/lib/errors/guarded";
   import { externalFrameInvalidation } from "src/lib/stores/externalFrameInvalidation";
   import { applyDeclaredFieldTypes, conditionFieldsKnown, extractRelationTargetIds, getRecordColor as computeRecordColor } from "./viewHelpers";
@@ -344,7 +345,9 @@
       dataGeneration,
       hasSort: view.sort.criteria.filter((c) => c.enabled).length > 0,
       hasFilter: view.filter.conditions.filter((c) => c.enabled).length > 0,
-      filterConditions: view.filter.conditions.filter((c) => c.enabled),
+      // w4-p03: what a note created here takes from the filter — the «and»
+      // conditions only (an «or» names no single value to write).
+      filterConditions: prefillConditions(view.filter),
       // #125: the complete definition, so a view that saves a filter back can
       // preserve groups, the conjunction and disabled conditions.
       filter: view.filter,

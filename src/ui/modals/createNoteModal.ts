@@ -15,6 +15,13 @@ export interface CreateNoteContext {
   date?: dayjs.Dayjs;
   /** Context time for template substitution (e.g., clicked time in timeline) */
   time?: string;
+  /**
+   * w4-p03 (audit F15, decision 24.10 #7): offer a project choice. Only the
+   * general command does; a note created from a view belongs to that view's
+   * project, so the window opened there has no choice (the views wrote to
+   * their own project whatever was picked).
+   */
+  chooseProject?: boolean;
 }
 
 export class CreateNoteModal extends Modal {
@@ -85,6 +92,7 @@ export class CreateNoteModal extends Modal {
               get(i18n).t("modals.note.create.untitled")
             ),
         project: this.project,
+        chooseProject: this.context?.chooseProject === true,
         // Closed only once the note is written; a refusal reaches the form,
         // which shows it and keeps what was typed (CreateNote.svelte).
         onSave: async (
