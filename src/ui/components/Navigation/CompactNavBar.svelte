@@ -96,10 +96,15 @@
   :global(.ppp-tabs-in-header .view-header-title) {
     display: none;
   }
+  /* w4-p09 (N1): a theme may style the header, not hide the strip in it.
+     Things shows the title container only on hover (a phone has none);
+     Minimal hides it with "hide tab title" and in focus mode. */
   :global(.ppp-tabs-in-header .view-header-title-container) {
     flex: 1 1 0;
     min-width: 0;
     overflow: hidden;
+    opacity: 1 !important;
+    visibility: visible !important;
   }
   :global(.ppp-tabs-in-header .view-header-title-container > .compact-navbar-tabs) {
     width: 100%;

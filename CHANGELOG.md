@@ -89,6 +89,9 @@ mean that a new release has been published.
 ### Phone and fields
 
 - The view tabs sit in the header in place of "Projects".
+- The view tabs stay in the phone's header with every theme: Things (title shown only on hover) and Minimal
+  ("hide tab title", focus mode) hid them. A header Obsidian or a theme rebuilds gets the tabs back; a theme
+  that hides the whole header row leaves them in the plugin's own bar.
 - The suggestion list opens above its field, follows it and keeps typed text. Search no longer overwrites
   what is being typed. The field list in view settings is one line per field.
 - A value box offers the same values in every filter — the view's filter, colour rules, agenda lists — and
