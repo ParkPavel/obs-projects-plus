@@ -68,7 +68,7 @@
   export let onRecordAdd: ((date: dayjs.Dayjs, startTime?: string, endTime?: string) => void) | undefined;
   /** w4-p07: the length a tap creates (the view setting), shown by the preview. */
   export let creationDuration = 60;
-  export let onDayTap: ((date: dayjs.Dayjs, records: DataRecord[], event?: MouseEvent | TouchEvent) => void) | undefined;
+  export let onDayTap: ((date: dayjs.Dayjs, records: DataRecord[], event?: Event) => void) | undefined;
   export let isMobile: boolean = false;
   export let now: dayjs.Dayjs | null = null;
   /** Hide time axis (used when shared axis is rendered externally) */
@@ -241,11 +241,11 @@
 
   // Mobile: Detect tap on day column
   // Extracts DataRecord[] from ProcessedRecord[] for backwards compatibility
-  function handleDayTap(day: dayjs.Dayjs) {
+  function handleDayTap(day: dayjs.Dayjs, event?: Event) {
     if (isMobile && onDayTap) {
       const processed = processedGroupedRecords[day.format('YYYY-MM-DD')] || [];
       const records = processed.map(p => p.record);
-      onDayTap(day, records);
+      onDayTap(day, records, event);
     }
   }
   
@@ -601,7 +601,7 @@
             class:today={isToday(day)}
             class:weekend={day.day() === 0 || day.day() === 6}
             data-date={day.format('YYYY-MM-DD')}
-            on:click={() => handleDayTap(day)}
+            on:click={(event) => handleDayTap(day, event)}
           >
             <div class="projects-calendar-day-name">
               {day.format('ddd')}

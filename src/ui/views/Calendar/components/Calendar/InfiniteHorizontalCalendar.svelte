@@ -40,7 +40,7 @@
   export let onRecordAdd: ((date: dayjs.Dayjs, startTime?: string, endTime?: string) => void) | undefined;
   /** w4-p07: the view's creation length, for the timeline's creation preview. */
   export let creationDuration = 60;
-  export let onDayTap: ((date: dayjs.Dayjs, records: DataRecord[], event?: MouseEvent | TouchEvent) => void) | undefined;
+  export let onDayTap: ((date: dayjs.Dayjs, records: DataRecord[], event?: Event) => void) | undefined;
   export let onScrollToCurrent: ((callback: () => void) => void) | undefined;
   export let onScrollToDate: ((callback: (date: dayjs.Dayjs) => void) => void) | undefined;
   export let targetDate: dayjs.Dayjs | null = null;

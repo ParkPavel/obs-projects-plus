@@ -916,6 +916,10 @@
   // The element the day was tapped on: where focus goes back to when the
   // duplicate window opened from that day's popup closes.
   let dayTapOrigin: HTMLElement | null = null;
+  // w4-p07 (N13): the window anchors at the day's whole cell, the same box
+  // whether the date, the background or "+N" was pressed. A day opened with
+  // no element at all anchors at the calendar.
+  let dayAnchor: HTMLElement | null = null;
 
   // Duplicate window state. It lives HERE, not in DayPopup: the day popup
   // closes the moment the window opens, and a window owned by it would be
@@ -935,15 +939,16 @@
    * v6.0: Works on both mobile AND desktop
    * @param date - The date that was tapped/clicked
    * @param records - Records for that date
-   * @param event - Optional mouse/touch event: its target anchors the window
+   * @param event - The press that opened it: its day cell anchors the window
    */
-  function handleDayTap(date: dayjs.Dayjs, records: DataRecord[], event?: MouseEvent | TouchEvent) {
+  function handleDayTap(date: dayjs.Dayjs, records: DataRecord[], event?: Event) {
     dayPopupDate = date;
     dayPopupRecords = records;
     // Duck-typed: in a popout window the target is not an instance of THIS
     // bundle's HTMLElement.
     const tapTarget = event?.target;
     dayTapOrigin = tapTarget && "closest" in tapTarget ? (tapTarget as HTMLElement) : null;
+    dayAnchor = dayTapOrigin?.closest<HTMLElement>("[data-date]") ?? dayTapOrigin;
 
     showDayPopup = true;
   }
@@ -1802,8 +1807,8 @@
             {now}
             {isMobile}
             {firstDayOfWeek}
-            onDayClick={(date, records) => {
-              handleDayTap(date, records);
+            onDayClick={(date, records, event) => {
+              handleDayTap(date, records, event);
             }}
             onMonthClick={(month, position) => {
               // Navigate to month view centered on clicked month
@@ -1996,7 +2001,7 @@
     {getRecordColor}
     eventColorField={config?.eventColorField}
     visible={showDayPopup}
-    anchorEl={dayTapOrigin?.isConnected ? dayTapOrigin : calendarRootEl}
+    anchorEl={dayAnchor?.isConnected ? dayAnchor : calendarRootEl}
     on:close={() => showDayPopup = false}
     on:recordClick={({ detail }) => handleDayPopupRecordClick(detail)}
     on:recordOpenInNewWindow={({ detail }) => handleDayPopupRecordOpenInNewWindow(detail)}

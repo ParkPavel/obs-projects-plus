@@ -29,7 +29,7 @@
   export let now: dayjs.Dayjs | null = null;
   export let isMobile: boolean = false;
   export let firstDayOfWeek: number = 0;
-  export let onDayClick: ((date: dayjs.Dayjs, records: DataRecord[]) => void) | undefined;
+  export let onDayClick: ((date: dayjs.Dayjs, records: DataRecord[], event?: Event) => void) | undefined;
   export let onMonthClick: ((month: dayjs.Dayjs, position?: string) => void) | undefined;
   /** Callback when user wants to navigate to a different year */
   export let onYearChange: ((year: number) => void) | undefined;
@@ -167,10 +167,10 @@
     return weeks;
   }
 
-  function handleDayClick(date: dayjs.Dayjs) {
+  function handleDayClick(date: dayjs.Dayjs, event?: Event) {
     const records = getRecordsForDate(date);
     if (onDayClick) {
-      onDayClick(date, records);
+      onDayClick(date, records, event);
     }
     dispatch('dayClick', { date, records });
   }
@@ -340,7 +340,7 @@
                       class:outside={isOutside}
                       class:today={isToday}
                       title="{displayDate}: {count} event{count !== 1 ? 's' : ''}"
-                      on:click={() => handleDayClick(date)}
+                      on:click={(event) => handleDayClick(date, event)}
                       disabled={isOutside}
                     >
                       <span class="sr-only">{displayDate}: {$i18n.t("views.calendar.events-count", { count })}</span>

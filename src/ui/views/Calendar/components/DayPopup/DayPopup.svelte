@@ -7,7 +7,7 @@
    * Escape, focus, scroll lock and swipe handling (~1100 lines); every one of
    * those is now the engine's contract, the same as every other popup:
    *   - the layer lives in the anchor's own document (#192 popout windows);
-   *   - desktop: anchored, flipped and clamped inside the visible viewport;
+   *   - desktop: beside the day's cell, right/left/under/over (w4-p07, N13);
    *   - mobile: a bottom sheet fitted above the on-screen keyboard;
    *   - Escape closes the top layer only; focus returns to the day.
    * The record list opens the peek through the view (`recordClick`); the
@@ -79,7 +79,7 @@
 <FloatingPopup
   triggerEl={anchorEl}
   open={visible}
-  placement="right-start"
+  placement="side-start"
   role="dialog"
   ariaLabel={formattedDate}
   on:close={close}
@@ -138,7 +138,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--ppp-space-4, 0.5rem);
-    width: 20rem;
+    width: var(--ppp-day-popup-w, 20rem); /* one width; the list sets only the height */
     max-width: 100%;
   }
 

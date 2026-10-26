@@ -27,6 +27,9 @@ mean that a new release has been published.
 - Week and day: a drag over the time grid creates the event over exactly that range (it was always one hour);
   on a phone a tap on empty time opens the creation preview, and the day opens from its header. The length
   a tap or click creates is a view setting: 15, 30, 60 (default), 90 or 120 minutes.
+- The day window on a computer opens beside the day's cell — right, else left, else under or over it — at one
+  width, whether the date, the background, "+N", the keyboard or the year view opened it (it could stand at
+  the screen's edge, far from the day). It keeps its side while open; on a phone it stays a bottom sheet.
 - Stretching a multi-day event over more days is saved; without an end field `endDate` is created.
 - A record's "Settings" in the day window open the note's properties block. The duplicate window follows
   Obsidian's modals: a time field and an action footer.

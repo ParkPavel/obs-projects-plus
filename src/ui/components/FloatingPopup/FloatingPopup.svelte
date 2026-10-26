@@ -29,7 +29,11 @@
     | "top-start"
     | "top-end"
     | "right-start"
-    | "left-start";
+    | "left-start"
+    // w4-p07 (N13): beside the anchor — right, else left; under it, else over
+    // it, only when neither side has room. Chosen once per opening.
+    | "side-start";
+  type ResolvedPlacement = Exclude<PopupPlacement, "side-start">;
 
   // ── Props ──────────────────────────────────────────────────
 
@@ -67,6 +71,10 @@
 
   let popupEl: HTMLDivElement | null = null;
   let style = "";
+  // The side a "side-start" popup took on this opening: a list that grows or
+  // shrinks afterwards does not carry the window across its anchor.
+  let sideTaken: ResolvedPlacement | null = null;
+  $: if (!open) sideTaken = null;
   let composing = false;
   $: if (!open) composing = false;
 
@@ -164,6 +172,9 @@
     // Wait one tick so the popup is laid out and we can measure.
     await tick();
     if (!open || !popupEl || !triggerEl) return;
+    // An anchor re-rendered away measures as a zero box at the corner; the
+    // window stays where it was instead of jumping there.
+    if (!triggerEl.isConnected && style) return;
 
     const tRect = triggerEl.getBoundingClientRect();
     const pRect = popupEl.getBoundingClientRect();
@@ -183,7 +194,7 @@
     const offsetPx = offsetRem * baseFontPx;
     const marginPx = 0.5 * baseFontPx;
 
-    const positions: Record<PopupPlacement, { top: number; left: number }> = {
+    const positions: Record<ResolvedPlacement, { top: number; left: number }> = {
       "bottom-start": { top: tRect.bottom + offsetPx, left: tRect.left },
       "bottom-end": { top: tRect.bottom + offsetPx, left: tRect.right - pRect.width },
       "top-start": { top: tRect.top - pRect.height - offsetPx, left: tRect.left },
@@ -192,22 +203,23 @@
       "left-start": { top: tRect.top, left: tRect.left - pRect.width - offsetPx },
     };
 
-    let { top, left } = positions[placement];
+    const side = resolvePlacement(tRect, pRect, bounds, offsetPx, marginPx);
+    let { top, left } = positions[side];
 
     // Flip vertically.
-    if (placement.startsWith("bottom") && top + pRect.height > vh - marginPx) {
+    if (side.startsWith("bottom") && top + pRect.height > vh - marginPx) {
       const flipped = tRect.top - pRect.height - offsetPx;
       if (flipped >= bounds.top + marginPx) top = flipped;
-    } else if (placement.startsWith("top") && top < bounds.top + marginPx) {
+    } else if (side.startsWith("top") && top < bounds.top + marginPx) {
       const flipped = tRect.bottom + offsetPx;
       if (flipped + pRect.height <= vh - marginPx) top = flipped;
     }
 
     // Flip horizontally for left/right.
-    if (placement === "right-start" && left + pRect.width > vw - marginPx) {
+    if (side === "right-start" && left + pRect.width > vw - marginPx) {
       const flipped = tRect.left - pRect.width - offsetPx;
       if (flipped >= bounds.left + marginPx) left = flipped;
-    } else if (placement === "left-start" && left < bounds.left + marginPx) {
+    } else if (side === "left-start" && left < bounds.left + marginPx) {
       const flipped = tRect.right + offsetPx;
       if (flipped + pRect.width <= vw - marginPx) left = flipped;
     }
@@ -235,6 +247,34 @@
         : viewportWidthCap;
 
     style = `top: ${remAt(clampedTop, baseFontPx)}; left: ${remAt(clampedLeft, baseFontPx)}; max-width: ${remAt(Math.max(0, widthCap), baseFontPx)}; min-width: ${remAt(Math.min(12 * baseFontPx, Math.max(0, widthCap)), baseFontPx)}; max-height: ${remAt(Math.max(0, vh - clampedTop - marginPx), baseFontPx)};`;
+  }
+
+  /**
+   * The placement to lay out: the asked one, or for "side-start" the first of
+   * right, left, below, above with room for the whole window. With room
+   * nowhere, the taller of below and above (the height is capped to it).
+   */
+  function resolvePlacement(
+    tRect: DOMRect,
+    pRect: DOMRect,
+    bounds: { top: number; left: number; right: number; bottom: number },
+    offsetPx: number,
+    marginPx: number
+  ): ResolvedPlacement {
+    if (placement !== "side-start") return placement;
+    if (sideTaken) return sideTaken;
+    const below = bounds.bottom - marginPx - (tRect.bottom + offsetPx);
+    const above = tRect.top - offsetPx - (bounds.top + marginPx);
+    let side: ResolvedPlacement;
+    if (tRect.right + offsetPx + pRect.width <= bounds.right - marginPx) side = "right-start";
+    else if (tRect.left - offsetPx - pRect.width >= bounds.left + marginPx) side = "left-start";
+    else if (pRect.height <= below) side = "bottom-start";
+    else if (pRect.height <= above) side = "top-start";
+    else side = below >= above ? "bottom-start" : "top-start";
+    // A box not laid out yet measures 0 × 0 and fits anywhere: no side is
+    // taken from that.
+    if (pRect.width > 0 && pRect.height > 0) sideTaken = side;
+    return side;
   }
 
   async function focusFirst(): Promise<void> {

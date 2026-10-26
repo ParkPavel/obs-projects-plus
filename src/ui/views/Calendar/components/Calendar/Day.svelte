@@ -87,7 +87,7 @@
    * Callback when day is tapped on mobile (opens popup)
    * Third parameter is optional event for positioning
    */
-  export let onDayTap: ((date: dayjs.Dayjs, records: DataRecord[], event?: MouseEvent | TouchEvent) => void) | undefined;
+  export let onDayTap: ((date: dayjs.Dayjs, records: DataRecord[], event?: Event) => void) | undefined;
   
   /**
    * Display mode for events in month view:
@@ -551,7 +551,7 @@
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       if (isMobile) {
-        onDayTap?.(date, records);
+        onDayTap?.(date, records, e);
       } else {
         handleDblClick(new MouseEvent('dblclick', { bubbles: true }));
       }
@@ -612,7 +612,7 @@
         {/each}
       </div>
       {#if hiddenBarCount > 0}
-        <button class="more-events-btn more-events-btn--bars" on:click|stopPropagation={() => onDayTap?.(date, records)}>
+        <button class="more-events-btn more-events-btn--bars" on:click|stopPropagation={(event) => onDayTap?.(date, records, event)}>
           +{hiddenBarCount}
         </button>
       {/if}
@@ -630,7 +630,7 @@
         />
       </div>
       {#if hiddenCount > 0}
-        <button class="more-events-btn" on:click|stopPropagation={() => onDayTap?.(date, records)}>
+        <button class="more-events-btn" on:click|stopPropagation={(event) => onDayTap?.(date, records, event)}>
           +{hiddenCount}
         </button>
       {/if}
