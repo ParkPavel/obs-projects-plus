@@ -133,17 +133,13 @@
 </section>
 
 <style>
+  /* w4-p10a (N12): the inspector's body; the shared popup is its frame. */
   .ppp-gallery-card-panel {
     display: flex;
     flex-direction: column;
     gap: var(--size-4-2);
-    margin: var(--size-4-2) var(--size-4-3) 0;
-    padding: var(--size-4-3);
-    max-width: 26rem;
-    border: var(--ppp-border-width) solid var(--background-modifier-border);
-    border-radius: var(--radius-m);
-    background: var(--background-primary);
-    box-shadow: var(--shadow-s);
+    width: min(22rem, 100%);
+    padding: var(--size-4-1);
   }
   .ppp-gcp-head,
   .ppp-gcp-row {
@@ -172,8 +168,13 @@
     gap: var(--size-2-1);
   }
   .ppp-gcp-seg button {
-    min-height: var(--ppp-touch-target-min, 2rem);
     font-size: var(--font-ui-small);
+  }
+  /* A finger's target on a touch screen; a computer keeps the rows compact. */
+  @media (pointer: coarse) {
+    .ppp-gcp-seg button {
+      min-height: var(--ppp-touch-target-min);
+    }
   }
   .ppp-gcp-seg button[aria-pressed="true"] {
     background: var(--interactive-accent);

@@ -227,11 +227,25 @@ describe("B9 — the «Card» panel writes the view's config and the gallery fol
     m.component.$destroy();
   });
 
+  // w4-p10a (N12, Codex design D): an inspector over the gallery, not a block
+  // in its flow at a phone's width that pushed the cards down.
+  it("the panel opens as an inspector over the gallery, outside its flow", async () => {
+    const m = mount();
+    await openPanel(m);
+    const panel = document.querySelector<HTMLElement>("[data-gallery-card-panel]")!;
+    const popup = panel.closest(".ppp-popup--floating");
+    expect(popup).not.toBeNull();
+    expect(popup!.getAttribute("role")).toBe("dialog");
+    expect(popup!.parentElement).toBe(document.body);
+    expect(m.target.contains(panel)).toBe(false);
+    m.component.$destroy();
+  });
+
   it("layout: list is saved and the grid re-renders as a list", async () => {
     const m = mount();
     await openPanel(m);
-    expect(m.target.querySelector("[data-gallery-card-panel]")).not.toBeNull();
-    m.target.querySelector<HTMLElement>('[data-gcp-layout="list"]')?.dispatchEvent(click());
+    expect(document.querySelector("[data-gallery-card-panel]")).not.toBeNull();
+    document.querySelector<HTMLElement>('[data-gcp-layout="list"]')?.dispatchEvent(click());
     await tick();
     expect(m.onConfigChange).toHaveBeenLastCalledWith(expect.objectContaining({ layout: "list", coverField: "cover" }));
     expect(m.target.querySelector(".projects--gallery--grid")).toHaveClass("ppp-gallery--list");
@@ -241,10 +255,10 @@ describe("B9 — the «Card» panel writes the view's config and the gallery fol
   it("size: Large writes cardWidth 400", async () => {
     const m = mount();
     await openPanel(m);
-    m.target.querySelector<HTMLElement>('[data-gcp-size="l"]')?.dispatchEvent(click());
+    document.querySelector<HTMLElement>('[data-gcp-size="l"]')?.dispatchEvent(click());
     await tick();
     expect(m.onConfigChange).toHaveBeenLastCalledWith(expect.objectContaining({ cardWidth: 400 }));
-    expect(m.target.querySelector('[data-gcp-size="l"]')).toHaveAttribute("aria-pressed", "true");
+    expect(document.querySelector('[data-gcp-size="l"]')).toHaveAttribute("aria-pressed", "true");
     m.component.$destroy();
   });
 
@@ -253,11 +267,11 @@ describe("B9 — the «Card» panel writes the view's config and the gallery fol
     await openPanel(m);
     const chips = () => Array.from(m.card(0).querySelectorAll(".field-label")).map((el) => el.textContent?.replace(/\s+/g, " ").trim());
     expect(chips()).toEqual(["status Doing"]);
-    m.target.querySelector<HTMLElement>('[data-gcp-hidden] [data-gcp-field="owner"] [data-gcp-action="show"]')?.dispatchEvent(click());
+    document.querySelector<HTMLElement>('[data-gcp-hidden] [data-gcp-field="owner"] [data-gcp-action="show"]')?.dispatchEvent(click());
     await tick();
     expect(m.onConfigChange).toHaveBeenLastCalledWith(expect.objectContaining({ includeFields: ["status", "owner"] }));
     expect(chips()).toEqual(["status Doing", "owner Ann"]);
-    m.target.querySelector<HTMLElement>('[data-gcp-shown] [data-gcp-field="owner"] [data-gcp-action="up"]')?.dispatchEvent(click());
+    document.querySelector<HTMLElement>('[data-gcp-shown] [data-gcp-field="owner"] [data-gcp-action="up"]')?.dispatchEvent(click());
     await tick();
     expect(m.onConfigChange).toHaveBeenLastCalledWith(expect.objectContaining({ includeFields: ["owner", "status"] }));
     expect(chips()).toEqual(["owner Ann", "status Doing"]);
@@ -267,10 +281,10 @@ describe("B9 — the «Card» panel writes the view's config and the gallery fol
   it("cover: choosing none removes the cover field; fit writes fitStyle", async () => {
     const m = mount();
     await openPanel(m);
-    m.target.querySelector<HTMLElement>('[data-gcp-fit="contain"]')?.dispatchEvent(click());
+    document.querySelector<HTMLElement>('[data-gcp-fit="contain"]')?.dispatchEvent(click());
     await tick();
     expect(m.onConfigChange).toHaveBeenLastCalledWith(expect.objectContaining({ fitStyle: "contain" }));
-    const select = m.target.querySelector<HTMLSelectElement>("[data-gcp-cover]") as HTMLSelectElement;
+    const select = document.querySelector<HTMLSelectElement>("[data-gcp-cover]") as HTMLSelectElement;
     select.value = "";
     select.dispatchEvent(new Event("change", { bubbles: true }));
     await tick();

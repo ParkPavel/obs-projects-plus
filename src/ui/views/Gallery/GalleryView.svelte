@@ -28,6 +28,7 @@
   import GalleryOptionsProvider from "./GalleryOptionsProvider.svelte";
   import { coverOf } from "./gallery";
   import GalleryCardPanel from "./components/CardPanel/GalleryCardPanel.svelte";
+  import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
   import { aspectRatioCss, cardFieldsInOrder, normalizeGalleryConfig, toggleCollapsedGroup } from "./galleryOptions";
   import {
     GALLERY_WINDOW_STEP,
@@ -151,6 +152,7 @@
 
   // B9 — the gallery's own «Card» panel (cover, size, layout, properties).
   let panelOpen = false;
+  let panelTrigger: HTMLButtonElement | null = null;
   // B9 — covers whose image failed to load (a resolved path whose file is
   // gone or unreadable); shown as broken, like an unresolved path.
   let failedCovers: Record<string, true> = {};
@@ -181,6 +183,7 @@
     <div class="ppp-gallery-toolbar">
       <button
         type="button"
+        bind:this={panelTrigger}
         class="ppp-gallery-card-options clickable-icon"
         data-gallery-card-options
         aria-expanded={panelOpen}
@@ -191,9 +194,14 @@
         <span>{$i18n.t("views.gallery.card-panel.title")}</span>
       </button>
     </div>
-    {#if panelOpen}
+    <!-- w4-p10a (N12, Codex design D): an inspector at the right, over the
+         gallery (which keeps its columns and shows each change live); on a
+         phone the shared popup is a sheet. It was a block in the page's flow
+         at a phone's width, pushing the cards down. -->
+    <FloatingPopup triggerEl={panelTrigger} bind:open={panelOpen} placement="bottom-end" role="dialog"
+      ariaLabel={$i18n.t("views.gallery.card-panel.title")}>
       <GalleryCardPanel {fields} {config} onChange={saveConfig} onClose={() => (panelOpen = false)} />
-    {/if}
+    </FloatingPopup>
   {/if}
   {#if records.length}
     {@const mediaRatio = options.compact ? null : aspectRatioCss(coverAspectRatio)}

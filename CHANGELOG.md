@@ -89,6 +89,9 @@ mean that a new release has been published.
 
 ### Gallery
 
+- The «Card» settings open as an inspector at the right, over the gallery — which keeps its columns and
+  shows each change at once — instead of a phone-width block that pushed the cards down; on a phone they
+  are a sheet. Controls are compact on a computer, finger-sized on a touch screen.
 - Cover from a list value or the note's first image, a text preview, grouping by a field, a width slider, a
   title-only mode and lazy images. Two cards a row on a phone.
 

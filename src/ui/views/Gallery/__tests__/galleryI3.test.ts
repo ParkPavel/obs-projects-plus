@@ -411,14 +411,14 @@ describe("i3-gallery — the «Card» panel", () => {
   it("the width slider writes cardWidth on release, clamped and snapped; presets still work", async () => {
     const m = mount();
     await open(m);
-    const slider = m.target.querySelector<HTMLInputElement>("[data-gcp-width]") as HTMLInputElement;
+    const slider = document.querySelector<HTMLInputElement>("[data-gcp-width]") as HTMLInputElement;
     expect(slider.type).toBe("range");
     slider.value = "347";
     slider.dispatchEvent(new Event("input", { bubbles: true }));
     slider.dispatchEvent(new Event("change", { bubbles: true }));
     await tick();
     expect(m.onConfigChange).toHaveBeenLastCalledWith(expect.objectContaining({ cardWidth: 350 }));
-    m.target.querySelector<HTMLElement>('[data-gcp-size="s"]')?.dispatchEvent(click());
+    document.querySelector<HTMLElement>('[data-gcp-size="s"]')?.dispatchEvent(click());
     expect(m.onConfigChange).toHaveBeenLastCalledWith(expect.objectContaining({ cardWidth: 200 }));
     m.component.$destroy();
   });
@@ -427,34 +427,34 @@ describe("i3-gallery — the «Card» panel", () => {
     const tags = field("tags", DataFieldType.List, true);
     const m = mount({}, { frame: { fields: [status, coverField, tags, scores], records: BASE } });
     await open(m);
-    const options = Array.from(m.target.querySelectorAll<HTMLOptionElement>("[data-gcp-cover] option")).map((o) => o.value);
+    const options = Array.from(document.querySelectorAll<HTMLOptionElement>("[data-gcp-cover] option")).map((o) => o.value);
     expect(options).toEqual(["", "cover", "tags"]);
 
-    const group = m.target.querySelector<HTMLSelectElement>("[data-gcp-group]") as HTMLSelectElement;
+    const group = document.querySelector<HTMLSelectElement>("[data-gcp-group]") as HTMLSelectElement;
     group.value = "status";
     group.dispatchEvent(new Event("change", { bubbles: true }));
     await tick();
     expect(m.onConfigChange).toHaveBeenLastCalledWith(expect.objectContaining({ groupByField: "status" }));
     expect(m.target.querySelector("[data-gallery-group]")).not.toBeNull();
 
-    const preview = m.target.querySelector<HTMLSelectElement>("[data-gcp-preview]") as HTMLSelectElement;
+    const preview = document.querySelector<HTMLSelectElement>("[data-gcp-preview]") as HTMLSelectElement;
     preview.value = "content";
     preview.dispatchEvent(new Event("change", { bubbles: true }));
     expect(m.onConfigChange).toHaveBeenLastCalledWith(expect.objectContaining({ cardPreview: "content" }));
 
-    m.target.querySelector<HTMLElement>("[data-gcp-compact]")?.dispatchEvent(click());
+    document.querySelector<HTMLElement>("[data-gcp-compact]")?.dispatchEvent(click());
     await tick();
     expect(m.onConfigChange).toHaveBeenLastCalledWith(expect.objectContaining({ compact: true }));
-    expect(m.target.querySelector("[data-gcp-compact]")).toHaveAttribute("aria-checked", "true");
+    expect(document.querySelector("[data-gcp-compact]")).toHaveAttribute("aria-checked", "true");
     m.component.$destroy();
   });
 
   it("dragging a shown property onto another reorders the card", async () => {
     const m = mount();
     await open(m);
-    const item = (name: string) => m.target.querySelector<HTMLElement>(`[data-gcp-shown] [data-gcp-field="${name}"]`) as HTMLElement;
+    const item = (name: string) => document.querySelector<HTMLElement>(`[data-gcp-shown] [data-gcp-field="${name}"]`) as HTMLElement;
     // w4-p06: the grip follows a pointer (a finger too), not HTML drag.
-    const rows = Array.from(m.target.querySelectorAll<HTMLElement>("[data-gcp-shown] [data-gcp-field]"));
+    const rows = Array.from(document.querySelectorAll<HTMLElement>("[data-gcp-shown] [data-gcp-field]"));
     rows.forEach((row, i) => { row.getBoundingClientRect = () => ({ top: i * 30, bottom: i * 30 + 30, left: 0, right: 200, width: 200, height: 30, x: 0, y: i * 30, toJSON: () => ({}) }); });
     const pointer = (type: string, clientY: number) =>
       Object.defineProperties(new MouseEvent(type, { bubbles: true, cancelable: true, clientY }), { pointerId: { value: 5 }, pointerType: { value: "touch" } });
