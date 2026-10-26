@@ -22,7 +22,7 @@ jest.mock("src/lib/stores/ui", () => {
   return { isMobile: writable(false) };
 });
 
-const FilterRow = require("../FilterRow.svelte").default;
+const AgendaFilterEditor = require("../AgendaFilterEditor.svelte").default;
 const FilterPanel = require("src/ui/components/FilterPanel/FilterPanel.svelte").default;
 const ColorFiltersTab = require("src/ui/components/Navigation/SettingsMenu/tabs/ColorFiltersTab.svelte").default;
 
@@ -62,8 +62,8 @@ async function offered(component: unknown, props: Record<string, unknown>): Prom
 
 describe("w4-p05 — one list of suggestions on every filter surface", () => {
   test("agenda filter row: the project's values after the declared options", async () => {
-    const filter = { id: "f1", field: "status", operator: "is", value: "" };
-    expect(await offered(FilterRow, { filter, fields: [field], records, prefix: "" })).toEqual(expected);
+    const filterGroup = { id: "g1", conjunction: "AND", filters: [{ id: "f1", field: "status", operator: "is", value: "" }], groups: [] };
+    expect(await offered(AgendaFilterEditor, { filterGroup, fields: [field], records })).toEqual(expected);
   });
 
   test("main filter panel: the same list", async () => {

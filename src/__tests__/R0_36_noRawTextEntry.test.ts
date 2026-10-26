@@ -212,7 +212,7 @@ describe("R0.36 — the tree", () => {
   });
 
   it("one planted imperative input in a real component is reported", () => {
-    const target = "ui/views/Calendar/agenda/FilterRow.svelte";
+    const target = "ui/components/FilterPanel/FilterPanel.svelte";
     expect(files.some((f) => f.file === target)).toBe(true);
     const planted = files.map((f) =>
       f.file === target ? { ...f, text: `${f.text}\nconst x = activeDocument.createElement('input');` } : f
@@ -228,7 +228,8 @@ describe("R0.36 — the tree", () => {
       "ui/views/Dashboard/widgets/Stats/StatsConfig.svelte",
       "ui/views/Dashboard/widgets/PipelineEditor.svelte",
       "ui/views/Calendar/components/Timeline/AgendaSidebar.svelte",
-      "ui/views/Calendar/agenda/FilterRow.svelte",
+      "ui/views/Calendar/agenda/AgendaFilterEditor.svelte",
+      "ui/components/FilterPanel/ConditionValue.svelte",
       "ui/components/Navigation/SettingsMenu/tabs/FieldComboInput.svelte",
     ];
     for (const file of migrated) {

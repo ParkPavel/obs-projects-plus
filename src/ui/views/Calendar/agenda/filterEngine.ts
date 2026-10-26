@@ -16,24 +16,15 @@ import { parseFormula, evaluateFormula } from 'src/lib/formula';
 import { matchesCondition, matchesFilterConditions, type FilterOpts } from 'src/lib/engine/filterEvaluator';
 import { stripToDisplay } from 'src/lib/engine/wikilink';
 import { calendarLogger } from '../logger';
+import { agendaOperator, agendaValueText } from 'src/lib/filters/agendaFilterModel';
 
 const CAL_OPTS: FilterOpts = { upcomingInclusive: false };
 
-/** Legacy → canonical operator names from v3.0.4 saved settings. */
-const LEGACY_OPS: Record<string, FilterOperator> = {
-  equals: 'is', not_equals: 'is-not', is_empty: 'is-empty', is_not_empty: 'is-not-empty',
-  greater_than: 'gt', less_than: 'lt', greater_or_equal: 'gte', less_or_equal: 'lte',
-  is_today: 'is-today', is_this_week: 'is-this-week', is_overdue: 'is-overdue',
-  is_upcoming: 'is-upcoming', not_contains: 'not-contains',
-};
-
+// w4-filters: the legacy operator names and the value text live with the
+// agenda's bridge to the condition model (agendaFilterModel), used by the editor too.
 function toCondition(filter: AgendaFilter): FilterCondition {
-  const op = (LEGACY_OPS[filter.operator] ?? filter.operator);
-  const v = filter.value;
-  const value = v == null ? undefined
-    : typeof v === 'string' ? v
-    : Array.isArray(v) ? JSON.stringify(v)
-    : String(v);
+  const op = agendaOperator(filter.operator);
+  const value = agendaValueText(filter.value);
   const cond: FilterCondition = value === undefined
     ? { field: filter.field, operator: op, enabled: true }
     : { field: filter.field, operator: op, value, enabled: true };
@@ -72,7 +63,7 @@ function toDefinition(group: AgendaFilterGroup): FilterDefinition {
 function collectFieldOps(group: AgendaFilterGroup, out: Map<string, FilterOperator>): void {
   for (const f of group.filters) {
     if (f.enabled === false) continue;
-    const op = (LEGACY_OPS[f.operator] ?? f.operator);
+    const op = agendaOperator(f.operator);
     if (!out.has(f.field)) out.set(f.field, op);
   }
   for (const g of group.groups) collectFieldOps(g, out);

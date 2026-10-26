@@ -76,7 +76,6 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   // Additional-series and agenda viewport fixes enter at their measured sizes.
   { file: "ui/views/Dashboard/widgets/Chart/ChartSeriesEditor.svelte", maxLines: 180 },
   { file: "ui/views/Calendar/agenda/fitAgendaOverlay.ts", maxLines: 21 },
-  { file: "ui/views/Calendar/agenda/FilterRow.svelte", maxLines: 528 },
   // F2 (#074) — TABLE_V2_CANON §5 budgets
   // 3.7.1 feedback: search/windowing and typed editing gained guards. Their
   // mechanisms are extracted, not paid for by raising component limits.

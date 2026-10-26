@@ -74,7 +74,9 @@ import {
 // integration p372-rc re-measured on the merged tree.
 // B10 189: DayPopup moved onto FloatingPopup; its own hover rules left with it.
 // i3 180: month bars lost their labels; the duplicate window took Obsidian's buttons.
-const UNGATED_HOVER_BUDGET = 180;
+// w4-filters 171: the agenda's own condition editor (FilterGroupEditor, FilterRow)
+// left for the shared FilterPanel, with its nine ungated rules.
+const UNGATED_HOVER_BUDGET = 171;
 
 /**
  * Components ios-t1 migrated. Each must carry no ungated `:hover` at all: a

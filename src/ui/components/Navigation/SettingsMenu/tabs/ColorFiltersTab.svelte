@@ -14,7 +14,7 @@
   import { getOperatorsForField, getOperatorLabel, getFieldIcon } from "./filterHelpers";
   import { operatorNeedsValue } from "src/settings/base/settings";
   import { COLOR_RULE_DEFAULT } from "src/lib/stores/palettes";
-  import ValueSuggestField from "src/ui/components/fields/ValueSuggestField.svelte";
+  import ConditionValue from "src/ui/components/FilterPanel/ConditionValue.svelte";
   import { app } from "src/lib/stores/obsidian";
   import { templateFoldersOf, valueSuggestions } from "src/lib/suggestions/valueSuggestions";
 
@@ -228,7 +228,9 @@
           <!-- Value -->
           <div class="value-area">
             {#if needsVal}
-              <ValueSuggestField
+              <ConditionValue
+                fieldType={getFieldType(cond.field)}
+                operator={cond.operator}
                 value={cond.value ?? ''}
                 suggestions={suggestionsFor(cond.field, records, templateFolders)}
                 placeholder={$i18n.t('common.value-placeholder')}

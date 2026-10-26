@@ -364,10 +364,13 @@ describe("R0.33 — the tree", () => {
   });
 
   it("Agenda operators cannot restore the retired hand-appended popup outside the shared root", () => {
-    const row = stripComponentComments(readText(join(SRC_ROOT, "ui/views/Calendar/agenda/FilterRow.svelte")));
-    expect(row).toContain("<FloatingPopup triggerEl={operatorTriggerEl}");
-    expect(row).not.toContain("ppp-popover-container");
-    expect(row).not.toContain("activeDocument.body.appendChild");
+    // w4-filters: the agenda edits its conditions in the shared FilterPanel.
+    const editor = stripComponentComments(readText(join(SRC_ROOT, "ui/views/Calendar/agenda/AgendaFilterEditor.svelte")));
+    expect(editor).toContain("<FilterPanel");
+    const panel = stripComponentComments(readText(join(SRC_ROOT, "ui/components/FilterPanel/FilterPanel.svelte")));
+    expect(panel).toContain("<FloatingPopup");
+    expect(panel).not.toContain("ppp-popover-container");
+    expect(panel).not.toContain("activeDocument.body.appendChild");
   });
 
   it("every node portalled to <body> carries a plugin root", () => {

@@ -189,10 +189,13 @@ export function matchesCondition(
     // falsy `cond.value` check already did for "".
     return numberFns[operator](value, toNumber(cond.value) ?? undefined);
   } else if (isOptionalDate(value) && isDateFilterOperator(operator)) {
-    // Resolve date formula in cond.value when baseDateCtx is available
+    // Resolve a date formula in cond.value ("today", "today+7d", "sow") from
+    // the pinned "today", else the clock. w4-filters (N11): the view's filter
+    // has no pinned day, and its formula was compared as text and matched
+    // nothing; the agenda and the view now read the same value the same way.
     let rv = cond.value;
-    if (rv && baseDateCtx && isDateFormula(rv)) {
-      const result = parseDateFormula(rv, baseDateCtx);
+    if (rv && isDateFormula(rv)) {
+      const result = parseDateFormula(rv, baseDateCtx ?? dayjs());
       if (result.success && result.date) {
         rv = result.date.format("YYYY-MM-DD");
       }

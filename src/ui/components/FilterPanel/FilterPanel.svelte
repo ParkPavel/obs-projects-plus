@@ -12,7 +12,7 @@
   import type { DataRecord } from "src/lib/dataframe/dataframe";
   import { getOperatorsForField, getOperatorLabel, getFieldIcon } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
   import { operatorNeedsValue } from "src/settings/base/settings";
-  import ValueSuggestField from "src/ui/components/fields/ValueSuggestField.svelte";
+  import ConditionValue from "src/ui/components/FilterPanel/ConditionValue.svelte";
   import { app } from "src/lib/stores/obsidian";
   import { templateFoldersOf, valueSuggestions } from "src/lib/suggestions/valueSuggestions";
 
@@ -320,7 +320,9 @@
           <!-- Value -->
           <div class="value-area">
             {#if needsVal}
-              <ValueSuggestField
+              <ConditionValue
+                fieldType={getFieldType(condition.field)}
+                operator={condition.operator}
                 value={condition.value ?? ''}
                 suggestions={suggestionsFor(condition.field, records, templateFolders)}
                 placeholder={$i18n.t('common.value-placeholder')}
@@ -410,7 +412,9 @@
 
                 <div class="value-area">
                   {#if gNeedsVal}
-                    <ValueSuggestField
+                    <ConditionValue
+                      fieldType={getFieldType(gCond.field)}
+                      operator={gCond.operator}
                       value={gCond.value ?? ''}
                       suggestions={suggestionsFor(gCond.field, records, templateFolders)}
                       placeholder={$i18n.t('common.value-placeholder')}
@@ -497,7 +501,9 @@
 
                       <div class="value-area">
                         {#if nNeedsVal}
-                          <ValueSuggestField
+                          <ConditionValue
+                            fieldType={getFieldType(nCond.field)}
+                            operator={nCond.operator}
                             value={nCond.value ?? ''}
                             suggestions={suggestionsFor(nCond.field, records, templateFolders)}
                             placeholder={$i18n.t('common.value-placeholder')}

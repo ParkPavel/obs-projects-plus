@@ -10,11 +10,17 @@ import { i18n } from 'src/lib/stores/i18n';
 import type { FilterOperator } from '../../../../../settings/base/settings';
 
 /** Field type strings as used by DataField.type */
-type FieldTypeStr = 'string' | 'number' | 'boolean' | 'date' | 'autotime' | 'multitext' | 'unknown';
+type FieldTypeStr = 'string' | 'number' | 'boolean' | 'date' | 'autotime' | 'multitext'
+  | 'select' | 'status' | 'relation' | 'formula' | 'rollup' | 'unknown';
 
 /**
  * Get available operators for a given field type.
  * Returns only operators that make sense for the field's data type.
+ *
+ * w4-filters (N11): the one catalog — the view's filter, colour rules and the
+ * agenda's lists offer the same operators for the same field (the agenda kept
+ * its own copy, with `regex` and the select/status/relation/formula/rollup
+ * sets; those are merged here and its copy is an alias of this one).
  */
 export function getOperatorsForField(fieldType: string): FilterOperator[] {
   const base: FilterOperator[] = ['is-empty', 'is-not-empty'];
@@ -22,7 +28,15 @@ export function getOperatorsForField(fieldType: string): FilterOperator[] {
 
   switch (ftype) {
     case 'string':
-      return [...base, 'is', 'is-not', 'contains', 'not-contains', 'starts-with', 'ends-with'];
+      return [...base, 'is', 'is-not', 'contains', 'not-contains', 'starts-with', 'ends-with', 'regex'];
+    case 'select':
+    case 'status':
+      return [...base, 'is', 'is-not'];
+    case 'relation':
+    case 'formula':
+      return [...base, 'is', 'is-not', 'contains', 'not-contains'];
+    case 'rollup':
+      return [...base, 'is', 'is-not', 'eq', 'neq', 'lt', 'gt', 'lte', 'gte'];
     case 'number':
       return [...base, 'eq', 'neq', 'lt', 'gt', 'lte', 'gte'];
     case 'boolean':

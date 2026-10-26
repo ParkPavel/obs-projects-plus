@@ -109,6 +109,12 @@ mean that a new release has been published.
 - Properties are reordered by the grip ≡ on the left — with a mouse or a finger — in the view's field list
   and the gallery's card fields (a finger could not reorder them before), and in the note header.
 - The calendar's "Duplicate" window fits the area the keyboard leaves visible.
+- One condition editor: an agenda list's conditions are edited by the same panel as the view's filter and
+  the colour rules — the same rows, switches, groups, operators and value suggestions. Saved lists keep their
+  format. The operators are one list everywhere: text gains "regex" in the view's filter; select and status,
+  relation, formula and rollup fields get their own sets.
+- A date value can be a formula in every filter — `today`, `today+7d`, `sow` — with suggestions; the view's
+  filter and the colour rules now read it as the agenda did (it matched nothing there before).
 
 ## 3.7.0 — 2026-10-05
 
