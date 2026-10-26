@@ -80,6 +80,10 @@
             "open-formula-editor": {
                 "name": "Open formula editor"
             },
+            "startup-report": {
+                "name": "Start-up report (copy)",
+                "copied": "Copied to the clipboard."
+            },
             "create-demo-project": {
                 "name": "Create demo project",
                 "duplicate-warning": "Demo project already exists — delete it first to regenerate.",

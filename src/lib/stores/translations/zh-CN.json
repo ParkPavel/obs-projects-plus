@@ -82,6 +82,10 @@
             "open-formula-editor": {
                 "name": "打开公式编辑器"
             },
+            "startup-report": {
+                "name": "启动报告（复制）",
+                "copied": "已复制到剪贴板。"
+            },
             "create-demo-project": {
                 "name": "创建演示项目",
                 "duplicate-warning": "演示项目已存在 — 请先删除后再重新生成。",

@@ -23,6 +23,7 @@ import { settings } from "src/lib/stores/settings";
 import { CreateNoteModal } from "src/ui/modals/createNoteModal";
 import { CreateProjectModal } from "src/ui/modals/createProjectModal";
 import { createDemoWithNotices } from "src/ui/app/onboarding/demoRun";
+import { startupReport } from "src/lib/startup/startupReport";
 import { hasCanvasCommandTarget } from "src/ui/views/Dashboard/dashboardCommands";
 import { commandBus, emitCommand } from "src/lib/stores/commandBus";
 import {
@@ -175,12 +176,16 @@ export default class ProjectsPlusPlugin extends Plugin {
    * onload runs when the plugin is enabled.
    */
   async onload(): Promise<void> {
+    // w4-p12: the first mark is also the time Obsidian took before the plugin.
+    startupReport.mark("onload start");
+    this.app.workspace.onLayoutReady(() => startupReport.mark("layout ready"));
     // i2-schema (D13): a crash on the phone leaves a readable trace in the vault.
     const crashPath = `${this.manifest.dir ?? `${this.app.vault.configDir}/plugins/${this.manifest.id}`}/crash.log`;
     this.register(installCrashLog(window, this.app.vault.adapter, crashPath, this.manifest.id));
     // 17.10: a freeze throws nothing — long main-thread tasks are logged with what was mounted.
     this.register(installLongTaskWatch(window, this.app.vault.adapter, crashPath));
     await this.loadSettings();
+    startupReport.mark("settings loaded");
 
     // Re-detect locale now that Obsidian app is fully initialized
     syncLocale();
@@ -222,6 +227,13 @@ export default class ProjectsPlusPlugin extends Plugin {
     // and (future) Database widgets. Lifecycle is bound to the plugin so
     // we never duplicate event handlers.
     this.inverseIndexStore = createInverseIndexStore(this.app);
+    // The first value is the empty index; the next one is the first build.
+    let indexValues = 0;
+    const unsubscribeIndexMark = this.inverseIndexStore.subscribe(() => {
+      if (++indexValues === 2) startupReport.mark("relations index built");
+    });
+    this.register(unsubscribeIndexMark);
+    startupReport.mark("views and index registered");
 
     this.registerHoverLinkSource(VIEW_TYPE_PROJECTS, {
       defaultMod: true,
@@ -303,6 +315,19 @@ export default class ProjectsPlusPlugin extends Plugin {
           (project) => settings.addProject(project),
           createProject()
         ).open();
+      },
+    });
+
+    // w4-p12: where the start-up's time went, as text a phone can paste.
+    this.addCommand({
+      id: "startup-report",
+      name: t("commands.startup-report.name"),
+      callback: () => {
+        // The report is measurements, not interface text; only the note is.
+        const report = startupReport.text();
+        void navigator.clipboard?.writeText(report).catch(() => undefined);
+        const message = [report, t("commands.startup-report.copied")].join("\n\n");
+        new Notice(message, 15000);
       },
     });
 
@@ -546,6 +571,7 @@ export default class ProjectsPlusPlugin extends Plugin {
     this.app.workspace.onLayoutReady(() => propertiesManager.start());
     // Reading mode re-renders sections; re-place the block after it does.
     this.registerMarkdownPostProcessor(() => propertiesManager.schedule());
+    startupReport.mark("onload end");
     let lastPropsSetting: boolean | null = null;
     const unsubscribeProps = settings.subscribe((value) => {
       const next = value.preferences.propertiesInNoteHeader !== false;

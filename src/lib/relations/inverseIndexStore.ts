@@ -53,6 +53,15 @@ export function createInverseIndexStore(
 
   let pending = false;
   let scheduled: number | null = null;
+  // w4-p12 (audit F18): every timer belongs to the store's life. Once it is
+  // destroyed nothing scans the vault or publishes again.
+  let destroyed = false;
+
+  function cancelScheduled(): void {
+    if (scheduled !== null) window.clearTimeout(scheduled);
+    scheduled = null;
+    pending = false;
+  }
 
   function gatherInputs(): BuildInverseIndexInput[] {
     const files = app.vault.getMarkdownFiles();
@@ -68,8 +77,11 @@ export function createInverseIndexStore(
   }
 
   function rebuildNow(): void {
-    pending = false;
-    scheduled = null;
+    if (destroyed) return;
+    // A rebuild now covers whatever was scheduled: that timer is cancelled,
+    // not forgotten. Forgetting it (the reference was dropped while the timer
+    // lived) let the startup kick-off scan the vault again after destroy.
+    cancelScheduled();
     const resolveLinkPath = (linktext: string, sourcePath: string): string | null => {
       const dest = app.metadataCache.getFirstLinkpathDest?.(linktext, sourcePath);
       return dest ? dest.path : null;
@@ -82,7 +94,7 @@ export function createInverseIndexStore(
   // bulk write, a sync) is collected for 200 ms and rebuilt once, instead of
   // once per animation frame and again on every `resolved`.
   function schedule(): void {
-    if (pending) return;
+    if (destroyed || pending) return;
     pending = true;
     scheduled = window.setTimeout(rebuildNow, 200);
   }
@@ -108,10 +120,12 @@ export function createInverseIndexStore(
     subscribe: inner.subscribe,
     rebuild: rebuildNow,
     destroy(): void {
+      if (destroyed) return;
+      destroyed = true;
       app.metadataCache.offref(resolvedRef);
       app.metadataCache.offref(changedRef);
       app.metadataCache.offref(deletedRef);
-      if (scheduled !== null) window.clearTimeout(scheduled);
+      cancelScheduled();
     },
   };
 }

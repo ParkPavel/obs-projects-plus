@@ -21,6 +21,9 @@ mean that a new release has been published.
   says how many of how many were not saved (PPP-205). When some notes refused the write, "Retry" writes just
   those. A missing note is no longer counted as saved. Adding, renaming or deleting a field offers the same
   retry over the notes it could not write.
+- The relations index no longer scans the vault again after the plugin is turned off or reloaded.
+- New command "Start-up report (copy)": how long Obsidian took before the plugin and each stage of the
+  plugin's start-up, copied as text — for measuring a slow start on a phone.
 
 ### Calendar
 

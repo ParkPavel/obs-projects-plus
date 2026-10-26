@@ -10,6 +10,7 @@ import { get } from "svelte/store";
 import App from "src/ui/app/App.svelte";
 import { i18n } from "./lib/stores/i18n";
 import { customViews } from "src/lib/stores/customViews";
+import { startupReport } from "src/lib/startup/startupReport";
 import { BoardView } from "src/ui/views/Board";
 import { CalendarView } from "src/ui/views/Calendar";
 import { DashboardView } from "src/ui/views/Dashboard";
@@ -97,6 +98,7 @@ export class ProjectsView extends ItemView {
 
    
   async onOpen(): Promise<void> {
+    startupReport.mark("first Projects view opening");
     customViews.set(this.getProjectViews());
 
     // Get the current state or use defaults
@@ -111,6 +113,7 @@ export class ProjectsView extends ItemView {
         viewId,
       }
     });
+    startupReport.mark("first Projects view mounted");
 
     // Listen for projectId changes and save them to view state
     if (this.component) {
