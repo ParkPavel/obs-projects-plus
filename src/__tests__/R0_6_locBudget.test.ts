@@ -69,8 +69,10 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   { file: "ui/views/Dashboard/widgets/Stats/statsSparkline.ts", maxLines: 35 },
   { file: "ui/views/Dashboard/widgets/Stats/StatsWidget.svelte", maxLines: 100 },
   { file: "ui/views/Dashboard/widgets/Stats/StatsCard.svelte", maxLines: 124 },
-  { file: "ui/actions/fitVisibleViewport.ts", maxLines: 33 },
-  { file: "ui/utils/visibleViewport.ts", maxLines: 11 },
+  // w4-input: the visible area learned Obsidian's keyboard (--keyboard-height,
+  // the keyboard events, the button strip over it); measured sizes.
+  { file: "ui/actions/fitVisibleViewport.ts", maxLines: 39 },
+  { file: "ui/utils/visibleViewport.ts", maxLines: 84 },
   { file: "ui/views/Dashboard/widgets/Chart/chartAggregations.ts", maxLines: 18 },
   // Additional-series and agenda viewport fixes enter at their measured sizes.
   { file: "ui/views/Dashboard/widgets/Chart/ChartSeriesEditor.svelte", maxLines: 180 },

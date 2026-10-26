@@ -31,7 +31,7 @@
   import { remAt, rootFontPx } from "src/ui/utils/cssLength";
   import { createDraftController, type CommitReason } from "./draftController";
   import { filterOptions, optionDomId, stepActive, type ComboOption } from "./comboOptions";
-  import { visibleViewport } from "src/ui/utils/visibleViewport";
+  import { onKeyboardChange, visibleViewport } from "src/ui/utils/visibleViewport";
 
   export let value = "";
   export let options: ComboOption[] = [];
@@ -80,6 +80,7 @@
   let popupEl: HTMLDivElement | null = null;
   let popupStyle = "";
   let watching: Window | null = null;
+  let unwatchKeyboard: (() => void) | null = null;
 
   /** Show the controller's text, and report it when it changed (an edit, a pick, a restore). */
   function pull(): void {
@@ -160,11 +161,15 @@
     watching?.removeEventListener("scroll", onViewChange, true);
     watching?.visualViewport?.removeEventListener("resize", onViewChange);
     watching?.visualViewport?.removeEventListener("scroll", onViewChange);
+    unwatchKeyboard?.();
+    unwatchKeyboard = null;
     watching = view;
     watching?.addEventListener("resize", onViewChange);
     watching?.addEventListener("scroll", onViewChange, true);
     watching?.visualViewport?.addEventListener("resize", onViewChange);
     watching?.visualViewport?.addEventListener("scroll", onViewChange);
+    // w4-input: Obsidian's keyboard (`--keyboard-height`) moves no viewport.
+    if (watching) unwatchKeyboard = onKeyboardChange(watching, () => onViewChange());
   }
   $: watch(expanded ? rootEl?.ownerDocument.defaultView ?? null : null);
   onDestroy(() => watch(null));
@@ -180,9 +185,10 @@
     const view = rootEl?.ownerDocument.defaultView;
     if (!expanded || !rootEl || !view?.requestAnimationFrame) return;
     const r = rootEl.getBoundingClientRect();
-    const vv = view.visualViewport;
-    // A pan of the visual viewport (iOS) moves the visible area, not the field.
-    const key = `${r.top}|${r.left}|${r.width}|${vv?.offsetTop ?? 0}|${vv?.height ?? 0}`;
+    const area = visibleViewport(view);
+    // A pan of the visual viewport (iOS) or the keyboard moves the visible
+    // area, not the field.
+    const key = `${r.top}|${r.left}|${r.width}|${area.top}|${area.height}`;
     if (key !== lastAnchor) {
       lastAnchor = key;
       void place();

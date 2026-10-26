@@ -2,9 +2,9 @@
  * w4-p06 (N9, CONSOLIDATION §7 rows 11–12) — the input standard, as far as a
  * browser model can show it: a list stays against its field and within the
  * room left, at a sane height; list rows are rows, not raised buttons; a
- * suggestion list stands over its field on a computer too; on a touch screen a
- * button puts the keyboard away and the field keeps its focus; when the
- * keyboard goes, the view comes back.
+ * suggestion list stands over its field on a computer too; when the keyboard
+ * goes, the view comes back. (The keyboard button is w4-input's now:
+ * fields/__tests__/w4input_keyboard.test.ts.)
  *
  * Why these fail on the old code: a popup taller than the room was clamped to
  * the window's top edge (0.5rem), far from its field, as tall as the window;
@@ -25,7 +25,6 @@ jest.mock("src/lib/stores/ui", () => {
 
 const FloatingPopup = require("../FloatingPopup.svelte").default;
 const ComboField = require("src/ui/components/fields/ComboField.svelte").default;
-const TextField = require("src/ui/components/fields/TextField.svelte").default;
 const { keepInView } = require("src/ui/components/fields/keepInView");
 
 const settle = async () => { await tick(); await tick(); };
@@ -102,45 +101,7 @@ describe("w4-p06 — a suggestion list stands over its field (the standard, PC t
   });
 });
 
-describe("w4-p06 — the keyboard button and the view's return (touch)", () => {
-  const coarse = (on: boolean) =>
-    (window.matchMedia as jest.Mock).mockImplementation((query: string) => ({
-      matches: on && query.includes("coarse"), media: query, addEventListener: jest.fn(), removeEventListener: jest.fn(), addListener: jest.fn(), removeListener: jest.fn(),
-    }));
-
-  test("a focused field shows the button; pressing it keeps the focus and asks for no keyboard; a tap on the field gives it back", async () => {
-    coarse(true);
-    const view = render(TextField, { props: { value: "x" } });
-    const input = view.container.querySelector<HTMLInputElement>("input")!;
-    input.focus();
-    await settle();
-    const button = document.querySelector<HTMLButtonElement>(".ppp-keyboard-dismiss")!;
-    expect(button).not.toBeNull();
-    button.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, cancelable: true }));
-    await Promise.resolve();
-    expect(document.activeElement).toBe(input);
-    expect(input.getAttribute("inputmode")).toBe("none");
-    expect(button.hidden).toBe(true);
-    input.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, cancelable: true }));
-    await Promise.resolve();
-    expect(document.activeElement).toBe(input);
-    expect(input.getAttribute("inputmode")).not.toBe("none");
-    input.blur();
-    await Promise.resolve();
-    expect(document.querySelector(".ppp-keyboard-dismiss")).toBeNull();
-    view.unmount();
-    coarse(false);
-  });
-
-  test("on a fine pointer there is no button", async () => {
-    coarse(false);
-    const view = render(TextField, { props: { value: "x" } });
-    view.container.querySelector<HTMLInputElement>("input")!.focus();
-    await settle();
-    expect(document.querySelector(".ppp-keyboard-dismiss")).toBeNull();
-    view.unmount();
-  });
-
+describe("w4-p06 — the view's return (touch)", () => {
   test("when the keyboard goes, the scroll it caused is put back", () => {
     const scroller = document.createElement("div");
     const input = document.createElement("input");

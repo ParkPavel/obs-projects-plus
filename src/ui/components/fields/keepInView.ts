@@ -10,12 +10,17 @@
  * nothing until one is used.
  *
  * w4-p06 adds the rest of the input standard: when the keyboard goes, the view
- * scrolled for it is put back, and on a touch screen a button puts the keyboard
- * away while the field keeps its focus (keyboardDismiss).
+ * scrolled for it is put back, and Obsidian's keyboard button stands over the
+ * keyboard (keyboardDismiss).
+ *
+ * w4-input: the visible part is the visual viewport cut at the keyboard
+ * Obsidian reports (`--keyboard-height`, visibleViewport.ts) — on iOS the
+ * visual viewport alone never shrinks — and the field is checked again when
+ * that keyboard comes or goes (onKeyboardChange).
  */
 import { get } from "svelte/store";
 import { i18n } from "src/lib/stores/i18n";
-import { visibleViewport } from "src/ui/utils/visibleViewport";
+import { onKeyboardChange, visibleViewport } from "src/ui/utils/visibleViewport";
 import { offerKeyboardDismiss } from "./keyboardDismiss";
 
 export type ViewportBounds = ReturnType<typeof visibleViewport>;
@@ -25,6 +30,7 @@ export function keepInView(node: HTMLElement, boundsOf: (view: Window) => Viewpo
   let listening = false;
   let frame = 0;
   let dismiss: (() => void) | null = null;
+  let unwatchKeyboard: (() => void) | null = null;
   // w4-p06: the scroll positions before the keyboard came up, and the visible
   // height then. When the keyboard goes (the height is back) after the field
   // was scrolled into view, the view is put back where the user left it.
@@ -67,6 +73,7 @@ export function keepInView(node: HTMLElement, boundsOf: (view: Window) => Viewpo
     }
     view.visualViewport?.addEventListener("resize", schedule);
     view.addEventListener("resize", schedule);
+    unwatchKeyboard = onKeyboardChange(view, schedule);
     check();
   }
   function stop(): void {
@@ -78,10 +85,13 @@ export function keepInView(node: HTMLElement, boundsOf: (view: Window) => Viewpo
     frame = 0;
     view.visualViewport?.removeEventListener("resize", schedule);
     view.removeEventListener("resize", schedule);
+    unwatchKeyboard?.();
+    unwatchKeyboard = null;
   }
 
-  // A blur that the keyboard button follows at once with a focus (keyboardDismiss)
-  // is not the end of the field's turn: the stop waits a microtask to see.
+  // A blur followed at once by a focus of the same field (a re-render, a
+  // popup giving the focus back) is not the end of the field's turn: the stop
+  // waits a microtask to see.
   function blurred(): void {
     void Promise.resolve().then(() => {
       if (node.ownerDocument.activeElement !== node) stop();

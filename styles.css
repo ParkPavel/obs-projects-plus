@@ -729,24 +729,58 @@
   color: var(--interactive-accent);
 }
 
-/* w4-p06: the input standard's "hide keyboard" button (keyboardDismiss.ts),
-   pinned to the bottom-right of the visible area, just above the keyboard. */
-.ppp-keyboard-dismiss {
-  position: fixed;
-  z-index: var(--ppp-z-popover, 50);
-  width: var(--ppp-touch-target-min, 2.75rem);
-  height: var(--ppp-touch-target-min, 2.75rem);
-  padding: 0;
-  border-radius: var(--ppp-radius-full, 624.9375rem);
-  background: var(--background-primary);
-  border: var(--ppp-border-width) solid var(--background-modifier-border);
-  box-shadow: var(--ppp-shadow-lg, 0 0.25rem 0.5rem rgba(0, 0, 0, 0.15));
-  color: var(--text-muted);
-  font-size: 1.25rem;
-  line-height: 1;
+/* w4-input: a picker (PopoverList) in a phone sheet keeps its search in view:
+   the sheet stops scrolling as a whole, only the list scrolls, and with
+   --search-below the search sits under the list, over the keyboard
+   (Obsidian's SuggestModal on a phone: .prompt-input-container, order 3). */
+.ppp-popup--bottom-sheet:has(> .ppp-pop-picker) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.ppp-keyboard-dismiss[hidden] {
+.ppp-popup--bottom-sheet > .ppp-pop-picker {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.ppp-pop-picker > .ppp-pop-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.ppp-pop-picker--search-below > .ppp-pop-search {
+  order: 2;
+  border-bottom: none;
+  border-top: var(--ppp-border-width) solid var(--background-modifier-border);
+}
+
+/* w4-input: the "hide keyboard" control is Obsidian's own element
+   (.mobile-toolbar-floating-options > .mobile-toolbar-option, keyboard-toggle
+   icon; keyboardDismiss.ts), on the strip Obsidian's mobile toolbar takes:
+   just above the keyboard, its right end. Only the button takes touches. */
+.ppp-keyboard-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: calc(100vh - var(--keyboard-height, 0rem) - var(--mobile-toolbar-height, 3rem));
+  height: var(--mobile-toolbar-height, 3rem);
+  z-index: var(--layer-menu, 65);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: calc(var(--safe-area-inset-right, 0rem) + var(--size-4-2, 0.5rem));
+  pointer-events: none;
+}
+
+.ppp-keyboard-bar > .mobile-toolbar-floating-options {
+  pointer-events: auto;
+}
+
+.ppp-keyboard-bar[hidden] {
   display: none;
 }
 

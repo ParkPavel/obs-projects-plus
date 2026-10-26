@@ -786,17 +786,4 @@
     .row-prefix { min-width: 2.25rem; font-size: 0.8125rem; }
     .conj-select { min-height: var(--ppp-touch-target-min); font-size: 0.8125rem; padding: 0.25rem 0.625rem; padding-right: 1.5rem; }
   }
-
-  /* v3.2.1: Mobile keyboard — reverse column so list scrolls upward.
-     Shared by FiltersTab, SortTab, ColorFiltersTab (all use .ppp-pop-box).
-     Applied via JS classList.add(), so :global() required.
-     Compiled into main.css → auto-merged into styles.css by mergeCSS(). */
-  :global(.ppp-pop-box--mobile-kbd) {
-    display: flex;
-    flex-direction: column-reverse;
-  }
-  :global(.ppp-pop-box--mobile-kbd) :global(.ppp-pop-search) {
-    border-bottom: none;
-    border-top: var(--ppp-border-width) solid color-mix(in srgb, var(--background-modifier-border) 50%, transparent);
-  }
 </style>

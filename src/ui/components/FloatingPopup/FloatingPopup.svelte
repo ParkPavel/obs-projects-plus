@@ -20,7 +20,7 @@
   import { remAt, rootFontPx } from "src/ui/utils/cssLength";
   import { isImeKey } from "src/ui/components/fields/draftController";
   import { fitVisibleViewport } from "src/ui/actions/fitVisibleViewport";
-  import { visibleViewport } from "src/ui/utils/visibleViewport";
+  import { onKeyboardChange, visibleViewport } from "src/ui/utils/visibleViewport";
 
   // ── Public types ───────────────────────────────────────────
   type PopupPlacement =
@@ -113,6 +113,8 @@
   let boundDoc: Document = document;
   let boundView: Window = window;
   let listening = false;
+  // w4-input: the keyboard Obsidian reports moves the visible area's bottom.
+  let unwatchKeyboard: (() => void) | null = null;
 
   /**
    * Put the listeners on `doc`, taking them off whatever held them before.
@@ -132,6 +134,7 @@
       boundView.removeEventListener("scroll", handleReposition, true);
       boundView.visualViewport?.removeEventListener("resize", handleReposition);
       boundView.visualViewport?.removeEventListener("scroll", handleReposition);
+      unwatchKeyboard?.();
     }
     boundDoc = doc;
     boundView = doc.defaultView ?? window;
@@ -141,6 +144,7 @@
     boundView.addEventListener("scroll", handleReposition, true);
     boundView.visualViewport?.addEventListener("resize", handleReposition);
     boundView.visualViewport?.addEventListener("scroll", handleReposition);
+    unwatchKeyboard = onKeyboardChange(boundView, handleReposition);
     listening = true;
   }
 
@@ -160,6 +164,8 @@
     boundView.removeEventListener("scroll", handleReposition, true);
     boundView.visualViewport?.removeEventListener("resize", handleReposition);
     boundView.visualViewport?.removeEventListener("scroll", handleReposition);
+    unwatchKeyboard?.();
+    unwatchKeyboard = null;
     listening = false;
   });
 
@@ -317,7 +323,9 @@
       requestClose();
       return;
     }
-    if (e.key === "Tab" && popupEl) {
+    // w4-input: a suggestion list (listbox) or a tooltip beside a field does
+    // not take Tab — it moves on from the field as usual; dialogs and menus trap it.
+    if (e.key === "Tab" && popupEl && (role === "dialog" || role === "menu")) {
       const focusable = Array.from(
         popupEl.querySelectorAll<HTMLElement>(
           'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'

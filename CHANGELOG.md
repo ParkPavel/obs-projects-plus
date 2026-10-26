@@ -118,9 +118,17 @@ mean that a new release has been published.
   window. Field and menu lists stop at about ten rows, and their rows are plain rows again, not raised
   buttons (on computers too).
 - A suggestion list stands over its field when a few rows fit there, on computers as on phones.
-- On a touch screen, a field with the keyboard up shows a button that puts the keyboard away; the field keeps
-  its focus, text and list until a tap elsewhere or a scroll. When the keyboard goes, the view scrolled for
-  it returns to where it was.
+- Typing on an iPhone works in every field again. Obsidian does not shrink the page for the keyboard, it
+  reports the keyboard's height, and the plugin now lays out by that report as Obsidian does: sheets,
+  suggestion lists and the field being typed into stay above the keyboard instead of under it.
+- The keyboard is put away by Obsidian's own round keyboard button at the right, above the keyboard, as in
+  a note; it ends the typing like Obsidian's. The plugin's own "⌄" button, which kept the focus and blurred
+  the field on any scroll, is gone.
+- Scrolling a form or a list no longer takes the focus from the field being typed into; only a tap elsewhere
+  does. A press in the field's suggestion list or picker is not "elsewhere".
+- Choosing from a list with search on a phone (fields in filters, sorting, colour rules) has Obsidian's
+  shape: the list above, the search under it just over the keyboard; only the list scrolls. When the
+  keyboard goes, the view scrolled for it returns to where it was.
 - Properties are reordered by the grip ≡ on the left — with a mouse or a finger — in the view's field list
   and the gallery's card fields (a finger could not reorder them before), and in the note header.
 - The calendar's "Duplicate" window fits the area the keyboard leaves visible.

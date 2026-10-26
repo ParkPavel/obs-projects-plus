@@ -40,6 +40,7 @@
   import { setIcon } from "obsidian";
   import { i18n } from "src/lib/stores/i18n";
   import SearchField from "src/ui/components/fields/SearchField.svelte";
+  import { isMobile } from "src/lib/stores/ui";
   import { isImeKey } from "src/ui/components/fields/draftController";
   import { filterOptions, stepActive } from "src/ui/components/fields/comboOptions";
 
@@ -107,6 +108,10 @@
   }
 </script>
 
+<!-- w4-input: on a phone a searchable list is Obsidian's SuggestModal shape —
+     the list above, the search under it, just over the keyboard; only the list
+     scrolls (styles.css, .ppp-pop-picker). On a computer the search leads. -->
+<div class="ppp-pop-picker" class:ppp-pop-picker--search-below={searchable && $isMobile}>
 {#if searchable}
   <div class="ppp-pop-search">
     <SearchField
@@ -144,6 +149,7 @@
       {/if}
     </button>
   {/each}
+</div>
 </div>
 
 <style>

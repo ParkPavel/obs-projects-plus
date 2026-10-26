@@ -1,100 +1,70 @@
-// w4-p06 — the input standard (CONSOLIDATION §7, rows 11–12): whenever the
-// on-screen keyboard is up there is a button that puts it away and leaves the
-// focus on the field, until a tap elsewhere or an attempt to scroll.
+// w4-input — the "hide keyboard" control is Obsidian's own.
 //
-// A web view hides its keyboard only when the field loses focus — unless the
-// field asks for no keyboard: `inputmode="none"`. The button sets that and
-// focuses the field again, so the keyboard goes and the field, its typed text
-// and its suggestion list stay. A tap on the field gives the keyboard back; a
-// tap elsewhere or a scroll gesture ends the focus as usual.
+// In a note Obsidian shows its mobile toolbar over the keyboard with a round
+// `keyboard-toggle` button at the right; the command behind it
+// (editor:toggle-keyboard) takes the focus from the editor and the keyboard
+// goes with it. That toolbar exists only for the note editor, so a plugin
+// field gets the same element — `.mobile-toolbar-floating-options.mod-raised`
+// holding a `.mobile-toolbar-option` with the `keyboard-toggle` icon, styled by
+// Obsidian and the theme — at the same place: the right end of the strip just
+// above the keyboard (`--keyboard-height`, `--mobile-toolbar-height`). Its
+// press does what Obsidian's does: the field loses focus.
 //
-// Only on a touch screen (`pointer: coarse`); a computer has no such keyboard.
+// It is there only while the app reports an on-screen keyboard; a computer or
+// a hardware keyboard reports none, and outside the mobile app (no `is-mobile`
+// on the body) nothing is made. Nothing else of the field is touched: the
+// w4-p06 button kept the focus with `inputmode="none"`, re-focused the field
+// on each tap and blurred it on any scroll gesture, and typing broke on that.
 
-import { visibleViewport } from "src/ui/utils/visibleViewport";
-import { remAt, rootFontPx } from "src/ui/utils/cssLength";
+import { setIcon } from "obsidian";
+import { KEYBOARD_BAR_CLASS, KEYBOARD_BAR_EVENT, keyboardHeight, onKeyboardChange } from "src/ui/utils/visibleViewport";
 
 export interface KeyboardDismissOptions {
   /** The button's accessible name, read when the button is made. */
   readonly label: () => string;
 }
 
-const BUTTON_CLASS = "ppp-keyboard-dismiss";
-
-function isCoarse(view: Window): boolean {
-  return view.matchMedia?.("(pointer: coarse)").matches ?? false;
-}
-
-/**
- * Shows the button for `field` while it has focus; returns the cleanup. Does
- * nothing (and returns a no-op) on a fine pointer.
- */
+/** Shows the keyboard button for `field` while it has focus; returns the cleanup. */
 export function offerKeyboardDismiss(field: HTMLInputElement | HTMLTextAreaElement, options: KeyboardDismissOptions): () => void {
   const doc = field.ownerDocument;
   const view = doc.defaultView ?? window;
-  if (!isCoarse(view)) return () => {};
-  const asked = field.getAttribute("inputmode");
+  // Obsidian marks its mobile app on the body; a computer gets nothing.
+  if (!doc.body.classList.contains("is-mobile")) return () => {};
   const label = options.label();
-  const button = doc.body.createEl("button", {
-    cls: BUTTON_CLASS,
-    text: "⌄",
-    attr: { type: "button", "aria-label": label, title: label },
+  const bar = doc.body.createDiv({ cls: KEYBOARD_BAR_CLASS });
+  const pill = bar.createDiv({ cls: "mobile-toolbar-floating-options mod-raised" });
+  const option = pill.createDiv({
+    cls: "mobile-toolbar-option",
+    attr: { role: "button", "aria-label": label, title: label },
   });
-  let resting = false;
+  setIcon(option, "keyboard-toggle");
 
-  function place(): void {
-    const bounds = visibleViewport(view);
-    const base = rootFontPx(doc);
-    button.style.top = remAt(bounds.bottom - 3 * base, base);
-    button.style.left = remAt(bounds.right - 3 * base, base);
-    button.hidden = resting;
-  }
-
-  function restoreMode(): void {
-    if (asked === null) field.removeAttribute("inputmode");
-    else field.setAttribute("inputmode", asked);
-  }
-
-  function rest(e: Event): void {
-    // The press must not take the focus from the field.
+  // The strip counts as covered screen (visibleViewport): whoever lays out
+  // over the keyboard hears when it comes or goes.
+  const sync = () => {
+    const hidden = keyboardHeight(view) <= 0;
+    if (bar.hidden === hidden) return;
+    bar.hidden = hidden;
+    view.dispatchEvent(new Event(KEYBOARD_BAR_EVENT));
+  };
+  // As in Obsidian's toolbar: the press must not move the focus by itself.
+  const hold = (e: Event) => e.preventDefault();
+  const hide = (e: Event) => {
     e.preventDefault();
-    resting = true;
-    field.setAttribute("inputmode", "none");
     field.blur();
-    field.focus({ preventScroll: true });
-    place();
-  }
-
-  function wake(): void {
-    if (!resting) return;
-    resting = false;
-    restoreMode();
-    field.blur();
-    field.focus({ preventScroll: true });
-    place();
-  }
-
-  function leave(e: Event): void {
-    if (!resting || (e.target instanceof Node && (field.contains(e.target) || button.contains(e.target)))) return;
-    field.blur();
-  }
-
-  button.addEventListener("pointerdown", rest);
-  button.addEventListener("mousedown", (e) => e.preventDefault());
-  field.addEventListener("pointerdown", wake);
-  doc.addEventListener("pointerdown", leave, true);
-  doc.addEventListener("touchmove", leave, true);
-  view.visualViewport?.addEventListener("resize", place);
-  view.visualViewport?.addEventListener("scroll", place);
-  place();
+  };
+  option.addEventListener("mousedown", hold);
+  option.addEventListener("click", hide);
+  bar.hidden = true;
+  const stopWatching = onKeyboardChange(view, sync);
+  sync();
 
   return () => {
-    restoreMode();
-    button.removeEventListener("pointerdown", rest);
-    field.removeEventListener("pointerdown", wake);
-    doc.removeEventListener("pointerdown", leave, true);
-    doc.removeEventListener("touchmove", leave, true);
-    view.visualViewport?.removeEventListener("resize", place);
-    view.visualViewport?.removeEventListener("scroll", place);
-    button.remove();
+    stopWatching();
+    option.removeEventListener("mousedown", hold);
+    option.removeEventListener("click", hide);
+    const shown = !bar.hidden;
+    bar.remove();
+    if (shown) view.dispatchEvent(new Event(KEYBOARD_BAR_EVENT));
   };
 }
