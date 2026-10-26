@@ -397,7 +397,8 @@ describe("R0.33 — the tree", () => {
       .filter(({ classes }) => classes > 0);
     // The exact set, not a floor: adding or removing a modal must be a visible
     // edit here (editNoteModal left in w4-p00; a floor of twelve then failed
-    // for the wrong reason and said nothing about which modal went missing).
+    // for the wrong reason and said nothing about which modal went missing); the
+    // name-only inputDialog left in w4-input2 — names are typed in place).
     expect(modals.map(({ file }) => file.replace(/\\/g, "/")).sort()).toEqual([
       "ui/app/onboarding/onboardingModal.ts",
       "ui/modals/addViewModal.ts",
@@ -406,7 +407,6 @@ describe("R0.33 — the tree", () => {
       "ui/modals/createFieldModal.ts",
       "ui/modals/createNoteModal.ts",
       "ui/modals/createProjectModal.ts",
-      "ui/modals/inputDialog.ts",
       "ui/modals/relationSetupModal.ts",
       "ui/modals/schemaModal.ts",
       "ui/views/VisualizerPane/RelationPickerModal.ts",

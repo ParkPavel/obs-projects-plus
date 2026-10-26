@@ -28,6 +28,8 @@
   export let fields: DataField[] = [];
   export let records: DataRecord[] = [];
   export let existingLists: AgendaCustomList[] = [];
+  /** w4-input2: a new list's name already typed in place (the row's gear). */
+  export let initialName = '';
   
   let showIconPicker = false;
   let showColorPicker = false;
@@ -79,7 +81,7 @@
     filterFormula: list.filterFormula || '',
     ...(list.color ? { color: list.color } : {}),
   } : {
-    name: '',
+    name: initialName,
     icon: { type: 'lucide', value: 'clipboard-list' },
     filterMode: 'visual',
     filterGroup: {

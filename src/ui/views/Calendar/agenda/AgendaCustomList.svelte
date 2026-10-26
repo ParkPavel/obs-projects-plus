@@ -9,6 +9,7 @@
   import type { AgendaCustomList } from 'src/settings/v3/settings';
   import { filterRecordsForList } from './filterEngine';
   import { agendaEmoji } from './agendaEmoji';
+  import AgendaListName from './AgendaListName.svelte';
   import {
     createLongPressHandler,
   } from './TouchDndCoordinator';
@@ -16,6 +17,9 @@
   const dispatch = createEventDispatcher<{
     recordClick: string;
     edit: void;
+    rename: string;
+    renameStart: void;
+    renameEnd: void;
     delete: void;
     toggle: void;
     moveUp: void;
@@ -36,6 +40,10 @@
   export let isFirst: boolean = false;
   /** Whether this is the last list in the list (disables Move Down) */
   export let isLast: boolean = false;
+  /** w4-input2: the header is the list's name field (menu «Rename list»). */
+  export let renaming: boolean = false;
+  /** Names of the other lists, for the rename clash check. */
+  export let takenNames: string[] = [];
   
   // Filter records using the selected date as base for formulas
   // New unified API supports both visual and advanced modes
@@ -119,8 +127,13 @@
     openContextMenu([
       {
         title: $i18n.t('views.calendar.agenda.custom.edit-list') || 'Edit list',
-        icon: 'pencil',
+        icon: 'settings',
         onClick: () => dispatch('edit'),
+      },
+      {
+        title: $i18n.t('views.calendar.agenda.custom.rename-list') || 'Rename list',
+        icon: 'pencil',
+        onClick: () => dispatch('renameStart'),
       },
       ...(!isFirst
         ? [{
@@ -159,6 +172,15 @@
 </script>
 
 <div class="agenda-custom-list" style:--list-accent={list.color}>
+  {#if renaming}
+    <AgendaListName
+      name={list.name}
+      icon={list.icon}
+      {takenNames}
+      on:save={(e) => dispatch('rename', e.detail)}
+      on:cancel={() => dispatch('renameEnd')}
+    />
+  {:else}
   <!-- svelte-ignore a11y-no-static-element-interactions -->
   <div 
     class="list-header"
@@ -189,6 +211,7 @@
       <span class="list-count">{filteredRecords.length}</span>
     </button>
   </div>
+  {/if}
   
   {#if !collapsed}
     <div class="list-items">

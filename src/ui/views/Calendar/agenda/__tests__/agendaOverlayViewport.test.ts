@@ -40,6 +40,8 @@ async function open(target?: HTMLElement) {
   } });
   await settle();
   await fireEvent.click(view.container.querySelector(".custom-add-btn")!); await settle();
+  // w4-input2: «Add list» names the list in place; the row's gear opens the editor.
+  await fireEvent.click(view.container.querySelector('[aria-label="views.calendar.agenda.custom.edit-list"]')!); await settle();
   return view;
 }
 
@@ -54,6 +56,9 @@ test("the real agenda editor fallback fits the visible viewport immediately and 
 });
 
 test("calendar-container bounds are intersected with the unobscured viewport, not trusted blindly", async () => {
+  // A computer: a phone's editor takes the whole visible screen (w4-input2 test).
+  const { isMobileDevice } = require("src/lib/stores/ui");
+  isMobileDevice.set(false);
   const target = document.createElement("div"); target.className = "calendar-zoom-container"; document.body.append(target);
   jest.spyOn(target, "getBoundingClientRect").mockReturnValue({ left: 20, top: 120, right: 380, bottom: 800, width: 360, height: 680 } as DOMRect);
   const view = await open(target);
@@ -63,7 +68,7 @@ test("calendar-container bounds are intersected with the unobscured viewport, no
     viewport.offsetLeft = 40; viewport.width = 280; viewport.height = 180; viewport.dispatchEvent(new Event("scroll"));
     expect(overlay.style.left).toBe("2.5rem"); expect(overlay.style.width).toBe("17.5rem");
     expect(overlay.style.height).toBe("8.75rem");
-  } finally { view.unmount(); target.remove(); }
+  } finally { view.unmount(); target.remove(); isMobileDevice.set(true); }
 });
 
 test("a popout editor listens to its own viewport, not the main window", async () => {

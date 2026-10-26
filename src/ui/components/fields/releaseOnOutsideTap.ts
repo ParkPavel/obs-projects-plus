@@ -9,11 +9,13 @@
  * leaves the field and its keyboard alone; blurring on the first touch of a
  * scroll made typing near a list impossible. Presses in the field's own
  * layers — a suggestion list, a picker sheet, Obsidian's keyboard button —
- * belong to the input, not to "elsewhere".
+ * belong to the input, not to "elsewhere". So do the field's own buttons
+ * (✓ / ✕ beside a name typed in place), marked `data-ppp-field-tools`: a tap
+ * on ✕ must reach ✕, not commit the name on its way.
  */
 
 /** Layers that belong to whichever field is being typed into. */
-const OWN_LAYERS = ".ppp-popup, .ppp-combo-popup, .ppp-keyboard-bar, [data-settings-dropdown]";
+const OWN_LAYERS = ".ppp-popup, .ppp-combo-popup, .ppp-keyboard-bar, [data-settings-dropdown], [data-ppp-field-tools]";
 /** How far a press may travel and still be a tap, in CSS px (a finger's wobble). */
 const TAP_SLOP_PX = 10;
 

@@ -27,6 +27,8 @@
   import { extractTimeWithPriority, parseDateInTimezone } from '../../../Calendar/calendar';
   import { isMobileDevice } from '../../../../../lib/stores/ui';
   import AgendaCustomListComponent from '../../agenda/AgendaCustomList.svelte';
+  import AgendaListName from '../../agenda/AgendaListName.svelte';
+  import { newAgendaList } from '../../agenda/newAgendaList';
   import AgendaListEditor from '../../agenda/AgendaListEditor.svelte';
   import { applyDragFeedback } from '../../agenda/TouchDndCoordinator';
   import { pauseGestures, resumeGestures } from '../../gestures/GestureCoordinator';
@@ -81,6 +83,11 @@
   // Custom Mode State
   let showListEditor = false;
   let editingList: AgendaCustomList | null = null;
+  // w4-input2: a list is named where it lives — a row at the end of the lists
+  // (new) or its own header (rename) — not in a separate window.
+  let drafting = false;
+  let renamingListId: string | null = null;
+  let editorName = '';
   
   // Local collapse state for custom lists (NOT persisted to project settings)
   let collapsedCustomLists: Set<string> = new Set();
@@ -450,12 +457,31 @@
   
   // CUSTOM MODE HANDLERS
   function handleAddList() {
+    renamingListId = null;
+    drafting = true;
+  }
+
+  function handleCreateList(name: string) {
+    drafting = false;
+    dispatch('saveList', { list: newAgendaList(name, customLists.length) });
+  }
+
+  /** The draft row's gear: the full editor, starting from the typed name. */
+  function handleDraftSettings(name: string) {
+    drafting = false;
     editingList = null;
+    editorName = name;
     showListEditor = true;
+  }
+
+  function handleRenameList(list: AgendaCustomList, name: string) {
+    renamingListId = null;
+    if (name !== list.name) dispatch('saveList', { list: { ...list, name } });
   }
   
   function handleEditList(list: AgendaCustomList) {
     editingList = list;
+    editorName = '';
     showListEditor = true;
   }
   
@@ -490,7 +516,9 @@
   // 3. Overlay starts BELOW navigation tabs (tabs are outside .calendar-zoom-container)
   // 4. Overlay click-to-dismiss works across the full area
   function portalOverlay(node: HTMLElement) {
-    const container = node.parentElement?.closest('.calendar-zoom-container') as HTMLElement | null;
+    // w4-input2: on a phone the calendar is a strip of the screen; the editor
+    // takes the whole visible screen, as its mobile styles say.
+    const container = isMobile ? null : node.parentElement?.closest('.calendar-zoom-container') as HTMLElement | null;
 
     // #192: the move itself goes through the shared primitive; the bounds
     // tracking below stays here, because it is this component's geometry and
@@ -752,6 +780,11 @@
                   {selectedDate}
                   isFirst={dndLists.indexOf(list) === 0}
                   isLast={dndLists.indexOf(list) === dndLists.length - 1}
+                  renaming={renamingListId === list.id}
+                  takenNames={customLists.filter(l => l.id !== list.id).map(l => l.name)}
+                  on:renameStart={() => { drafting = false; renamingListId = list.id; }}
+                  on:renameEnd={() => renamingListId = null}
+                  on:rename={(e) => handleRenameList(list, e.detail)}
                   on:edit={() => handleEditList(list)}
                   on:delete={() => handleDeleteList(list.id)}
                   on:toggle={() => handleToggleList(list.id)}
@@ -766,7 +799,7 @@
               {/if}
             {/each}
           </div>
-        {:else}
+        {:else if !drafting}
           <div class="custom-lists">
             <div class="custom-empty">
               <p>{$i18n.t('views.calendar.agenda.custom.no-lists')}</p>
@@ -778,6 +811,18 @@
           </div>
         {/if}
         
+        {#if drafting}
+          <div class="custom-list-draft">
+            <AgendaListName
+              takenNames={customLists.map(l => l.name)}
+              withSettings
+              on:save={(e) => handleCreateList(e.detail)}
+              on:settings={(e) => handleDraftSettings(e.detail)}
+              on:cancel={() => drafting = false}
+            />
+          </div>
+        {/if}
+
         {#if showListEditor}
           <!-- svelte-ignore a11y-click-events-have-key-events -->
           <div class="ppp-list-editor-overlay" use:portalOverlay on:click|self={handleCancelListEditor}>
@@ -787,6 +832,7 @@
                 {fields}
                 {records}
                 existingLists={customLists}
+                initialName={editorName}
                 on:save={handleSaveList}
                 on:cancel={handleCancelListEditor}
               />
@@ -1468,6 +1514,15 @@
     flex-direction: column;
     gap: var(--ppp-gap-block-md, 0.75rem);
     padding: var(--agenda-gap-lg);
+  }
+
+  /* w4-input2: the name row of a list being added, where the list will be. */
+  .custom-list-draft {
+    padding: var(--agenda-gap-lg);
+  }
+
+  .custom-lists + .custom-list-draft {
+    padding-top: 0;
   }
 
   /*

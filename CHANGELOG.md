@@ -129,6 +129,14 @@ mean that a new release has been published.
 - Choosing from a list with search on a phone (fields in filters, sorting, colour rules) has Obsidian's
   shape: the list above, the search under it just over the keyboard; only the list scrolls. When the
   keyboard goes, the view scrolled for it returns to where it was.
+- A name is typed where the named thing lives, not in a separate window with a name line. The agenda's "Add
+  list" puts a row with a name field at the end of the lists: Enter, ✓ or leaving the field creates the list;
+  Escape, ✕ or an empty name drops it; a taken name stays in the field, marked. The row's gear opens the full
+  settings (icon, colour, filters) with the name already typed. "Rename list" in a list's menu turns its
+  header into the name field. An item of a list value in the note editor is added by a field at the end of
+  the values (Enter adds it and keeps the field for the next one), not by an "Add list item" window.
+- An agenda list's settings take the whole visible screen above the keyboard on a phone, not the calendar's
+  strip.
 - Properties are reordered by the grip ≡ on the left — with a mouse or a finger — in the view's field list
   and the gallery's card fields (a finger could not reorder them before), and in the note header.
 - The calendar's "Duplicate" window fits the area the keyboard leaves visible.
