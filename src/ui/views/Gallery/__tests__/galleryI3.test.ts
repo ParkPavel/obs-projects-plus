@@ -453,15 +453,16 @@ describe("i3-gallery — the «Card» panel", () => {
     const m = mount();
     await open(m);
     const item = (name: string) => m.target.querySelector<HTMLElement>(`[data-gcp-shown] [data-gcp-field="${name}"]`) as HTMLElement;
-    expect(item("status")).toHaveAttribute("draggable", "true");
-    const drag = (type: string) => {
-      const event = new Event(type, { bubbles: true, cancelable: true });
-      Object.defineProperty(event, "dataTransfer", { value: { setData: jest.fn(), getData: () => "", effectAllowed: "", dropEffect: "" } });
-      return event;
-    };
-    item("owner").dispatchEvent(drag("dragstart"));
-    item("status").dispatchEvent(drag("dragover"));
-    item("status").dispatchEvent(drag("drop"));
+    // w4-p06: the grip follows a pointer (a finger too), not HTML drag.
+    const rows = Array.from(m.target.querySelectorAll<HTMLElement>("[data-gcp-shown] [data-gcp-field]"));
+    rows.forEach((row, i) => { row.getBoundingClientRect = () => ({ top: i * 30, bottom: i * 30 + 30, left: 0, right: 200, width: 200, height: 30, x: 0, y: i * 30, toJSON: () => ({}) }); });
+    const pointer = (type: string, clientY: number) =>
+      Object.defineProperties(new MouseEvent(type, { bubbles: true, cancelable: true, clientY }), { pointerId: { value: 5 }, pointerType: { value: "touch" } });
+    const statusY = rows.findIndex((r) => r.dataset["gcpField"] === "status") * 30 + 15;
+    const grip = item("owner").querySelector<HTMLElement>("[data-gcp-grip]")!;
+    grip.dispatchEvent(pointer("pointerdown", 0));
+    grip.dispatchEvent(pointer("pointermove", statusY));
+    grip.dispatchEvent(pointer("pointerup", statusY));
     await tick();
     expect(m.onConfigChange).toHaveBeenLastCalledWith(expect.objectContaining({ includeFields: ["owner", "status"] }));
     m.component.$destroy();

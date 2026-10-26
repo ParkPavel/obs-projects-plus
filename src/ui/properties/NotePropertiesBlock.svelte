@@ -731,7 +731,7 @@
               on:pointerup={onGripUp}
               on:pointercancel={endDrag}
               on:lostpointercapture={(e) => e.pointerId === dragPointer && endDrag()}
-            ><Icon name="grip-vertical" size="sm" /></button>
+            ><Icon name="menu" size="sm" /></button>
           {/if}
           {#if renamingKey === entry.key}
             <div class="ppp-note-props__rename">

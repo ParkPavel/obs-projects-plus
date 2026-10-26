@@ -2,8 +2,9 @@
   /**
    * i3-final (B4): «Properties» — the table's fields as one list, the way
    * Notion's view menu shows them. A search box narrows the list; the eye on a
-   * row shows or hides that column; the grip reorders by drag, or by the Up and
-   * Down arrow keys while it has focus; hidden fields sit in a group of their
+   * row shows or hides that column; the grip (≡, w4-p06) reorders by a drag
+   * with a mouse or a finger (reorderGrip), or by the Up and Down arrow keys
+   * while it has focus; hidden fields sit in a group of their
    * own, collapsed until opened (or until a search reaches into it).
    *
    * The component owns no setting. It reports a partial `{ fieldConfig }` or
@@ -15,6 +16,7 @@
   import { i18n } from "src/lib/stores/i18n";
   import SearchField from "src/ui/components/fields/SearchField.svelte";
   import { getFieldIcon } from "./filterHelpers";
+  import { reorderGrip } from "src/ui/actions/reorderGrip";
   import {
     fieldRows,
     matchesFieldQuery,
@@ -34,7 +36,6 @@
 
   let query = "";
   let hiddenOpen = false;
-  let dragName: string | null = null;
   let overName: string | null = null;
   let listEl: HTMLElement | null = null;
   /**
@@ -85,30 +86,8 @@
     if (grip && document.activeElement !== grip) grip.focus();
   });
 
-  function onDragStart(name: string, e: DragEvent) {
-    dragName = name;
-    if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
-  }
-
-  function onDragOver(name: string, e: DragEvent) {
-    if (dragName === null) return;
-    e.preventDefault();
-    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
-    overName = name;
-  }
-
-  function onDrop(name: string, e: DragEvent) {
-    e.preventDefault();
-    const moved = dragName;
-    dragName = null;
-    overName = null;
-    if (moved !== null && moved !== name) moveTo(moved, shownNames.indexOf(name));
-  }
-
-  function onDragEnd() {
-    dragName = null;
-    overName = null;
-  }
+  const shownRows = (): HTMLElement[] => Array.from(listEl?.querySelectorAll<HTMLElement>("[data-view-property]") ?? []);
+  const rowName = (row: HTMLElement): string | undefined => row.dataset["viewProperty"];
 </script>
 
 <div class="ppp-props" data-view-properties>
@@ -126,13 +105,8 @@
     {#each shown as field (field.name)}
       <li
         class="ppp-prop"
-        class:ppp-prop--over={overName === field.name && dragName !== field.name}
+        class:ppp-prop--over={overName === field.name}
         data-view-property={field.name}
-        draggable={!searching}
-        on:dragstart={(e) => onDragStart(field.name, e)}
-        on:dragover={(e) => onDragOver(field.name, e)}
-        on:drop={(e) => onDrop(field.name, e)}
-        on:dragend={onDragEnd}
       >
         <button
           type="button"
@@ -142,7 +116,15 @@
           aria-label={$i18n.t("settings-menu.view-config.table.move-field", { name: field.name })}
           title={$i18n.t("settings-menu.view-config.table.move-field", { name: field.name })}
           on:keydown={(e) => onGripKey(field.name, e)}
-        ><Icon name="grip-vertical" size="sm" /></button>
+          use:reorderGrip={{
+            key: field.name,
+            rows: shownRows,
+            keyOf: rowName,
+            disabled: searching,
+            onMove: moveTo,
+            onOver: (name) => (overName = name === field.name ? null : name),
+          }}
+        ><Icon name="menu" size="sm" /></button>
         <span class="ppp-prop-kind" aria-hidden="true"><Icon name={getFieldIcon(field.type)} size="sm" /></span>
         <span class="ppp-prop-name">{field.name}</span>
         <button
@@ -275,6 +257,8 @@
   }
   .ppp-prop-grip {
     cursor: grab;
+    /* A finger on the grip drags the row, it does not scroll the panel. */
+    touch-action: none;
   }
   .ppp-prop-btn:disabled {
     cursor: default;
@@ -312,14 +296,11 @@
     }
   }
 
-  /* A finger needs a target-sized row and buttons. HTML drag never starts from
-     touch, and a grip a finger cannot use is a promise, so it steps aside. */
+  /* A finger needs a target-sized row and buttons; the grip follows a finger
+     too (w4-p06), so it stays. */
   @media (pointer: coarse) {
     .ppp-prop {
       min-height: var(--ppp-touch-target-min);
-    }
-    .ppp-prop-grip {
-      display: none;
     }
     .ppp-prop-btn,
     .ppp-props-group {

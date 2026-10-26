@@ -67,6 +67,8 @@
   export let autoFocus: boolean = true;
 
   // ── Internal ───────────────────────────────────────────────
+  // w4-p06 (N9): the tallest a list or menu grows — about ten rows.
+  const LIST_MAX_REM = 20;
   const dispatch = createEventDispatcher<{ close: void }>();
 
   let popupEl: HTMLDivElement | null = null;
@@ -206,13 +208,29 @@
     const side = resolvePlacement(tRect, pRect, bounds, offsetPx, marginPx);
     let { top, left } = positions[side];
 
-    // Flip vertically.
-    if (side.startsWith("bottom") && top + pRect.height > vh - marginPx) {
-      const flipped = tRect.top - pRect.height - offsetPx;
-      if (flipped >= bounds.top + marginPx) top = flipped;
-    } else if (side.startsWith("top") && top < bounds.top + marginPx) {
-      const flipped = tRect.bottom + offsetPx;
-      if (flipped + pRect.height <= vh - marginPx) top = flipped;
+    // w4-p06 (N9): a popup under or over its anchor stays against it. One too
+    // tall for either side used to be clamped to the window's top edge — far
+    // from its field, as tall as the window. It now takes the side with room
+    // (the asked one first, else the roomier) and is capped to that room; a
+    // list or menu is also capped to LIST_MAX_REM.
+    const vertical = side.startsWith("bottom") || side.startsWith("top");
+    // The edges it grows from: the anchor's, kept inside the visible area (a
+    // keyboard over the anchor leaves the popup at the visible edge nearest it).
+    const belowEdge = Math.max(tRect.bottom + offsetPx, bounds.top + marginPx);
+    const aboveEdge = Math.min(tRect.top - offsetPx, vh - marginPx);
+    const below = Math.max(0, vh - marginPx - belowEdge);
+    const above = Math.max(0, aboveEdge - (bounds.top + marginPx));
+    const listCap = role === "menu" || role === "listbox" ? LIST_MAX_REM * baseFontPx : Infinity;
+    // The content's own height: measured after a cap, pRect would always fit.
+    const natural = Math.min(Math.max(popupEl.scrollHeight, pRect.height), listCap);
+    let room = vh - marginPx;
+    if (vertical) {
+      const wantBelow = side.startsWith("bottom");
+      const goBelow = wantBelow
+        ? natural <= below || (natural > above && below >= above)
+        : !(natural <= above || (natural > below && above >= below));
+      room = Math.min(goBelow ? below : above, listCap);
+      top = goBelow ? belowEdge : aboveEdge - Math.min(natural, room);
     }
 
     // Flip horizontally for left/right.
@@ -229,10 +247,10 @@
       Math.max(left, bounds.left + marginPx),
       Math.max(bounds.left + marginPx, vw - pRect.width - marginPx)
     );
-    const clampedTop = Math.min(
-      Math.max(top, bounds.top + marginPx),
-      Math.max(bounds.top + marginPx, vh - pRect.height - marginPx)
-    );
+    const clampedTop = vertical
+      ? top
+      : Math.min(Math.max(top, bounds.top + marginPx), Math.max(bounds.top + marginPx, vh - pRect.height - marginPx));
+    const maxHeight = vertical ? room : Math.min(vh - clampedTop - marginPx, listCap);
 
     // Constrain WIDTH to the space from the clamped origin to the right
     // margin so a wide child cannot overflow the viewport (clamp only moves
@@ -246,7 +264,7 @@
         ? Math.min(viewportWidthCap, cssMaxWidth)
         : viewportWidthCap;
 
-    style = `top: ${remAt(clampedTop, baseFontPx)}; left: ${remAt(clampedLeft, baseFontPx)}; max-width: ${remAt(Math.max(0, widthCap), baseFontPx)}; min-width: ${remAt(Math.min(12 * baseFontPx, Math.max(0, widthCap)), baseFontPx)}; max-height: ${remAt(Math.max(0, vh - clampedTop - marginPx), baseFontPx)};`;
+    style = `top: ${remAt(clampedTop, baseFontPx)}; left: ${remAt(clampedLeft, baseFontPx)}; max-width: ${remAt(Math.max(0, widthCap), baseFontPx)}; min-width: ${remAt(Math.min(12 * baseFontPx, Math.max(0, widthCap)), baseFontPx)}; max-height: ${remAt(Math.max(0, maxHeight), baseFontPx)};`;
   }
 
   /**

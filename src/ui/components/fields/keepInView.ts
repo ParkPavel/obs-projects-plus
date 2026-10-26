@@ -5,10 +5,18 @@
  * its own window's visualViewport (the on-screen keyboard shrinks it, a pinch
  * pans it) and, whenever the field's box leaves the visible part, scrolls the
  * nearest scroll container just enough to bring it back. Nothing is listened
- * to while the field is not focused, and everything is removed on blur and on
- * destroy, so a list of a hundred fields costs nothing until one is used.
+ * to while the field is not focused, and everything is removed on blur (a
+ * microtask later, w4-p06) and on destroy, so a list of a hundred fields costs
+ * nothing until one is used.
+ *
+ * w4-p06 adds the rest of the input standard: when the keyboard goes, the view
+ * scrolled for it is put back, and on a touch screen a button puts the keyboard
+ * away while the field keeps its focus (keyboardDismiss).
  */
+import { get } from "svelte/store";
+import { i18n } from "src/lib/stores/i18n";
 import { visibleViewport } from "src/ui/utils/visibleViewport";
+import { offerKeyboardDismiss } from "./keyboardDismiss";
 
 export type ViewportBounds = ReturnType<typeof visibleViewport>;
 
@@ -16,13 +24,24 @@ export function keepInView(node: HTMLElement, boundsOf: (view: Window) => Viewpo
   const view = node.ownerDocument.defaultView ?? window;
   let listening = false;
   let frame = 0;
+  let dismiss: (() => void) | null = null;
+  // w4-p06: the scroll positions before the keyboard came up, and the visible
+  // height then. When the keyboard goes (the height is back) after the field
+  // was scrolled into view, the view is put back where the user left it.
+  let before: Array<{ el: Element; top: number }> = [];
+  let restingHeight = 0;
+  let moved = false;
 
   function check(): void {
     frame = 0;
     const bounds = boundsOf(view);
     const rect = node.getBoundingClientRect();
     if (rect.top < bounds.top || rect.bottom > bounds.bottom) {
+      moved = true;
       node.scrollIntoView?.({ block: "nearest", inline: "nearest", behavior: "auto" });
+    } else if (moved && bounds.height >= restingHeight - 1) {
+      moved = false;
+      for (const { el, top } of before) el.scrollTop = top;
     }
   }
   // i3-input: one check per frame, and only when the visible area changes
@@ -36,6 +55,16 @@ export function keepInView(node: HTMLElement, boundsOf: (view: Window) => Viewpo
   function start(): void {
     if (listening) return;
     listening = true;
+    before = [];
+    for (let el = node.parentElement; el; el = el.parentElement) {
+      if (el.scrollHeight > el.clientHeight) before.push({ el, top: el.scrollTop });
+    }
+    restingHeight = boundsOf(view).height;
+    moved = false;
+    // A tag test, not instanceof: the field may live in a popout window.
+    if (node.tagName === "INPUT" || node.tagName === "TEXTAREA") {
+      dismiss = offerKeyboardDismiss(node as HTMLInputElement, { label: () => get(i18n).t("common.hide-keyboard") });
+    }
     view.visualViewport?.addEventListener("resize", schedule);
     view.addEventListener("resize", schedule);
     check();
@@ -43,20 +72,30 @@ export function keepInView(node: HTMLElement, boundsOf: (view: Window) => Viewpo
   function stop(): void {
     if (!listening) return;
     listening = false;
+    dismiss?.();
+    dismiss = null;
     if (frame !== 0) view.cancelAnimationFrame?.(frame);
     frame = 0;
     view.visualViewport?.removeEventListener("resize", schedule);
     view.removeEventListener("resize", schedule);
   }
 
+  // A blur that the keyboard button follows at once with a focus (keyboardDismiss)
+  // is not the end of the field's turn: the stop waits a microtask to see.
+  function blurred(): void {
+    void Promise.resolve().then(() => {
+      if (node.ownerDocument.activeElement !== node) stop();
+    });
+  }
+
   node.addEventListener("focus", start);
-  node.addEventListener("blur", stop);
+  node.addEventListener("blur", blurred);
   if (node.ownerDocument.activeElement === node) start();
   return {
     destroy(): void {
       stop();
       node.removeEventListener("focus", start);
-      node.removeEventListener("blur", stop);
+      node.removeEventListener("blur", blurred);
     },
   };
 }

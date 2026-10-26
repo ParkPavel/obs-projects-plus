@@ -136,10 +136,10 @@
     // The list's own height, not the one the last placement capped it to:
     // measured after a cap, it always "fitted" below and never flipped.
     const natural = Math.min(popupEl.scrollHeight || box.height, 12 * base);
-    // i3-input: on a touch screen the keyboard is below the field, so the list
-    // opens above it whenever a few rows fit there.
-    const coarse = view.matchMedia?.("(pointer: coarse)").matches ?? false;
-    const goAbove = coarse ? above >= Math.min(natural, 6 * base) || above > below : natural > below && above > below;
+    // The input standard (CONSOLIDATION §7, w4-p06): the list stands over its
+    // field whenever a few rows fit there — on a phone the keyboard is below,
+    // and a computer follows the same rule — else under it, capped to the room.
+    const goAbove = above >= Math.min(natural, 6 * base) || above > below;
     const width = Math.max(0, bounds.width - 2 * margin);
     const maxHeight = goAbove ? above : below;
     const top = goAbove ? anchor.top - gap - Math.min(natural, above) : anchor.bottom + gap;
@@ -498,9 +498,12 @@
     align-items: center;
     gap: var(--ppp-space-3, 0.375rem);
     width: 100%;
+    height: auto;
     min-height: 1.75rem;
     padding: var(--ppp-space-2, 0.25rem) var(--ppp-space-4, 0.5rem);
     border: none;
+    /* w4-p06 (N9): not Obsidian's raised button — a row of the list. */
+    box-shadow: none;
     border-radius: var(--ppp-radius-md, 0.25rem);
     background: transparent;
     color: var(--text-normal);

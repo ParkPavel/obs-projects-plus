@@ -2514,6 +2514,7 @@
             "scroll-left": "向左滚动",
             "scroll-right": "向右滚动",
             "retry": "重试",
+            "hide-keyboard": "收起键盘",
             "loading": "加载中...",
             "drag-to-reorder": "拖动以重新排序",
             "confirm": "确认",

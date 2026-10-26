@@ -98,6 +98,17 @@ mean that a new release has been published.
   either.
 - The agenda's icon picker shows its emoji again (they were broken text); a list saved with a broken emoji
   shows it as the emoji it was.
+- Lists that open from a field or a button stay against it: one with no room for its whole height takes
+  the side with more room and scrolls inside it, instead of jumping to the window's top edge as tall as the
+  window. Field and menu lists stop at about ten rows, and their rows are plain rows again, not raised
+  buttons (on computers too).
+- A suggestion list stands over its field when a few rows fit there, on computers as on phones.
+- On a touch screen, a field with the keyboard up shows a button that puts the keyboard away; the field keeps
+  its focus, text and list until a tap elsewhere or a scroll. When the keyboard goes, the view scrolled for
+  it returns to where it was.
+- Properties are reordered by the grip ≡ on the left — with a mouse or a finger — in the view's field list
+  and the gallery's card fields (a finger could not reorder them before), and in the note header.
+- The calendar's "Duplicate" window fits the area the keyboard leaves visible.
 
 ## 3.7.0 — 2026-10-05
 

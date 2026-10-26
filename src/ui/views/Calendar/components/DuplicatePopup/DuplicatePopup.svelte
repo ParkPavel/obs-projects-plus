@@ -7,6 +7,7 @@
   import { i18n } from "src/lib/stores/i18n";
   import { focusTrap } from "src/lib/a11y/focusTrap";
   import { portal } from "src/ui/portal";
+  import { fitVisibleViewport } from "src/ui/actions/fitVisibleViewport";
   import DuplicateCalendarView from "./DuplicateCalendarView.svelte";
   import { calendarLogger } from '../../logger';
 
@@ -142,11 +143,14 @@
        window lives on the body of its own document, above every leaf layer, so
        the day popup it was opened from cannot cover it. `ppp-modal` is the
        shared plugin-modal root: the reduced-motion and coarse-pointer rules in
-       tokens.css reach a body-level surface through it. -->
+       tokens.css reach a body-level surface through it. w4-p06: the backdrop
+       is the keyboard-visible area (the same rule as the shared popups), so a
+       time field's keyboard does not cover the window or its footer. -->
   <div
     class="duplicate-backdrop ppp-modal"
     bind:this={backdropElement}
     use:portal={{ to: "document-body" }}
+    use:fitVisibleViewport
     use:focusTrap
     on:click={handleBackdropClick}
     on:keydown={handleKeydown}
@@ -262,7 +266,7 @@
     border-radius: var(--modal-radius, var(--radius-l));
     width: 90%;
     max-width: 28rem;
-    max-height: 85vh;
+    max-height: min(85vh, 100%);
     display: flex;
     flex-direction: column;
     box-shadow: var(--shadow-l);

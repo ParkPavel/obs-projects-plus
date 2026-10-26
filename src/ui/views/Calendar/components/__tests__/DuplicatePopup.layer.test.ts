@@ -109,6 +109,25 @@ describe("DuplicatePopup — the window is the top layer", () => {
     expect(host.contains(backdrop)).toBe(false);
   });
 
+  // w4-p06 (#34): the window takes the keyboard-visible area, the shared
+  // popups' rule — a time field's keyboard no longer covers its footer.
+  test("it is fitted to the visible viewport and follows the keyboard", async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(window, "visualViewport");
+    const viewport = Object.assign(new EventTarget(), { offsetTop: 0, offsetLeft: 0, width: 390, height: 800 });
+    Object.defineProperty(window, "visualViewport", { configurable: true, value: viewport });
+    try {
+      await open();
+      const backdrop = document.querySelector<HTMLElement>(".duplicate-backdrop")!;
+      expect(backdrop.style.height).toBe("50rem");
+      viewport.height = 480;
+      viewport.dispatchEvent(new Event("resize"));
+      expect(backdrop.style.height).toBe("30rem");
+    } finally {
+      if (descriptor) Object.defineProperty(window, "visualViewport", descriptor);
+      else Reflect.deleteProperty(window, "visualViewport");
+    }
+  });
+
   test("it carries the shared modal root and the dialog semantics", async () => {
     await open();
     expect(document.querySelector(".duplicate-backdrop")).toHaveClass("ppp-modal");

@@ -145,18 +145,36 @@ describe("Properties in View settings", () => {
     m.destroy();
   });
 
-  it("drag and drop reorders the shown fields", () => {
+  // w4-p06: the grip follows a pointer — a mouse or a finger — instead of HTML
+  // drag and drop, which never starts from touch. Each row is 30 px tall here.
+  it("a drag on the grip, with a finger too, reorders the shown fields", () => {
     const m = mount();
-    const from = m.row("due");
-    const to = m.row("status");
-    const drag = (el: HTMLElement | undefined, type: string) => {
-      const e = new Event(type, { bubbles: true, cancelable: true });
-      el?.dispatchEvent(e);
+    const rows = Array.from(m.target.querySelectorAll<HTMLElement>("[data-view-property]"));
+    rows.forEach((row, i) => { row.getBoundingClientRect = () => ({ top: i * 30, bottom: i * 30 + 30, left: 0, right: 200, width: 200, height: 30, x: 0, y: i * 30, toJSON: () => ({}) }); });
+    const pointer = (type: string, clientY: number) => {
+      const e = new MouseEvent(type, { bubbles: true, cancelable: true, clientY });
+      Object.defineProperties(e, { pointerId: { value: 7 }, pointerType: { value: "touch" } });
+      return e;
     };
-    drag(from, "dragstart");
-    drag(to, "dragover");
-    drag(to, "drop");
+    const grip = m.row("due")!.querySelector<HTMLElement>("[data-property-grip]")!;
+    expect(grip.querySelector("svg, .svg-icon") ?? grip).toBeTruthy();
+    const statusTop = rows.findIndex((r) => r.dataset["viewProperty"] === "status") * 30;
+    grip.dispatchEvent(pointer("pointerdown", 0));
+    grip.dispatchEvent(pointer("pointermove", statusTop + 15));
+    grip.dispatchEvent(pointer("pointerup", statusTop + 15));
     expect(m.updates.at(-1)).toEqual({ table: { orderFields: ["name", "due", "status", "owner", "path"] } });
+    m.destroy();
+  });
+
+  it("a cancelled drag writes nothing", () => {
+    const m = mount();
+    const before = m.updates.length;
+    const grip = m.row("due")!.querySelector<HTMLElement>("[data-property-grip]")!;
+    const e = (type: string) => Object.defineProperties(new MouseEvent(type, { bubbles: true, cancelable: true, clientY: 0 }), { pointerId: { value: 3 }, pointerType: { value: "touch" } });
+    grip.dispatchEvent(e("pointerdown"));
+    grip.dispatchEvent(e("pointermove"));
+    grip.dispatchEvent(e("pointercancel"));
+    expect(m.updates.length).toBe(before);
     m.destroy();
   });
 });

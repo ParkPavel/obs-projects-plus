@@ -49,7 +49,7 @@ afterEach(() => {
 });
 
 describe("keepInView", () => {
-  it("scrolls a focused field into view when the keyboard shrinks the viewport", () => {
+  it("scrolls a focused field into view when the keyboard shrinks the viewport", async () => {
     const vv = fakeViewport();
     const input = document.createElement("input");
     document.body.appendChild(input);
@@ -67,6 +67,9 @@ describe("keepInView", () => {
     vv.fire("resize");
     expect(input.scrollIntoView).toHaveBeenCalledWith({ block: "nearest", inline: "nearest", behavior: "auto" });
     input.blur();
+    // w4-p06: the listeners go a microtask after the blur (a blur followed at
+    // once by a focus — the keyboard button — keeps them).
+    await Promise.resolve();
     expect(vv.count()).toBe(0);
     action.destroy();
   });

@@ -1,15 +1,17 @@
 <script lang="ts">
   /**
    * i3-gallery — the «Card» panel's properties, as Notion lists them: the
-   * shown ones in card order, each with a drag grip and an eye that hides it;
+   * shown ones in card order, each with a grip (≡) and an eye that hides it;
    * then the hidden ones, each with a crossed eye that shows it. Drag a shown
-   * property onto another to take its place; the up/down buttons stay for the
-   * keyboard and for touch, where HTML drag and drop does not start. Moved out
-   * of GalleryCardPanel (B9) with the drag, so neither file outgrows itself.
+   * property by its grip onto another to take its place — with a mouse or a
+   * finger (reorderGrip, w4-p06; HTML drag never started from touch); the
+   * up/down buttons stay for the keyboard. Moved out of GalleryCardPanel (B9)
+   * with the drag, so neither file outgrows itself.
    */
   import { Icon } from "obsidian-svelte";
   import type { DataField } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
+  import { reorderGrip } from "src/ui/actions/reorderGrip";
   import { cardFieldsInOrder, dropIncludedField, moveIncludedField } from "../../galleryOptions";
 
   export let fields: DataField[];
@@ -30,50 +32,38 @@
     onChange(includeFields.includes(name) ? includeFields.filter((n) => n !== name) : [...includeFields, name]);
   }
 
+  let listEl: HTMLElement | null = null;
   let dragged: string | null = null;
   let over: string | null = null;
 
-  function dragStart(event: DragEvent, name: string) {
-    dragged = name;
-    event.dataTransfer?.setData("text/plain", name);
-    if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
-  }
+  const shownRows = (): HTMLElement[] => Array.from(listEl?.querySelectorAll<HTMLElement>("[data-gcp-field]") ?? []);
+  const rowName = (row: HTMLElement): string | undefined => row.dataset["gcpField"];
 
-  function dragOver(event: DragEvent, name: string) {
-    if (dragged === null) return;
-    event.preventDefault();
-    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
-    over = name;
-  }
-
-  function drop(event: DragEvent, name: string) {
-    event.preventDefault();
-    const from = dragged ?? event.dataTransfer?.getData("text/plain") ?? "";
-    dragged = null;
-    over = null;
-    if (from && from !== name) onChange(dropIncludedField(includeFields, from, name));
-  }
-
-  function dragEnd() {
-    dragged = null;
-    over = null;
+  function dropOn(name: string, to: number) {
+    const target = shown[to]?.name;
+    if (target && target !== name) onChange(dropIncludedField(includeFields, name, target));
   }
 </script>
 
-<ol class="ppp-gcp-list" data-gcp-shown>
+<ol class="ppp-gcp-list" data-gcp-shown bind:this={listEl}>
   {#each shown as field, index (field.name)}
     <li
       data-gcp-field={field.name}
-      draggable="true"
       class:ppp-gcp-dragging={dragged === field.name}
       class:ppp-gcp-over={over === field.name && dragged !== field.name}
-      on:dragstart={(e) => dragStart(e, field.name)}
-      on:dragover={(e) => dragOver(e, field.name)}
-      on:dragleave={() => { if (over === field.name) over = null; }}
-      on:drop={(e) => drop(e, field.name)}
-      on:dragend={dragEnd}
     >
-      <span class="ppp-gcp-grip" aria-hidden="true"><Icon name="grip-vertical" size="sm" /></span>
+      <span
+        class="ppp-gcp-grip"
+        aria-hidden="true"
+        data-gcp-grip
+        use:reorderGrip={{
+          key: field.name,
+          rows: shownRows,
+          keyOf: rowName,
+          onMove: dropOn,
+          onOver: (name) => { over = name; dragged = name === null ? null : field.name; },
+        }}
+      ><Icon name="menu" size="sm" /></span>
       <span class="ppp-gcp-name">{field.name}</span>
       <button type="button" class="ppp-gcp-btn clickable-icon" data-gcp-action="up" disabled={index === 0}
         aria-label={$i18n.t("settings-menu.view-config.gallery.move-up", { name: field.name })}
@@ -125,8 +115,14 @@
   }
   .ppp-gcp-grip {
     display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--ppp-touch-target-min, 2rem);
+    min-height: var(--ppp-touch-target-min, 2rem);
     color: var(--text-faint);
     cursor: grab;
+    /* A finger on the grip drags the row, it does not scroll the panel. */
+    touch-action: none;
   }
   .ppp-gcp-btn {
     min-width: var(--ppp-touch-target-min, 2rem);
