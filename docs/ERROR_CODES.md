@@ -325,6 +325,35 @@ A new field is written into the project's notes one by one, and some of those wr
 
 The console lists the notes that could not be written. The rest were updated.
 
+## PPP-205
+
+### Что случилось
+
+Изменение нескольких заметок записано не во все: часть заметок показывает прежние значения, остальные
+сохранены.
+
+### Почему
+
+Изменение записывается в каждую заметку по отдельности. Часть заметок не нашлась (их переименовали,
+переместили или удалили) или отказала в записи.
+
+### Что делать
+
+Нажмите «Повторить» в уведомлении — повтор затронет только те заметки, запись в которые не прошла.
+Список заметок — в консоли разработчика; пропавшую заметку найдите на новом месте и обновите вид.
+
+### What happened
+
+{{unwritten}} of {{count}} notes were not saved and show their previous values; the rest were saved.
+
+### Why
+
+A change to several notes is written into each note on its own; some notes were missing or refused the write. The console lists them.
+
+### What to do
+
+Press "Retry" in the notice: it writes only the notes that failed. The console lists the notes; find a missing one at its new place and refresh the view.
+
 ## PPP-301
 
 ### Что случилось

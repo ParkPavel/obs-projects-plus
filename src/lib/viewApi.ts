@@ -10,10 +10,11 @@ import type {
 } from "./dataframe/dataframe";
 import { DataFieldType } from "./dataframe/dataframe";
 import type { DataFrame } from "./dataframe/dataframe";
-import type { BulkFieldWriteOutcome, DataApi } from "./dataApi";
+import type { BulkFieldWriteOutcome, DataApi, RecordsWriteOutcome } from "./dataApi";
 import { dataFrame } from "./stores/dataframe";
 import { changedKeys, patchRecord, touchedKeys } from "./recordDiff";
 import { noticeFor } from "src/lib/errors/errorText";
+import { noticeWithRetry } from "src/lib/errors/retryNotice";
 
 /**
  * #202 — the codes this module can raise, named once at the top so a number a
@@ -24,6 +25,7 @@ const RECORD_WRITE_FAILED = "PPP-201";
 const RECORDS_WRITE_FAILED = "PPP-202";
 const RECORD_FILE_MISSING = "PPP-203";
 const FIELD_WRITE_PARTIAL = "PPP-204";
+const RECORDS_WRITE_PARTIAL = "PPP-205";
 /** Raised here, but a relations event to the user, so it lives in 5xx. */
 const INVERSE_WRITE_FAILED = "PPP-501";
 import type { DataSource } from "./datasources";
@@ -38,17 +40,29 @@ const EMPTY_BULK_WRITE: BulkFieldWriteOutcome = { written: 0, failed: [], missin
  * #144 — tells the user when a schema write did not reach every note. Silent on
  * success: a Notice per successful field write would be noise, and the column
  * appearing is already the confirmation.
+ *
+ * w4-p04: `write` writes the same change into the given notes; when some
+ * refused it, the notice offers to run it again over those notes only, and the
+ * retry reports itself the same way.
  */
-function reportBulkFieldWrite(outcome: BulkFieldWriteOutcome, fieldName: string): void {
+function reportBulkFieldWrite(
+  outcome: BulkFieldWriteOutcome,
+  fieldName: string,
+  write?: (paths: string[]) => Promise<BulkFieldWriteOutcome>
+): void {
   const unwritten = outcome.failed.length + outcome.missing.length;
   if (unwritten === 0) return;
 
-  new Notice(
+  const failedPaths = outcome.failed.map((f) => f.path);
+  noticeWithRetry(
     noticeFor(FIELD_WRITE_PARTIAL, {
       field: fieldName,
       written: outcome.written,
       unwritten,
-    })
+    }),
+    write && failedPaths.length > 0
+      ? () => void write(failedPaths).then((again) => reportBulkFieldWrite(again, fieldName, write))
+      : undefined
   );
   console.error(
     `[Projects+] field '${fieldName}': ${outcome.failed.length} write(s) failed, ` +
@@ -171,6 +185,11 @@ export class ViewApi {
    *
    * Returns false when the batch did not reach disk. Not rethrown, for the same
    * reason as `updateRecord`: several call sites do not await.
+   *
+   * w4-p04 (audit F17): the batch reports each note. Only the notes that were
+   * not written (missing, or the write threw) are put back; the written ones
+   * keep their new values, and the notice says how many of how many were not
+   * saved, with a retry over the ones that failed.
    */
   async updateRecords(records: DataRecord[], fields: DataField[]): Promise<boolean> {
     const rs = records.filter((r) => this.dataSource.includes(r.id));
@@ -196,22 +215,42 @@ export class ViewApi {
     const shownRs = rs.map((r) => shownById.get(r.id) ?? r);
     if (shownRs.length > 0) dataFrame.updateRecords(shownRs);
 
+    let outcome: RecordsWriteOutcome;
     try {
-      await this.dataApi.updateRecords(fields, records, keys);
-      return true;
+      outcome = await this.dataApi.updateRecords(fields, records, keys);
     } catch (error) {
-      // Put back only the records this call actually wrote, and only where the
-      // store still holds what we put there — same rule as `revertOptimistic`.
-      const current = get(dataFrame).records;
-      const untouched = previous.filter((old) => {
-        const attempted = shownRs.find((r) => r.id === old.id);
-        return attempted !== undefined && current.includes(attempted);
-      });
-      if (untouched.length > 0) dataFrame.updateRecords(untouched);
-      new Notice(noticeFor(RECORDS_WRITE_FAILED, { count: rs.length }));
-      console.error("[Projects+] batch record write failed", error);
-      return false;
+      // Each note is settled on its own, so this is a throw before any note
+      // was tried: none of them was written.
+      const reason = error instanceof Error ? error : new Error(String(error));
+      outcome = { written: [], unchanged: [], missing: [], failed: records.map((r) => ({ path: r.id, error: reason })) };
     }
+    const unwritten = new Set([...outcome.missing, ...outcome.failed.map((f) => f.path)]);
+    if (unwritten.size === 0) return true;
+
+    // Put back only the notes that were not written, and only where the store
+    // still holds what we put there — same rule as `revertOptimistic`.
+    const current = get(dataFrame).records;
+    const putBack = previous.filter((old) => {
+      if (!unwritten.has(old.id)) return false;
+      const attempted = shownRs.find((r) => r.id === old.id);
+      return attempted !== undefined && current.includes(attempted);
+    });
+    if (putBack.length > 0) dataFrame.updateRecords(putBack);
+
+    const failedIds = new Set(outcome.failed.map((f) => f.path));
+    const failedRecords = records.filter((r) => failedIds.has(r.id));
+    const nothingSaved = outcome.written.length + outcome.unchanged.length === 0;
+    noticeWithRetry(
+      nothingSaved
+        ? noticeFor(RECORDS_WRITE_FAILED, { count: records.length })
+        : noticeFor(RECORDS_WRITE_PARTIAL, { unwritten: unwritten.size, count: records.length }),
+      failedRecords.length > 0 ? () => void this.updateRecords(failedRecords, fields) : undefined
+    );
+    console.error("[Projects+] batch record write incomplete", {
+      missing: outcome.missing,
+      failed: outcome.failed,
+    });
+    return false;
   }
 
   deleteRecord(recordId: string) {
@@ -250,8 +289,9 @@ export class ViewApi {
     // empty default. Writing those took 193 files at once on the phone.
     if (isEmptyFieldValue(value)) return EMPTY_BULK_WRITE;
 
-    const outcome = await this.dataApi.addField(this.fieldWriteTargets(), field, value);
-    reportBulkFieldWrite(outcome, field.name);
+    const write = (paths: string[]) => this.dataApi.addField(paths, field, value);
+    const outcome = await write(this.fieldWriteTargets());
+    reportBulkFieldWrite(outcome, field.name, write);
     return outcome;
   }
 
@@ -260,22 +300,17 @@ export class ViewApi {
 
     if (!oldName) return EMPTY_BULK_WRITE;
 
-    const outcome = await this.dataApi.renameField(
-      get(dataFrame).records.map((record) => record.id),
-      oldName,
-      field.name
-    );
-    reportBulkFieldWrite(outcome, field.name);
+    const write = (paths: string[]) => this.dataApi.renameField(paths, oldName, field.name);
+    const outcome = await write(get(dataFrame).records.map((record) => record.id));
+    reportBulkFieldWrite(outcome, field.name, write);
     return outcome;
   }
 
   async deleteField(field: string): Promise<BulkFieldWriteOutcome> {
     dataFrame.deleteField(field);
-    const outcome = await this.dataApi.deleteField(
-      get(dataFrame).records.map((record) => record.id),
-      field
-    );
-    reportBulkFieldWrite(outcome, field);
+    const write = (paths: string[]) => this.dataApi.deleteField(paths, field);
+    const outcome = await write(get(dataFrame).records.map((record) => record.id));
+    reportBulkFieldWrite(outcome, field, write);
     return outcome;
   }
 }

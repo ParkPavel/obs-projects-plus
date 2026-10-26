@@ -2057,6 +2057,7 @@
             "fieldWritePartial": "'{{field}}' was written to {{written}} notes; {{unwritten}} could not be updated. See the console for the list.",
             "inverseWriteFailed": "The back-link for '{{field}}' could not be written to {{count}} note(s). See the console.",
             "recordsWriteFailed": "Could not save {{count}} record(s); the previous values were restored.",
+            "recordsWritePartial": "{{unwritten}} of {{count}} notes were not saved and show their previous values; the rest were saved.",
             "migrationBackupFailed": "The dashboard configuration was migrated, but its restore point could not be written. See the console.",
             "renameFailed": "The note could not be renamed.",
             "settingsUnreadable": "The settings file could not be read; defaults are in use.",
@@ -2070,6 +2071,7 @@
                 "settings-conflict-uncopied": "Both the copy beside data.json and the note in the vault failed to write, so the other version survives in two places only: the console line, and data.json itself, which this session is holding unwritten until your next change.",
                 "record-write-failed": "Writing the note's frontmatter failed, so the value on screen was rolled back to what is on disk.",
                 "records-write-failed": "A batch write failed part way through, so every record in the batch was rolled back to what is on disk.",
+                "records-write-partial": "A change to several notes is written into each note on its own; some notes were missing or refused the write. The console lists them.",
                 "record-file-missing": "The note was renamed, moved or deleted after the view loaded it, so there was no file left to write to.",
                 "field-write-partial": "A new field is written into the project's notes one by one, and some of those writes did not succeed.",
                 "rename-failed": "Obsidian refused the rename — usually the new name is already taken, or holds characters the file system does not allow.",
@@ -2372,6 +2374,7 @@
         },
         "common": {
             "clear": "Clear",
+            "retry": "Retry",
             "search": "Search",
             "yesterday": "Yesterday",
             "tomorrow": "Tomorrow",

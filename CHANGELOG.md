@@ -16,6 +16,11 @@ mean that a new release has been published.
   was writes nothing, and a drag that never ends is released on its own.
 - The calendar no longer freezes on the month view: day cells create no hidden frames and at most 24 months
   stay in memory.
+- A change written into several notes at once (a board move, renaming or removing a column's option) reports
+  each note: the ones written keep their new values, only the unwritten ones are put back, and the notice
+  says how many of how many were not saved (PPP-205). When some notes refused the write, "Retry" writes just
+  those. A missing note is no longer counted as saved. Adding, renaming or deleting a field offers the same
+  retry over the notes it could not write.
 
 ### Calendar
 

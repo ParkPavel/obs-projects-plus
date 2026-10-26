@@ -41,6 +41,21 @@ export type BulkFieldWriteOutcome = {
 };
 
 /**
+ * w4-p04 (audit F17) — what a batch of record writes did, note by note.
+ * `written` reached the file; `unchanged` had nothing to write; `missing`
+ * names records whose note no longer exists; `failed` names the writes that
+ * threw. Every record lands in exactly one list. The batch used to resolve the
+ * same whether a note was missing or not, and to reject on the first failure
+ * while the others went on, so nobody could say which notes were written.
+ */
+export type RecordsWriteOutcome = {
+  readonly written: ReadonlyArray<string>;
+  readonly unchanged: ReadonlyArray<string>;
+  readonly missing: ReadonlyArray<string>;
+  readonly failed: ReadonlyArray<{ readonly path: string; readonly error: Error }>;
+};
+
+/**
  * DataApi writes records to file.
  */
 export class DataApi {
@@ -80,22 +95,35 @@ export class DataApi {
     fields: DataField[],
     records: DataRecord[],
     keys?: ReadonlyArray<readonly string[] | undefined>
-  ): Promise<void> {
+  ): Promise<RecordsWriteOutcome> {
+    const written: string[] = [];
+    const unchanged: string[] = [];
+    const missing: string[] = [];
+    const failed: Array<{ path: string; error: Error }> = [];
+    // Each note is settled on its own: one failure neither stops the others
+    // nor hides which of them were written.
     await Promise.all(
       records.map(async (record, index) => {
         const file = this.fileSystem.getFile(record.id);
-        if (!file) return;
+        if (!file) return void missing.push(record.id);
         const recordKeys = keys?.[index];
-        if (recordKeys?.length === 0) return;
-        const processed = await file.processFrontMatter((fm) =>
-          applyRecordToFrontmatter(fm, fields, record, recordKeys),
-        );
-        if (processed) return;
-        await this.updateFile(file, (data) =>
-          doUpdateRecord(data, fields, record, recordKeys),
-        )();
+        if (recordKeys?.length === 0) return void unchanged.push(record.id);
+        try {
+          const processed = await file.processFrontMatter((fm) =>
+            applyRecordToFrontmatter(fm, fields, record, recordKeys),
+          );
+          if (!processed) {
+            await this.updateFile(file, (data) =>
+              doUpdateRecord(data, fields, record, recordKeys),
+            )();
+          }
+          written.push(record.id);
+        } catch (error) {
+          failed.push({ path: record.id, error: E.toError(error) });
+        }
       }),
     );
+    return { written, unchanged, missing, failed };
   }
 
   /**

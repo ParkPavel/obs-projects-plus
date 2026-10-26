@@ -220,6 +220,16 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
       "A new field is written into the project's notes one by one, and some of those writes did not succeed.",
   },
   {
+    code: "PPP-205",
+    kind: "failure",
+    key: "errors.recordsWritePartial",
+    causeKey: "errors.causes.records-write-partial",
+    caption:
+      "{{unwritten}} of {{count}} notes were not saved and show their previous values; the rest were saved.",
+    cause:
+      "A change to several notes is written into each note on its own; some notes were missing or refused the write. The console lists them.",
+  },
+  {
     code: "PPP-301",
     kind: "failure",
     key: "errors.renameFailed",
