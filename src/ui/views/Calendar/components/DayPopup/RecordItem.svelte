@@ -233,13 +233,13 @@
   /**
    * v4.0.0: Corrected interaction model
    * 
-   * РџР РђР’РР›Р¬РќРђРЇ Р›РћР“РРљРђ:
-   * - Single tap/click в†’ РїРѕРєР°Р·Р°С‚СЊ Actions menu (РЅР°СЃС‚СЂРѕР№РєРё Р·Р°РїРёСЃРё)
-   * - Ctrl+Click (desktop) в†’ РѕС‚РєСЂС‹С‚СЊ Р·Р°РјРµС‚РєСѓ РІ РЅРѕРІРѕР№ РІРєР»Р°РґРєРµ
-   * - Double tap (mobile) в†’ РѕС‚РєСЂС‹С‚СЊ Р·Р°РјРµС‚РєСѓ РІ РЅРѕРІРѕР№ РІРєР»Р°РґРєРµ
-   * - Long press (mobile) в†’ СЂР°СЃС€РёСЂРµРЅРЅРѕРµ РєРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ
+   * ПРАВИЛЬНАЯ ЛОГИКА:
+   * - Single tap/click → показать Actions menu (настройки записи)
+   * - Ctrl+Click (desktop) → открыть заметку в новой вкладке
+   * - Double tap (mobile) → открыть заметку в новой вкладке
+   * - Long press (mobile) → расширенное контекстное меню
    * 
-   * Р’РђР–РќРћ: Tap РґРѕР»Р¶РµРЅ РїРѕРєР°Р·С‹РІР°С‚СЊ РЅР°СЃС‚СЂРѕР№РєРё, РќР• РѕС‚РєСЂС‹РІР°С‚СЊ Р·Р°РјРµС‚РєСѓ!
+   * ВАЖНО: Tap должен показывать настройки, НЕ открывать заметку!
    */
   
   // Double tap detection - variables declared at top of script
@@ -283,13 +283,13 @@
       return;
     }
     
-    // Ctrl+Click в†’ open in new tab (desktop)
+    // Ctrl+Click → open in new tab (desktop)
     if (event.ctrlKey || event.metaKey) {
       dispatch('openInNewWindow');
       return;
     }
     
-    // Normal click в†’ toggle actions menu (show settings)
+    // Normal click → toggle actions menu (show settings)
     showActions = !showActions;
     if (!showActions) {
       showColorPalette = false;
@@ -317,7 +317,7 @@
     longPressTimeout = setTimeout(() => {
       if (!touchMoved) {
         isLongPress = true;
-        // Long press в†’ show actions menu + haptic feedback
+        // Long press → show actions menu + haptic feedback
         showActions = true;
         if (navigator.vibrate) {
           navigator.vibrate(50);
@@ -330,8 +330,8 @@
    * Touch end - detect single tap vs double tap
    * v3.0.1: Ignore if user was scrolling
    * 
-   * - Single tap в†’ toggle actions menu (settings)
-   * - Double tap в†’ open note in new tab
+   * - Single tap → toggle actions menu (settings)
+   * - Double tap → open note in new tab
    */
   function handleTouchEnd(event: TouchEvent) {
     // Clear debounce timer
@@ -373,7 +373,7 @@
       return; // Don't trigger record open - these have their own handlers
     }
     
-    // Debounce: РµСЃР»Рё СѓР¶Рµ РІ РїСЂРѕС†РµСЃСЃРµ РѕР±СЂР°Р±РѕС‚РєРё, РёРіРЅРѕСЂРёСЂСѓРµРј
+    // Debounce: если уже в процессе обработки, игнорируем
     if (touchHandled) {
       return;
     }
@@ -400,7 +400,7 @@
     
     // Double tap detection
     if (now - lastTapTime < DOUBLE_TAP_INTERVAL) {
-      // Double tap в†’ open note in new tab
+      // Double tap → open note in new tab
       lastTapTime = 0;
       if (doubleTapTimeout) {
         clearTimeout(doubleTapTimeout);
@@ -414,7 +414,7 @@
       doubleTapTimeout = setTimeout(() => {
         if (lastTapTime === now) {
           // No second tap - execute single tap action
-          // Single tap в†’ toggle actions menu (NOT open note)
+          // Single tap → toggle actions menu (NOT open note)
           showActions = !showActions;
           if (!showActions) {
             showColorPalette = false;
@@ -446,7 +446,7 @@
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      // Enter/Space в†’ toggle actions menu
+      // Enter/Space → toggle actions menu
       showActions = !showActions;
       if (!showActions) {
         showColorPalette = false;
@@ -667,7 +667,7 @@
             <div class="hsl-preview-row">
               <div class="hsl-preview" style:--preview-color={hsvColor}></div>
               <div class="hsl-values">
-                <span>H: {hueValue}В°</span>
+                <span>H: {hueValue}°</span>
                 <span>S: {saturationValue}%</span>
                 <span>V: {valueValue}%</span>
               </div>

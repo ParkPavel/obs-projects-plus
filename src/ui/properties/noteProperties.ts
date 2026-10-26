@@ -21,6 +21,7 @@ import {
 } from "src/lib/database/cellEditor";
 import { parseTypedDate } from "src/lib/helpers/typedDate";
 import { formatWikilink, parseWikilink } from "src/lib/engine/wikilink";
+import { isTemplateText } from "src/lib/suggestions/valueSuggestions";
 
 export function isReservedPropertyKey(key: string): boolean {
   return key.startsWith("pp_") || key.startsWith("$");
@@ -198,7 +199,8 @@ export function noteScopeFor(path: string, projects: readonly unknown[]): NoteSc
 
 /**
  * i3-props: the distinct values `key` holds across `frontmatters` — scalars
- * and list items, as text, in first-seen order. Objects are skipped.
+ * and list items, as text, in first-seen order. Objects and template text
+ * (`<% %>`, `{{ }}`, w4-p05) are skipped.
  */
 export function valuesForKey(
   frontmatters: Iterable<Record<string, unknown> | null | undefined>,
@@ -209,7 +211,7 @@ export function valuesForKey(
   const add = (v: unknown): void => {
     if (typeof v !== "string" && typeof v !== "number" && typeof v !== "boolean") return;
     const text = String(v).trim();
-    if (text !== "") seen.add(text);
+    if (text !== "" && !isTemplateText(text)) seen.add(text);
   };
   for (const fm of frontmatters) {
     if (seen.size >= limit) break;

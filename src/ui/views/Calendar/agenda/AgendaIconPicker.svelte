@@ -4,6 +4,7 @@
   import { i18n } from 'src/lib/stores/i18n';
   import SearchField from 'src/ui/components/fields/SearchField.svelte';
   import type { AgendaIcon } from 'src/settings/v3/settings';
+  import { AGENDA_EMOJIS, agendaEmoji } from './agendaEmoji';
   
   const dispatch = createEventDispatcher<{
     select: AgendaIcon;
@@ -31,21 +32,11 @@
     'home', 'briefcase', 'shopping-cart', 'coffee',
   ];
   
-  // Popular emojis for agenda lists
-  const emojis = [
-    'рџ”Ґ', 'в­ђ', 'рџ’Є', 'рџЋЇ', 'вљЎ', 'рџ’Ћ', 'рџЏ†', 'рџ‘‘',
-    'рџ“‹', 'рџ“ќ', 'вњ…', 'вќЊ', 'вЏ°', 'рџ“…', 'рџ””', 'рџ’Ў',
-    'рџљЂ', 'рџЋ‰', 'рџЋЉ', 'рџЋ€', 'рџЋЃ', 'рџЋЇ', 'рџ”®', 'рџЊџ',
-    'рџ“Њ', 'рџ“Ќ', 'рџ”—', 'вљ™пёЏ', 'рџ› пёЏ', 'рџ”§', 'вљЎ', 'рџ’¬',
-    'рџ“§', 'рџ“¬', 'рџ“Є', 'рџ“«', 'рџ“®', 'рџ“¤', 'рџ“Ґ', 'рџ“¦',
-    'рџЋЁ', 'рџЋ­', 'рџЋЄ', 'рџЋ¬', 'рџЋµ', 'рџЋё', 'рџЋ№', 'рџЋ¤',
-  ];
-  
   $: filteredLucide = searchQuery
     ? lucideIcons.filter(icon => icon.includes(searchQuery.toLowerCase()))
     : lucideIcons;
     
-  $: filteredEmojis = emojis; // Emoji search can be added later
+  const filteredEmojis = AGENDA_EMOJIS; // Emoji search can be added later
   
   function selectIcon(type: 'lucide' | 'emoji', value: string) {
     const icon: AgendaIcon = { type, value };
@@ -53,7 +44,8 @@
   }
   
   function isSelected(type: string, value: string): boolean {
-    return currentIcon?.type === type && currentIcon?.value === value;
+    if (currentIcon?.type !== type) return false;
+    return (type === 'emoji' ? agendaEmoji(currentIcon.value) : currentIcon.value) === value;
   }
 </script>
 

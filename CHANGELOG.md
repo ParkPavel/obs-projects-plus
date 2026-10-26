@@ -91,6 +91,13 @@ mean that a new release has been published.
 - The view tabs sit in the header in place of "Projects".
 - The suggestion list opens above its field, follows it and keeps typed text. Search no longer overwrites
   what is being typed. The field list in view settings is one line per field.
+- A value box offers the same values in every filter — the view's filter, colour rules, agenda lists — and
+  in the note editor: the values the project's notes hold for the field, after the options its settings
+  declare. The agenda no longer adds every note of the vault (other projects included). Notes in the
+  Templates or Templater folder and template text (`<% %>`, `{{ }}`) are never offered, in the note header
+  either.
+- The agenda's icon picker shows its emoji again (they were broken text); a list saved with a broken emoji
+  shows it as the emoji it was.
 
 ## 3.7.0 — 2026-10-05
 

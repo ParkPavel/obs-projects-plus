@@ -13,6 +13,8 @@
   import { getOperatorsForField, getOperatorLabel, getFieldIcon } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
   import { operatorNeedsValue } from "src/settings/base/settings";
   import ValueSuggestField from "src/ui/components/fields/ValueSuggestField.svelte";
+  import { app } from "src/lib/stores/obsidian";
+  import { templateFoldersOf, valueSuggestions } from "src/lib/suggestions/valueSuggestions";
 
   export let value: FilterDefinition | undefined;
   export let fields: Array<{ name: string; type: string }> = [];
@@ -175,41 +177,10 @@
     return fields.find(f => f.name === fieldName)?.type ?? 'string';
   }
 
-  // ── Value suggestions ──
-  function getValueSuggestions(fieldName: string): string[] {
-    if (!fieldName || records.length === 0) return [];
-    const vals = new Set<string>();
-    for (const record of records) {
-      const raw = record.values[fieldName];
-      if (raw == null) continue;
-      if (Array.isArray(raw)) {
-        raw.forEach(v => { const s = String(v).trim(); if (s) vals.add(s); });
-      } else {
-        let s = String(raw);
-        const m = s.match(/^\[\[([^\]]+)\]\]$/);
-        if (m?.[1]) { const inner = m[1]; const pipe = inner.indexOf('|'); s = pipe >= 0 ? inner.substring(pipe + 1) : inner; }
-        s = s.trim();
-        if (s && s !== 'undefined' && s !== 'null') vals.add(s);
-      }
-    }
-    return [...vals].sort();
-  }
-
-  // The suggestions of a field are read from every record; a row re-renders on
-  // each edit, so they are computed once per field for one set of records.
-  let suggestionsOf: DataRecord[] | null = null;
-  let suggestionCache = new Map<string, string[]>();
-  function suggestionsFor(fieldName: string, source: DataRecord[]): string[] {
-    if (source !== suggestionsOf) {
-      suggestionsOf = source;
-      suggestionCache = new Map();
-    }
-    let hit = suggestionCache.get(fieldName);
-    if (!hit) {
-      hit = getValueSuggestions(fieldName);
-      suggestionCache.set(fieldName, hit);
-    }
-    return hit;
+  // ── Value suggestions: the project's values and the field's options (one shared memo) ──
+  $: templateFolders = templateFoldersOf($app);
+  function suggestionsFor(fieldName: string, source: DataRecord[], folders: readonly string[]): string[] {
+    return valueSuggestions(source, fields.find((f) => f.name === fieldName), { templateFolders: folders });
   }
 
   // ═══════════════════════════════
@@ -351,7 +322,7 @@
             {#if needsVal}
               <ValueSuggestField
                 value={condition.value ?? ''}
-                suggestions={suggestionsFor(condition.field, records)}
+                suggestions={suggestionsFor(condition.field, records, templateFolders)}
                 placeholder={$i18n.t('common.value-placeholder')}
                 ariaLabel={$i18n.t('common.value-placeholder')}
                 on:input={(e) => updateCondition(index, { value: e.detail }, [], true)}
@@ -441,7 +412,7 @@
                   {#if gNeedsVal}
                     <ValueSuggestField
                       value={gCond.value ?? ''}
-                      suggestions={suggestionsFor(gCond.field, records)}
+                      suggestions={suggestionsFor(gCond.field, records, templateFolders)}
                       placeholder={$i18n.t('common.value-placeholder')}
                       ariaLabel={$i18n.t('common.value-placeholder')}
                       on:input={(e) => updateCondition(cIdx, { value: e.detail }, [gIndex], true)}
@@ -528,7 +499,7 @@
                         {#if nNeedsVal}
                           <ValueSuggestField
                             value={nCond.value ?? ''}
-                            suggestions={suggestionsFor(nCond.field, records)}
+                            suggestions={suggestionsFor(nCond.field, records, templateFolders)}
                             placeholder={$i18n.t('common.value-placeholder')}
                             ariaLabel={$i18n.t('common.value-placeholder')}
                             on:input={(e) => updateCondition(nCIdx, { value: e.detail }, nPath, true)}

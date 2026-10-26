@@ -8,6 +8,7 @@
   import type { DataRecord } from 'src/lib/dataframe/dataframe';
   import type { AgendaCustomList } from 'src/settings/v3/settings';
   import { filterRecordsForList } from './filterEngine';
+  import { agendaEmoji } from './agendaEmoji';
   import {
     createLongPressHandler,
   } from './TouchDndCoordinator';
@@ -180,7 +181,7 @@
         <Icon name={collapsed ? 'chevron-right' : 'chevron-down'} size="xs" />
       </span>
       {#if list.icon.type === 'emoji'}
-        <span class="list-icon-emoji">{list.icon.value}</span>
+        <span class="list-icon-emoji">{agendaEmoji(list.icon.value)}</span>
       {:else}
         <span class="list-icon"><Icon name={list.icon.value} size="sm" /></span>
       {/if}

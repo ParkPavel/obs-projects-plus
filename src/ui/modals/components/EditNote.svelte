@@ -14,8 +14,10 @@
   import { FieldControl } from "src/ui/components/FieldControl";
   import { isColorFieldName } from "src/lib/colors/recordColor";
   import type { DataField, DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
-  import { DataFieldType, isString } from "src/lib/dataframe/dataframe";
+  import { DataFieldType } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
+  import { app } from "src/lib/stores/obsidian";
+  import { templateFoldersOf, valueSuggestions } from "src/lib/suggestions/valueSuggestions";
   import { isTouchDevice } from "src/lib/stores/ui";
   import { dataFrame } from "src/lib/stores/dataframe";
   import { mergeExternal } from "./editNoteMerge";
@@ -75,36 +77,22 @@
     }
   }
   
-  // ========================================
-  // FIELD VALUE SUGGESTIONS
-  // Собираем уникальные значения для каждого поля из всех записей
-  // ========================================
-  $: fieldSuggestions = (() => {
+  // Field value suggestions: the project's values for each text field, templates
+  // left out — the same list the filters offer (w4-p05).
+  $: fieldSuggestions = suggestionsByField(fields, allRecords, $app);
+  function suggestionsByField(list: DataField[], source: DataRecord[], obsidianApp: unknown): Record<string, string[]> {
     const suggestions: Record<string, string[]> = {};
-    
-    fields.forEach(field => {
-      // Пропускаем поля с уже настроенными опциями
-      if (field.typeConfig?.options?.length) return;
-      // Только для строковых полей без повторений
-      if (field.type !== DataFieldType.String || field.repeated) return;
-      
-      const uniqueValues = new Set<string>();
-      
-      allRecords.forEach(rec => {
-        const val = rec.values[field.name];
-        if (isString(val) && val.trim() !== '') {
-          uniqueValues.add(val);
-        }
-      });
-      
-      // Только если есть хотя бы 2 уникальных значения для подсказок
-      if (uniqueValues.size >= 2) {
-        suggestions[field.name] = Array.from(uniqueValues).sort();
-      }
-    });
-    
+    const templateFolders = templateFoldersOf(obsidianApp);
+    for (const field of list) {
+      // A field with declared options shows those; lists and other types have their own editors.
+      if (field.typeConfig?.options?.length) continue;
+      if (field.type !== DataFieldType.String || field.repeated) continue;
+      const values = valueSuggestions(source, field, { templateFolders });
+      // Only a choice of at least two values is offered.
+      if (values.length >= 2) suggestions[field.name] = values;
+    }
     return suggestions;
-  })();
+  }
   
   // ========================================
   // REACTIVITY FIX: Force UI updates on value changes

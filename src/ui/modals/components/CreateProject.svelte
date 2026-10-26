@@ -27,6 +27,7 @@
   import { app } from "src/lib/stores/obsidian";
   import { settings } from "src/lib/stores/settings";
   import { interpolateTemplate } from "src/lib/templates/interpolate";
+  import { agendaEmoji } from "src/ui/views/Calendar/agenda/agendaEmoji";
   import { getAPI, isPluginEnabled } from "obsidian-dataview";
   import type { ProjectDefinition } from "src/settings/settings";
   import type {
@@ -1006,7 +1007,7 @@
                     <div class="list-item">
                       <div class="list-icon">
                         {#if list.icon.type === 'emoji'}
-                          <span class="emoji">{list.icon.value}</span>
+                          <span class="emoji">{agendaEmoji(list.icon.value)}</span>
                         {:else}
                           <Icon name={list.icon.value} size="sm" />
                         {/if}

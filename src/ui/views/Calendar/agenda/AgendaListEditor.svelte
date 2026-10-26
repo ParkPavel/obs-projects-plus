@@ -8,6 +8,7 @@
   import AgendaFilterEditor from './AgendaFilterEditor.svelte';
   import AdvancedFilterEditor from './AdvancedFilterEditor.svelte';
   import AgendaIconPicker from './AgendaIconPicker.svelte';
+  import { agendaEmoji } from './agendaEmoji';
   import { calendarLogger } from '../logger';
   
   // Generate unique ID
@@ -205,7 +206,7 @@
       >
         <span class="icon-preview">
           {#if formData.icon.type === 'emoji'}
-            <span class="icon-emoji">{formData.icon.value}</span>
+            <span class="icon-emoji">{agendaEmoji(formData.icon.value)}</span>
           {:else}
             <Icon name={formData.icon.value} size="md" />
           {/if}
@@ -267,7 +268,7 @@
           <span class="preview-label">{$i18n.t('views.calendar.agenda.custom.list-editor.preview')}</span>
           <div class="preview-card">
             {#if formData.icon.type === 'emoji'}
-              <span class="preview-icon">{formData.icon.value}</span>
+              <span class="preview-icon">{agendaEmoji(formData.icon.value)}</span>
             {:else}
               <Icon name={formData.icon.value} size="sm" />
             {/if}

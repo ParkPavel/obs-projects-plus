@@ -9,12 +9,15 @@
  * on every ask and always come first, so an edit in this note shows at once.
  */
 
+import { inTemplateFolder } from "src/lib/suggestions/valueSuggestions";
 import { inScope, valuesForKey, type NoteScope } from "./noteProperties";
 
 export interface UsedValuesSource {
   /** Every markdown file of the vault. */
   files(): ReadonlyArray<{ path: string }>;
   frontmatterOf(file: { path: string }): Record<string, unknown> | null | undefined;
+  /** w4-p05: folders whose notes are templates; their values are never offered. */
+  templateFolders?(): readonly string[];
 }
 
 export interface UsedValuesCache {
@@ -50,10 +53,11 @@ export function createUsedValuesCache(
     const hit = memo.get(id);
     if (hit) return hit;
     scanCount += 1;
+    const templates = source.templateFolders?.() ?? [];
     const values = valuesForKey(
       source
         .files()
-        .filter((f) => f.path !== path && inScope(f.path, scope))
+        .filter((f) => f.path !== path && inScope(f.path, scope) && !inTemplateFolder(f.path, templates))
         .map((f) => source.frontmatterOf(f)),
       key,
       LIMIT,

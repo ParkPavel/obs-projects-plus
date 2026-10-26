@@ -1,7 +1,7 @@
 ﻿<script lang="ts">
   /**
    * MultiDayEventStrip - Horizontal strip for multi-day events in day header
-   * Per ROADMAP_V3.0.0 В§2.8 - РњРЅРѕРіРѕРґРЅРµРІРЅС‹Рµ СЃРѕР±С‹С‚РёСЏ РІ С€Р°РїРєРµ
+   * Per ROADMAP_V3.0.0 §2.8 - Многодневные события в шапке
    * 
    * Each day renders its own segment of the multi-day event strip.
    * The strip spans across multiple day columns in the header area.
@@ -50,7 +50,7 @@
   function handleClick(e: MouseEvent) {
     e.stopPropagation();
     if (onClick) {
-      // v3.0.8: Unified navigation вЂ” Shift в†’ window, Ctrl в†’ tab, else в†’ default
+      // v3.0.8: Unified navigation — Shift → window, Ctrl → tab, else → default
       const openMode: false | 'tab' | 'window' = e.shiftKey ? 'window' : (e.ctrlKey || e.metaKey) ? 'tab' : false;
       onClick(openMode);
     }
@@ -231,7 +231,7 @@
     font-size: 0.5625rem;
   }
 
-  /* в”Ђв”Ђ v3.2.0 Iteration 5: DnD states в”Ђв”Ђ */
+  /* ── v3.2.0 Iteration 5: DnD states ── */
   .projects-calendar-multiday-strip.dnd-grab {
     cursor: grab;
   }
@@ -240,7 +240,7 @@
     pointer-events: none;
   }
 
-  /* Reset browser/theme focus outline вЂ” use outline only for keyboard navigation */
+  /* Reset browser/theme focus outline — use outline only for keyboard navigation */
   button.projects-calendar-multiday-strip:focus-visible {
     outline: 0.125rem solid var(--strip-color);
     outline-offset: 0.0625rem;
@@ -253,7 +253,7 @@
     opacity: 1;
   }
 
-  /* Left triangle вЂ” startDate edge */
+  /* Left triangle — startDate edge */
   .resize-handle-start {
     position: absolute;
     top: 0;
@@ -269,7 +269,7 @@
     pointer-events: auto;
   }
 
-  /* Right triangle вЂ” endDate edge */
+  /* Right triangle — endDate edge */
   .resize-handle-end {
     position: absolute;
     bottom: 0;

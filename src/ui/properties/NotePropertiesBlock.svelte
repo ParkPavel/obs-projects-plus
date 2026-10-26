@@ -64,6 +64,7 @@
   import ChipsEditor from "./ChipsEditor.svelte";
   import { createWriteQueue } from "./writeQueue";
   import { createUsedValuesCache } from "./usedValuesCache";
+  import { templateFoldersOf } from "src/lib/suggestions/valueSuggestions";
   import {
     dateToCellText,
     draftOf,
@@ -122,6 +123,7 @@
     files: () => app.vault.getMarkdownFiles?.() ?? [],
     frontmatterOf: (f) =>
       app.metadataCache.getFileCache(f as TFile)?.frontmatter as Record<string, unknown> | undefined,
+    templateFolders: () => templateFoldersOf(app),
   });
 
   $: t = $i18n.t.bind($i18n);

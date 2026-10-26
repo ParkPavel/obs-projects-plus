@@ -1,6 +1,5 @@
 ﻿<script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  import type { TFile } from 'obsidian';
   import { Icon } from 'obsidian-svelte';
   import FloatingPopup from 'src/ui/components/FloatingPopup/FloatingPopup.svelte';
   import PopoverList, { type PopoverItem } from 'src/ui/components/FloatingPopup/PopoverList.svelte';
@@ -12,6 +11,7 @@
   import { getOperatorsForFieldType } from './operatorHelpers';
   import { operatorNeedsValue } from 'src/settings/base/settings';
   import DateFormulaInput from './DateFormulaInput.svelte';
+  import { templateFoldersOf, valueSuggestions as projectValueSuggestions } from 'src/lib/suggestions/valueSuggestions';
   
   const dispatch = createEventDispatcher<{
     update: AgendaFilter;
@@ -25,13 +25,13 @@
   
   const t = (key: string) => $i18n.t(`views.calendar.agenda.custom.filter-editor.${key}`);
   
-  /* в”Ђв”Ђ State в”Ђв”Ђ */
+  /* ── State ── */
   let showFieldDropdown = false;
   let showOperatorDropdown = false;
   let fieldTriggerEl: HTMLButtonElement | null = null;
   let operatorTriggerEl: HTMLButtonElement | null = null;
 
-  /* в”Ђв”Ђ Reactive data в”Ђв”Ђ */
+  /* ── Reactive data ── */
   $: currentField = fields.find(f => f.name === filter.field);
   $: operators = currentField ? getOperatorsForFieldType(currentField.type) : [];
   $: operatorItems = operators.map((op): PopoverItem => ({
@@ -47,7 +47,7 @@
     handler: () => selectField(f.name),
   }));
 
-  /* в”Ђв”Ђ Icon helper в”Ђв”Ђ */
+  /* ── Icon helper ── */
   function getFieldIconName(field: DataField | undefined): string {
     if (!field) return 'file-text';
     if (field.name === 'file' || field.name === 'File') return 'file';
@@ -70,7 +70,7 @@
     return op.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
 
-  /* в”Ђв”Ђ Toggle functions в”Ђв”Ђ */
+  /* ── Toggle functions ── */
   function openFieldDropdown() {
     closeOperatorDropdown();
     showFieldDropdown = !showFieldDropdown;
@@ -90,7 +90,7 @@
     showOperatorDropdown = false;
   }
 
-  /* в”Ђв”Ђ Selection handlers в”Ђв”Ђ */
+  /* ── Selection handlers ── */
   function selectField(name: string) {
     const newField = fields.find(f => f.name === name);
     if (!newField) return;
@@ -124,104 +124,12 @@
     dispatch('update', { ...filter, value });
   }
   
-  /** Collect unique field values from records + vault for suggestions */
-  function getValueSuggestions(): string[] {
-    if (!currentField) return [];
-    const fieldName = currentField.name;
-    const MAX_SUGGESTIONS = 200;
-    
-    // Boolean field: offer true/false
-    if (currentField.type === DataFieldType.Boolean) {
-      return ['true', 'false'];
-    }
-    
-    const values = new Set<string>();
-    
-    // в”Ђв”Ђ Primary source: actual DataRecords (most reliable) в”Ђв”Ђ
-    if (records.length > 0) {
-      for (const record of records) {
-        const raw = record.values[fieldName];
-        if (raw == null) continue;
-        
-        // Strip wiki-link: [[path|display]] в†’ display
-        let val: string;
-        if (typeof raw === 'string') {
-          const m = raw.match(/^\[\[([^\]]+)\]\]$/);
-          if (m && m[1]) {
-            const inner = m[1];
-            const pipe = inner.indexOf('|');
-            val = pipe >= 0 ? inner.substring(pipe + 1) : inner;
-          } else {
-            val = raw;
-          }
-        } else if (Array.isArray(raw)) {
-          raw.forEach(v => {
-            const s = String(v).trim();
-            if (s && s !== 'undefined' && s !== 'null') values.add(s);
-          });
-          continue;
-        } else {
-          val = String(raw);
-        }
-        
-        const trimmed = val.trim();
-        if (trimmed && trimmed !== 'undefined' && trimmed !== 'null') {
-          values.add(trimmed);
-        }
-      }
-    }
-    
-    // в”Ђв”Ђ Secondary source: vault frontmatter scan (supplements records) в”Ђв”Ђ
-    if ($app && values.size < MAX_SUGGESTIONS) {
-      const vault = $app.vault;
-      const metadataCache = $app.metadataCache;
-      
-      // Special handling for tags field
-      if (fieldName === 'tags' && currentField.repeated) {
-        vault.getMarkdownFiles().forEach((file: TFile) => {
-          const cache = metadataCache.getFileCache(file);
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Obsidian CachedMetadata tags type
-          if (cache?.['tags']) {
-            cache['tags'].forEach((tag: any) => { values.add(tag.tag); });
-          }
-          if (cache?.frontmatter?.['tags']) {
-            const tags = Array.isArray(cache.frontmatter['tags'])
-              ? cache.frontmatter['tags']
-              : [cache.frontmatter['tags']];
-            tags.forEach((tag: string) => values.add(typeof tag === 'string' ? `#${tag}` : tag));
-          }
-        });
-      } else {
-        vault.getMarkdownFiles().forEach((file: TFile) => {
-          if (values.size >= MAX_SUGGESTIONS) return;
-          const cache = metadataCache.getFileCache(file);
-          const fv = cache?.frontmatter?.[fieldName];
-          if (fv != null) {
-            if (Array.isArray(fv)) {
-              fv.forEach(v => {
-                const s = String(v).trim();
-                if (s && s !== 'undefined' && s !== 'null') values.add(s);
-              });
-            } else {
-              const s = String(fv).trim();
-              if (s && s !== 'undefined' && s !== 'null') values.add(s);
-            }
-          }
-        });
-      }
-    }
-    
-    const sorted = Array.from(values).sort();
-    return sorted.length > MAX_SUGGESTIONS ? sorted.slice(0, MAX_SUGGESTIONS) : sorted;
-  }
-  
-  // The suggestions follow the field, the records and the vault; `currentField` is a
-  // new object on every edit of the row, so the key is its name: typing must not rescan
-  // the vault on each keystroke.
-  $: suggestionField = currentField?.name;
-  $: valueSuggestions = collectSuggestions(suggestionField, records, $app);
-  function collectSuggestions(_name: string | undefined, _records: DataRecord[], _app: unknown): string[] {
-    return getValueSuggestions();
+  // The values the project's records hold for the field, after its declared options;
+  // templates never count (w4-p05). One memo per set of records, shared with the
+  // filter panel and the colour rules, so typing does not rebuild the list.
+  $: valueSuggestions = suggestionsOf(records, currentField, $app);
+  function suggestionsOf(source: DataRecord[], field: DataField | undefined, obsidianApp: unknown): string[] {
+    return projectValueSuggestions(source, field, { templateFolders: templateFoldersOf(obsidianApp) });
   }
 
 </script>
@@ -340,7 +248,7 @@
     opacity: 1;
   }
   
-  /* в”Ђв”Ђ Disabled filter row в”Ђв”Ђ */
+  /* ── Disabled filter row ── */
   .filter-row--disabled {
     opacity: 0.5;
   }
@@ -351,7 +259,7 @@
     pointer-events: none;
   }
   
-  /* в”Ђв”Ђ Row prefix (Р“РґРµ / Рё) в”Ђв”Ђ */
+  /* ── Row prefix (Где / и) ── */
   .row-prefix {
     flex-shrink: 0;
     width: 2rem;
@@ -362,9 +270,9 @@
     user-select: none;
   }
   
-  /* в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
-     CHIP BUTTONS вЂ” pill selectors
-     в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ */
+  /* ═══════════════════════════════════════
+     CHIP BUTTONS — pill selectors
+     ═══════════════════════════════════════ */
   .chip-wrapper {
     position: relative;
     flex-shrink: 0;
@@ -423,9 +331,9 @@
     font-weight: 500;
   }
   
-  /* в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
-     VALUE вЂ” inline text input
-     в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ */
+  /* ═══════════════════════════════════════
+     VALUE — inline text input
+     ═══════════════════════════════════════ */
   .value-area {
     flex: 1;
     min-width: 5rem;
@@ -439,9 +347,9 @@
     padding: 0.25rem 0.5rem;
   }
   
-  /* в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
-     DELETE вЂ” trash icon (hidden until row hover)
-     в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ */
+  /* ═══════════════════════════════════════
+     DELETE — trash icon (hidden until row hover)
+     ═══════════════════════════════════════ */
   .row-toggle {
     flex-shrink: 0;
     color: var(--text-faint);
@@ -474,9 +382,9 @@
     background: rgba(var(--color-red-rgb, 255, 0, 0), 0.06);
   }
   
-  /* в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+  /* ═══════════════════════════════════════
      TOUCH DEVICES
-     в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ */
+     ═══════════════════════════════════════ */
   @media (pointer: coarse) {
     .filter-row {
       gap: 0.25rem;
