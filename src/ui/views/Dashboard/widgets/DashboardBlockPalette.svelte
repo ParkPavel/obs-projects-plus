@@ -23,6 +23,8 @@
   export let open = false;
   /** i3-close: where the menu opens when it was not opened by this «+». */
   export let anchorEl: HTMLElement | null = null;
+  /** w4-p10 (N7): where the block goes, named in the list ("After «Services»"). */
+  export let placeLabel = "";
 
   let triggerEl: HTMLButtonElement | null = null;
 
@@ -50,6 +52,7 @@
 
   <FloatingPopup triggerEl={anchorEl ?? triggerEl} bind:open placement="bottom-start" role="menu" ariaLabel={label}>
     <div class="ppp-block-insert__list">
+      {#if placeLabel}<div class="ppp-block-insert__place" data-insert-place>{placeLabel}</div>{/if}
       {#each choices as choice (choice.type)}
         <button
           class="ppp-block-insert__item"
@@ -116,5 +119,6 @@
   .ppp-block-insert__icon { flex-shrink: 0; color: var(--text-muted); }
   .ppp-block-insert__text { display: flex; flex-direction: column; align-items: flex-start; gap: 0.125rem; min-width: 0; }
   .ppp-block-insert__label { font-size: var(--font-ui-small); }
+  .ppp-block-insert__place { padding: 0.25em 0.5em; font-size: var(--font-ui-smaller); color: var(--text-muted); }
   .ppp-block-insert__desc { font-size: var(--font-ui-smaller); color: var(--text-muted); }
 </style>

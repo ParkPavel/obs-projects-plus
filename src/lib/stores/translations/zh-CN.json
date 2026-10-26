@@ -1082,6 +1082,9 @@
                 },
                 "insert": {
                     "here": "在此添加区块",
+                    "after": "在“{{name}}”之后",
+                    "start": "在开头",
+                    "block": "区块",
                     "add": "添加区块",
                     "database": "数据库",
                     "database-desc": "由笔记生成的表格、看板或日历",

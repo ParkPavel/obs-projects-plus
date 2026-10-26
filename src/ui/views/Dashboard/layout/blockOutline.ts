@@ -19,6 +19,12 @@ export interface BlockOutline {
   readonly jump: (id: string) => void;
   /** The block that holds most of the visible page now, or null. */
   readonly current: () => string | null;
+  /**
+   * w4-p10 (N7): opens the block palette for a block placed after the selected
+   * block, else after the one most on screen, anchored to `anchor`; absent on a
+   * read-only page.
+   */
+  readonly insert?: ((anchor: HTMLElement | null) => void) | undefined;
 }
 
 export const BLOCK_OUTLINE_KEY = Symbol("ppp-block-outline");

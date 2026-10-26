@@ -9,11 +9,13 @@
   import ViewSpecificActions from "./ViewSpecificActions.svelte";
   import SaveStatusChip from "src/ui/components/SaveStatus/SaveStatusChip.svelte";
   import BlockOutlineButton from "src/ui/views/Dashboard/layout/BlockOutlineButton.svelte";
+  import { i18n } from "src/lib/stores/i18n";
   import { blockOutlineStore } from "src/ui/views/Dashboard/layout/blockOutline";
 
   // w4-p10a (N15): a dashboard's table of contents, when the view publishes one.
   const outlineStore = blockOutlineStore();
   $: outline = outlineStore ? $outlineStore : null;
+  let addBlockEl: HTMLButtonElement | null = null;
 
   export let views: ViewDefinition[] = [];
   export let viewId: ViewId | undefined;
@@ -57,8 +59,15 @@
     />
   </div>
 
-  {#if outline}
+  {#if outline && outline.items.length > 1}
     <BlockOutlineButton {outline} />
+  {/if}
+  {#if outline?.insert}
+    <!-- w4-p10 (N7): «+ Block» after the selected block, else the one on screen. -->
+    <button bind:this={addBlockEl} type="button" class="ppp-block-add clickable-icon" data-block-add
+      aria-label={$i18n.t("views.dashboard.insert.add", { defaultValue: "Add block" })}
+      title={$i18n.t("views.dashboard.insert.add", { defaultValue: "Add block" })}
+      on:click={() => outline?.insert?.(addBlockEl)}>+ {$i18n.t("views.dashboard.insert.block", { defaultValue: "Block" })}</button>
   {/if}
 
   <div class="right">

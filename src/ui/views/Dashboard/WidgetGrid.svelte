@@ -27,6 +27,7 @@
   import { createEventDispatcher, onDestroy } from "svelte";
   import { dragHandleZone, SOURCES, TRIGGERS, type DndEvent } from "svelte-dnd-action";
   import { Icon } from "obsidian-svelte";
+  import { Platform } from "obsidian";
   import { ignoreHostSwipe } from "src/ui/actions/ignoreHostSwipe";
   import { createReorderCollapse, type ReorderCollapse } from "./reorderCollapse";
   import { measureWidth } from "./layout/measureWidth";
@@ -79,8 +80,31 @@
   // The end palette opens at the tile with the position after it; the choice
   // goes out as the same `insert` the in-between «+» of the stack sends.
   let paletteOpen = false;
-  let insertAt: { index: number; anchor: HTMLElement | null } | null = null;
+  let insertAt: { index: number; anchor: HTMLElement | null; label?: string } | null = null;
   $: if (!paletteOpen) insertAt = null;
+
+  // ── w4-p10 (N7, Codex design C): the selected block and «+ Block» ──
+  // A tap or click on a block's header (not on its buttons) selects it: a thin
+  // frame marks it until another is picked, it is removed, or the view goes.
+  // «+ Block» in the plugin bar inserts after the selected block, else after
+  // the one most on screen; the palette names the place.
+  let selectedId: string | null = null;
+  $: if (selectedId && !dndWidgets.some((w) => w.id === selectedId)) selectedId = null;
+  function selectFromHeader(e: Event, id: string): void {
+    const target = e.target as Element | null;
+    if (!target?.closest?.(".ppp-widget-header")) return;
+    if (target.closest("button, input, select, textarea, a, [role='button'], [contenteditable='true']")) return;
+    selectedId = id;
+  }
+  function openInsert(anchor: HTMLElement | null): void {
+    const ids = dndWidgets.map((w) => w.id);
+    const target = selectedId ?? mostVisibleBlock(canvasEl, visibleViewport(canvasEl?.ownerDocument.defaultView ?? window));
+    const name = dndWidgets.find((w) => w.id === target)?.title?.trim();
+    insertAt = target
+      ? { index: insertIndexAfter(ids, target), anchor, label: $i18n.t("views.dashboard.insert.after", { name: name || String(ids.indexOf(target) + 1), defaultValue: "After «{{name}}»" }) }
+      : { index: 0, anchor, label: $i18n.t("views.dashboard.insert.start", { defaultValue: "At the start" }) };
+    paletteOpen = true;
+  }
   provideBlockInsert({
     available: () => tileMode && canDnd && !readonly,
     after: (id, anchor) => {
@@ -162,11 +186,12 @@
   // The carousel row of titles is gone.
   const outlineStore = blockOutlineStore();
   $: jumpList = widgets.length > 1 ? jumpItems(widgets) : [];
-  $: outline = jumpList.length > 0
+  $: outline = widgets.length > 0
     ? {
         items: jumpList,
         jump: (id: string) => { jumpToBlock(canvasEl, id); },
         current: () => mostVisibleBlock(canvasEl, visibleViewport(canvasEl?.ownerDocument.defaultView ?? window)),
+        insert: canDnd && !readonly ? openInsert : undefined,
       }
     : null;
   $: outlineStore?.set(outline);
@@ -280,7 +305,7 @@
   </EmptyState>
   <slot name="empty-extra" />
 {:else}
-  {#if outline && !outlineStore}
+  {#if outline && outline.items.length > 0 && !outlineStore}
     <div class="ppp-block-outline-row"><BlockOutlineButton {outline} /></div>
   {/if}
   {#if canDnd}
@@ -303,11 +328,16 @@
     on:finalize={onFinalize}
   >
     {#each dndWidgets as widget, index (widget.id)}
-      <div class="ppp-block-slot" style:grid-column={areas[index]?.column} style:grid-row={areas[index]?.row}>
+      <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+      <div class="ppp-block-slot" class:ppp-block-slot--selected={selectedId === widget.id}
+        style:grid-column={areas[index]?.column} style:grid-row={areas[index]?.row}
+        on:click={(e) => selectFromHeader(e, widget.id)}
+        on:focusin={(e) => selectFromHeader(e, widget.id)}>
       <!-- i3-dash: in tiles a block is inserted with the «+» after the grid;
            a «+» inside every tile would sit on top of its content.
            i3-close: or after a given tile, from its menu (layout/blockInsert.ts). -->
-      {#if !tileMode}<DashboardBlockPalette variant="between" {index} currentWidgets={dndWidgets} on:insert />{/if}
+      <!-- w4-p10 (N7): no «+» between blocks on a phone — «+ Block» in the bar. -->
+      {#if !tileMode && !Platform.isPhone}<DashboardBlockPalette variant="between" {index} currentWidgets={dndWidgets} on:insert />{/if}
       <WidgetHost
         reorderable={!widget.layout?.locked}
         {widget}
@@ -352,6 +382,7 @@
     <DashboardBlockPalette
       index={insertAt?.index ?? dndWidgets.length}
       anchorEl={insertAt?.anchor ?? null}
+      placeLabel={insertAt?.label ?? ""}
       bind:open={paletteOpen}
       currentWidgets={dndWidgets}
       on:insert
@@ -523,5 +554,11 @@
   .ppp-block-outline-row {
     display: flex;
     padding: 0.25em 0;
+  }
+  /* w4-p10 (N7): the selected block — where «+ Block» inserts after. */
+  .ppp-block-slot--selected {
+    outline: var(--ppp-border-width) solid var(--interactive-accent);
+    outline-offset: 0.125em;
+    border-radius: var(--radius-m);
   }
 </style>

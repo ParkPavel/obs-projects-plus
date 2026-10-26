@@ -62,6 +62,9 @@ mean that a new release has been published.
 
 ### Dashboard and data
 
+- "+ Block" in the plugin's bar adds a block after the selected one (a tap or click on a block's header
+  selects it, a thin frame marks it), else after the block most on screen; the block list names the place.
+  On a phone the "+" between blocks is gone.
 - A block's filter is one button with the number of active conditions, in the row of the block's views —
   the row of filter pills is gone. The table's search folds away keeping its query (the button is marked);
   the field's ×, or Escape, ends it.

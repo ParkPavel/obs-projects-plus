@@ -1043,6 +1043,9 @@
                 },
                 "insert": {
                     "here": "Add a block here",
+                    "after": "After «{{name}}»",
+                    "start": "At the start",
+                    "block": "Block",
                     "add": "Add block",
                     "database": "Database",
                     "database-desc": "Table, board or calendar built from notes",
