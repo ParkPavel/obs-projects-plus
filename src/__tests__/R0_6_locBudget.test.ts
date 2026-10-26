@@ -65,7 +65,6 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   { file: "ui/views/Dashboard/layout/blockJump.ts", maxLines: 29 },
   // i3-close: «Insert block after» enters at its measured size.
   { file: "ui/views/Dashboard/layout/blockInsert.ts", maxLines: 40 },
-  { file: "ui/views/Dashboard/layout/BlockJumpBar.svelte", maxLines: 90 },
   { file: "ui/views/Dashboard/widgets/Stats/statsDefaults.ts", maxLines: 18 },
   { file: "ui/views/Dashboard/widgets/Stats/statsSparkline.ts", maxLines: 35 },
   { file: "ui/views/Dashboard/widgets/Stats/StatsWidget.svelte", maxLines: 100 },

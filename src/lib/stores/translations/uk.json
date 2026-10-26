@@ -1146,7 +1146,9 @@
                     "add-widget": "Додати віджет",
                     "error-add-field": "Не вдалося додати поле. Спробуйте ще раз.",
                     "error-reopen-schema": "Не вдалося знову відкрити схему.",
-                    "jump-bar": "Блоки на сторінці"
+                    "jump-bar": "Блоки на сторінці",
+                    "blocks": "Блоки",
+                    "collapsed-block": "згорнутий"
                 },
                 "field-presets": {
                     "label": "Макет",

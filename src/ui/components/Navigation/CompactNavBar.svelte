@@ -8,6 +8,12 @@
   import SettingsMenuButton from "./SettingsMenuButton.svelte";
   import ViewSpecificActions from "./ViewSpecificActions.svelte";
   import SaveStatusChip from "src/ui/components/SaveStatus/SaveStatusChip.svelte";
+  import BlockOutlineButton from "src/ui/views/Dashboard/layout/BlockOutlineButton.svelte";
+  import { blockOutlineStore } from "src/ui/views/Dashboard/layout/blockOutline";
+
+  // w4-p10a (N15): a dashboard's table of contents, when the view publishes one.
+  const outlineStore = blockOutlineStore();
+  $: outline = outlineStore ? $outlineStore : null;
 
   export let views: ViewDefinition[] = [];
   export let viewId: ViewId | undefined;
@@ -50,6 +56,10 @@
       onSelect={(id) => dispatch("viewChange", id)}
     />
   </div>
+
+  {#if outline}
+    <BlockOutlineButton {outline} />
+  {/if}
 
   <div class="right">
     <SaveStatusChip />

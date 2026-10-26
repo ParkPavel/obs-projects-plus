@@ -11,7 +11,9 @@ import "@testing-library/jest-dom";
 import { fireEvent, render } from "@testing-library/svelte";
 import { tick } from "svelte";
 
+import { get, writable } from "svelte/store";
 import { jumpItems, jumpToBlock } from "../layout/blockJump";
+import { BLOCK_OUTLINE_KEY } from "../layout/blockOutline";
 import { createBlockProperties, readsHostProject } from "../layout/blockProperties";
 import { buildWidgetMenuEntries } from "../widgets/widgetMenu";
 
@@ -21,7 +23,7 @@ jest.mock("src/lib/stores/i18n", () => {
 });
 jest.mock("../widgets/WidgetHost.svelte", () => require("./mocks/WidgetHost.mock.svelte"));
 
-const BlockJumpBar = require("../layout/BlockJumpBar.svelte").default;
+const BlockOutlineButton = require("../layout/BlockOutlineButton.svelte").default;
 const WidgetGrid = require("../WidgetGrid.svelte").default;
 const DashboardToolbar = require("../DashboardToolbar.svelte").default;
 
@@ -71,40 +73,67 @@ describe("jumpItems / jumpToBlock", () => {
   });
 });
 
-describe("BlockJumpBar", () => {
-  it("renders one button per block, a number for an untitled one, and reports the pick", async () => {
-    const view = render(BlockJumpBar, { props: { items: jumpItems(blocks) } });
-    const buttons = Array.from(view.container.querySelectorAll<HTMLButtonElement>(".ppp-block-jump__item"));
-    expect(buttons.map((b) => b.textContent)).toEqual(["Totals", "Tasks", "3"]);
-    expect(buttons[1]).toHaveClass("ppp-block-jump__item--collapsed");
-    expect(view.container.querySelector("nav")).toHaveAttribute("aria-label", "Blocks on this page");
-    const onJump = jest.fn();
-    view.component.$on("jump", onJump);
-    await fireEvent.click(buttons[1]!);
-    expect(onJump.mock.calls[0][0].detail).toBe("b");
+describe("BlockOutlineButton (w4-p10a, N15) — the table of contents is one button", () => {
+  const outline = (jump = jest.fn()) => ({ items: jumpItems(blocks), jump, current: () => "b" });
+
+  it("names the blocks' count, opens them in page order, marks the current one and reports the pick", async () => {
+    const jump = jest.fn();
+    const view = render(BlockOutlineButton, { props: { outline: outline(jump) } });
+    const button = view.container.querySelector<HTMLButtonElement>(".ppp-block-outline")!;
+    expect(button).toHaveAttribute("aria-label", "Blocks on this page");
+    expect(button.querySelector(".ppp-block-outline__count")?.textContent).toBe("3");
+    await fireEvent.click(button);
+    await tick();
+    const rows = Array.from(document.querySelectorAll<HTMLElement>(".ppp-pop-item"));
+    expect(rows.map((r) => r.textContent?.trim())).toEqual(["Totals", "Tasks · collapsed", "3"]);
+    expect(rows[1]).toHaveClass("ppp-pop-item--selected");
+    await fireEvent.mouseDown(rows[2]!);
+    expect(jump).toHaveBeenCalledWith("c");
   });
 });
 
-describe("WidgetGrid — narrow page navigation", () => {
-  it("shows the jump bar above the stack and jumps to the picked block", async () => {
+describe("WidgetGrid — page navigation", () => {
+  it("without an App bar: the button above the blocks, no carousel, and a pick jumps", async () => {
     const view = mountGrid();
-    const bar = view.container.querySelector(".ppp-block-jump");
-    expect(bar).not.toBeNull();
-    // The bar precedes the canvas, so it stays at the top while the blocks scroll.
+    expect(view.container.querySelector(".ppp-block-jump")).toBeNull();
+    const button = view.container.querySelector<HTMLButtonElement>(".ppp-block-outline")!;
+    expect(button).not.toBeNull();
     const canvas = view.container.querySelector(".ppp-database-canvas--stack")!;
-    expect(bar!.compareDocumentPosition(canvas) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(button.compareDocumentPosition(canvas) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const target = canvas.querySelector<HTMLElement>('[data-widget-id="c"]')!;
     target.scrollIntoView = jest.fn();
-    await fireEvent.click(view.container.querySelector('[data-jump-id="c"]')!);
+    await fireEvent.click(button);
+    await tick();
+    await fireEvent.mouseDown(document.querySelectorAll<HTMLElement>(".ppp-pop-item")[2]!);
     await tick();
     expect(target.scrollIntoView).toHaveBeenCalledWith({ block: "start", inline: "nearest" });
     expect(document.activeElement).toBe(target);
   });
 
+  it("under an App: the grid publishes its blocks to the bar and draws no button of its own", async () => {
+    const store = writable<unknown>(null);
+    const view = render(WidgetGrid, {
+      props: {
+        widgets: blocks, dndWidgets: blocks, canDnd: true, readonly: false,
+        frame: { fields: [], records: [] }, displayFrame: { fields: [], records: [] },
+        api: {}, getRecordColor: () => null, fields: [], tableConfig: undefined,
+        primaryDataTableId: "a", fieldPresets: [], activeFieldPresetId: undefined,
+        availableSources: [], rightFrames: new Map(), project: { id: "p", name: "Plans" },
+      },
+      context: new Map([[BLOCK_OUTLINE_KEY, store]]),
+    });
+    await tick();
+    expect(view.container.querySelector(".ppp-block-outline")).toBeNull();
+    const published = get(store) as { items: Array<{ id: string }> };
+    expect(published.items.map((i) => i.id)).toEqual(["a", "b", "c"]);
+    view.unmount();
+    expect(get(store)).toBeNull();
+  });
+
   it("works on a read-only page too, and is absent for a single block", () => {
-    expect(mountGrid(blocks, true).container.querySelector(".ppp-block-jump")).not.toBeNull();
+    expect(mountGrid(blocks, true).container.querySelector(".ppp-block-outline")).not.toBeNull();
     document.body.innerHTML = "";
-    expect(mountGrid([blocks[0]!]).container.querySelector(".ppp-block-jump")).toBeNull();
+    expect(mountGrid([blocks[0]!]).container.querySelector(".ppp-block-outline")).toBeNull();
   });
 
   it("stays a stack, with no tile handles, on a canvas that has not been measured wide", () => {

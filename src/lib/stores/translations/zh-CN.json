@@ -1122,7 +1122,9 @@
                     "add-widget": "添加组件",
                     "error-add-field": "添加字段失败。请重试。",
                     "error-reopen-schema": "重新打开模式失败。",
-                    "jump-bar": "本页的区块"
+                    "jump-bar": "本页的区块",
+                    "blocks": "区块",
+                    "collapsed-block": "已折叠"
                 },
                 "field-presets": {
                     "label": "布局",

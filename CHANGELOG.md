@@ -62,6 +62,9 @@ mean that a new release has been published.
 
 ### Dashboard and data
 
+- The dashboard's table of contents is one button, "Blocks · N", in the plugin's bar (on computers too),
+  in place of the row of block titles: it lists the blocks in page order, marks the one on screen and a
+  collapsed one, and moves the page to the block picked.
 - A wide dashboard is a tile grid: resize a block by its corner, snapping to the grid. On a phone it is a
   stack with a jump bar of block titles.
 - A source's "Properties" moved from the toolbar into the block menu.

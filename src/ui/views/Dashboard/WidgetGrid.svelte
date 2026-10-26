@@ -39,7 +39,9 @@
   import WidgetHost from "./widgets/WidgetHost.svelte";
   import DashboardBlockPalette from "./widgets/DashboardBlockPalette.svelte";
   import EmptyState from "src/ui/components/EmptyState/EmptyState.svelte";
-  import BlockJumpBar from "./layout/BlockJumpBar.svelte";
+  import BlockOutlineButton from "./layout/BlockOutlineButton.svelte";
+  import { blockOutlineStore, mostVisibleBlock } from "./layout/blockOutline";
+  import { visibleViewport } from "src/ui/utils/visibleViewport";
 
   const dispatch = createEventDispatcher<{
     insert: { type: WidgetType; index: number };
@@ -154,8 +156,21 @@
     commitSpan(widget.id, start, next);
   }
 
-  // ── i3-dash: the narrow page's jump bar ──
-  $: jumpList = !tileMode && widgets.length > 1 ? jumpItems(widgets) : [];
+  // ── w4-p10a (N15): the page's table of contents ──
+  // Published to the plugin bar's "Blocks · N" (blockOutline.ts) on any width;
+  // without an App around this grid, the same button is drawn above the blocks.
+  // The carousel row of titles is gone.
+  const outlineStore = blockOutlineStore();
+  $: jumpList = widgets.length > 1 ? jumpItems(widgets) : [];
+  $: outline = jumpList.length > 0
+    ? {
+        items: jumpList,
+        jump: (id: string) => { jumpToBlock(canvasEl, id); },
+        current: () => mostVisibleBlock(canvasEl, visibleViewport(canvasEl?.ownerDocument.defaultView ?? window)),
+      }
+    : null;
+  $: outlineStore?.set(outline);
+  onDestroy(() => outlineStore?.set(null));
 
   // ── ios-g1 G1: widgets drag from the grip only ──
   //
@@ -265,8 +280,8 @@
   </EmptyState>
   <slot name="empty-extra" />
 {:else}
-  {#if jumpList.length > 0}
-    <BlockJumpBar items={jumpList} on:jump={(e) => jumpToBlock(canvasEl, e.detail)} />
+  {#if outline && !outlineStore}
+    <div class="ppp-block-outline-row"><BlockOutlineButton {outline} /></div>
   {/if}
   {#if canDnd}
   <!-- ios-g1: G1 grip-only drag (see the script), G2 interior swipes stay in
@@ -503,5 +518,10 @@
     border-radius: 0.375rem;
     background: rgba(var(--interactive-accent-rgb, 122, 104, 238), 0.06);
     opacity: 0.6;
+  }
+  /* w4-p10a: the table of contents without an App bar around the grid. */
+  .ppp-block-outline-row {
+    display: flex;
+    padding: 0.25em 0;
   }
 </style>

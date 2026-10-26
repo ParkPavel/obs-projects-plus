@@ -1080,7 +1080,9 @@
                     "empty-add-block": "Add a database",
                     "error-add-field": "Failed to add field. Please try again.",
                     "error-reopen-schema": "Failed to reopen schema.",
-                    "jump-bar": "Blocks on this page"
+                    "jump-bar": "Blocks on this page",
+                    "blocks": "Blocks",
+                    "collapsed-block": "collapsed"
                 },
                 "cover-banner-config": {
                     "src": "Image source",

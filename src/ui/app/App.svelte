@@ -32,6 +32,7 @@
   import { AddViewModal } from "src/ui/modals/addViewModal";
   import { ConfirmDialogModal } from "src/ui/modals/confirmDialog";
   import CompactNavBar from "src/ui/components/Navigation/CompactNavBar.svelte";
+  import { provideBlockOutline } from "src/ui/views/Dashboard/layout/blockOutline";
   import SettingsMenuPopover from "src/ui/components/Navigation/SettingsMenu/SettingsMenuPopover.svelte";
   import { createDemoWithNotices } from "./onboarding/demoRun";
   import ProjectsEmptyState from "./ProjectsEmptyState.svelte";
@@ -47,6 +48,9 @@
     ProjectDefinition,
     ViewId,
   } from "src/settings/settings";
+
+  // w4-p10a (N15): the bar shows a dashboard's "Blocks · N"; the view publishes them.
+  provideBlockOutline();
 
   export let projectId: ProjectId | undefined;
   export let viewId: ViewId | undefined;
