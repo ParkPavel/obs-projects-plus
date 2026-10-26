@@ -1,5 +1,5 @@
 <script context="module" lang="ts">
-  import { SOURCES, TRIGGERS } from "svelte-dnd-action";
+  import { DRAGGED_ELEMENT_ID, SOURCES, TRIGGERS } from "svelte-dnd-action";
 
   // ── ios-d1: a grip press that starts no drag must not leave the board armed ──
   //
@@ -75,7 +75,7 @@
   // arming flag (svelte-dnd-action 0.9.52, dist/index.mjs `getAddedOptions`),
   // so the `dragDisabled` a zone passes is never read. Any grip press arms every
   // zone, and the pressed item starts a drag even in a pinned or read-only
-  // column, while editing or zoomed. The zone therefore decides itself: when
+  // column or while editing. The zone therefore decides itself: when
   // it is disabled, a press (or Enter/Space) on one of its grips is stopped
   // before the grip's `dragHandle` listener, so nothing is armed.
 
@@ -84,13 +84,26 @@
     editing?: boolean;
     /** The zone is pinned or its data is read-only. */
     locked?: boolean;
-    /** Board zoom; only the column row is gated by it. */
-    zoom?: number;
   }
 
-  /** Whether a drag may not start from a zone in this state. */
+  /**
+   * Whether a drag may not start from a zone in this state. w4-p08 (N6): the
+   * board's zoom no longer forbids moving columns (it did, from ios-c1 on); the
+   * zoom is held still while a drag is under way instead (`zoomHeldByDrag`).
+   */
   export function isDragZoneDisabled(state: DragZoneState): boolean {
-    return Boolean(state.editing) || Boolean(state.locked) || (state.zoom !== undefined && state.zoom !== 1);
+    return Boolean(state.editing) || Boolean(state.locked);
+  }
+
+  /**
+   * w4-p08 (N6) — a drag is under way on the board: a column drag the board
+   * tracks, a touch card drag, or the library's mouse drag, whose clone is in
+   * the document for exactly as long. A pinch or Ctrl+wheel then leaves the
+   * zoom alone: rescaling under a moving clone threw the drop off target and
+   * could crash the phone.
+   */
+  export function zoomHeldByDrag(doc: Document | undefined, columnDrag: boolean, touchDrag: boolean): boolean {
+    return columnDrag || touchDrag || Boolean(doc?.getElementById(DRAGGED_ELEMENT_ID));
   }
 
   interface GripGate {
@@ -471,6 +484,22 @@
 </div>
 
 <style>
+  /* w4-p08 (N5): on a computer the library marks where the card will land with
+     a hidden copy of it (inline `visibility: hidden`) — in a list tinted whole,
+     an invisible gap. The slot is drawn instead: a dashed frame of the card's
+     own size, the card inside it hidden. The phone's own drag draws a line. */
+  :global(.ppp-board-card-slot[data-is-dnd-shadow-item-internal]) {
+    visibility: visible !important;
+    /* An outline, drawn inside: the slot keeps the card's exact size. */
+    outline: var(--ppp-border-width-thick) dashed var(--interactive-accent);
+    outline-offset: calc(-1 * var(--ppp-border-width-thick));
+    border-radius: var(--radius-s);
+    background: hsla(var(--interactive-accent-hsl), 0.12);
+  }
+  :global(.ppp-board-card-slot[data-is-dnd-shadow-item-internal] > *) {
+    visibility: hidden;
+  }
+
   /* cards-g2: the card's own lanes (`.projects--board--card`: the grid, its
      focus and hover surface, the coarse-pointer lane width) moved to
      SharedCard.svelte with the article they style. What stays here styles

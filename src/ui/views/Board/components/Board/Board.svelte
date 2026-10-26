@@ -28,7 +28,7 @@
   import NewColumn from "./NewColumn.svelte";
   // ios-d1: the column row is a `dragHandleZone` sharing the cards' arming
   // store, so a tap on a column grip must disarm it too (see CardList).
-  import { disarmAfterGripTap, gateDisabledGrip, isDisarmEvent, isDragZoneDisabled } from "./CardList.svelte";
+  import { disarmAfterGripTap, gateDisabledGrip, isDisarmEvent, isDragZoneDisabled, zoomHeldByDrag } from "./CardList.svelte";
   import type {
     Column,
     OnRecordAdd,
@@ -128,11 +128,11 @@
     return items.filter((column) => !isShadowPlaceholder(column));
   }
 
-  // ios-c1: the column row may not start a drag while editing, zoomed or
-  // read-only. `dragHandleZone` ignores its `dragDisabled`, so the grips are
-  // gated (`gateDisabledGrip`) and, as a safeguard, a drag that still starts
-  // while disabled is not committed: its finalize restores the order.
-  $: columnZoneDisabled = isDragZoneDisabled({ editing: boardEditing, locked: dataReadOnly, zoom });
+  // ios-c1: the column row may not start a drag while editing or read-only
+  // (w4-p08, N6: at any zoom). `dragHandleZone` ignores its `dragDisabled`, so
+  // the grips are gated (`gateDisabledGrip`) and, as a safeguard, a drag that
+  // still starts while disabled is not committed: its finalize restores the order.
+  $: columnZoneDisabled = isDragZoneDisabled({ editing: boardEditing, locked: dataReadOnly });
   let rejectedColumnDrag: DndColumn[] | undefined;
 
   function handleDndConsider(e: CustomEvent<DndEvent<Column>>) {
@@ -259,10 +259,14 @@
    * v3.0.10: Also handles pinch-to-zoom on touch devices.
    */
   function wheelZoom(node: HTMLElement) {
+    // w4-p08 (N6): the zoom holds still while anything on the board is dragged.
+    const held = () => zoomHeldByDrag(node.ownerDocument, isDraggingColumns, Boolean(touchDrag?.isActive()));
+
     // --- Desktop: Ctrl+Wheel ---
     function wheelHandler(e: WheelEvent) {
       if (!e.ctrlKey && !e.metaKey) return;
       e.preventDefault();
+      if (held()) return;
       const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
       const next = Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom + delta)) * 100) / 100;
       if (next !== zoom) {
@@ -284,7 +288,7 @@
     function touchStartHandler(e: TouchEvent) {
       // p372-b8: a second finger cancels a card drag (touchCardDrag); while
       // one is under way, a pinch never starts.
-      if (touchDrag?.isActive()) return;
+      if (held()) return;
       if (e.touches.length === 2) {
         initialPinchDistance = getPinchDistance(e.touches);
         initialZoom = zoom;
@@ -294,6 +298,10 @@
     function touchMoveHandler(e: TouchEvent) {
       if (e.touches.length !== 2 || initialPinchDistance === null) return;
       e.preventDefault();
+      if (held()) {
+        initialPinchDistance = null;
+        return;
+      }
       const currentDistance = getPinchDistance(e.touches);
       const scale = currentDistance / initialPinchDistance;
       const next = Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, initialZoom * scale)) * 100) / 100;
@@ -317,6 +325,7 @@
 
     function gestureChangeHandler(e: any) {
       e.preventDefault();
+      if (held()) return;
       const next = Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, initialZoom * e.scale)) * 100) / 100;
       if (next !== zoom) {
         zoom = next;
@@ -491,8 +500,17 @@
           const rect = element.getBoundingClientRect();
           if (rect.width === 0 || rect.height === 0) return;
           const root = rootFontPx(element.ownerDocument);
-          const width = remAt(rect.width, root);
-          const height = remAt(rect.height, root);
+          // w4-p08 (N6): on a zoomed board the column's rect is scaled, and the
+          // clone (outside the board's transform) holds unscaled content. As
+          // for cards (scaleDraggedClone): the logical size, drawn at the zoom.
+          // The scaled clone measures the same rect again, so this is stable.
+          const scale = zoom > 0 ? zoom : 1;
+          const width = remAt(rect.width / scale, root);
+          const height = remAt(rect.height / scale, root);
+          if (scale !== 1) {
+            element.classList.add("ppp-board-scaled-clone");
+            element.style.scale = String(scale);
+          }
           element.style.width = width;
           element.style.minWidth = width;
           element.style.maxWidth = width;

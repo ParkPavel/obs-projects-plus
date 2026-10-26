@@ -1,7 +1,8 @@
 /**
  * ios-c1: `dragHandleZone` overwrites a zone's `dragDisabled` with the shared
- * arming flag, so a grip in a pinned / read-only / editing / zoomed zone armed
- * the drag anyway. The zone now gates its own grips.
+ * arming flag, so a grip in a pinned / read-only / editing zone armed the drag
+ * anyway. The zone now gates its own grips. w4-p08 (N6): zoom no longer
+ * disables a zone — the zoom is held during a drag instead (w4p08_zoomHold).
  */
 import { dragHandle } from "svelte-dnd-action";
 
@@ -12,7 +13,7 @@ interface GripGate {
   disabled: boolean;
 }
 interface CardListModule {
-  isDragZoneDisabled: (state: { editing?: boolean; locked?: boolean; zoom?: number }) => boolean;
+  isDragZoneDisabled: (state: { editing?: boolean; locked?: boolean }) => boolean;
   gateDisabledGrip: (
     node: HTMLElement,
     gate: GripGate
@@ -23,7 +24,7 @@ const { gateDisabledGrip, isDragZoneDisabled } = require("../CardList.svelte") a
 describe("isDragZoneDisabled", () => {
   it("leaves a normal zone enabled", () => {
     expect(isDragZoneDisabled({})).toBe(false);
-    expect(isDragZoneDisabled({ editing: false, locked: false, zoom: 1 })).toBe(false);
+    expect(isDragZoneDisabled({ editing: false, locked: false })).toBe(false);
   });
 
   it("disables a pinned or read-only zone", () => {
@@ -34,9 +35,10 @@ describe("isDragZoneDisabled", () => {
     expect(isDragZoneDisabled({ editing: true })).toBe(true);
   });
 
-  it("disables the column row when zoomed", () => {
-    expect(isDragZoneDisabled({ zoom: 0.5 })).toBe(true);
-    expect(isDragZoneDisabled({ zoom: 1.25 })).toBe(true);
+  it("zoom is not a reason (N6: columns move at any zoom)", () => {
+    // ios-c1 expected true here; the requirement was corrected on 26.10.
+    expect(isDragZoneDisabled({ zoom: 0.5 } as { editing?: boolean })).toBe(false);
+    expect(isDragZoneDisabled({ zoom: 1.25 } as { editing?: boolean })).toBe(false);
   });
 });
 

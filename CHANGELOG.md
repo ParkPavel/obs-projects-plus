@@ -53,6 +53,9 @@ mean that a new release has been published.
 
 - Columns drag by their grip again; the column menu has Move left / Move right.
 - Pinning a column is a view setting and no longer follows the status options.
+- Columns move at any board zoom, on a phone too; while a column or a card is being dragged, the zoom (pinch,
+  Ctrl+wheel) holds still. A column dragged on a zoomed board keeps its look.
+- On a computer the place a dragged card will land is drawn as a dashed frame of the card's size.
 
 ### Dashboard and data
 
