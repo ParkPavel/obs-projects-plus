@@ -540,23 +540,26 @@
       </svelte:fragment>
     </EmptyState>
   {:else}
-    <ViewTabBar
-      {tabs}
-      {activeTabId}
-      {readonly}
-      menuExtras={tabMenuExtras}
-      on:tabSwitch={handleTabSwitch}
-      on:tabAdd={handleTabAdd}
-      on:tabRemove={handleTabRemove}
-      on:tabRename={handleTabRename}
-    />
-    <BlockFilterBar
-      filter={subFilter}
-      fields={frame.fields}
-      records={frame.records}
-      {readonly}
-      on:change={handleSubFilterChange}
-    />
+    <!-- w4-p10a (N8): the block's views and its filter share one row. -->
+    <div class="ppp-dbc-head">
+      <ViewTabBar
+        {tabs}
+        {activeTabId}
+        {readonly}
+        menuExtras={tabMenuExtras}
+        on:tabSwitch={handleTabSwitch}
+        on:tabAdd={handleTabAdd}
+        on:tabRemove={handleTabRemove}
+        on:tabRename={handleTabRename}
+      />
+      <BlockFilterBar
+        filter={subFilter}
+        fields={frame.fields}
+        records={frame.records}
+        {readonly}
+        on:change={handleSubFilterChange}
+      />
+    </div>
     {#if filterLabel === "relation" && masterSide}
       <span class="ppp-dbc-filter-label ppp-dbc-filter-label--relation" aria-label={$i18n.t("views.dashboard.database-call.filtered-by-relation")}>
         {$i18n.t("views.dashboard.database-call.filter-master", {
@@ -819,5 +822,17 @@
   .ppp-dbc-filter-label--broken {
     color: var(--text-warning, var(--text-muted));
     background: color-mix(in srgb, var(--text-warning, orange) 12%, var(--background-secondary));
+  }
+  /* w4-p10a (N8): views and filter in one row; the strip scrolls, the filter stays. */
+  .ppp-dbc-head {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
+  }
+  .ppp-dbc-head :global(.ppp-view-tab-bar) {
+    flex: 1 1 0;
+    min-width: 0;
+    border-bottom: none;
   }
 </style>

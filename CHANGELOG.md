@@ -62,6 +62,9 @@ mean that a new release has been published.
 
 ### Dashboard and data
 
+- A block's filter is one button with the number of active conditions, in the row of the block's views —
+  the row of filter pills is gone. The table's search folds away keeping its query (the button is marked);
+  the field's ×, or Escape, ends it.
 - The dashboard's table of contents is one button, "Blocks · N", in the plugin's bar (on computers too),
   in place of the row of block titles: it lists the blocks in page order, marks the one on screen and a
   collapsed one, and moves the page to the block picked.

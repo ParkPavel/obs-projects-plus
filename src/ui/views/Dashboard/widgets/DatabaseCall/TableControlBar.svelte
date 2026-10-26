@@ -1,11 +1,6 @@
 <script lang="ts">
-  /**
-   * TableControlBar — F2.1 (TABLE_V2_CANON §1). The view's single control
-   * surface: dismissable sort pills, expandable search, record count.
-   * Filter pills and the «⋯» display menu arrive in F2.4 — the bar is the
-   * canonical place they will land in, nothing view-related stays in the
-   * table body.
-   */
+  /** TableControlBar — F2.1 (TABLE_V2_CANON §1): the view's one control surface
+   * (sort pills, search, record count); nothing view-related in the table body. */
   import { createEventDispatcher } from "svelte";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
@@ -31,14 +26,15 @@
     clearSort: void;
   }>();
 
+  // w4-p10a (N8): the button folds the field and KEEPS the query (the button is
+  // marked); the field's clear (×) or Escape ends the search.
   let searchOpen = false;
-  function toggleSearch() {
-    searchOpen = !searchOpen;
-    if (!searchOpen) {
-      searchQuery = "";
-      dispatch("search", "");
-    }
+  const toggleSearch = () => (searchOpen = !searchOpen);
+  function closeAndClear() {
+    searchOpen = false; searchQuery = ""; dispatch("search", "");
   }
+  $: queryActive = !searchOpen && searchQuery.trim() !== "";
+  $: searchLabel = $i18n.t("views.dashboard.table-v2.search", { defaultValue: "Search records" });
 
   let active = -1;
   const listId = `ppp-t2-hints-${Math.random().toString(36).slice(2, 8)}`;
@@ -58,7 +54,7 @@
     active = step.active;
     const chosen = step.choose === undefined ? undefined : suggestions[step.choose];
     if (chosen) setQuery(chosen.query);
-    if (step.close) toggleSearch();
+    if (step.close) closeAndClear();
   }
 </script>
 
@@ -95,11 +91,10 @@
   {/if}
   <button
     class="ppp-t2-cb-btn clickable-icon"
-    class:ppp-t2-cb-btn--active={searchOpen}
-    on:click={toggleSearch}
-    aria-label={$i18n.t("views.dashboard.table-v2.search", { defaultValue: "Search records" })}
-    title={$i18n.t("views.dashboard.table-v2.search", { defaultValue: "Search records" })}
-  ><Icon name="search" size="sm" /></button>
+    class:ppp-t2-cb-btn--active={searchOpen || queryActive} class:ppp-t2-cb-btn--query={queryActive}
+    aria-pressed={searchOpen} on:click={toggleSearch}
+    aria-label={queryActive ? `${searchLabel}: ${searchQuery}` : searchLabel} title={searchLabel}
+  ><Icon name="search" size="sm" />{#if queryActive}<span class="ppp-t2-cb-dot" aria-hidden="true"></span>{/if}</button>
 
   <span class="ppp-t2-cb-count" aria-live="polite" aria-busy={searching}
     aria-label={searching ? $i18n.t("views.dashboard.table-v2.searching", { defaultValue: "Searching…" }) : undefined}
@@ -172,6 +167,10 @@
     border-radius: var(--radius-s, 0.25rem);
     cursor: pointer;
   }
+
+  /* A search kept while folded: a dot, not colour alone (the label says it too). */
+  .ppp-t2-cb-btn--query { position: relative; }
+  .ppp-t2-cb-dot { position: absolute; top: 0.2em; right: 0.2em; width: 0.4em; height: 0.4em; border-radius: 50%; background: var(--interactive-accent); }
 
   .ppp-t2-cb-btn:hover,
   .ppp-t2-cb-btn--active {

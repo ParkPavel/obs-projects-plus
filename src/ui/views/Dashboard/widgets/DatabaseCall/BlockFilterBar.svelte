@@ -2,8 +2,8 @@
   /**
    * BlockFilterBar — #099.1 (NOTION_DM_RESEARCH §2, Закон 5).
    *
-   * The block's filter as Notion-style pills: every enabled condition is a
-   * visible, one-click-removable pill; the builder popup is the ONE
+   * The block's filter. w4-p10a (N8): one "Filter · N" button in the block's
+   * row (the pills' own row took a line of the block); the builder popup is the ONE
    * canonical FilterPanel and every change applies INSTANTLY (its `update`
    * event) — no Save. Storage: `WidgetDataContext.subFilter`
    * (SPEC §3.4), evaluation: canonical filterEvaluator in the block.
@@ -14,7 +14,8 @@
   import type { FilterDefinition } from "src/settings/base/settings";
   import FilterPanel from "src/ui/components/FilterPanel/FilterPanel.svelte";
   import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
-  import { FilterPills } from "src/ui/components/FilterPills";
+  import FilterPills from "src/ui/components/FilterPills/FilterPills.svelte";
+  import { Icon } from "obsidian-svelte";
 
   export let filter: FilterDefinition | undefined = undefined;
   export let fields: DataField[] = [];
@@ -33,30 +34,41 @@
     dispatch("change", next.conditions.length > 0 ? next : undefined);
   }
 
-  function removeCondition(index: number) {
-    if (!filter) return;
-    const remaining = filter.conditions.filter((_, i) => i !== index);
-    dispatch("change", remaining.length > 0 ? { ...filter, conditions: remaining } : undefined);
-  }
 </script>
 
 {#if !readonly || conditions.length > 0}
+  <!-- w4-p10a (N8, Codex design A): one button, "Filter · N", in the block's
+       row beside its views — the pills' own row is gone. N counts the switched
+       on conditions; none, no number. It opens the same editor (on a phone the
+       sheet); read-only, the conditions as pills. -->
   <div class="ppp-blockfilter">
-    <FilterPills
-      {conditions}
-      {readonly}
-      bind:triggerEl
-      {open}
-      ariaLabel={$i18n.t("views.dashboard.block-filter.aria", { defaultValue: "Block filter" })}
-      addLabel={$i18n.t("views.dashboard.block-filter.add", { defaultValue: "Filter" })}
-      removeLabel={$i18n.t("views.dashboard.block-filter.remove", { defaultValue: "Remove condition" })}
-      on:remove={(e) => removeCondition(e.detail)}
-      on:addClick={() => (open = !open)}
-    />
-    {#if !readonly}
-      <FloatingPopup {triggerEl} bind:open placement="bottom-start" role="dialog"
-        ariaLabel={$i18n.t("views.dashboard.block-filter.aria", { defaultValue: "Block filter" })}>
-        <div class="ppp-blockfilter-popover">
+    <button
+      bind:this={triggerEl}
+      type="button"
+      class="ppp-blockfilter-button clickable-icon"
+      class:ppp-blockfilter-button--on={conditions.length > 0}
+      aria-haspopup="dialog"
+      aria-expanded={open}
+      aria-label={conditions.length > 0
+        ? `${$i18n.t("views.dashboard.block-filter.add", { defaultValue: "Filter" })}: ${conditions.length}`
+        : $i18n.t("views.dashboard.block-filter.add", { defaultValue: "Filter" })}
+      on:click={() => (open = !open)}
+    >
+      <Icon name="filter" size="sm" />
+      {#if conditions.length > 0}<span class="ppp-blockfilter-count">{conditions.length}</span>{/if}
+    </button>
+    <FloatingPopup {triggerEl} bind:open placement="bottom-start" role="dialog"
+      ariaLabel={$i18n.t("views.dashboard.block-filter.aria", { defaultValue: "Block filter" })}>
+      <div class="ppp-blockfilter-popover">
+        {#if readonly}
+          <FilterPills
+            {conditions}
+            readonly
+            ariaLabel={$i18n.t("views.dashboard.block-filter.aria", { defaultValue: "Block filter" })}
+            addLabel={$i18n.t("views.dashboard.block-filter.add", { defaultValue: "Filter" })}
+            removeLabel={$i18n.t("views.dashboard.block-filter.remove", { defaultValue: "Remove condition" })}
+          />
+        {:else}
           <FilterPanel
             value={filter}
             fields={fields.map((f) => ({ name: f.name, type: f.type }))}
@@ -64,36 +76,35 @@
             scopeLabel={$i18n.t("views.dashboard.block-filter.scope", { defaultValue: "This block — all its views" })}
             on:update={handleUpdate}
           />
-        </div>
-      </FloatingPopup>
-    {/if}
+        {/if}
+      </div>
+    </FloatingPopup>
   </div>
 {/if}
 
 <style>
   .ppp-blockfilter {
     display: flex;
+    flex: none;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 0.25rem;
-    padding: 0.25rem 0.5rem;
-    border-bottom: 0.0625rem solid var(--background-modifier-border);
   }
 
-  /*
-   * The same trade as TableControlBar's, on the shared pills: below the width
-   * where the label crowds the row it is capped by a share of the widget
-   * instead of by a root-anchored length. `:global` because the element belongs
-   * to FilterPills — and the rule lives HERE and not there for a reason worth
-   * keeping: FilterPills is shared with the view-level bar outside any widget,
-   * where `container-name: widget` does not exist, and writing `@container` into
-   * it would also pull a component full of root-anchored sizes into R0.16's
-   * scope through its second clause.
-   */
-  @container widget (max-width: 24em) {
-    .ppp-blockfilter :global(.ppp-filterpills-pill-text) {
-      max-width: 40cqi;
-    }
+  .ppp-blockfilter-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25em;
+    min-height: var(--ppp-touch-target-min);
+    padding: 0 0.375em;
+    color: var(--text-muted);
+  }
+
+  .ppp-blockfilter-button--on {
+    color: var(--interactive-accent);
+  }
+
+  .ppp-blockfilter-count {
+    font-size: var(--font-ui-smaller);
+    font-variant-numeric: tabular-nums;
   }
 
   .ppp-blockfilter-popover {
