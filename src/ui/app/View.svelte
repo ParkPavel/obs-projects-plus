@@ -18,6 +18,7 @@
   import { applyDeclaredFieldTypes, conditionFieldsKnown, extractRelationTargetIds, getRecordColor as computeRecordColor } from "./viewHelpers";
 
   import { useView } from "./useView";
+  import { bindViewOwner } from "./viewOwner";
   import { applySort, sortRecords } from "./viewSort";
   import RecordCardView from "src/ui/components/RecordCardView/RecordCardView.svelte";
   import { recordPeek, closePeek } from "src/lib/stores/recordPeek";
@@ -60,9 +61,7 @@
     cfg: Record<string, any>
   ) => void;
 
-  function handleConfigChange(config: Record<string, any>) {
-    onConfigChange(project.id, view.id, config);
-  }
+  $: handleConfigChange = bindViewOwner(project.id, view.id, onConfigChange);
 
   // Clean up any filter conditions for non-existing fields.
   // Guard: skip when frame is empty (initial load) to prevent deleting valid conditions
@@ -242,9 +241,10 @@
   // Promote local widget filter to the global view filter.
   // Called via ProjectViewProps.saveViewFilter by views that expose such UX
   // (currently Database view — see filter-bridge chip).
-  const handleViewFilterChange = (filter: typeof view.filter) => {
-    settings.updateView(project.id, { ...view, filter });
-  };
+  $: handleViewFilterChange = bindViewOwner(project.id, view.id, (ownerProject, ownerView, filter: typeof view.filter) => {
+    const latest = get(settings).projects.find(p => p.id === ownerProject)?.views.find(v => v.id === ownerView);
+    if (latest) settings.updateView(ownerProject, { ...latest, filter });
+  });
 
   // ── #158 (L2) — the peek is RESOLVED, every tick, from identity ──────
   // The store carries `{id, projectId?, readonly?}`, never a copy (see

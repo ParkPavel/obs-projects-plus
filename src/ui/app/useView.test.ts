@@ -175,6 +175,15 @@ describe("useView lifecycle", () => {
     expect(mockView.onOpen).toHaveBeenCalledTimes(2);
   });
 
+  it("does not remount again on ordinary updates after switching project", () => {
+    const action = useView(makeNode(), makeProps());
+    action.update(makeProps({ project: makeProject("p2") }));
+    action.update(makeProps({ project: makeProject("p2"), config: { zoom: 2 } }));
+    expect(mockView.onOpen).toHaveBeenCalledTimes(2);
+    expect(mockView.onClose).toHaveBeenCalledTimes(1);
+    expect(mockView.updateProps).toHaveBeenCalledWith({ config: { zoom: 2 } });
+  });
+
   it("looks up view type directly from registry (no runtime remap)", () => {
     const dashView = new MockProjectView();
     customViews.set({ dashboard: dashView });

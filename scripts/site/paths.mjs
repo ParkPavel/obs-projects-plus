@@ -1,8 +1,10 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+const hasControls = value => [...value].some(c=>c.charCodeAt(0)<32||c.charCodeAt(0)===127);
+
 const isRepoPath = value => typeof value === 'string' && value !== ''
-  && !/[\\:\x00-\x1f\x7f]/.test(value) && !path.posix.isAbsolute(value) && !path.win32.isAbsolute(value)
+  && !/[\\:]/.test(value) && !hasControls(value) && !path.posix.isAbsolute(value) && !path.win32.isAbsolute(value)
   && value !== '..' && !value.startsWith('../') && path.posix.normalize(value) === value;
 
 export function safeHref(href) {
@@ -19,7 +21,7 @@ export function resolveRepoReference(source, href) {
   let decoded;
   try { decoded = decodeURIComponent(filename); } catch { return null; }
   // Colon also rejects drive-relative paths and Windows alternate streams.
-  if (!decoded || /[\\:\x00-\x1f\x7f]/.test(decoded) || path.posix.isAbsolute(decoded) || path.win32.isAbsolute(decoded)) return null;
+  if (!decoded || /[\\:]/.test(decoded) || hasControls(decoded) || path.posix.isAbsolute(decoded) || path.win32.isAbsolute(decoded)) return null;
   const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(source), decoded));
   if (resolved === '..' || resolved.startsWith('../') || path.posix.isAbsolute(resolved)) return null;
   return { source: resolved, hash };
