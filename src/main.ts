@@ -46,8 +46,10 @@ import {
 import { get, type Unsubscriber } from "svelte/store";
 import {
   createSettingsWriter,
+  SETTINGS_WRITE_REFUSED,
   type SettingsWriter,
 } from "src/lib/settings/settingsWriter";
+import { saveCheckedSettings } from "src/lib/settings/settingsCheckedSave";
 import {
   onSaveFailureEpisode,
   saveStatus,
@@ -159,6 +161,8 @@ export default class ProjectsPlusPlugin extends Plugin {
    * else wrote something else" when the read-back does not match.
    */
   private confirmedOnDisk: string | null = null;
+  /** Recovery's exact bytes when the seen version is not parseable JSON. */
+  private confirmedRawOnDisk: string | null = null;
   /**
    * #212: what an adoption decided inside the lease, to be published to the
    * store after it. It is not a second source of truth — it is only read when
@@ -462,13 +466,11 @@ export default class ProjectsPlusPlugin extends Plugin {
       this.activateView(projectId, viewId);
     });
 
-    // #185 — one writer owns `data.json`. `saveData` is handed to it rather
-    // than imported, which is what makes a failing write expressible in a test
-    // at all; the outcome leaves through `saveStatus` instead of being returned,
-    // because under coalescing a per-call promise describes no single write.
+    // One writer owns data.json. Its injected save checks the base inside the
+    // adapter's queue (#213); the status remains out of band under coalescing.
     const writer = createSettingsWriter<LatestProjectsPluginSettings>({
-      save: (value) => this.saveData(value),
-      // #199: `saveData` resolving is a claim, not a fact. A live run with
+      save: (value) => this.saveSettingsWithCheck(value),
+      // #199: a host write resolving is a claim, not a fact. A live run with
       // `data.json` made read-only had it report success while the file did
       // not change — and #185's whole visibility hangs off a rejection that
       // never arrived. So the file is read back and compared.
@@ -696,31 +698,15 @@ export default class ProjectsPlusPlugin extends Plugin {
   }
 
   /**
-   * #200 — somebody else wrote `data.json`.
-   *
-   * Obsidian calls this when the file changes on disk from outside the app: a
-   * second window, a synchroniser, a hand edit. It exists on every host this
-   * plugin claims (`Plugin#onExternalSettingsChange`, v1.5.7; `minAppVersion`
-   * is v1.5.7), and the step-0 spike confirmed in a live vault both that an
-   * external write fires it with the NEW contents already readable, and that
-   * our own `saveData` does not fire it.
-   *
-   * Every judgement is in `settingsReconcile.ts`, on purpose: this method
-   * cannot be unit-tested in this tree at all, so it holds only the wiring —
-   * read, decide, apply. What it does with each decision is the thing to keep
-   * honest, and each branch is one statement.
-   */
-  /**
    * #212 — is `data.json` still what this session last confirmed?
    *
    * `false` stops the write and turns it into a divergence, and reconciliation
    * is scheduled at once rather than waited for: the host's change event is
    * what we were racing, so depending on it here would reproduce the defect.
    *
-   * Unknowns answer `true` deliberately. With no base, or a file that cannot be
-   * read at all, refusing every write would turn a rare event into a session
-   * where nothing saves — the model `PLAN_200` §2 rejected — and the post-write
-   * verification still stands behind it.
+   * This early check defers unknown or unreadable bases to the checked save.
+   * That save requires a confirmed canonical or exact recovery base; an
+   * unknown base never authorizes a blind write.
    */
   private async settingsAreStillOurs(): Promise<boolean> {
     if (this.confirmedOnDisk === null) return true;
@@ -745,9 +731,12 @@ export default class ProjectsPlusPlugin extends Plugin {
     console.warn(
       "[Projects+] the settings file changed before our write; reconciling instead of overwriting"
     );
-    // One at a time. A refused write that scheduled another episode on every
-    // attempt would answer a single external change with a storm of them.
-    if (this.reconcileScheduled) return false;
+    this.scheduleSettingsReconciliation();
+    return false;
+  }
+
+  private scheduleSettingsReconciliation(): void {
+    if (this.reconcileScheduled) return;
     this.reconcileScheduled = true;
     // Not awaited, and not called directly: this runs inside the write, and the
     // lease waits for writes in flight — awaiting it here would wait for
@@ -756,7 +745,20 @@ export default class ProjectsPlusPlugin extends Plugin {
       this.reconcileScheduled = false;
       void this.onExternalSettingsChange();
     }, 0);
-    return false;
+  }
+
+  /** The writer's only mutation primitive; refusal keeps its queued value. */
+  private async saveSettingsWithCheck(
+    value: LatestProjectsPluginSettings
+  ): Promise<void | typeof SETTINGS_WRITE_REFUSED> {
+    const path = settingsFilePath(this.manifest.dir);
+    if (path === null) throw new Error("cannot determine the plugin settings path");
+    const result = await saveCheckedSettings(this.app.vault.adapter, path, {
+      canonical: this.confirmedOnDisk,
+      raw: this.confirmedRawOnDisk,
+    }, value);
+    if (result === SETTINGS_WRITE_REFUSED) this.scheduleSettingsReconciliation();
+    return result;
   }
 
   /**
@@ -765,9 +767,9 @@ export default class ProjectsPlusPlugin extends Plugin {
    * Obsidian calls this when the file changes on disk from outside the app: a
    * second window, a synchroniser, a hand edit. It exists on every host this
    * plugin claims (`Plugin#onExternalSettingsChange`, v1.5.7; `minAppVersion`
-   * is v1.5.7), and the step-0 spike confirmed in a live vault both that an
-   * external write fires it with the NEW contents already readable, and that
-   * our own `saveData` does not fire it.
+   * is v1.5.7). The earlier saveData spike confirmed external notification;
+   * checked adapter writes must also tolerate notifications for their own
+   * changes. Reconciliation compares the file instead of assuming its origin.
    *
    * #212: this method is wiring and nothing else. The decision lives in
    * `settingsReconcile.ts`, how the episode ends lives in `settingsEpisode.ts`,
@@ -809,6 +811,7 @@ export default class ProjectsPlusPlugin extends Plugin {
     // what is on disk, and normalisation happens only in memory — exactly as at
     // load, which does not rewrite the file for filling in a default.
     this.confirmedOnDisk = adoption.base;
+    this.confirmedRawOnDisk = null;
     settings.set(adoption.settings);
     if (adoption.carried) {
       // The one merged field (user's decision, 2026-09-07): a project's
@@ -1017,10 +1020,12 @@ export default class ProjectsPlusPlugin extends Plugin {
    *
    * Called by an episode that has read the file and decided to write over it:
    * from that moment the pre-write check has nothing to warn about, because the
-   * change it would warn about is the one just handled. Unparsable bytes leave
-   * no base, which the check reads as "unknown" and allows.
+   * change it would warn about is the one just handled. Unparsable bytes keep
+   * their exact recovery base for the checked save, rather than allowing any
+   * unknown version to be overwritten.
    */
   private noteFileAsSeen(raw: string): void {
+    this.confirmedRawOnDisk = raw;
     try {
       this.confirmedOnDisk = canonical(JSON.parse(raw));
     } catch {
@@ -1139,7 +1144,7 @@ export default class ProjectsPlusPlugin extends Plugin {
     value: LatestProjectsPluginSettings
   ): Promise<WriteVerdict> {
     const path = settingsFilePath(this.manifest.dir);
-    if (path === null) return "confirmed";
+    if (path === null) return "not-written";
     // A mismatch is looked at more than once before it is believed. The host
     // may resolve its write before the bytes land, and a check that raced it
     // would raise the "not saved" chip on perfectly good saves — a control
@@ -1159,6 +1164,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       const verdict = classifyDisk(value, raw, this.confirmedOnDisk);
       if (verdict === "confirmed") {
         this.confirmedOnDisk = canonical(value);
+        this.confirmedRawOnDisk = null;
         return "confirmed";
       }
       if (verdict === "superseded") {
@@ -1170,6 +1176,7 @@ export default class ProjectsPlusPlugin extends Plugin {
         // is unknown rather than to pick a side. #200 covers reconciling it.
         logWarning(SETTINGS_SUPERSEDED, "not retrying");
         this.confirmedOnDisk = null;
+        this.confirmedRawOnDisk = null;
         new Notice(noticeFor(SETTINGS_SUPERSEDED), 15000);
         // #200 step 1: this used to return `true` — the writer filed a write it
         // could not confirm as a success. Every argument about who owns the
@@ -1198,6 +1205,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       );
       return null;
     }
+    this.confirmedRawOnDisk = raw;
     const path = await writeBrokenCopy(adapter, dir, raw, reason, new Date());
     if (path === null) {
       console.error("[Projects+] Failed to write the forensic copy of settings");
@@ -1273,6 +1281,7 @@ export default class ProjectsPlusPlugin extends Plugin {
     // where `raw` really is what is on disk — the corruption paths publish
     // defaults, which the file does NOT hold.
     this.confirmedOnDisk = canonical(raw);
+    this.confirmedRawOnDisk = null;
     this.publishSettings(result.right);
   }
 

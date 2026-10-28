@@ -38,6 +38,9 @@ const SETTINGS_WRITE_FAILED = "PPP-101";
 /** #200 — the file was replaced by another writer. Never retried. */
 const SETTINGS_DIVERGED = "PPP-102";
 
+/** A checked save left the other version untouched; keep our queued value. */
+export const SETTINGS_WRITE_REFUSED = Symbol("settings-write-refused");
+
 export type SaveStatus =
   | { kind: "idle" }
   | { kind: "saving" }
@@ -161,6 +164,7 @@ type Permit =
   | { kind: "closed" };
 
 export interface SettingsWriterOptions<T> {
+  /** SETTINGS_WRITE_REFUSED means the other version was kept; reconcile without retrying it away. */
   save: (value: T) => Promise<unknown>;
   /**
    * #199 — confirm that `value` is what the file now holds. Resolving `false`
@@ -184,14 +188,11 @@ export interface SettingsWriterOptions<T> {
    * written: it becomes a divergence, which fences and hands the decision to
    * reconciliation, where the other version is preserved first.
    *
-   * **What it does not close, and cannot from here.** The check reads and the
-   * host writes, so a version arriving between those two moments is still
-   * overwritten silently — the post-write verification then compares the file
-   * to our own bytes and calls it confirmed. Closing that needs a compare-and-
-   * write, and `DataAdapter.process` is the closest the host offers; taking it
-   * means this plugin, not `saveData`, decides how `data.json` is serialised,
-   * which is a change of write primitive rather than a guard. Filed as #213
-   * with the measurement it needs, instead of being smuggled in here.
+   * #213 also compares inside the save primitive's queued process callback.
+   * A refusal there returns SETTINGS_WRITE_REFUSED and keeps this value pending
+   * just like a refusal here. The host queue serializes its own writers; an
+   * unrelated OS process is outside that guarantee. Verification and recovery
+   * remain necessary after the checked save.
    */
   beforeWrite?: () => Promise<boolean>;
   onStatus?: (status: SaveStatus) => void;
@@ -622,7 +623,7 @@ export function createSettingsWriter<T>(
       // would exist only in memory until the next reload took it.
       return "rejected";
     }
-    await save(value);
+    if ((await save(value)) === SETTINGS_WRITE_REFUSED) return "rejected";
     if (verify === undefined) return "confirmed";
     const verdict = await verify(value);
     if (verdict === "confirmed") return "confirmed";
