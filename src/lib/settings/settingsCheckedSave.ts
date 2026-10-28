@@ -31,10 +31,12 @@ export async function saveCheckedSettings(
   const desired = canonical(value);
   if (serialized === undefined || desired === null) throw new Error("settings are not JSON serializable");
   const fresh = base.canonical === canonical(null) && base.raw === null;
-  if (fresh && !(await adapter.exists(path))) {
+  let bootstrapped = false;
+  if ((base.canonical !== null || base.raw !== null) && !(await adapter.exists(path))) {
     // append-empty never truncates a version which appeared after exists().
     // A host refusing creation reports failure; there is no blind-write fallback.
     await adapter.append(path, "");
+    bootstrapped = true;
   }
   let called = false;
   let accepted = false;
@@ -42,8 +44,8 @@ export async function saveCheckedSettings(
     called = true;
     let current: string | null = null;
     try { current = canonical(JSON.parse(raw)); } catch { /* recovery compares exact damaged bytes */ }
-    accepted = base.canonical !== null ? current === base.canonical || (fresh && raw === "")
-      : base.raw !== null && raw === base.raw;
+    accepted = (base.canonical !== null ? current === base.canonical : base.raw !== null && raw === base.raw)
+      || ((fresh || bootstrapped) && raw === "");
     if (!accepted) return raw;
     return current === desired ? raw : serialized;
   });

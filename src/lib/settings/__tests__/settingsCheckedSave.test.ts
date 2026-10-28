@@ -78,6 +78,43 @@ describe("checked save at the host process boundary", () => {
     expect(d.get()).toBeNull();
   });
 
+  it("recreates a deleted file with a known session base, without blind truncation", async () => {
+    const d = disk(null);
+    await saveCheckedSettings(d.adapter, PATH, basis(A), C);
+    expect(d.adapter.append).toHaveBeenCalledWith(PATH, "");
+    expect(JSON.parse(d.get()!)).toEqual(C);
+  });
+
+  it("preserves a replacement arriving during deleted-file recreation", async () => {
+    const d = disk(null);
+    const append = d.adapter.append.getMockImplementation()!;
+    d.adapter.append.mockImplementation(async (path, suffix) => {
+      d.replace(JSON.stringify(B));
+      await append(path, suffix);
+    });
+    expect(await saveCheckedSettings(d.adapter, PATH, basis(A), C)).toBe(SETTINGS_WRITE_REFUSED);
+    expect(JSON.parse(d.get()!)).toEqual(B);
+    expect(d.writes).toHaveLength(0);
+  });
+
+  it("a confirmed empty recovery base permits only those exact empty bytes", async () => {
+    const d = disk("");
+    const base = { canonical: null, raw: "" };
+    d.replace(JSON.stringify(B));
+    expect(await saveCheckedSettings(d.adapter, PATH, base, C)).toBe(SETTINGS_WRITE_REFUSED);
+    expect(JSON.parse(d.get()!)).toEqual(B);
+    d.replace("");
+    await saveCheckedSettings(d.adapter, PATH, base, C);
+    expect(JSON.parse(d.get()!)).toEqual(C);
+  });
+
+  it("does not create a missing file when the session base is unknown", async () => {
+    const d = disk(null);
+    await expect(saveCheckedSettings(d.adapter, PATH, { canonical: null, raw: null }, C)).rejects.toThrow("ENOENT");
+    expect(d.adapter.append).not.toHaveBeenCalled();
+    expect(d.get()).toBeNull();
+  });
+
   it("allows recovery's exact damaged bytes, but refuses a different damaged version", async () => {
     const d = disk("{broken");
     const base = { canonical: null, raw: "{broken" };
@@ -123,6 +160,31 @@ describe("checked save at the host process boundary", () => {
 describe("#213 — the real writer, checked save and reconciliation", () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
+
+  it("resumes a queued edit after bounded empty-file recovery instead of fencing forever", async () => {
+    const d = disk(JSON.stringify(A));
+    let base = basis(A);
+    const writer = createSettingsWriter({
+      save: (value: typeof A) => saveCheckedSettings(d.adapter, PATH, base, value),
+      verify: async (value) => canonical(JSON.parse(d.get()!)) === canonical(value) ? "confirmed" : "diverged",
+    });
+    try {
+      writer.prime(A);
+      d.replace("");
+      writer.pushNow(C); await writer.flush();
+      expect(writer.status().kind).toBe("diverged");
+      await writer.withExclusive("PPP-102", async () => {
+        // settleUnreadable's bounded-empty release records exactly what it saw.
+        base = { canonical: null, raw: d.get() };
+        return { kind: "release" };
+      });
+      await writer.flush();
+      expect(JSON.parse(d.get()!)).toEqual(C);
+      expect(writer.status().kind).toBe("idle");
+      expect(writer.hasPending()).toBe(false);
+      expect(d.writes).toHaveLength(1);
+    } finally { writer.dispose(); }
+  });
 
   it("still verifies a host that calls the callback but silently refuses to write", async () => {
     const d = disk(JSON.stringify(A));

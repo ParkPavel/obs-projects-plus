@@ -976,6 +976,9 @@ export default class ProjectsPlusPlugin extends Plugin {
       console.debug(
         "[Projects+] the settings file stayed empty; releasing the episode"
       );
+      // The bounded wait accepted exactly these empty bytes. Carry that base
+      // into the checked save; a completed external version still refuses it.
+      this.noteFileAsSeen(raw);
       return { kind: "release" };
     }
     try {
@@ -1134,9 +1137,8 @@ export default class ProjectsPlusPlugin extends Plugin {
   /**
    * #199 — is `value` what `data.json` now holds?
    *
-   * `true` when the plugin folder is unknown: without it there is nothing to
-   * read back, and a permanent false alarm would be worse than the weaker
-   * guarantee. Any other doubt — unreadable file, mismatch, unparseable text —
+   * An unknown plugin folder cannot confirm a save. Any other doubt —
+   * unreadable file, mismatch, unparseable text —
    * is reported as a failed write, because a half-written file is exactly the
    * case worth catching.
    */
