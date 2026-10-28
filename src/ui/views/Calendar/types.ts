@@ -28,6 +28,8 @@ export interface CalendarConfig {
   readonly iconField?: string;
   readonly centerOn?: string | null;
   readonly agendaOpen?: boolean;
+  /** A block's custom lists; project-level agenda remains the standalone default. */
+  readonly localAgenda?: import("src/settings/settings").ProjectDefinition["agenda"];
   readonly timezone?: string;
   readonly timeFormat?: string;
 }

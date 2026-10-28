@@ -243,7 +243,8 @@
   const paletteProject = writable<string | undefined>(undefined);
   providePaletteProject(paletteProject);
   $: paletteProject.set(sourceProjectId);
-  $: sourceViews = ($settings.projects.find((p) => p.id === sourceProjectId) ?? project)?.views ?? ([] as ViewDefinition[]);
+  $: sourceProject = $settings.projects.find((p) => p.id === sourceProjectId) ?? project;
+  $: sourceViews = sourceProject?.views ?? ([] as ViewDefinition[]);
   $: resolvedTab = activeTab ? resolveTabView(activeTab, sourceViews) : undefined;
   $: embeddedSettingsView = activeTab ? embeddedViewDefinition(activeTab, resolvedTab?.config ?? {}) : undefined;
   $: tabScope = scopeTabFrame(effectiveFrame, resolvedTab, hasSubFilter || autoFilter !== null || masterSelected);
@@ -746,6 +747,7 @@
           {#key activeTab.id}
           <CalendarView
             embedded={true}
+            agendaProject={sourceProject}
             {project}
             frame={viewFrame}
             {api}

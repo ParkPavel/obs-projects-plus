@@ -106,6 +106,8 @@
   export let dataVersion: number = 0;
   /** Embedded settings belong to the tab; project navigation cache is unrelated. */
   export let embedded: boolean = false;
+  /** The data source's agenda defaults, separate from the host's write project. */
+  export let agendaProject: ProjectDefinition | undefined = undefined;
   export let filterConditions: import("src/settings/settings").FilterCondition[] = [];
 
   // Navigation & Animation Controllers (v3.0.0)
@@ -1710,6 +1712,14 @@
   }
 
   // Agenda Logic
+  $: effectiveAgendaProject = embedded
+    ? { ...(agendaProject ?? project), agenda: config?.localAgenda ?? (agendaProject ?? project).agenda }
+    : project;
+
+  function latestAgendaProject(): ProjectDefinition {
+    return embedded ? effectiveAgendaProject : getLatestProject();
+  }
+
   $: agendaDate = focusedDate ?? dayjs();
   // Sync agendaVisible with config for mobile in day scale
   // On mobile day scale, agendaOpen controls visibility directly
@@ -1736,7 +1746,7 @@
     const { list } = event.detail;
     
     // v4.0.6: Read latest project from settings store — local `project` has stale views[].config
-    const latest = getLatestProject();
+    const latest = latestAgendaProject();
     const currentLists = latest.agenda?.custom?.lists ?? [];
     const existingIndex = currentLists.findIndex(l => l.id === list.id);
     
@@ -1768,7 +1778,8 @@
     
     // Persist to settings store — the store → App.svelte → CalendarView
     // propagation updates children in the same Svelte flush.
-    settings.updateProject(updatedProject);
+    if (embedded) saveConfig({ ...config, localAgenda: updatedProject.agenda });
+    else settings.updateProject(updatedProject);
   }
   
   /**
@@ -1778,7 +1789,7 @@
     const { listId } = event.detail;
     
     // v4.0.6: Read latest project from settings store — local `project` has stale views[].config
-    const latest = getLatestProject();
+    const latest = latestAgendaProject();
     const currentLists = latest.agenda?.custom?.lists ?? [];
     const updatedLists = currentLists.filter(l => l.id !== listId);
     
@@ -1797,6 +1808,10 @@
       },
     };
     
+    if (embedded) {
+      saveConfig({ ...config, localAgenda: updatedProject.agenda });
+      return;
+    }
     // v3.3.5: Guard + deferred pattern — prevents view cascade and interval centering
     _agendaGuard = true;
     project = updatedProject;
@@ -1819,7 +1834,7 @@
     // v4.0.6: Read latest project from settings store — local `project` has stale views[].config.
     // Using the stale local copy would revert interval/agendaOpen/etc., causing the
     // calendar to navigate back to today on the resulting settings cascade.
-    const latest = getLatestProject();
+    const latest = latestAgendaProject();
     const updatedProject: ProjectDefinition = {
       ...latest,
       agenda: {
@@ -1835,6 +1850,10 @@
       },
     };
     
+    if (embedded) {
+      saveConfig({ ...config, localAgenda: updatedProject.agenda });
+      return;
+    }
     // v3.3.5: Guard + deferred pattern — prevents view cascade and interval centering
     _agendaGuard = true;
     project = updatedProject;
@@ -2022,7 +2041,7 @@
     <!-- Desktop: Side panel with collapse, Mobile: Full drawer show/hide -->
     {#if shouldMountAgenda({ isMobile, interval, drawerOpen })}
       <AgendaSidebar 
-        project={project}
+        project={effectiveAgendaProject}
         records={agendaSidebarRecords}
         fields={fields}
         currentDate={agendaDate}

@@ -1,17 +1,18 @@
-import { cleanup, render } from "@testing-library/svelte";
+import { cleanup, render, fireEvent } from "@testing-library/svelte";
 import { tick } from "svelte";
 import { DEFAULT_PROJECT } from "src/settings/settings";
 import BoardView from "../BoardView.svelte";
+import { settings } from "src/lib/stores/settings";
 
 jest.mock("src/ui/modals/createNoteModal", () => ({ CreateNoteModal: jest.fn() }));
 jest.mock("src/lib/record/openRecord", () => ({ activateRecord: jest.fn() }));
-jest.mock("../components", () => ({ Board: require("src/ui/components/EmptyState/EmptyState.svelte").default }));
+jest.mock("../components", () => ({ Board: require("./fixtures/EmbeddedBoardProbe.svelte").default }));
 jest.mock("src/ui/components/Layout", () => ({
   ViewLayout: jest.requireActual("src/ui/components/Layout/ViewLayout.svelte").default,
   ViewContent: jest.requireActual("src/ui/components/Layout/ViewContent.svelte").default,
 }));
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); jest.restoreAllMocks(); });
 const props = () => ({
   project: { ...DEFAULT_PROJECT, id: "project", name: "Project" },
   frame: { fields: ["status", "priority"].map(name => ({ name, type: "string" as const, identifier: false, derived: false, repeated: false })), records: [] },
@@ -37,4 +38,13 @@ test("standalone boards retain automatic persisted-column initialization", async
   render(BoardView, { ...p, embedded: false });
   await tick();
   expect(p.onConfigChange).toHaveBeenCalledWith({ groupByField: "status", persistedStatuses: expect.any(Array) });
+});
+
+test("a read-only source cannot add column options to the host project's schema", async () => {
+  const p = props();
+  const write = jest.spyOn(settings, "updateFieldConfig");
+  const rendered = render(BoardView, { ...p, dataReadOnly: true });
+  await fireEvent.click(rendered.getByText("Probe column callback"));
+  expect(write).not.toHaveBeenCalled();
+  expect(p.onConfigChange).not.toHaveBeenCalled();
 });

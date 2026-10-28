@@ -307,7 +307,7 @@
   const handleColumnAdd =
     (field: DataField | undefined): OnColumnAdd =>
     (columns, name) => {
-      if (!field) return;
+      if (dataReadOnly || !field) return;
 
       settings.updateFieldConfig(
         project.id,
