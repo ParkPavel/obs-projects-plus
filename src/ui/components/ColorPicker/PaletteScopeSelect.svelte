@@ -23,5 +23,5 @@
   label { display: grid; gap: var(--size-4-1); min-width: 0; }
   select { width: 100%; max-width: 100%; min-width: 0; font: inherit; }
   small { color: var(--text-muted); overflow-wrap: anywhere; }
-  @media (pointer: coarse) { select { font-size: max(var(--font-ui-small), 16px); } }
+  @media (pointer: coarse) { select { font-size: max(var(--font-ui-small), 1rem); } }
 </style>
