@@ -26,8 +26,8 @@ beforeEach(() => {
 afterEach(() => { cleanup(); jest.clearAllTimers(); jest.useRealTimers(); });
 
 function fixture() {
-  const first = { ...DEFAULT_VIEW, id: "first-view", type: "probe", config: { original: true } };
-  const second = { ...DEFAULT_VIEW, id: "second-view", type: "probe", config: { untouched: true } };
+  const first = { ...DEFAULT_VIEW, id: "first-view", name: "First view", type: "probe", config: { original: true } };
+  const second = { ...DEFAULT_VIEW, id: "second-view", name: "Second view", type: "probe", config: { untouched: true } };
   const p1 = { ...DEFAULT_PROJECT, id: "first-project", name: "First", views: [first] };
   const p2 = { ...DEFAULT_PROJECT, id: "second-project", name: "Second", views: [second] };
   settings.set({ ...DEFAULT_SETTINGS, projects: [p1,p2] });

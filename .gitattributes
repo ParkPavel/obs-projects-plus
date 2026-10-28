@@ -25,3 +25,9 @@ main.js -diff -merge
 styles.css -diff -merge
 releases/*/main.js -diff -merge
 releases/*/styles.css -diff -merge
+
+# Generated Pages are checked byte-for-byte, including on Windows checkouts.
+docs/*.html text eol=lf
+docs/read/*.html text eol=lf
+docs/search-index.json text eol=lf
+docs/site-manifest.json text eol=lf
