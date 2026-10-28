@@ -70,10 +70,14 @@ export interface DraftMappingInput {
 }
 
 export function draftMapping({ config, fields, start, end, creation, check }: DraftMappingInput): DraftMapping {
-  const startName = start ?? (config?.startDateField || "startDate");
+  const candidateStart = start ?? (config?.startDateField || "startDate");
+  const endName = end ?? (config?.endDateField || "endDate");
+  // A lone end/due property is an implicit end, not two explicit mappings.
+  const startName = !config?.startDateField && !config?.endDateField && candidateStart === endName
+    ? "startDate" : candidateStart;
   return {
     start: startName,
-    end: end ?? (config?.endDateField || "endDate"),
+    end: endName,
     startTime: config?.startTimeField || "startTime",
     endTime: config?.endTimeField || "endTime",
     creation: creation && creation !== startName && creation !== "name" ? creation : undefined,
@@ -110,6 +114,7 @@ export interface CalendarDraft {
   readonly icon: string;
   readonly done: boolean;
   readonly status: string;
+  readonly edited: readonly ("color" | "icon" | "status" | "done")[];
   /** The view's defaults (filter prefill), written under the mapped values. */
   readonly prefill: Values;
   readonly mapping: DraftMapping;
@@ -213,10 +218,10 @@ export function draftPayload(draft: CalendarDraft, today: Dayjs, untitled: strin
   const values: Values = { ...draft.prefill, ...timeValues(draft.start, draft.end, m) };
   if (m.start === "name") delete values["name"];
   if (m.creation) values[m.creation] = today.format(DAY);
-  if (m.check) values[m.check] = draft.done;
-  if (m.status) values[m.status] = draft.status || null;
-  if (m.color) values[m.color] = draft.color || null;
-  if (m.icon) values[m.icon] = draft.icon.trim() || null;
+  if (m.check && (draft.done || draft.edited.includes("done"))) values[m.check] = draft.done;
+  if (m.status && (draft.status || draft.edited.includes("status"))) values[m.status] = draft.status || null;
+  if (m.color && (draft.color || draft.edited.includes("color"))) values[m.color] = draft.color || null;
+  if (m.icon && (draft.icon.trim() || draft.edited.includes("icon"))) values[m.icon] = draft.icon.trim() || null;
   for (const name of m.computed) delete values[name];
   return { name: draftFileName(draft, untitled), templatePath: draft.templatePath, values };
 }
@@ -314,6 +319,7 @@ export function createCalendarDraft(): CalendarDraftController {
         icon: mapping.icon ? textOf(prefill[mapping.icon]) : "",
         done: mapping.check ? prefill[mapping.check] === true : false,
         status: mapping.status ? textOf(prefill[mapping.status]) : "",
+        edited: [],
         prefill,
         mapping,
       };
@@ -328,7 +334,10 @@ export function createCalendarDraft(): CalendarDraftController {
 
     edit(fields) {
       const draft = editable();
-      if (draft) change(draft, fields);
+      if (draft) {
+        const touched = (["color", "icon", "status", "done"] as const).filter((key) => key in fields);
+        change(draft, { ...fields, edited: [...new Set([...draft.edited, ...touched])] });
+      }
     },
 
     setStart(start) {

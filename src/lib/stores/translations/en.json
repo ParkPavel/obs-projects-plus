@@ -983,7 +983,10 @@
                     "color": "Colour",
                     "clear-color": "Clear colour",
                     "computed": "Read-only computed fields: {{fields}}",
-                    "mapping-conflict": "Choose distinct mapped properties before saving: {{fields}}"
+                    "mapping-conflict": "Choose distinct mapped properties before saving: {{fields}}",
+                    "template-default": "From template",
+                    "template-hint": "Untouched properties keep the template values. Use the eraser to clear a value explicitly.",
+                    "clear-value": "Clear {{field}}"
                 }
             },
             "gallery": {

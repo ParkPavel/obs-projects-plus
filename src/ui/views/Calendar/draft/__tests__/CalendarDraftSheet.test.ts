@@ -121,6 +121,15 @@ describe("CalendarDraftSheet — keys", () => {
 });
 
 describe("CalendarDraftSheet — writing", () => {
+  it("leaves untouched template properties inherited, with a mixed completion state", async () => {
+    const m = mount();
+    begin(m.ctl, { templatePath: "Template.md" });
+    await tick();
+    expect(m.container.querySelector<HTMLInputElement>('input[type="checkbox"]')?.indeterminate).toBe(true);
+    await fireEvent.click(m.confirmButton());
+    expect(m.onConfirm).toHaveBeenCalledTimes(1);
+    expect(m.ctl.getState().draft?.edited).toEqual([]);
+  });
   it("captures an unblurred textual status when ✓ is pressed", async () => {
     const m = mount();
     begin(m.ctl, { mapping: draftMapping({ config: { statusField: "stage" }, fields: [] }) });

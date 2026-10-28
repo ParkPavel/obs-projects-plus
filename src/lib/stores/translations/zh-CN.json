@@ -1021,7 +1021,10 @@
                     "color": "颜色",
                     "clear-color": "清除颜色",
                     "computed": "只读计算字段：{{fields}}",
-                    "mapping-conflict": "保存前请为各项选择不同的映射属性：{{fields}}"
+                    "mapping-conflict": "保存前请为各项选择不同的映射属性：{{fields}}",
+                    "template-default": "来自模板",
+                    "template-hint": "未更改的属性保留模板值。使用橡皮擦可明确清除值。",
+                    "clear-value": "清除 {{field}}"
                 }
             },
             "gallery": {

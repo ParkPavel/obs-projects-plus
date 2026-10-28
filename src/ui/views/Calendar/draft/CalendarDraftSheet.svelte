@@ -64,6 +64,8 @@
     : draft ? nameProblem(draftFileName({ ...draft, name: typedName }, untitled)) : "";
   $: computed = draft ? computedOf(draft) : [];
   $: writable = (name: string | undefined) => !!name && !computed.includes(name);
+  $: inheritedDone = !!draft?.templatePath && !!draft.mapping.check
+    && draft.prefill[draft.mapping.check] === undefined && !draft.edited.includes("done");
 
   function computedOf(d: CalendarDraft): string[] {
     const m = d.mapping;
@@ -78,7 +80,11 @@
 
   function confirm(): void {
     if (!draft || state.saving || problem) return;
-    controller.edit({ name: typedName, icon: typedIcon, status: typedStatus });
+    controller.edit({
+      ...(typedName !== draft.name ? { name: typedName } : {}),
+      ...(typedIcon !== draft.icon ? { icon: typedIcon } : {}),
+      ...(typedStatus !== draft.status ? { status: typedStatus } : {}),
+    });
     onConfirm();
   }
 
@@ -150,6 +156,10 @@
       </button>
     </div>
 
+    {#if conflicts.length}
+      <p class="ppp-draft-sheet__error" role="alert">{problem}</p>
+    {/if}
+
     {#if state.error}
       <p class="ppp-draft-sheet__error" role="alert">
         {$i18n.t("modals.note.create.save-error", { message: state.error })}
@@ -164,13 +174,13 @@
           id="{uid}-name"
           value={draft.name}
           inputClass="ppp-draft-sheet__input"
-          error={!!problem}
+          error={!!problem && !conflicts.length}
           disabled={state.saving}
           on:input={(e) => (typedName = e.detail)}
           on:commit={onNameCommit}
           on:cancel={() => (typedName = draft?.name ?? "")}
         />
-        {#if problem}<span class="ppp-draft-sheet__problem">{problem}</span>{/if}
+        {#if problem && !conflicts.length}<span class="ppp-draft-sheet__problem">{problem}</span>{/if}
       </div>
 
       {#if templates.length}
@@ -219,6 +229,7 @@
           <ComboField
             id="{uid}-status"
             value={draft.status}
+            placeholder={draft.templatePath ? $i18n.t("views.calendar.draft.template-default") : ""}
             options={statusOptions}
             allowCustom
             disabled={state.saving}
@@ -226,6 +237,9 @@
             on:commit={(e) => { typedStatus = e.detail.value; controller.edit({ status: typedStatus }); }}
             on:cancel={() => (typedStatus = draft?.status ?? "")}
           />
+          <button type="button" class="clickable-icon" disabled={state.saving}
+            aria-label={$i18n.t("views.calendar.draft.clear-value", { field: $i18n.t("views.calendar.draft.status") })}
+            on:click={() => { typedStatus = ""; controller.edit({ status: "" }); }}><Icon name="eraser" /></button>
         </div>
       {/if}
 
@@ -235,6 +249,8 @@
             class="ppp-touch-target"
             type="checkbox"
             checked={draft.done}
+            bind:indeterminate={inheritedDone}
+            aria-checked={inheritedDone ? "mixed" : draft.done}
             disabled={state.saving}
             on:change={(e) => controller.edit({ done: e.currentTarget.checked })}
           />
@@ -248,12 +264,16 @@
           <TextField
             id="{uid}-icon"
             value={draft.icon}
+            placeholder={draft.templatePath ? $i18n.t("views.calendar.draft.template-default") : ""}
             inputClass="ppp-draft-sheet__input"
             disabled={state.saving}
             on:input={(e) => (typedIcon = e.detail)}
             on:commit={onIconCommit}
             on:cancel={() => (typedIcon = draft?.icon ?? "")}
           />
+          <button type="button" class="clickable-icon" disabled={state.saving}
+            aria-label={$i18n.t("views.calendar.draft.clear-value", { field: $i18n.t("views.calendar.draft.icon") })}
+            on:click={() => { typedIcon = ""; controller.edit({ icon: "" }); }}><Icon name="eraser" /></button>
         </div>
       {/if}
 
@@ -266,9 +286,8 @@
               aria-expanded={colorOpen}
               disabled={state.saving}
               on:click={() => (colorOpen = !colorOpen)}>
-              <Icon name="palette" /> {draft.color}
+              <Icon name="palette" /> {draft.color || (draft.templatePath && !draft.edited.includes("color") ? $i18n.t("views.calendar.draft.template-default") : "")}
             </button>
-            {#if draft.color}
               <button
                 type="button"
                 class="ppp-draft-sheet__button clickable-icon"
@@ -279,7 +298,6 @@
               >
                 <Icon name="eraser" />
               </button>
-            {/if}
           </span>
           {#if colorOpen && !state.saving}
             <ColorPicker value={draft.color || "#808080"} on:change={(e) => controller.edit({ color: e.detail })} />
@@ -288,6 +306,9 @@
       {/if}
     </div>
 
+    {#if draft.templatePath}
+      <p class="ppp-draft-sheet__hint">{$i18n.t("views.calendar.draft.template-hint")}</p>
+    {/if}
     {#if computed.length}
       <p class="ppp-draft-sheet__hint">{$i18n.t("views.calendar.draft.computed", { fields: computed.join(", ") })}</p>
     {/if}

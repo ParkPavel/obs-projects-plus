@@ -202,6 +202,16 @@ describe("cancel, refusals and one write at a time", () => {
 });
 
 describe("what is written", () => {
+  it.each(["due", "end", "endDate"])("does not treat the lone implicit date %s as two explicit mappings", async (name) => {
+    const ctl = createCalendarDraft();
+    const m = draftMapping({ config: undefined, fields: [field(name)], start: name, end: name });
+    ctl.begin(begin(m));
+    const save = jest.fn(() => Promise.resolve());
+    expect(await ctl.confirm(save, TODAY, UNTITLED)).toBe("saved");
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(m.start).toBe("startDate");
+    expect(m.end).toBe(name);
+  });
   it("refuses conflicting mappings instead of overwriting status with a colour", async () => {
     const ctl = createCalendarDraft();
     ctl.begin(begin(mapping({ status: "stage", color: "stage" })));
