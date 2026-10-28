@@ -22,7 +22,7 @@ jest.mock("src/ui/components/ColorPicker", () => ({
 }));
 
 import "@testing-library/jest-dom";
-import { render } from "@testing-library/svelte";
+import { render, waitFor } from "@testing-library/svelte";
 import { tick } from "svelte";
 // Required, not imported: esbuild-jest runs babel hoisting on files with
 // jest.mock, and babel refuses an imported binding also used as a type.
@@ -31,7 +31,7 @@ type TFile = { path: string };
 
 const NotePropertiesBlock = require("../NotePropertiesBlock.svelte").default;
 
-function setup(fm: Record<string, unknown>) {
+function setup(fm: Record<string, unknown>, other?: Record<string, unknown>) {
   const file = new TFile("Notes/a.md");
   const getMarkdownFiles = jest.fn(() => [file, new TFile("Notes/b.md")]);
   const listeners: Array<(f: TFile) => void> = [];
@@ -41,7 +41,7 @@ function setup(fm: Record<string, unknown>) {
   });
   const app = {
     metadataCache: {
-      getFileCache: () => ({ frontmatter: { ...fm } }),
+      getFileCache: (candidate: TFile) => ({ frontmatter: { ...(candidate.path === file.path ? fm : other ?? fm) } }),
       on: (_name: string, cb: (f: TFile) => void) => {
         listeners.push(cb);
         return {};
@@ -101,6 +101,160 @@ afterEach(() => {
 });
 
 describe("i3-props NotePropertiesBlock", () => {
+  it("Tab waits even when the input has another window's prototype", async () => {
+    const fm: Record<string, unknown> = { one: "x", two: "y" };
+    const { processFrontMatter } = setup(fm);
+    await tick();
+    (row("one").querySelector(".ppp-note-props__display") as HTMLElement).click();
+    await flush();
+    const field = editorOf("one")!;
+    type(field, "draft");
+    const frame = document.createElement("iframe");
+    document.body.appendChild(frame);
+    const foreignWindow = frame.contentWindow as Window & typeof globalThis;
+    const original = Object.getPrototypeOf(field);
+    Object.setPrototypeOf(field, foreignWindow.HTMLInputElement.prototype);
+    expect(Object.getPrototypeOf(field)).not.toBe(HTMLInputElement.prototype);
+    let release: () => void = () => {};
+    const blocked = new Promise<void>(resolve => { release = resolve; });
+    const write = processFrontMatter.getMockImplementation()!;
+    processFrontMatter.mockImplementationOnce(async (...args) => { await blocked; return write(...args); });
+    try {
+      key(field, "Tab");
+      await flush();
+      expect(editorOf("one")).toBe(field);
+      expect(editorOf("two")).toBeNull();
+      release();
+      await flush();
+      expect(fm["one"]).toBe("draft");
+      expect(processFrontMatter).toHaveBeenCalledTimes(1);
+    } finally { Object.setPrototypeOf(field, original); frame.remove(); }
+  });
+
+  it("an old add-property write cannot close a newer name draft", async () => {
+    const fm: Record<string, unknown> = { title: "x" };
+    const { processFrontMatter, container } = setup(fm);
+    await tick();
+    (container.querySelector("button.ppp-note-props__add") as HTMLButtonElement).click();
+    await flush();
+    const input = container.querySelector<HTMLInputElement>(".ppp-note-props__add-row input")!;
+    let release: () => void = () => {};
+    const blocked = new Promise<void>(resolve => { release = resolve; });
+    const write = processFrontMatter.getMockImplementation()!;
+    processFrontMatter.mockImplementationOnce(async (...args) => { await blocked; return write(...args); });
+    type(input, "first");
+    key(input, "Enter");
+    await flush();
+    type(input, "second");
+    release();
+    await flush();
+    expect("first" in fm).toBe(true);
+    expect(container.querySelector<HTMLInputElement>(".ppp-note-props__add-row input")?.value).toBe("second");
+    key(input, "Enter");
+    await flush();
+    expect("second" in fm).toBe(true);
+  });
+
+  it.each([
+    ["text", false], ["text", true], ["status", false], ["status", true],
+  ])("%s Tab (backwards=%s) waits and writes exactly once through the field", async (kind, backwards) => {
+    const fm: Record<string, unknown> = { before: "x", choice: "alpha", after: "z",
+      ...(kind === "status" ? { pp_types: { choice: "status" } } : {}) };
+    const { processFrontMatter } = setup(fm, { choice: "beta" });
+    await tick();
+    (row("choice").querySelector(".ppp-note-props__display") as HTMLElement).click();
+    await flush();
+    const field = editorOf("choice")!;
+    type(field, kind === "status" ? "be" : "draft");
+    if (kind === "status") { key(field, "ArrowDown"); await tick(); }
+    let release: () => void = () => {};
+    const blocked = new Promise<void>(resolve => { release = resolve; });
+    const write = processFrontMatter.getMockImplementation()!;
+    processFrontMatter.mockImplementationOnce(async (...args) => { await blocked; return write(...args); });
+    keyWith(field, "Tab", { shiftKey: backwards === true });
+    await flush();
+    expect(editorOf("choice")).toBe(field);
+    expect(editorOf(backwards ? "before" : "after")).toBeNull();
+    expect(processFrontMatter).toHaveBeenCalledTimes(1);
+    release();
+    await flush();
+    expect(fm["choice"]).toBe(kind === "status" ? "beta" : "draft");
+    expect(document.activeElement).toBe(editorOf(backwards ? "before" : "after"));
+    expect(processFrontMatter).toHaveBeenCalledTimes(1);
+  });
+  it("keeps a rejected value draft editable and lets the user retry", async () => {
+    const fm: Record<string, unknown> = { title: "original" };
+    const { processFrontMatter } = setup(fm);
+    const error = jest.spyOn(console, "error").mockImplementation(() => undefined);
+    await tick();
+    (row("title").querySelector(".ppp-note-props__display") as HTMLElement).click();
+    await flush();
+    for (let i = 0; i < 4; i++) processFrontMatter.mockRejectedValueOnce(new Error("disk full") as never);
+    type(editorOf("title") as HTMLInputElement, "draft");
+    key(editorOf("title") as HTMLInputElement, "Enter");
+    await waitFor(() => expect(row("title").querySelector('[role="alert"]')).not.toBeNull());
+    expect(fm["title"]).toBe("original");
+    expect(editorOf("title")?.value).toBe("draft");
+    expect(row("title").querySelector('[role="alert"]')).not.toBeNull();
+    key(editorOf("title") as HTMLInputElement, "Enter");
+    await flush();
+    expect(fm["title"]).toBe("draft");
+    expect(editorOf("title")).toBeNull();
+    error.mockRestore();
+  });
+
+  it("keeps the rename editor open when the file refuses a rename", async () => {
+    const fm: Record<string, unknown> = { title: "A", status: "open" };
+    const { processFrontMatter } = setup(fm);
+    const error = jest.spyOn(console, "error").mockImplementation(() => undefined);
+    await tick();
+    await menuEntry("status", "Rename property");
+    processFrontMatter.mockRejectedValueOnce(new Error("read only") as never);
+    type(editorOf("status") as HTMLInputElement, "state");
+    key(editorOf("status") as HTMLInputElement, "Enter");
+    await flush();
+    expect(fm).toEqual({ title: "A", status: "open" });
+    expect(editorOf("status")?.value).toBe("state");
+    expect(row("status").querySelector('[role="alert"]')).not.toBeNull();
+    key(editorOf("status") as HTMLInputElement, "Enter");
+    await flush();
+    expect(fm["state"]).toBe("open");
+    expect("status" in fm).toBe(false);
+    error.mockRestore();
+  });
+
+  it("does not close another field when a previous save finishes", async () => {
+    const fm: Record<string, unknown> = { one: "x", two: "y" };
+    const { processFrontMatter } = setup(fm);
+    const original = processFrontMatter.getMockImplementation();
+    let release: () => void = () => undefined;
+    processFrontMatter.mockImplementationOnce(async (...args) => {
+      await new Promise<void>(resolve => { release = resolve; });
+      await original?.(...args);
+    });
+    await tick();
+    (row("one").querySelector(".ppp-note-props__display") as HTMLElement).click();
+    await flush();type(editorOf("one") as HTMLInputElement, "saved");key(editorOf("one") as HTMLInputElement, "Enter");
+    (row("two").querySelector(".ppp-note-props__display") as HTMLElement).click();
+    await flush();type(editorOf("two") as HTMLInputElement, "keep typing");
+    release();await flush();
+    expect(fm["one"]).toBe("saved");
+    expect(fm["two"]).toBe("y");
+    expect(editorOf("two")?.value).toBe("keep typing");
+  });
+
+  it("Tab waits for storage and retains the draft after a persistent refusal", async () => {
+    const fm: Record<string, unknown> = { one: "x", two: "y" };
+    const { processFrontMatter } = setup(fm);
+    const error=jest.spyOn(console,"error").mockImplementation(()=>undefined);
+    for(let i=0;i<4;i++)processFrontMatter.mockRejectedValueOnce(new Error("disk full") as never);
+    await tick();(row("one").querySelector(".ppp-note-props__display") as HTMLElement).click();
+    await flush();type(editorOf("one") as HTMLInputElement,"draft");key(editorOf("one") as HTMLInputElement,"Tab");
+    await waitFor(()=>expect(row("one").querySelector('[role="alert"]')).not.toBeNull());
+    expect(fm["one"]).toBe("x");expect(editorOf("one")?.value).toBe("draft");expect(editorOf("two")).toBeNull();
+    error.mockRestore();
+  });
+
   it("deletes a property from the row menu, with its type entry", async () => {
     const fm: Record<string, unknown> = { title: "A", status: "open", pp_types: { status: "status" } };
     setup(fm);

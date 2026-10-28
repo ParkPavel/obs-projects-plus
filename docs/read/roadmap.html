@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Roadmap"><meta name="color-scheme" content="light dark">
+<meta name="referrer" content="strict-origin-when-cross-origin"><title>Roadmap · Projects Plus</title>
+<meta property="og:type" content="website"><meta property="og:title" content="Roadmap"><meta property="og:description" content="Roadmap"><meta property="og:url" content="https://parkpavel.github.io/obs-projects-plus/read/roadmap.html"><meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://parkpavel.github.io/obs-projects-plus/read/roadmap.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/site.css">
+<script type="module" src="../assets/site.js"></script></head>
+<body data-prefix="../" data-language="en"><a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header"><a class="wordmark" href="../en.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
+<nav aria-label="Main navigation"><a href="../en.html#ideas">Garden of ideas</a><a href="../read/user-guide-en.html">Documentation</a><a class="language" href="../read/roadmap-ru.html" hreflang="ru">Русский</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../en.html">← Explore the plugin</a><strong>On this page</strong><nav aria-label="On this page"><a href="#current-priority-stabilize-371">Current priority — stabilize 3.7.1</a><a href="#principles-that-do-not-change">Principles that do not change</a><a href="#track-1-calculations-and-data-after-stabilization">Track 1 — Calculations and data (after stabilization)</a><a href="#track-2-behaviour-design-and-fixes">Track 2 — Behaviour, design and fixes</a><a href="#track-3-connections-to-the-outside">Track 3 — Connections to the outside</a><a href="#exploring-every-note-is-a-database">Exploring: every note is a database</a><a href="#how-releases-are-accepted">How releases are accepted</a></nav></aside><article class="doc-article"><p class="doc-version">Documentation follows the source code; an installed release may differ.</p><h1 id="roadmap">Roadmap</h1>
+<p><a href="../read/roadmap-ru.html">Русский</a> · <a href="../read/readme.html">README</a> · <a href="../read/changelog.html">Changelog</a></p>
+<p>This is the plan of record for Projects Plus after 3.6.3. It changes when priorities change; what has
+shipped is in the <a href="../read/changelog.html">changelog</a>. Items are listed in priority order within each track; no
+dates are promised.</p>
+<h2 id="current-priority-stabilize-371">Current priority — stabilize 3.7.1</h2>
+<p>Before new roadmap functionality, finish the existing workflows reported by the tester.
+The <a href="../read/development-3.7.1.html">3.7.1 completion baseline</a> consolidates all 19 cases, their
+implementation boundaries and device acceptance. The October 5 stabilization cycle takes
+precedence over the track order below. A green check on the narrower release contract does
+not mean that the whole matrix has been accepted. This is a candidate, not a released version.</p>
+<h2 id="principles-that-do-not-change">Principles that do not change</h2>
+<ul>
+<li><strong>Your data stays in your notes.</strong> Frontmatter and Markdown are the database. Nothing is moved into a
+separate store; everything computed is built on top of your notes.</li>
+<li><strong>Relations are frontmatter properties.</strong> A property holding a list of links is recognised as a relation;
+a single plain <code>[[link]]</code> stays text until you declare the property a relation.</li>
+<li><strong>One behaviour on every device.</strong> The bar is how a well-made iOS app behaves — on a phone, a tablet,
+a desktop, and a narrow pane inside Obsidian alike.</li>
+<li><strong>Layouts adapt to their container, not to the screen.</strong> A view sized for a small window works the same
+on a small phone.</li>
+</ul>
+<h2 id="track-1-calculations-and-data-after-stabilization">Track 1 — Calculations and data (after stabilization)</h2>
+<p>One calculation model, closer to a spreadsheet, for everything you see in tables, cards and charts.</p>
+<ol>
+<li><strong>One calculation engine.</strong> The separate transformation pipeline is retired. Its operations move into
+the database itself: filters and formulas inside tables, chart calls and cross-project summaries built
+on a computed data model that you configure — similar to a spreadsheet&#39;s data model or pivot table.
+Dashboards you already have are migrated.</li>
+<li><strong>Correct calculations.</strong> Formulas defined on a project field are evaluated. Rollups get their own
+filters, so one relation can feed several differently filtered totals. Rollups can chain across
+projects. <code>SUMIF</code>, <code>COUNTIF</code> and <code>AVERAGEIF</code> behave as they do in spreadsheets. Anything unsupported
+says so instead of returning an approximation.</li>
+<li><strong>Working selections.</strong> A saved selection can filter on computed columns (rollups, formulas), not only
+on raw properties.</li>
+<li><strong>Analytics in plain words.</strong> Ready recipes such as &quot;average per client over a period&quot;, &quot;change between
+periods&quot; and &quot;gap between visits&quot;, starting with Clients → Sessions.</li>
+</ol>
+<h2 id="track-2-behaviour-design-and-fixes">Track 2 — Behaviour, design and fixes</h2>
+<p>A cross-platform redesign with iOS-first behaviour, and the issues users reported after publication.</p>
+<ul>
+<li><strong>Adaptive layout everywhere.</strong> Panes and windows respect device and window edges (safe areas, split
+panes, pop-out and narrow windows). Calendar side panels no longer overlap the controls. View tabs
+scroll when they do not fit. The filter side panel adapts to its space. This applies equally to small
+desktop windows.</li>
+<li><strong>Touch.</strong> Drag from anywhere already works in most views; the Kanban board gets its own designed grab
+area that no longer covers card text or other controls.</li>
+<li><strong>Cards and galleries.</strong> A redesigned gallery with view settings you choose; thumbnails on Kanban cards
+as an option; card frames you can resize by hand, remembered per view; better-designed, more capable
+cards across views.</li>
+<li><strong>Cleaner internals.</strong> Large views are split along testable boundaries and legacy code paths are
+removed, so fixes land faster.</li>
+<li><strong>Refreshed demo.</strong> Once the behaviour gaps are closed, the demo projects are updated to show the new
+calculation model and cards.</li>
+</ul>
+<h2 id="track-3-connections-to-the-outside">Track 3 — Connections to the outside</h2>
+<ul>
+<li>Remote calendars (ICS, CalDAV, Google Calendar), with a clear boundary for what is read, what is written
+and where it is stored.</li>
+<li>Other external services, each with its own explicit contract.</li>
+</ul>
+<p>Credentials will never be written into notes.</p>
+<h2 id="exploring-every-note-is-a-database">Exploring: every note is a database</h2>
+<p>A note&#39;s frontmatter shown as a full card that replaces the standard properties view, with its related
+databases, rollups and views built around it through its relations — much like a page in Notion. This is
+in design only. Tracks 1 and 2 are being built so that the calculation engine and the card can be reused
+here without rework.</p>
+<h2 id="how-releases-are-accepted">How releases are accepted</h2>
+<p>Every release passes the Obsidian community directory&#39;s automated review. Reports from users are
+reviewed and turned into items in Track 2. Changes that affect saved data are checked by changing a
+value, reloading, and reading it back in a test vault before release.</p>
+<p>Found a problem or have an idea? Open an <a href="https://github.com/ParkPavel/obs-projects-plus/issues">issue</a>.</p>
+<p class="doc-source"><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/ROADMAP.md">Page source ↗</a></p></article></main>
+<footer class="site-footer"><a class="wordmark" href="../en.html">Projects Plus</a><p>An open-source project by Park Pavel. Based on Obsidian Projects by Marcus Olsson.</p><div><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache-2.0</a><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE">Attribution</a><a href="https://github.com/ParkPavel/obs-projects-plus/issues">Feedback</a></div></footer>
+<aside class="search-panel" aria-label="Search documentation"><label for="doc-search">Search documentation</label><div class="search-input-wrap"><input id="doc-search" type="search" placeholder="Search…" autocomplete="off" aria-controls="search-results"><kbd>/</kbd></div><ul id="search-results" hidden></ul><p id="search-status" role="status" aria-live="polite" data-empty="No matches. Try “calendar”, “formula” or “source”."></p></aside>
+</body></html>

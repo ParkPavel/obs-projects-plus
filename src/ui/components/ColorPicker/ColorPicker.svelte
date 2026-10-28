@@ -4,7 +4,9 @@
   import TextField from '../fields/TextField.svelte';
   import { i18n } from '../../../lib/stores/i18n';
   import { hexToHsv, hsvToHex } from '../../../lib/colors/math';
-  import { favoritesStore, DEFAULT_COLOR } from 'src/lib/stores/palettes';
+  import { DEFAULT_COLOR } from 'src/lib/stores/palettes';
+  import { useFavoritesStore } from 'src/ui/paletteProject';
+  const favoritesStore = useFavoritesStore();
 
   const dispatch = createEventDispatcher<{ change: string }>();
 

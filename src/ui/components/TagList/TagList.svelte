@@ -36,7 +36,7 @@
     field?.focus();
   }
 
-  function add(e: CustomEvent<{ value: string; reason: "enter" | "blur" }>): void {
+  function add(e: CustomEvent<{ value: string; reason: "enter" | "blur" | "tab" }>): void {
     const item = e.detail.value.trim();
     if (item) onChange([...values, item]);
     if (e.detail.reason === "enter" && item) field?.reset("");

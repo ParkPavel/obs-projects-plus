@@ -20,11 +20,12 @@
   export let views: ViewDefinition[] = [];
   export let viewId: ViewId | undefined;
   export let view: ViewDefinition | undefined = undefined;
+  export let newView: { name: string; commit: (name: string) => void; cancel: () => void } | null = null;
   /** Agenda state for the icon/label; undefined falls back to the view config. */
   export let agendaOpen: boolean | undefined = undefined;
 
   const dispatch = createEventDispatcher<{
-    addView: void;
+    addView: MouseEvent;
     openSettings: MouseEvent;
     centerToday: void;
     toggleAgenda: void;
@@ -54,6 +55,7 @@
   <div class="compact-navbar-tabs" use:moveToViewHeader={Platform.isPhone === true}>
     <ViewSwitcher
       {views}
+      {newView}
       activeViewId={viewId}
       onSelect={(id) => dispatch("viewChange", id)}
     />
@@ -72,7 +74,7 @@
 
   <div class="right">
     <SaveStatusChip />
-    <AddViewButton onAdd={() => dispatch("addView")}/>
+    <AddViewButton onAdd={(event) => dispatch("addView", event)}/>
     <SettingsMenuButton onOpen={(event) => dispatch("openSettings", event)}/>
     <ViewSpecificActions
       {view}

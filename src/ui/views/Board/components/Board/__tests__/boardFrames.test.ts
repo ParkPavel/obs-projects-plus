@@ -70,6 +70,7 @@ type ComponentClass = new (options: { target: HTMLElement; props: Record<string,
 
 const CardList = require("../CardList.svelte").default as ComponentClass;
 const Board = require("../Board.svelte").default as ComponentClass;
+const { TRIGGERS, SOURCES } = require("svelte-dnd-action");
 const BoardView = require("../../../BoardView.svelte").default as ComponentClass;
 const { app } = require("src/lib/stores/obsidian") as { app: { set(value: unknown): void } };
 const { Notice } = require("obsidian") as { Notice: jest.Mock };
@@ -310,6 +311,38 @@ describe("cards-g5 — the board handle", () => {
     m.handle("a.md").dispatchEvent(key("ArrowDown"));
     expect(m.onDrop).not.toHaveBeenCalled();
     m.destroy();
+  });
+});
+
+describe("column drag temporarily folds columns without changing saved state", () => {
+  it("restores expanded, collapsed and pinned columns and keeps the pressed handle connected", async () => {
+    const target=document.createElement("div");document.body.appendChild(target);
+    const columns=[
+      {id:"Pinned",records:RECORDS(),collapse:false,pinned:true,persisted:false},
+      {id:"Open",records:RECORDS(),collapse:false,pinned:false,persisted:false},
+      {id:"Closed",records:RECORDS(),collapse:true,pinned:false,persisted:false},
+    ];
+    const onColumnCollapse=jest.fn();const onSortColumns=jest.fn();
+    const component=new Board({target,props:{columns,readonly:true,dataReadOnly:false,richText:false,
+      onRecordClick:jest.fn(),onRecordCheck:jest.fn(),onRecordUpdate:jest.fn(),onRecordAdd:jest.fn(),columnWidth:270,
+      onSortColumns,onColumnAdd:jest.fn(),onColumnDelete:jest.fn(),onColumnRename:jest.fn(),onColumnCollapse,
+      onColumnPin:jest.fn(),onColumnPersist:jest.fn(),validateStatusField:()=>({}),checkField:undefined,includeFields:[],customHeader:undefined,
+    }});
+    const zone=target.querySelector<HTMLElement>("section.projects--board:not(.projects--board--pinned)")!;
+    const grip=target.querySelector<HTMLElement>('section[data-id="Open"] .board-column-grip')!;
+    expect(grip).not.toBeNull();
+    zone.dispatchEvent(new CustomEvent("consider",{detail:{items:columns.filter(c=>!c.pinned),info:{trigger:TRIGGERS.DRAG_STARTED,source:SOURCES.KEYBOARD,id:"Open"}}}));
+    await tick();
+    expect(target.querySelectorAll("section.projects--board--column.collapse")).toHaveLength(3);
+    expect(grip.isConnected).toBe(true);
+    expect(columns.map(c=>c.collapse)).toEqual([false,false,true]);
+    zone.dispatchEvent(new CustomEvent("finalize",{detail:{items:columns.filter(c=>!c.pinned),info:{trigger:TRIGGERS.DROPPED_INTO_ZONE,source:SOURCES.KEYBOARD,id:"Open"}}}));
+    await tick();
+    expect(target.querySelectorAll("section.projects--board--column.collapse")).toHaveLength(1);
+    expect(target.querySelector('section[data-id="Closed"]')?.classList.contains("collapse")).toBe(true);
+    expect(grip.isConnected).toBe(true);
+    expect(onColumnCollapse).not.toHaveBeenCalled();expect(onSortColumns).not.toHaveBeenCalled();
+    component.$destroy();target.remove();
   });
 });
 

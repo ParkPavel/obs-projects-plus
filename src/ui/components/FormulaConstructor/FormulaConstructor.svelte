@@ -40,6 +40,9 @@
   } from "src/lib/dashboard-engine/formulaMetadata";
   import { i18n } from "src/lib/stores/i18n";
   import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
+  import { isImeKey } from "src/ui/components/fields/draftController";
+  import { keepInView } from "src/ui/components/fields/keepInView";
+  import { releaseOnOutsideTap } from "src/ui/components/fields/releaseOnOutsideTap";
   import { tokenize, type Token } from "src/lib/helpers/formulaParser";
 
   // ── Snippets catalog (default) ──────────────────────────────
@@ -97,6 +100,7 @@
   let textareaEl: HTMLTextAreaElement;
   let highlightEl: HTMLDivElement | null = null;
   let suggestionListEl: HTMLDivElement | null = null;
+  let composing = false;
 
   // ── Syntax highlight (#077) ─────────────────────────────────
   type HighlightSegment = { text: string; cls: string };
@@ -234,6 +238,7 @@
   }
 
   function updateCursor(el: HTMLTextAreaElement) {
+    if (composing) return;
     const pos = el.selectionStart ?? 0;
     cursorPosition = pos;
     const before = value.substring(0, pos);
@@ -299,6 +304,7 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
+    if (composing || isImeKey(e)) return;
     // Ctrl+Space: force-open suggestions even when cursor word is empty.
     // Empty textarea → snippet catalog; otherwise → first 12 functions.
     if (e.ctrlKey && (e.code === "Space" || e.key === " ")) {
@@ -377,6 +383,8 @@
       {/if}
       <textarea
         bind:this={textareaEl}
+        use:keepInView
+        use:releaseOnOutsideTap
         class="ppp-fc-textarea"
         class:ppp-fc-textarea--error={errors.length > 0}
         class:ppp-fc-textarea--highlight={highlight}
@@ -389,6 +397,8 @@
         on:keyup={handleCursorMove}
         on:focus={handleCursorMove}
         on:scroll={syncScroll}
+        on:compositionstart={() => { composing = true; showSuggestions = false; }}
+        on:compositionend={(event) => { composing = false; handleCursorMove(event); }}
         spellcheck="false"
       ></textarea>
     </div>
@@ -529,6 +539,15 @@
     min-height: 4rem;
     overflow-x: hidden;
     overflow-y: auto;
+  }
+
+  /* The shared touch input floor in tokens.css also enlarges textareas.
+     Its painted underlay must receive the same size or glyphs leave the caret. */
+  @media (pointer: coarse) {
+    .ppp-fc-textarea,
+    .ppp-fc-highlight {
+      font-size: var(--ppp-input-font-size) !important;
+    }
   }
 
   .ppp-fc-highlight {

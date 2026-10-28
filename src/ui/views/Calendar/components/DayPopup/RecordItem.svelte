@@ -5,7 +5,8 @@
   import { Icon } from "obsidian-svelte";
   import { getScrollBehavior } from 'src/lib/helpers/animation';
   import { hexToHsv, hsvToHex } from "src/lib/colors/math";
-  import { favoritesStore } from "src/lib/stores/palettes";
+  import { useFavoritesStore } from "src/ui/paletteProject";
+  const favoritesStore = useFavoritesStore();
 
   export let record: DataRecord;
   export let checkField: string | undefined;

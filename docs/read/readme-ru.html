@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Projects Plus"><meta name="color-scheme" content="light dark">
+<meta name="referrer" content="strict-origin-when-cross-origin"><title>Projects Plus · Projects Plus</title>
+<meta property="og:type" content="website"><meta property="og:title" content="Projects Plus"><meta property="og:description" content="Projects Plus"><meta property="og:url" content="https://parkpavel.github.io/obs-projects-plus/read/readme-ru.html"><meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://parkpavel.github.io/obs-projects-plus/read/readme-ru.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/site.css">
+<script type="module" src="../assets/site.js"></script></head>
+<body data-prefix="../" data-language="ru"><a class="skip-link" href="#main">К содержимому</a>
+<header class="site-header"><a class="wordmark" href="../index.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
+<nav aria-label="Основная навигация"><a href="../index.html#ideas">Сад идей</a><a href="../read/user-guide.html">Документация</a><a class="language" href="../read/readme.html" hreflang="en">English</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../index.html">← Все возможности</a><strong>На этой странице</strong><nav aria-label="На этой странице"><a href="#что-можно-сделать">Что можно сделать</a><a href="#установка">Установка</a><a href="#использование">Использование</a><a href="#доступ-и-приватность">Доступ и приватность</a><a href="#куда-дальше">Куда дальше</a></nav></aside><article class="doc-article"><p class="doc-version">Документация исходного кода; установленный выпуск может отличаться.</p><h1 id="projects-plus">Projects Plus</h1>
+<p><a href="../read/readme.html">English</a> · <a href="https://parkpavel.github.io/obs-projects-plus/">Сайт и идеи</a> · <a href="../read/user-guide.html">Руководство пользователя</a> · <a href="../read/readme.html">Документация</a> · <a href="../read/roadmap-ru.html">План развития</a></p>
+<p>Projects Plus помогает работать с заметками Obsidian как с проектом: просматривать записи в таблице, распределять их по колонкам, планировать события в календаре и собирать обзор на Dashboard.</p>
+<p>Каждая запись остаётся Markdown-файлом. Поля, например статус, дата и исполнитель, хранятся в свойствах заметки — YAML-блоке в начале файла. Изменение обычного редактируемого поля в плагине записывается в заметку.</p>
+<h2 id="что-можно-сделать">Что можно сделать</h2>
+<table>
+<thead>
+<tr>
+<th>Задача</th>
+<th>Инструмент</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Сравнить записи и изменить их свойства</td>
+<td>Таблица в блоке Dashboard</td>
+</tr>
+<tr>
+<td>Распределить задачи по статусам</td>
+<td>Доска с перетаскиванием карточек</td>
+</tr>
+<tr>
+<td>Посмотреть встречи и сроки</td>
+<td>Календарь с обзором от года до дня</td>
+</tr>
+<tr>
+<td>Просматривать материалы по обложкам</td>
+<td>Галерея</td>
+</tr>
+<tr>
+<td>Объединить данные, графики и показатели</td>
+<td>Dashboard с настраиваемыми блоками</td>
+</tr>
+<tr>
+<td>Считать итоги по связанным записям</td>
+<td>Свёртки через связь и обратные — «записи, которые ссылаются сюда»</td>
+</tr>
+<tr>
+<td>Сравнить показатели разных проектов</td>
+<td>Графики с несколькими сериями, данными другого проекта и второй осью</td>
+</tr>
+<tr>
+<td>Выбрать нужные заметки</td>
+<td>Папка, тег, встроенный запрос с фильтром или Dataview</td>
+</tr>
+</tbody></table>
+<p><img src="../media/images--2026-01-27_12-24-17.png" alt="Пример календаря Projects Plus" loading="lazy" decoding="async"></p>
+<p>Иллюстрация показывает один из вариантов интерфейса; оформление установленной версии может отличаться.</p>
+<h2 id="установка">Установка</h2>
+<p>Когда Projects Plus появится в каталоге сообщества Obsidian, его можно будет установить прямо из Obsidian: <strong>Настройки → Сторонние плагины → Обзор</strong>, найдите <strong>Projects Plus</strong>, затем <strong>Установить</strong> и <strong>Включить</strong>.</p>
+<p>Чтобы установить выпуск вручную:</p>
+<p>Текущая версия — <strong>3.7.0</strong>: настраиваемые раскладки и поля карточек галереи, изменяемые рамки карточек, миниатюры в канбане, фильтры в настройках вида, поведение под касание на телефонах и планшетах и стили, следующие теме Obsidian. 3.6.3 дала плагину имя Projects Plus; 3.6.1 принесла демо из трёх связанных проектов. Первая версия в формате каталога сообщества Obsidian — 3.6.0. Готовые сборки лежат в <a href="https://github.com/ParkPavel/obs-projects-plus/releases">GitHub Releases</a>; нужен Obsidian 1.8.7 или новее, на компьютере или телефоне. Что изменилось — в <a href="../read/changelog-ru.html">истории изменений</a>.</p>
+<ol>
+<li>Выберите релиз и скачайте из него <strong>все три файла</strong>: <code>main.js</code>, <code>manifest.json</code> и <code>styles.css</code>.</li>
+<li>Создайте в своём хранилище папку <code>.obsidian/plugins/obs-projects-plus/</code> и поместите туда файлы. Если в Obsidian задана другая папка конфигурации, используйте её вместо <code>.obsidian</code>.</li>
+<li>Перезапустите Obsidian и включите <strong>Projects Plus</strong> в настройках сторонних плагинов.</li>
+</ol>
+<p>При обновлении заменяйте эти три файла одной сборкой. Сохраните <code>data.json</code>: в нём находятся настройки ваших проектов и представлений.</p>
+<h2 id="использование">Использование</h2>
+<p>Создайте первый проект:</p>
+<ol>
+<li><p>Создайте в хранилище папку <code>Projects</code>, а в ней заметку <code>First task.md</code>:</p>
+<pre><code class="language-yaml">---
+title: Первый шаг
+status: todo
+startDate: 2026-09-15
+---
+</code></pre>
+</li>
+<li><p>Откройте палитру команд Obsidian и найдите <strong>Создать новый проект плюс</strong>.</p>
+</li>
+<li><p>Задайте имя проекта, выберите источник <strong>Папка</strong> и путь <code>Projects</code>.</p>
+</li>
+<li><p>Откройте проект командой <strong>Показать проекты плюс</strong>. Добавьте представление через кнопку добавления представления; для таблицы используйте блок данных на Dashboard.</p>
+</li>
+<li><p>Измените <code>status</code> у записи и откройте Markdown-файл: значение должно сохраниться в свойствах заметки.</p>
+</li>
+</ol>
+<p>Для знакомства на готовых данных используйте команду <strong>Создать демо-проект</strong>: она создаёт три связанных проекта — массажный кабинет, трекер самочувствия и личный бюджет, — данные которых перетекают между ними. Её же предлагают окно приветствия и пустой экран проектов. Есть и отдельное <a href="../read/demo-vault-readme.html">демо-хранилище</a>.</p>
+<h2 id="доступ-и-приватность">Доступ и приватность</h2>
+<p>Projects Plus работает с вашим хранилищем через API Obsidian. У плагина нет отдельного сервера и телеметрии. Внешние обложки и изображения могут загружаться по сети; для локальной работы используйте изображения из хранилища.</p>
+<ul>
+<li><strong>Файлы хранилища.</strong> Чтобы найти заметки проекта и записи, которые ссылаются друг на друга, плагин просматривает список файлов хранилища и читает их свойства. В заметку он пишет только когда вы меняете или создаёте запись или запускаете действие вроде создания демо.</li>
+<li><strong>Буфер обмена.</strong> Плагин пишет в буфер, когда вы явно копируете отладочный отчёт формул или отчёт запуска; буфер он не читает.</li>
+<li><strong>Настройки.</strong> Проекты и представления хранятся в файле плагина <code>data.json</code> внутри хранилища.</li>
+</ul>
+<h2 id="куда-дальше">Куда дальше</h2>
+<ul>
+<li><a href="../read/user-guide.html">Руководство пользователя</a>: источники, представления, фильтры, шаблоны и решение проблем.</li>
+<li><a href="../read/templates-readme.html">Шаблоны заметок</a>: примеры для задач, встреч и обзоров.</li>
+<li><a href="../read/roadmap-ru.html">План развития</a>: что будет дальше.</li>
+<li><a href="../read/changelog-ru.html">История изменений</a> и <a href="https://github.com/ParkPavel/obs-projects-plus/issues">сообщения об ошибках</a>.</li>
+<li><a href="../read/contributing.html">Участие в разработке</a> и <a href="../read/api.html">API пользовательских представлений</a>.</li>
+</ul>
+<p>В <a href="../read/contributing-ru.html">правилах участия</a> описано, как сообщить о воспроизводимой ошибке, улучшить документацию или предложить код. Возможности и ограничения опубликованных версий перечислены в истории изменений.</p>
+<p>Projects Plus основан на <a href="https://github.com/marcusolsson/obsidian-projects">Obsidian Projects</a> Маркуса Олссона. Текущий сопровождающий — Park Pavel. Лицензия: <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache 2.0</a>; сведения об авторстве — <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE">NOTICE</a>.</p>
+<p class="doc-source"><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/README-RU.md">Исходник страницы ↗</a></p></article></main>
+<footer class="site-footer"><a class="wordmark" href="../index.html">Projects Plus</a><p>Открытый проект Park Pavel. Основан на Obsidian Projects Маркуса Олссона.</p><div><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache-2.0</a><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE">Attribution</a><a href="https://github.com/ParkPavel/obs-projects-plus/issues">Обратная связь</a></div></footer>
+<aside class="search-panel" aria-label="Поиск по документации"><label for="doc-search">Поиск по документации</label><div class="search-input-wrap"><input id="doc-search" type="search" placeholder="Поиск…" autocomplete="off" aria-controls="search-results"><kbd>/</kbd></div><ul id="search-results" hidden></ul><p id="search-status" role="status" aria-live="polite" data-empty="Ничего не найдено. Попробуйте «календарь», «formula» или «источник»."></p></aside>
+</body></html>

@@ -4,6 +4,15 @@
 </script>
 
 <script lang="ts">
+  /** Re-arm an unchanged draft after the consumer reports a failed write. */
+  export function retryCommit(): void { ctl.arm(); }
+  /** A containing editor can own Tab while keeping the field's selected option. */
+  export function commitForNavigation(): void {
+    const pick = activeNow();
+    if (!multi && pick && (userNav || !allowCustom)) choose(pick);
+    else finish("tab");
+    hide();
+  }
   /**
    * ComboField (stab-forms) — a text input with a suggestion listbox. DOM focus
    * stays on the input (role=combobox, aria-activedescendant names the active
@@ -375,10 +384,7 @@
       if (edited) e.stopPropagation();
       dispatch("cancel");
     } else if (e.key === "Tab") {
-      const pick = activeNow();
-      if (!multi && pick && (userNav || !allowCustom)) choose(pick);
-      else finish("tab");
-      hide();
+      commitForNavigation();
     }
   }
   function onBlur(): void {

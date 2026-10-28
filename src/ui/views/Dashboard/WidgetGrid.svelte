@@ -35,7 +35,7 @@
   import { startTileResize } from "./layout/tileResize";
   import { jumpItems, jumpToBlock } from "./layout/blockJump";
   import { createBlockProperties, provideBlockProperties } from "./layout/blockProperties";
-  import { insertIndexAfter, provideBlockInsert } from "./layout/blockInsert";
+  import { insertIndexAfter, insertIndexBefore, provideBlockInsert } from "./layout/blockInsert";
 
   import WidgetHost from "./widgets/WidgetHost.svelte";
   import DashboardBlockPalette from "./widgets/DashboardBlockPalette.svelte";
@@ -106,9 +106,13 @@
     paletteOpen = true;
   }
   provideBlockInsert({
-    available: () => tileMode && canDnd && !readonly,
+    available: () => canDnd && !readonly,
     after: (id, anchor) => {
       insertAt = { index: insertIndexAfter(dndWidgets.map((w) => w.id), id), anchor };
+      paletteOpen = true;
+    },
+    before: (id, anchor) => {
+      insertAt = { index: insertIndexBefore(dndWidgets.map((w) => w.id), id), anchor };
       paletteOpen = true;
     },
   });

@@ -25,6 +25,9 @@
   /** #C4 — see BoardView.svelte for what this covers and why it is separate from `readonly`. */
   export let dataReadOnly: boolean = false;
   export let richText: boolean;
+  /** Transient layout while columns move; never changes the saved collapse flag. */
+  export let temporaryCollapse = false;
+  $: shownCollapsed = collapse || temporaryCollapse;
   export let checkField: string | undefined;
   export let includeFields: DataField[];
   export let customHeader: DataField | undefined;
@@ -130,10 +133,10 @@
 <section
   data-id={name}
   class="projects--board--column"
-  class:collapse
+  class:collapse={shownCollapsed}
   class:pinned
   class:persisted
-  style={`width: ${widthLength}; min-width: ${widthLength}; max-width: ${widthLength};${collapse ? ` margin-right: ${toRem(48 - width)};` : ''}`}
+  style={`width: ${widthLength}; min-width: ${widthLength}; max-width: ${widthLength};${shownCollapsed ? ` margin-right: ${toRem(48 - width)};` : ''}`}
 >
   <ColumnHeader
     value={name}
@@ -142,7 +145,7 @@
     bind:editing
     {dataReadOnly}
     {richText}
-    {collapse}
+    collapse={shownCollapsed}
     {pinned}
     {persisted}
     {checkField}
@@ -159,7 +162,7 @@
     </svelte:fragment>
   </ColumnHeader>
 
-  {#if !collapse}
+  {#if !shownCollapsed}
     <CardGroup
       items={records}
       {boardEditing}

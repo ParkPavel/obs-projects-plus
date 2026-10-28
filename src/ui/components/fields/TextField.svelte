@@ -26,9 +26,14 @@
   /** Report a blur that changed nothing (a cell editor that must leave edit mode). */
   export let commitUnchanged = false;
 
+  /** A consumer whose persistence failed can keep the draft and permit retry. */
+  export function retryCommit(): void { ctl.arm(); }
+  /** A containing editor owns Tab navigation; commit through this field once. */
+  export function commitForNavigation(): void { emit("tab"); }
+
   const dispatch = createEventDispatcher<{
     input: string;
-    commit: { value: string; reason: "enter" | "blur" };
+    commit: { value: string; reason: "enter" | "blur" | "tab" };
     cancel: void;
   }>();
 
@@ -69,9 +74,9 @@
     return ok;
   }
 
-  function emit(reason: "enter" | "blur"): void {
+  function emit(reason: "enter" | "blur" | "tab"): void {
     const verdict = accepts(ctl.getState().draft);
-    const result = reason === "blur" ? ctl.blur({ accept: verdict, unchanged: commitUnchanged }) : ctl.commit("enter", { accept: verdict });
+    const result = reason === "blur" ? ctl.blur({ accept: verdict, unchanged: commitUnchanged }) : ctl.commit(reason, { accept: verdict, unchanged: commitUnchanged });
     pull();
     // A rejected draft left on blur was restored, so nothing is invalid any more.
     if (reason === "blur") invalid = false;

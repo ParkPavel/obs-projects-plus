@@ -6,6 +6,8 @@ Projects Plus представляет Markdown-заметки Obsidian как �
 Projects Plus displays Obsidian Markdown notes as tables, boards, calendars and other
 views. Choose the guide that matches your task — each one exists in both languages.
 
+[Сайт и сад идей / Website and garden of ideas](https://parkpavel.github.io/obs-projects-plus/)
+
 ## Для пользователя / For users
 
 | Задача / Task | Русский | English |
@@ -22,7 +24,8 @@ views. Choose the guide that matches your task — each one exists in both langu
 | Задача / Task | Русский | English |
 |---|---|---|
 | Предложить изменение и соблюсти правила кода / Propose a change and follow the coding rules | [Как участвовать](../CONTRIBUTING-RU.md) | [Contributing](../CONTRIBUTING.md) |
-| Завершить стабилизацию 3.7.1 / Complete 3.7.1 stabilization | [Матрица завершения](development-3.7.1-RU.md) | [Completion baseline](development-3.7.1.md) |
+| История стабилизации 3.7.1 / Historical 3.7.1 specification | [Историческая матрица](development-3.7.1-RU.md) | [Historical baseline](development-3.7.1.md) |
+| Обновить сайт / Update the website | [Сборка сайта](site-maintenance-RU.md) | [Website maintenance](site-maintenance.md) |
 | Понять устройство кода / Understand the code | [Устройство кода](architecture.md) | [Code structure](architecture-EN.md) |
 | Сделать своё представление / Build a custom view | [API](api-RU.md) | [API](api.md) |
 | Подключить типы из npm / Use the npm types | [obsidian-projects-types](../obsidian-projects-types/README-RU.md) | [obsidian-projects-types](../obsidian-projects-types/README.md) |
@@ -52,12 +55,6 @@ for whoever reads it, not documentation pages, and the rule does not apply to th
 
 [License](https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE) and [attribution](https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE).
 
-Разработка в рабочем пространстве сопровождающего ведётся через Borshkit.
-Закрытые инструкции, контракты, материалы и отчёты находятся в базе знаний рабочего
-пространства, вне истории плагина. Прежние версии документов остаются в истории Git.
-Этот каталог содержит документацию плагина и публичную матрицу завершения кандидата.
+Об ошибках и предложениях сообщайте в [Issues](https://github.com/ParkPavel/obs-projects-plus/issues). Прикладывайте версию плагина, версию Obsidian, устройство и шаги воспроизведения без личных данных.
 
-Development in the maintainer workspace uses Borshkit. Private instructions, contracts,
-materials and reports are in its knowledge base, outside plugin history. Earlier document
-versions remain in Git history. This directory documents the plugin and the public
-candidate completion baseline.
+Report bugs and suggestions in [Issues](https://github.com/ParkPavel/obs-projects-plus/issues). Include the plugin version, Obsidian version, device and reproduction steps without personal data.

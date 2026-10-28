@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Changelog"><meta name="color-scheme" content="light dark">
+<meta name="referrer" content="strict-origin-when-cross-origin"><title>Changelog · Projects Plus</title>
+<meta property="og:type" content="website"><meta property="og:title" content="Changelog"><meta property="og:description" content="Changelog"><meta property="og:url" content="https://parkpavel.github.io/obs-projects-plus/read/changelog.html"><meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://parkpavel.github.io/obs-projects-plus/read/changelog.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/site.css">
+<script type="module" src="../assets/site.js"></script></head>
+<body data-prefix="../" data-language="en"><a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header"><a class="wordmark" href="../en.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
+<nav aria-label="Main navigation"><a href="../en.html#ideas">Garden of ideas</a><a href="../read/user-guide-en.html">Documentation</a><a class="language" href="../read/changelog-ru.html" hreflang="ru">Русский</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../en.html">← Explore the plugin</a><strong>On this page</strong><nav aria-label="On this page"><a href="#372-unreleased">3.7.2 — unreleased</a><a href="#370-2026-10-05">3.7.0 — 2026-10-05</a><a href="#363-2026-09-28">3.6.3 — 2026-09-28</a><a href="#362-2026-09-28">3.6.2 — 2026-09-28</a><a href="#361-2026-09-28">3.6.1 — 2026-09-28</a><a href="#360-2026-09-27">3.6.0 — 2026-09-27</a><a href="#360-alpha">3.6.0-alpha</a><a href="#earlier-versions">Earlier versions</a></nav></aside><article class="doc-article"><p class="doc-version">Documentation follows the source code; an installed release may differ.</p><h1 id="changelog">Changelog</h1>
+<blockquote>
+<p><a href="../read/changelog-ru.html">Русский</a> · English</p>
+</blockquote>
+<p>This file describes the current development line and changes to consider when updating.
+Downloadable versions and their publication dates are listed in
+<a href="https://github.com/ParkPavel/obs-projects-plus/releases">GitHub Releases</a>.
+The version in <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/manifest.json">manifest.json</a> identifies this source tree; it does not
+mean that a new release has been published.</p>
+<h2 id="372-unreleased">3.7.2 — unreleased</h2>
+<h3 id="safety-and-stability">Safety and stability</h3>
+<ul>
+<li>Board column dragging closes a handler leak: a column dropped where it
+was writes nothing, and a drag that never ends is released on its own.</li>
+<li>The calendar no longer freezes on the month view: day cells create no hidden frames and at most 24 months
+stay in memory.</li>
+<li>A change written into several notes at once (a board move, renaming or removing a column&#39;s option) reports
+each note: the ones written keep their new values, only the unwritten ones are put back, and the notice
+says how many of how many were not saved (PPP-205). When some notes refused the write, &quot;Retry&quot; writes just
+those. A missing note is no longer counted as saved. Adding, renaming or deleting a field offers the same
+retry over the notes it could not write.</li>
+<li>The relations index no longer scans the vault again after the plugin is turned off or reloaded.</li>
+<li>New notes are prepared with complete frontmatter before file creation; invalid template YAML refuses
+creation. Failed property writes keep the draft for retry, and Tab waits for the write result.</li>
+<li>New command &quot;Start-up report (copy)&quot;: how long Obsidian took before the plugin and each stage of the
+plugin&#39;s start-up, copied as text — for measuring a slow start on a phone.</li>
+</ul>
+<h3 id="calendar">Calendar</h3>
+<ul>
+<li>Month and two weeks: event bars are proportional to time and no longer overlap (on phones too); labels
+are gone — an event is found by its colour and place in the day, its title is the tooltip and in the day
+window. Extra columns go behind &quot;+N&quot;. Multi-day strips are thin colour bands, packed per week.</li>
+<li>Week and day: an event shorter than an hour (from 15 minutes) is drawn at its length; an overnight event is
+drawn in parts per day; an event of 24 hours or more lives in the all-day row.</li>
+<li>Week and day: dragging over the time grid passes the selected range to the creation form. On a phone,
+hold empty time for 500 ms to preview it, then stretch with the same finger and release to open the form.
+A short tap creates nothing. Small finger movements preserve the configured duration:
+15, 30, 60 (default), 90 or 120 minutes. Moving the draft behind the form is still in development.</li>
+<li>The agenda&#39;s custom list combines the selected date with its list conditions.</li>
+<li>The day window on a computer opens beside the day&#39;s cell — right, else left, else under or over it — at one
+width, whether the date, the background, &quot;+N&quot;, the keyboard or the year view opened it (it could stand at
+the screen&#39;s edge, far from the day). It keeps its side while open; on a phone it stays a bottom sheet.</li>
+<li>Stretching a multi-day event over more days is saved; without an end field <code>endDate</code> is created.</li>
+<li>A record&#39;s &quot;Settings&quot; in the day window open the note&#39;s properties block. The duplicate window follows
+Obsidian&#39;s modals: a time field and an action footer.</li>
+</ul>
+<h3 id="note-properties">Note properties</h3>
+<ul>
+<li>The Projects Plus properties block is shown at the top of every Markdown note in place of Obsidian&#39;s
+built-in Properties. Turn it off in the plugin settings: &quot;Properties in the note header&quot;.</li>
+<li>Rename and delete a property; lists and tags as separate items (a comma inside an item is kept); status
+picked from the values the project uses; a colour palette with shared favourites; arrow keys move between
+rows. Nested values are read-only. Only the note&#39;s own frontmatter is written.</li>
+<li>Properties reorder by drag (or Alt+Up/Down) and the order is written to the note&#39;s YAML; Tab moves to the
+next value. The board pencil and gallery editing open the same block.</li>
+</ul>
+<h3 id="board">Board</h3>
+<ul>
+<li>During a column drag, columns fold temporarily and restore their saved collapsed state afterwards.</li>
+<li>Columns drag by their grip again; the column menu has Move left / Move right.</li>
+<li>Pinning a column is a view setting and no longer follows the status options.</li>
+<li>Columns move at any board zoom, on a phone too; while a column or a card is being dragged, the zoom (pinch,
+Ctrl+wheel) holds still. A column dragged on a zoomed board keeps its look.</li>
+<li>On a computer the place a dragged card will land is drawn as a dashed frame of the card&#39;s size.</li>
+</ul>
+<h3 id="dashboard-and-data">Dashboard and data</h3>
+<ul>
+<li>Block menus offer insertion above and below. Embedded board, calendar and gallery tabs expose their
+shared view settings. New embedded calendars start in week view with event bars.</li>
+<li>Adding a view chooses its type from a menu and edits its name in the tab strip before saving.</li>
+<li>Formula previews use the same dependency evaluation as application, including dataset aggregates.
+Saved formulas can be loaded for editing; empty or conflicting names and dependency cycles block Apply.</li>
+<li>Favourite colours follow synced plugin settings, with a shared fallback and separate project palettes.
+Legacy local favourites migrate only after settings load successfully.</li>
+<li>&quot;+ Block&quot; in the plugin&#39;s bar adds a block after the selected one (a tap or click on a block&#39;s header
+selects it, a thin frame marks it), else after the block most on screen; the block list names the place.
+On a phone the &quot;+&quot; between blocks is gone.</li>
+<li>A block&#39;s filter is one button with the number of active conditions, in the row of the block&#39;s views —
+the row of filter pills is gone. The table&#39;s search folds away keeping its query (the button is marked);
+the field&#39;s ×, or Escape, ends it.</li>
+<li>The dashboard&#39;s table of contents is one button, &quot;Blocks · N&quot;, in the plugin&#39;s bar (on computers too),
+in place of the row of block titles: it lists the blocks in page order, marks the one on screen and a
+collapsed one, and moves the page to the block picked.</li>
+<li>A wide dashboard is a tile grid: resize a block by its corner, snapping to the grid. On a phone it is a
+stack with a jump bar of block titles.</li>
+<li>A source&#39;s &quot;Properties&quot; moved from the toolbar into the block menu.</li>
+<li>Tables: the first column is pinned only from its header menu; a scroll that reaches the table&#39;s edge
+carries on into the page; option pills read on any background; lists and dates in formulas show by type.</li>
+<li>A filtered dashboard block can be the source of another block, a chart or a relation; loops are refused.
+Rollups read rollups (up to three levels); formulas run in dependency order. A rollup can total a
+formula of its own project (a client sums its visits&#39; <code>IF(paid, price)</code>), and a formula can read a rollup.</li>
+<li>Values read from Dataview keep 0, false and empty text; a date and time read as text keeps its time.</li>
+<li>The demo projects compute a visit&#39;s payment, debt and session and an operation&#39;s income, expense and
+balance with project formulas, so a change to a note moves the totals.</li>
+<li>A board, calendar or gallery tab in a block can be linked to a project view: it takes that view&#39;s
+settings, sort and filter; &quot;Unlink&quot; keeps them in the tab.</li>
+<li>&quot;Properties&quot; in view settings: search, show and hide by the eye icon, order by drag; the list applies to
+the dashboard&#39;s tables unless a table set a column itself.</li>
+<li>Spreadsheet formulas: SUMIF, COUNTIF, AVERAGEIF, SUMIFS, COUNTIFS, AVERAGEIFS, MINIFS, MAXIFS; a
+column aggregate is computed once; fields named in Cyrillic or any other script work in formulas; the
+formula editor&#39;s highlight sits on the caret.</li>
+</ul>
+<h3 id="gallery">Gallery</h3>
+<ul>
+<li>The «Card» settings open as an inspector at the right, over the gallery — which keeps its columns and
+shows each change at once — instead of a phone-width block that pushed the cards down; on a phone they
+are a sheet. Controls are compact on a computer, finger-sized on a touch screen.</li>
+<li>Cover from a list value or the note&#39;s first image, a text preview, grouping by a field, a width slider, a
+title-only mode and lazy images. Two cards a row on a phone.</li>
+</ul>
+<h3 id="phone-and-fields">Phone and fields</h3>
+<ul>
+<li>The view tabs sit in the header in place of &quot;Projects&quot;.</li>
+<li>The view tabs stay in the phone&#39;s header with every theme: Things (title shown only on hover) and Minimal
+(&quot;hide tab title&quot;, focus mode) hid them. A header Obsidian or a theme rebuilds gets the tabs back; a theme
+that hides the whole header row leaves them in the plugin&#39;s own bar.</li>
+<li>The suggestion list opens above its field, follows it and keeps typed text. Search no longer overwrites
+what is being typed. The field list in view settings is one line per field.</li>
+<li>A value box offers the same values in every filter — the view&#39;s filter, colour rules, agenda lists — and
+in the note editor: the values the project&#39;s notes hold for the field, after the options its settings
+declare. The agenda no longer adds every note of the vault (other projects included). Notes in the
+Templates or Templater folder and template text (<code>&lt;% %&gt;</code>, <code>{{ }}</code>) are never offered, in the note header
+either.</li>
+<li>The agenda&#39;s icon picker shows its emoji again (they were broken text); a list saved with a broken emoji
+shows it as the emoji it was.</li>
+<li>Lists that open from a field or a button stay against it: one with no room for its whole height takes
+the side with more room and scrolls inside it, instead of jumping to the window&#39;s top edge as tall as the
+window. Field and menu lists stop at about ten rows, and their rows are plain rows again, not raised
+buttons (on computers too).</li>
+<li>A suggestion list stands over its field when a few rows fit there, on computers as on phones.</li>
+<li>Typing on an iPhone works in every field again. Obsidian does not shrink the page for the keyboard, it
+reports the keyboard&#39;s height, and the plugin now lays out by that report as Obsidian does: sheets,
+suggestion lists and the field being typed into stay above the keyboard instead of under it.</li>
+<li>The keyboard is put away by Obsidian&#39;s own round keyboard button at the right, above the keyboard, as in
+a note; it ends the typing like Obsidian&#39;s. The plugin&#39;s own &quot;⌄&quot; button, which kept the focus and blurred
+the field on any scroll, is gone.</li>
+<li>Scrolling a form or a list no longer takes the focus from the field being typed into; only a tap elsewhere
+does. A press in the field&#39;s suggestion list or picker is not &quot;elsewhere&quot;.</li>
+<li>Choosing from a list with search on a phone (fields in filters, sorting, colour rules) has Obsidian&#39;s
+shape: the list above, the search under it just over the keyboard; only the list scrolls. When the
+keyboard goes, the view scrolled for it returns to where it was.</li>
+<li>A name is typed where the named thing lives, not in a separate window with a name line. The agenda&#39;s &quot;Add
+list&quot; puts a row with a name field at the end of the lists: Enter, ✓ or leaving the field creates the list;
+Escape, ✕ or an empty name drops it; a taken name stays in the field, marked. The row&#39;s gear opens the full
+settings (icon, colour, filters) with the name already typed. &quot;Rename list&quot; in a list&#39;s menu turns its
+header into the name field. An item of a list value in the note editor is added by a field at the end of
+the values (Enter adds it and keeps the field for the next one), not by an &quot;Add list item&quot; window.</li>
+<li>An agenda list&#39;s settings take the whole visible screen above the keyboard on a phone, not the calendar&#39;s
+strip.</li>
+<li>Properties are reordered by the grip ≡ on the left — with a mouse or a finger — in the view&#39;s field list
+and the gallery&#39;s card fields (a finger could not reorder them before), and in the note header.</li>
+<li>The calendar&#39;s &quot;Duplicate&quot; window fits the area the keyboard leaves visible.</li>
+<li>One condition editor: an agenda list&#39;s conditions are edited by the same panel as the view&#39;s filter and
+the colour rules — the same rows, switches, groups, operators and value suggestions. Saved lists keep their
+format. The operators are one list everywhere: text gains &quot;regex&quot; in the view&#39;s filter; select and status,
+relation, formula and rollup fields get their own sets.</li>
+<li>A date value can be a formula in every filter — <code>today</code>, <code>today+7d</code>, <code>sow</code> — with suggestions; the view&#39;s
+filter and the colour rules now read it as the agenda did (it matched nothing there before).</li>
+</ul>
+<h2 id="370-2026-10-05">3.7.0 — 2026-10-05</h2>
+<h3 id="cards-and-gallery">Cards and gallery</h3>
+<ul>
+<li>Gallery view options: layout (grid, masonry, list), card size (S, M, L or a width), cover proportions
+(16:10, 4:3, 1:1, 3:4, 2:3 or no cover) and fill or fit. Old galleries look as before.</li>
+<li>&quot;Fields on the card&quot; in the gallery settings lists the fields a card shows, in order: move, hide or add a
+field; formulas and rollups are marked ƒ; field names can be hidden. Cards follow that order. The
+project&#39;s declared rollups now appear in the settings (card fields, filters, sort, colors).</li>
+<li>Resizable card frames: drag a card&#39;s lower right corner (or use the arrow keys on it). A size can be set
+for one card or for the whole view (&quot;Card height&quot;), and &quot;Reset all card frames&quot; clears them. Saved in
+the view settings, never in notes.</li>
+<li>Board card thumbnails: a cover on top, a small square at the left (it grows with the card frame, up to
+40% of the card) or none. A card without an image, or whose image fails to load, shows none.</li>
+<li>Gallery and board cards share one card component.</li>
+</ul>
+<h3 id="board-1">Board</h3>
+<ul>
+<li>Drag grips have their own place: a strip along the card&#39;s left edge and the first cell of a column
+header. They no longer cover field labels or titles, are visible without hovering and get a finger-sized
+target on touch screens.</li>
+<li>A pinned or read-only column can no longer be dragged by its grip. A pinned column&#39;s header keeps its
+title on touch screens.</li>
+<li>Fixed: a board whose columns were frozen by an older version (saved as <code>freezeColumns</code>) shows them
+pinned again; the settings already showed it as frozen.</li>
+</ul>
+<h3 id="filters-and-settings">Filters and settings</h3>
+<ul>
+<li>The filter row under the navigation bar is gone, which gives the views that height back. A view&#39;s filter
+lives in its settings (gear → Filters), which show the number of active conditions, clear them all and
+save the selection as a source (&quot;Save as source&quot;).</li>
+<li>Picking a field from a field list in the settings is accepted at once, and typed names and numbers are
+no longer reset while typing.</li>
+<li>Filter conditions wrap inside a narrow settings panel.</li>
+</ul>
+<h3 id="touch-and-small-screens">Touch and small screens</h3>
+<ul>
+<li>A finger scrolls the dashboard instead of dragging widgets; widgets move by their grip. A swipe inside
+the plugin no longer opens Obsidian&#39;s side panels; a swipe from the screen edge still does.</li>
+<li>Landscape phones get a slim header and a filter button; view tabs scroll when they do not fit; the
+settings panel opens below the navigation bar; the last items of every view scroll above Obsidian&#39;s
+floating bar.</li>
+<li>Touch targets of at least 44 points; text fields at 16 so iOS does not zoom; essential labels on
+phones (calendar days and events, the year overview, view tabs, chart axes) no smaller than 11 points;
+reduced motion is honoured everywhere.</li>
+<li>Board cards and calendar events can be moved by touch; calendar strips open their record on tap and
+on click; a swipe right after a drag still pages the calendar.</li>
+<li>The whole plugin is sized in relative units.</li>
+</ul>
+<h3 id="themes">Themes</h3>
+<ul>
+<li>The plugin&#39;s styles no longer reach Obsidian&#39;s own interface: the navigation bar&#39;s icon rule used to
+change every icon in Obsidian once a Projects view had opened.</li>
+<li>Hairlines follow Obsidian&#39;s border width, so themes that change it apply to the plugin. Shadows, dims
+and colours come from the theme; quiet labels (counts, empty states, weekend names) reach WCAG AA
+contrast in the default light and dark themes.</li>
+</ul>
+<h3 id="upgrading">Upgrading</h3>
+<ul>
+<li>Filters are edited in the view settings (gear → Filters); nothing about existing filters changes.</li>
+<li>Gallery cards show fields in the order saved in the view settings, which may reorder fields in views
+whose saved order differed from the notes&#39; order.</li>
+<li>Plugin icon buttons outside the navigation bar look like Obsidian&#39;s own icons.</li>
+<li>After updating, restart Obsidian (or reload the window) so styles of the previous version are dropped.</li>
+</ul>
+<h2 id="363-2026-09-28">3.6.3 — 2026-09-28</h2>
+<ul>
+<li>The plugin is named <strong>Projects Plus</strong> (was «OBS Projects Plus»): the community directory does not accept
+part of the Obsidian name in a plugin name. The plugin id <code>obs-projects-plus</code> is unchanged, so installed
+copies, their settings and data stay as they are.</li>
+<li><code>README.md</code> is now the English overview, with Installation, Usage and Privacy sections; the Russian
+one is <code>README-RU.md</code>.</li>
+<li>Release assets carry GitHub build provenance attestations.</li>
+</ul>
+<h2 id="362-2026-09-28">3.6.2 — 2026-09-28</h2>
+<h3 id="ready-for-the-community-directory">Ready for the community directory</h3>
+<ul>
+<li>The code passes the Obsidian community directory&#39;s automated review set
+(<code>eslint-plugin-obsidianmd</code> recommended: type-checked TypeScript and the
+Obsidian plugin rules) with no errors or warnings, and CI enforces it.</li>
+<li>The interface language comes from Obsidian&#39;s own setting (<code>getLanguage()</code>)
+rather than from <code>moment</code> or local storage.</li>
+<li>Fixed: a template whose <code>tags</code> is a single string, not a list, no longer
+merges into a new note&#39;s tags letter by letter.</li>
+<li>Fixed: a plain object value (in a join key, an exported cell, or front
+matter of an unexpected shape) is written as its content rather than
+<code>[object Object]</code>; as join keys, such values no longer all match each other.</li>
+</ul>
+<h2 id="361-2026-09-28">3.6.1 — 2026-09-28</h2>
+<h3 id="demo-rebuilt">Demo rebuilt</h3>
+<ul>
+<li><strong>The demo is three new projects</strong>, each larger than the single demo it replaces:
+«Демо: Массажный кабинет» (a massage practice), «Демо: Трекер» (three clients&#39; daily wellbeing log)
+and «Демо: Личный бюджет» (a personal budget). The studio project is gone.</li>
+<li>The new demo is created in the <code>Projects Plus - Демо 2</code> folder. A 3.6.0 demo (folder
+<code>Projects Plus - Демо</code>) is left as it is: the new one neither changes nor mixes with it, and
+the old one can be deleted by hand.</li>
+<li>Client cards compute visits, payments, debt, wellbeing, weight, training and sleep from the
+practice&#39;s visits and from the tracker; services count their sessions and revenue. The
+tracker and the budget chart series read from the practice, and the gallery shows offline
+covers.</li>
+<li><strong>The starter profiles are removed.</strong> The welcome dialog offers the demo and «Create new
+project»; closing it leaves an <strong>empty projects screen</strong> with the same two actions, and the
+project menu gains «Create demo project», so the demo stays reachable after the first run.</li>
+</ul>
+<h2 id="360-2026-09-27">3.6.0 — 2026-09-27</h2>
+<p>The first version published in the format of the Obsidian community catalogue. It brings
+computation across tables and projects, charts over the computed values, three linked demo
+projects, a clear read-only boundary for data that belongs to another project, and a pass
+over everything a catalogue reviewer checks.</p>
+<h3 id="computation-across-tables-and-projects">Computation across tables and projects</h3>
+<ul>
+<li><strong>Reverse rollups.</strong> A record can aggregate the records that link <em>to</em> it: a client counts
+its visits, sums what they paid, or takes the latest wellbeing score, while its own note
+stays unchanged. In the field dialog pick a source marked «(links here)».</li>
+<li><strong>First and last value</strong> rollups pick a value by an ordering field, usually a date. Pick it
+from the list, or type any property of the source with «Another field…».</li>
+<li>A declared rollup is a column even when no note carries its key. A view filter on a rollup
+column is kept.</li>
+<li>Rollups are read-only, shown by their mode (percent bar, chips, count), and a percent shows
+the engine&#39;s 0–100 value.</li>
+<li>Blocks that read another project see that project&#39;s rollup columns too. Changing a rollup
+(for example sum → average) refreshes every block that reads it.</li>
+<li>The calculation engine is checked against a real spreadsheet: an aggregate without a
+group-by is one total, and every path agrees on what &quot;checked&quot; means.</li>
+</ul>
+<h3 id="charts-and-statistics">Charts and statistics</h3>
+<ul>
+<li>A chart or stats block can read <strong>another project</strong> («Data from»). While that project
+loads, the block shows a state and never this project&#39;s numbers. A deleted source stays
+selectable so it can be cleared.</li>
+<li>A chart can hold <strong>several series</strong>, each with its own field, aggregation, project, x field
+and axis. A right-hand axis is available; bars can go below zero, and a missing value is
+a gap, not a zero.</li>
+<li>Charts and stats <strong>follow the record picked in another block</strong> through a relation («Follow
+selection in»). This also works for scatter charts.</li>
+<li>Readability: the value axis of bar charts is labelled, legends show colour marks, isolated
+points stay visible, smooth areas follow their line, and a chart&#39;s settings offer the
+columns its pipeline made.</li>
+</ul>
+<h3 id="demo">Demo</h3>
+<ul>
+<li>«Create demo project» creates <strong>three linked projects</strong>: the studio, a massage room and
+personal finances. The finances read the room&#39;s income and the studio&#39;s payments, and the
+room&#39;s clients count their visits and payments through reverse rollups.</li>
+<li>Running the command again restores what is missing and never duplicates notes, on any day.</li>
+</ul>
+<h3 id="relations-and-the-read-only-boundary">Relations and the read-only boundary</h3>
+<ul>
+<li>A block that reads another project is <strong>read-only as a whole</strong>. Its board, calendar and
+gallery open no editor, and its row menu offers no duplicate or delete. The record panel
+says which project the record belongs to.</li>
+<li>Frames read from another project carry that project&#39;s declared relation types.</li>
+<li><strong>Linked-block suggestion:</strong><ul>
+<li>it reads the right project through the right relation;</li>
+<li>it can also follow the master&#39;s side of a relation («Show the linked record of the row you
+pick»);</li>
+<li>on a filtered view it reads the project whole;</li>
+<li>accepting it dismisses it only once the block really works.</li>
+</ul>
+</li>
+<li>Closing the record panel keeps an edit made within the autosave delay.</li>
+</ul>
+<h3 id="platform-and-catalogue-readiness">Platform and catalogue readiness</h3>
+<ul>
+<li><code>manifest.json</code> meets the catalogue rules; the minimum Obsidian version is <strong>1.8.7</strong>.</li>
+<li>Note writes use the platform APIs:<ul>
+<li>bulk field changes go through <code>processFrontMatter</code>;</li>
+<li>read-modify-write goes through <code>Vault.process</code> on the current contents;</li>
+<li>the settings recovery note goes through <code>Vault.create</code>;</li>
+<li>template paths are normalised.</li>
+</ul>
+</li>
+<li>The plugin releases everything it registered when it unloads.</li>
+<li>Static styles moved from scripts to CSS classes.</li>
+<li>The settings tab reads like Obsidian&#39;s own, and the inert «Link behavior» control is gone.</li>
+<li>The schema commands appear only where a dashboard handles them. The «Open formula editor»
+command, which did nothing, is gone.</li>
+<li>Onboarding text is parsed into nodes and never rendered as HTML.</li>
+<li>No false ENOENT warning on the first settings write in a fresh vault.</li>
+</ul>
+<h3 id="languages-and-accessibility">Languages and accessibility</h3>
+<ul>
+<li>Ukrainian and Simplified Chinese are complete against Russian. The aggregation vocabulary,
+stats wording, the record panel&#39;s field groups and every word in the markup come from the
+locale layer.</li>
+<li>Icon buttons work from the keyboard.</li>
+</ul>
+<h3 id="updating-from-an-earlier-version">Updating from an earlier version</h3>
+<ul>
+<li>Replace all three files (<code>main.js</code>, <code>manifest.json</code>, <code>styles.css</code>) from the same release,
+and keep <code>data.json</code>.</li>
+<li><strong>Saved configurations stay valid.</strong> New keys are optional and only written when you use the
+feature:<ul>
+<li><code>config.dataProjectId</code>, <code>config.series</code> and <code>config.linkedSelection</code> on charts and stats;</li>
+<li><code>relationSide</code> on a linked selection;</li>
+<li><code>backlink</code> and <code>orderBy</code> on a rollup.</li>
+</ul>
+</li>
+<li><strong>The demo notes changed their names</strong> from dates to series numbers. A demo created by a
+3.6.0 pre-release keeps its old notes; delete the demo folder and run the command again for
+a clean copy.</li>
+</ul>
+<h3 id="build-and-release">Build and release</h3>
+<ul>
+<li><strong>Versions:</strong><ul>
+<li>a release is <code>x.y.z</code> in <code>package.json</code>, <code>manifest.json</code> and <code>versions.json</code>, and its tag
+is the same string without a <code>v</code>;</li>
+<li>the release workflow refuses a tag that does not match the manifest;</li>
+<li>pre-releases for <a href="https://github.com/TfTHacker/obsidian42-brat">BRAT</a> use tags
+<code>x.y.z-beta.N</code> and are marked as pre-release on GitHub.</li>
+</ul>
+</li>
+<li><strong>Release assets:</strong> <code>main.js</code>, <code>manifest.json</code> and <code>styles.css</code>. <code>styles.css</code> merges the
+design tokens and the handwritten styles; the build checks both are present.</li>
+<li><code>main.js</code> is still tracked in Git and is rebuilt from the release commit.</li>
+<li><strong>Requirements:</strong> Obsidian 1.8.7 or newer, desktop and mobile. Dataview is optional; the
+Dataview source reports when it is missing.</li>
+</ul>
+<h3 id="documentation">Documentation</h3>
+<ul>
+<li>The documentation a user reads was rewritten short. The README is 62 lines instead of 305
+and the user guide 196 instead of 688: each page answers a question a reader has, rather
+than listing everything the plugin contains.</li>
+<li>The documentation a contributor reads was rewritten too. One architecture map links each
+responsibility to the file that implements it; one contribution guide carries the coding
+rules, so the two <code>CODE_STANDARDS</code> pages are gone without a rule going with them. The API
+references and the library notes under <code>src/lib</code> were rewritten against the current source.</li>
+<li>Corrected what no longer matched the plugin: a project has four views — Dashboard, Board,
+Calendar and Gallery — a table is a block inside a Dashboard rather than a view of its own,
+and the only public extension point is <code>onRegisterProjectView</code>. The <code>getProjects</code> /
+<code>createProject</code> / <code>registerView</code> API the guides described does not exist.</li>
+<li>Every document exists in Russian and English: as a pair of files, or bilingual in one file
+for the index, the error codes and the two pages a reader meets inside a vault. A test keeps
+that in place.</li>
+<li>Internal plans, agent reports, session instructions and duplicate release documents are no
+longer part of the tree. Development is managed with
+<a href="https://github.com/ParkPavel/claudex">Claudex</a>; earlier versions remain in Git history.</li>
+</ul>
+<h3 id="fixes">Fixes</h3>
+<ul>
+<li>A console line no longer quotes the message template. Codes whose text carries a placeholder
+such as <code>{{path}}</code> printed it verbatim, so a user quoting their console reported the template
+while the notice beside it named the real file. A placeholder with nothing to fill it now reads
+<code>&lt;path&gt;</code>, which tells the reader the value is unknown rather than that the code is unfinished.</li>
+</ul>
+<h3 id="development">Development</h3>
+<ul>
+<li>Retired tests of the old project-local agent hooks and configuration. Plugin behaviour tests
+remain here; Claudex checks its own harness and publication guards.</li>
+<li>The filter-order test no longer asserts sentences in a design document; it pins the wiring,
+which is the part that can silently regress.</li>
+<li>CI checks pull requests without writing beta metadata or pushing changes to <code>main</code>. Tagged
+releases still use the release workflow.</li>
+</ul>
+<h2 id="360-alpha">3.6.0-alpha</h2>
+<p>This is a development version. The following summary focuses on changes that affect
+notes, saved views or the way users work with the plugin.</p>
+<h3 id="relations-and-dashboard-data">Relations and dashboard data</h3>
+<ul>
+<li>Relation fields identify linked notes and report unresolved or ambiguous matches.
+The setup dialog supports choosing a target project and display field.</li>
+<li>Related records and rollups can use data from another project. Dashboard interactions
+can narrow a block&#39;s records through an existing relation.</li>
+<li>External-source blocks use their own source for data and field configuration.
+Gallery blocks with an external source are read-only.</li>
+</ul>
+<h3 id="updating-saved-dashboards">Updating saved dashboards</h3>
+<ul>
+<li>A block filter narrows the records <strong>before</strong> advanced transformations run. A saved
+dashboard that combines both may display different results after updating.</li>
+<li>During migration, a leading pipeline filter moves to the block filter only when that
+move is safe. Conditions that depend on a column created by the pipeline remain there.
+This changes view configuration, not the source notes.</li>
+<li>The old sub-base widget is no longer available. Legacy configuration fields remain
+readable for compatibility, but they do not restore the removed widget.</li>
+</ul>
+<h3 id="fixes-1">Fixes</h3>
+<ul>
+<li>Rollup configuration made through the interface is passed to the calculation engine.</li>
+<li>Relation setup waits for the write result and preserves the selected display field.</li>
+<li>Record updates report failed writes instead of treating them as completed changes.</li>
+<li>Generated demo dashboards use the current block-filter representation.</li>
+<li>The stylesheet build checks that the handwritten styles are present before producing
+the installation bundle.</li>
+</ul>
+<h2 id="earlier-versions">Earlier versions</h2>
+<p>Older release notes and internal records remain in Git history. They describe the version
+in which they were written and are not instructions for the current tree.</p>
+<ul>
+<li><a href="https://github.com/ParkPavel/obs-projects-plus/releases">Published releases</a></li>
+<li><a href="https://github.com/ParkPavel/obs-projects-plus/blob/0e4b69f43de57477b0172575c098776899b10dfd/CHANGELOG.md">Full changelog before the documentation cleanup</a></li>
+</ul>
+<p>For current behaviour, use the <a href="../read/readme.html">documentation index</a>.</p>
+<p class="doc-source"><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/CHANGELOG.md">Page source ↗</a></p></article></main>
+<footer class="site-footer"><a class="wordmark" href="../en.html">Projects Plus</a><p>An open-source project by Park Pavel. Based on Obsidian Projects by Marcus Olsson.</p><div><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache-2.0</a><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE">Attribution</a><a href="https://github.com/ParkPavel/obs-projects-plus/issues">Feedback</a></div></footer>
+<aside class="search-panel" aria-label="Search documentation"><label for="doc-search">Search documentation</label><div class="search-input-wrap"><input id="doc-search" type="search" placeholder="Search…" autocomplete="off" aria-controls="search-results"><kbd>/</kbd></div><ul id="search-results" hidden></ul><p id="search-status" role="status" aria-live="polite" data-empty="No matches. Try “calendar”, “formula” or “source”."></p></aside>
+</body></html>

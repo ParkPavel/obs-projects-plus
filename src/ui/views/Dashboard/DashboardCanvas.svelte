@@ -88,8 +88,8 @@
   onDestroy(() => { unsubCommands(); schemaController.dispose(); }); // CV-2: nothing opens after the view is gone
   let isRecalculating = false, showFormulaBar = false, activeFilterTab: ActiveFilterTab | null = null;
   $: { void frame; isRecalculating = true; schemaController.refresh(); /* i3-final: an open schema follows */ void Promise.resolve().then(() => { isRecalculating = false; }); }
-  $: fieldNames = frame.fields.map((f) => f.name);
-  $: previewRecord = frame.records[0];
+  $: fieldNames = [...frame.fields.map((f) => f.name), ...(effectiveConfig?.formulaFields ?? []).map(definition => definition.name)];
+  $: previewRecord = filteredFrame.records[0];
   function handleFilterTab(e: CustomEvent<{ field: string; value: string | null }>) {
     const { field, value } = e.detail;
     activeFilterTab = value === null ? null : { field, value };
@@ -146,9 +146,7 @@
       {#if !readonly && quickActions.length > 0}
         <div class="ppp-quick-actions" role="group" aria-label={$i18n.t("views.dashboard.quick.group", { defaultValue: "Quick actions" })}>
           {#each quickActions as action (action.id)}
-            <!-- #191: `toggle-formula-bar` is the only kind left, so the call is
-                 direct. A dispatcher over a union of one would be ceremony that
-                 hides which of the two lines is the actual behaviour. -->
+            <!-- #191: the remaining quick actions toggle the formula panel. -->
             <button class="ppp-quick-action clickable-icon" on:click={() => (showFormulaBar = !showFormulaBar)}
               aria-label={action.labelKey ? $i18n.t(action.labelKey, { defaultValue: action.label }) : action.label}>
               {action.labelKey ? $i18n.t(action.labelKey, { defaultValue: action.label }) : action.label}
@@ -157,7 +155,9 @@
         </div>
       {/if}
       {#if showFormulaBar && !readonly}
-        <FormulaBar fields={fieldNames} {previewRecord} on:apply={handleFormulaApply} on:cancel={() => (showFormulaBar = false)} />
+        <FormulaBar fields={fieldNames} {previewRecord} previewFrame={filteredFrame}
+          formulaFields={effectiveConfig?.formulaFields ?? []}
+          on:apply={handleFormulaApply} on:cancel={() => (showFormulaBar = false)} />
       {/if}
       <FilterBridge {activeFilterTab} {readonly}
         canPromote={!!onViewFilterChange} on:promote={promoteLocalToGlobal} on:clear={() => (activeFilterTab = null)} />

@@ -13,6 +13,15 @@ export default defineConfig([
   },
   ...obsidianmd.configs.recommended,
   {
+    // The static documentation site runs in a browser, outside Obsidian.
+    // Its samples describe the default configuration folder, not runtime IO.
+    files: ["docs/assets/*.js", "scripts/site/**"],
+    rules: {
+      "no-restricted-globals": "off",
+      "obsidianmd/hardcoded-config-path": "off",
+    },
+  },
+  {
     files: ["**/*.ts"],
     languageOptions: {
       parserOptions: {

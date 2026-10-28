@@ -386,7 +386,11 @@ export type MobileCalendarView = "month" | "week" | "day";
 
 export type AnimationBehavior = "smooth" | "instant";
 
+export interface ColorFavorite { readonly color: string; readonly name: string; }
+
 export type ProjectsPluginPreferences = {
+  /** Shared fallback palette, synced by the ordinary settings writer. */
+  readonly colorFavorites?: ColorFavorite[];
   readonly projectSizeLimit: number;
   readonly frontmatter: {
     readonly quoteStrings: "PLAIN" | "QUOTE_DOUBLE";

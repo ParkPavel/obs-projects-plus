@@ -1,5 +1,7 @@
 <script lang="ts">
   import dayjs from 'dayjs';
+  import { onDestroy } from 'svelte';
+  import { rootFontPx } from 'src/ui/utils/cssLength';
   import type { DataRecord } from 'src/lib/dataframe/dataframe';
   import { EventRenderType, type ProcessedRecord } from '../../types';
   import EventBarContainer from './EventBarContainer.svelte';
@@ -8,7 +10,7 @@
   import type { TimelineDragManager } from '../../dnd/TimelineDragManager';
   import CreationPreview from '../../dnd/CreationPreview.svelte';
   import { DND_CONSTANTS } from '../../dnd/types';
-  import { yPositionToMinutes } from '../../dnd/SnapEngine';
+  import { yPositionToMinutes, minutesToTime } from '../../dnd/SnapEngine';
   
   /**
    * DayColumn - Single day column in timeline view
@@ -29,7 +31,7 @@
   export let onRecordAdd: ((date: dayjs.Dayjs, startTime?: string, endTime?: string) => void) | undefined;
   /** w4-p07: the length a tap creates (the view setting); the preview shows it. */
   export let creationDuration: number = DND_CONSTANTS.CREATION_DEFAULT_DURATION;
-  export let onDayTap: (() => void) | undefined;
+  export let onDayTap: (() => void) | undefined = undefined;
   export let isMobile: boolean = false;
   export let isToday: boolean = false;
   export let hourHeightRem: number = 3; // Height per hour in rem (default: 3rem = 48)
@@ -53,9 +55,23 @@
     isMultiDay: boolean;     // Event spans multiple days
   }
   
-  let touchStartTime = 0;
+  let holdTimer: ReturnType<typeof setTimeout> | null = null;
+  let touchStartX = 0;
   let touchStartY = 0;
   let hasMoved = false;
+  let holdingCreation = false;
+  let stretchingCreation = false;
+  let creationAnchor = 0;
+  const clearHold = () => {
+    if (holdTimer !== null) clearTimeout(holdTimer);
+    holdTimer = null;
+  };
+  onDestroy(() => {
+    clearHold();
+    const doc = columnElement?.ownerDocument ?? document;
+    doc.removeEventListener('mousemove', handleCreationMouseMove);
+    doc.removeEventListener('mouseup', handleCreationMouseUp);
+  });
   
   /**
    * Calculate time (HH:mm) from click Y position on the column
@@ -158,6 +174,7 @@
   // Handle background click (add new event with time from click position)
   let suppressNextClick = false;
   function handleBackgroundClick(e: MouseEvent) {
+    if (isMobile) return;
     // v3.2.6: Suppress click if drag-to-create just completed
     if (suppressNextClick) {
       suppressNextClick = false;
@@ -170,46 +187,75 @@
     }
   }
   
-  // Mobile: Detect tap (not scroll)
+  // Touch: scrolling and quick taps do not start a writable draft. A held
+  // press arms it, the same finger stretches it, and release opens the form.
   function handleTouchStart(e: TouchEvent) {
-    if (!e.touches[0]) return;
-    touchStartTime = Date.now();
+    clearHold();
+    holdingCreation = false;
+    stretchingCreation = false;
+    if (!e.touches[0] || e.touches.length !== 1) return;
+    if (e.target !== e.currentTarget) return;
+    touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
     hasMoved = false;
+    if (isMobile && onRecordAdd && !onDayTap) {
+      holdTimer = setTimeout(() => {
+        holdTimer = null;
+        if (hasMoved) return;
+        showCreationPreview(touchStartY);
+        creationAnchor = previewStartMinutes;
+        holdingCreation = true;
+      }, DND_CONSTANTS.LONG_PRESS_MS);
+    }
   }
   
   function handleTouchMove(e: TouchEvent) {
-    if (!e.touches[0]) return;
-    const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
-    if (deltaY > 10) {
+    if (!e.touches[0] || e.touches.length !== 1) { handleTouchCancel(); return; }
+    if (holdingCreation) {
+      if (e.cancelable) e.preventDefault();
+      if (!stretchingCreation && Math.hypot(e.touches[0].clientX - touchStartX, e.touches[0].clientY - touchStartY) <= 10) return;
+      stretchingCreation = true;
+      const minutes = getMinutesFromClientY(e.touches[0].clientY);
+      previewStartMinutes = Math.min(creationAnchor, minutes);
+      previewEndMinutes = Math.min(endHour * 60, Math.max(creationAnchor + DND_CONSTANTS.MIN_DURATION_MINUTES, minutes));
+    } else if (Math.hypot(e.touches[0].clientX - touchStartX, e.touches[0].clientY - touchStartY) > 10) {
       hasMoved = true;
+      clearHold();
     }
   }
   
   function handleTouchEnd(e: TouchEvent) {
+    clearHold();
+    if (holdingCreation) {
+      holdingCreation = false;
+      if (e.cancelable) e.preventDefault();
+      handlePreviewConfirm(minutesToTime(previewStartMinutes), minutesToTime(previewEndMinutes));
+      return;
+    }
     // ios-d1: a tap on an event bar is the bar's — its click opens the record.
     // Reading it as a tap on empty time would cancel that click (preventDefault)
     // and open the day or a new record instead. Not stopped, only ignored, so
     // the GestureCoordinator above still sees the touchend.
     if (e.target instanceof Element && e.target.closest('.projects-calendar-event-bar')) return;
-    const duration = Date.now() - touchStartTime;
-    
-    // Tap detected: short duration, no movement
-    if (duration < 300 && !hasMoved) {
+    if (!hasMoved) {
       if (onDayTap) {
         e.preventDefault();
         onDayTap();
       } else if (onRecordAdd && e.changedTouches[0]) {
         e.preventDefault();
-        if (isMobile) {
-          // v3.2.0 Iteration 4: Show creation preview instead of immediate creation
-          showCreationPreview(e.changedTouches[0].clientY);
-        } else {
+        if (!isMobile) {
           const startTime = getTimeFromYPosition(e.changedTouches[0].clientY);
           onRecordAdd(day, startTime);
         }
       }
     }
+  }
+  function handleTouchCancel(): void {
+    clearHold();
+    hasMoved = true;
+    holdingCreation = false;
+    stretchingCreation = false;
+    previewVisible = false;
   }
 
   // ── v3.2.0 Iteration 4: Creation preview ──
@@ -223,11 +269,11 @@
     const rect = columnElement.getBoundingClientRect();
     const relativeY = clientY - rect.top;
     const tapMinutes = yPositionToMinutes(
-      relativeY, startHour, endHour, hourHeightRem, 16,
+      relativeY, startHour, endHour, hourHeightRem, rootFontPx(columnElement.ownerDocument),
       DND_CONSTANTS.SNAP_INTERVAL_DEFAULT
     );
-    previewStartMinutes = tapMinutes;
-    previewEndMinutes = Math.min(tapMinutes + creationDuration, endHour * 60);
+    previewStartMinutes = Math.min(tapMinutes, endHour * 60 - DND_CONSTANTS.MIN_DURATION_MINUTES);
+    previewEndMinutes = Math.min(previewStartMinutes + creationDuration, endHour * 60);
     previewVisible = true;
   }
 
@@ -256,7 +302,7 @@
     const rect = columnElement.getBoundingClientRect();
     const relativeY = clientY - rect.top;
     return yPositionToMinutes(
-      relativeY, startHour, endHour, hourHeightRem, 16,
+      relativeY, startHour, endHour, hourHeightRem, rootFontPx(columnElement.ownerDocument),
       DND_CONSTANTS.SNAP_INTERVAL_DEFAULT
     );
   }
@@ -351,8 +397,9 @@
   on:click={handleBackgroundClick}
   on:mousedown={handleColumnMouseDown}
   on:touchstart|passive={handleTouchStart}
-  on:touchmove|passive={handleTouchMove}
+  on:touchmove={handleTouchMove}
   on:touchend={handleTouchEnd}
+  on:touchcancel={handleTouchCancel}
   on:keydown={(e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       if (onRecordAdd) {

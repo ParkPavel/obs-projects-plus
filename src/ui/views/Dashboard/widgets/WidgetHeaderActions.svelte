@@ -53,10 +53,13 @@
   const blockInsert = useBlockInsert();
   let menuBtn: HTMLButtonElement | null = null;
 
-  function insertEntry(): { onInsertAfter?: () => void } {
+  function insertEntry(): { onInsertAfter?: () => void; onInsertBefore?: () => void } {
     const id = widget?.id;
     if (id === undefined || !blockInsert?.available()) return {};
-    return { onInsertAfter: () => blockInsert.after(id, menuBtn) };
+    return {
+      onInsertAfter: () => blockInsert.after(id, menuBtn),
+      ...(blockInsert.before ? { onInsertBefore: () => blockInsert.before?.(id, menuBtn) } : {}),
+    };
   }
 
   export function menuEntries() {

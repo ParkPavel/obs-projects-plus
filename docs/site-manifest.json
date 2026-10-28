@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "sourceVersion": "3.7.2",
+  "generator": "node scripts/build-docs-site.mjs",
+  "sources": [
+    "README.md",
+    "README-RU.md",
+    "CHANGELOG.md",
+    "CHANGELOG-RU.md",
+    "ROADMAP.md",
+    "ROADMAP-RU.md",
+    "CONTRIBUTING.md",
+    "CONTRIBUTING-RU.md",
+    "CODE_OF_CONDUCT.md",
+    "CODE_OF_CONDUCT-RU.md",
+    "docs/api-RU.md",
+    "docs/api.md",
+    "docs/architecture-EN.md",
+    "docs/architecture.md",
+    "docs/development-3.7.1-RU.md",
+    "docs/development-3.7.1.md",
+    "docs/ERROR_CODES.md",
+    "docs/README.md",
+    "docs/site-maintenance-RU.md",
+    "docs/site-maintenance.md",
+    "docs/user-guide-EN.md",
+    "docs/user-guide.md",
+    "templates/README.md",
+    "demo-vault/README.md",
+    "obsidian-projects-types/README.md",
+    "obsidian-projects-types/README-RU.md"
+  ],
+  "files": [
+    {
+      "name": "read/readme.html",
+      "sha256": "bed4bb30a7eb1b5054da0e24105399fd444f2f791f8e22c53f8335e69639dcff"
+    },
+    {
+      "name": "read/readme-ru.html",
+      "sha256": "02395efb80a73dd10b132f7af299ac18e369d63179323450390821d158fbf994"
+    },
+    {
+      "name": "read/changelog.html",
+      "sha256": "28a686ae56d93be9d23a9e4794f2e20f6d249d4396d01c0173f83445a6c6dd90"
+    },
+    {
+      "name": "read/changelog-ru.html",
+      "sha256": "bb0fd7d893deadd740689ebc87fb63df3faa35fab3c89cc8c1e431c2e4d4718e"
+    },
+    {
+      "name": "read/roadmap.html",
+      "sha256": "9cf7c290105234444398887948c2115b8164f5149bd763dd55e381e43c39e3fe"
+    },
+    {
+      "name": "read/roadmap-ru.html",
+      "sha256": "8eff674f9dd7bb2a05651dd13b06fbb94300602fe7c863dc950211048cef1629"
+    },
+    {
+      "name": "read/contributing.html",
+      "sha256": "2007073ac6e6f38736f6515478f168f6ee73fe78bcb9f0521fede538eaf687f6"
+    },
+    {
+      "name": "read/contributing-ru.html",
+      "sha256": "75904d26c36ddede381b020f6d48fc3900b0d5a99694ffa2afc21fe5d6483a62"
+    },
+    {
+      "name": "read/code_of_conduct.html",
+      "sha256": "7d63ed10f193385ddc1a7b323f74bc295ae4b8816c94bc45beccc085e93cae20"
+    },
+    {
+      "name": "read/code_of_conduct-ru.html",
+      "sha256": "43809fd675a444995de44015ad75a56d94b025341551b9c8b1d06dc74a021b58"
+    },
+    {
+      "name": "read/api-ru.html",
+      "sha256": "50c13197f81ef4bb2eaafe97d30e89c954c58015c3446e7242c0efadd8bb8a09"
+    },
+    {
+      "name": "read/api.html",
+      "sha256": "930379a603e84b12b085da0af52f2fe494b46c382f4e3a8770fec088b6b37542"
+    },
+    {
+      "name": "read/architecture-en.html",
+      "sha256": "bfae8ae8fd799b737ffa715b6507f8004feb46c7fac817917defe198a12403b2"
+    },
+    {
+      "name": "read/architecture.html",
+      "sha256": "dd7f389457d8824eb643ff36017e70d782fc4224cf9f39b60e6a123dcacba394"
+    },
+    {
+      "name": "read/development-3.7.1-ru.html",
+      "sha256": "d02ec9e8613b46b0b2d94915f8b7ef3c867c4c1f2de3def2eee98dd2e4caf8ec"
+    },
+    {
+      "name": "read/development-3.7.1.html",
+      "sha256": "e3056d6b3ba1fc64ee601b540aabf742bf50323c6191d39845718fc8650240b9"
+    },
+    {
+      "name": "read/error_codes.html",
+      "sha256": "89bb0012e7b632b00b818fcf4bbccf05fd1e63f2e19babd6034b0cadb2c2845c"
+    },
+    {
+      "name": "read/site-maintenance-ru.html",
+      "sha256": "8227f2cf3806d0d1ffe816424b378af56ef09850bf0f4bd462bf163df83a813c"
+    },
+    {
+      "name": "read/site-maintenance.html",
+      "sha256": "f42ac3d039bcd1f75b1549e35cbc0b357a7134085da2e3345f43399759933f13"
+    },
+    {
+      "name": "read/user-guide-en.html",
+      "sha256": "433f89febb93e6d31acd8b76403bc933b8d8d420bc88b35726148f064320e43e"
+    },
+    {
+      "name": "read/user-guide.html",
+      "sha256": "4a29f552291b74e924d09d7cbcfb05ee35d3a947138cb766f95622fb2ddfb63e"
+    },
+    {
+      "name": "read/templates-readme.html",
+      "sha256": "dbf6cd1f2083320efa0dc697365fe041dffe1b3bcf43712b4c1755b0b9151b5e"
+    },
+    {
+      "name": "read/demo-vault-readme.html",
+      "sha256": "49c0656dd6bd87101e75820f8f2a8d41e9da226f12c6020eb59401b58005198b"
+    },
+    {
+      "name": "read/obsidian-projects-types-readme.html",
+      "sha256": "94dd645032019b5bf4294525e61693cdfabaa72de7454ce70261cc9501308c83"
+    },
+    {
+      "name": "read/obsidian-projects-types-readme-ru.html",
+      "sha256": "a55555d1b2813eb7d8bfaa3c5cee31abb4d5efc2790efd0e4ef08fb2a62d63bb"
+    },
+    {
+      "name": "media/images--2026-01-27_12-24-17.png",
+      "sha256": "8012fa56f18b5f0f7b117875ed65f61499696affce9e954f07600c189b32892a"
+    },
+    {
+      "name": "index.html",
+      "sha256": "ab1c58621d24974ccaa7e5eff3188bbe05964e0b2e62de4fda2b562f145ee3e0"
+    },
+    {
+      "name": "en.html",
+      "sha256": "865483664a482db6f8dc62a7d394b119cec7ceac57cb6c0fbd9da7d93ab9a08b"
+    },
+    {
+      "name": "search-index.json",
+      "sha256": "a918e61f4b4a3f0c30c153ea2b2574ee3167da1698596e4576952daa4cd6356b"
+    },
+    {
+      "name": ".nojekyll",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

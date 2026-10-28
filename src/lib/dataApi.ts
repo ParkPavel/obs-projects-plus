@@ -248,11 +248,12 @@ export class DataApi {
       }
     }
 
-    const file = await this.fileSystem.create(record.id, content);
-
-    await this.updateFile(file, (data) =>
-      doUpdateRecord(data, fields, record)
-    )();
+    // Prepare the complete note before crossing the filesystem boundary.
+    // Creating a body first and writing properties afterwards could leave an
+    // incomplete file when the second write failed, blocking a safe retry.
+    const prepared = doUpdateRecord(content, fields, record);
+    if (E.isLeft(prepared)) throw prepared.left;
+    await this.fileSystem.create(record.id, prepared.right);
   }
 
   updateFile(

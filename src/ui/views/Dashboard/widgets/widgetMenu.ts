@@ -32,6 +32,7 @@ export function buildWidgetMenuEntries(opts: WidgetMenuHandlers & {
   properties?: { label: string; open: () => void };
   /** i3-close: tiles only — open the block palette after this block (layout/blockInsert.ts). */
   onInsertAfter?: () => void;
+  onInsertBefore?: () => void;
 }): ContextMenuEntry[] {
   const { t, locked, collapsed, pipelineStepCount } = opts;
   const K = "views.dashboard.widget.";
@@ -57,6 +58,7 @@ export function buildWidgetMenuEntries(opts: WidgetMenuHandlers & {
   e.push({ title: collapsed ? t(`${K}expand`, "Expand") : t(`${K}menu-collapse`, "Collapse"), icon: collapsed ? "chevron-down" : "chevron-up", onClick: opts.onToggleCollapse });
   // Pinning is undone here; a block is pinned from its grip, not the menu.
   if (locked) e.push({ title: t(`${K}unlock`, "Unpin position"), icon: "unlock", onClick: opts.onToggleLock });
+  if (opts.onInsertBefore) e.push({ title: t(`${K}menu-insert-before`, "Insert block before"), icon: "plus", onClick: opts.onInsertBefore });
   if (opts.onInsertAfter) e.push({ title: t(`${K}menu-insert-after`, "Insert block after"), icon: "plus", onClick: opts.onInsertAfter });
   e.push({ title: t(`${K}menu-duplicate`, "Duplicate"), icon: "copy", onClick: opts.onDuplicate });
   e.push({ separator: true });

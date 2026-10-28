@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Contributing to Projects Plus"><meta name="color-scheme" content="light dark">
+<meta name="referrer" content="strict-origin-when-cross-origin"><title>Contributing to Projects Plus · Projects Plus</title>
+<meta property="og:type" content="website"><meta property="og:title" content="Contributing to Projects Plus"><meta property="og:description" content="Contributing to Projects Plus"><meta property="og:url" content="https://parkpavel.github.io/obs-projects-plus/read/contributing.html"><meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://parkpavel.github.io/obs-projects-plus/read/contributing.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/site.css">
+<script type="module" src="../assets/site.js"></script></head>
+<body data-prefix="../" data-language="en"><a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header"><a class="wordmark" href="../en.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
+<nav aria-label="Main navigation"><a href="../en.html#ideas">Garden of ideas</a><a href="../read/user-guide-en.html">Documentation</a><a class="language" href="../read/contributing-ru.html" hreflang="ru">Русский</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../en.html">← Explore the plugin</a><strong>On this page</strong><nav aria-label="On this page"><a href="#build-locally">Build locally</a><a href="#find-the-relevant-code">Find the relevant code</a><a href="#make-a-focused-change">Make a focused change</a><a href="#check-the-result">Check the result</a><a href="#translate-the-interface">Translate the interface</a><a href="#paired-documentation">Paired documentation</a><a href="#submit-a-pull-request">Submit a pull request</a><a href="#release-a-version">Release a version</a><a href="#license-and-attribution">License and attribution</a></nav></aside><article class="doc-article"><p class="doc-version">Documentation follows the source code; an installed release may differ.</p><h1 id="contributing-to-projects-plus">Contributing to Projects Plus</h1>
+<p><a href="../read/contributing-ru.html">Русский</a></p>
+<p>Projects Plus is an Obsidian plugin maintained as a fork of <a href="https://github.com/marcusolsson/obsidian-projects">Obsidian Projects</a>. This guide covers building, changing and testing the plugin. Development coordination in the maintainer workspace uses Borshkit. Start with its local <code>borshkit/START-HERE.md</code>; task contracts and acceptance evidence are private workspace material, not plugin runtime files.</p>
+<h2 id="build-locally">Build locally</h2>
+<p>Use Node.js 22, matching CI, and npm. From a clone of this repository:</p>
+<pre><code class="language-sh">npm ci
+npm run build
+</code></pre>
+<p>The build type-checks TypeScript and bundles the plugin with esbuild. The runtime files are <code>main.js</code>, <code>manifest.json</code> and <code>styles.css</code>. For incremental builds, run <code>npm run dev</code>.</p>
+<p><code>npm run build</code> and <code>npm run dev</code> overwrite generated runtime files in the checkout, including tracked <code>main.js</code>. In maintainer task worktrees, use the isolated build helper instead. Run it from the workspace root, with explicit checkout and output paths:</p>
+<pre><code class="language-sh">node handoff/2026-10-07-claudex-to-borshkit/tools/build-branch.mjs &lt;candidate-checkout&gt; &lt;output-directory&gt;
+</code></pre>
+<p>This helper belongs to the maintainer workspace, not a standalone repository clone. It includes the checkout&#39;s uncommitted source changes and records artifact hashes without replacing its tracked bundle. Install each task worktree&#39;s dependencies with <code>npm ci</code>; do not share its <code>node_modules</code> through a junction.</p>
+<p>To test in Obsidian, copy those three files into <code>.obsidian/plugins/obs-projects-plus/</code> in a separate test vault. Create the directory if necessary, enable the plugin in Community plugins, and reload it after each build. Use sample notes: testing editing and deletion changes vault files.</p>
+<h2 id="find-the-relevant-code">Find the relevant code</h2>
+<p>Start with the <a href="../read/architecture.html">architecture map</a>. The plugin uses TypeScript, Svelte, Obsidian APIs and Svelte stores. Exact dependencies and compiler options are in <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/package.json">package.json</a>, <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/package-lock.json">package-lock.json</a> and <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/tsconfig.json">tsconfig.json</a>.</p>
+<p>Third-party view authors should read the <a href="../read/api.html">custom view API</a>. Internal modules are implementation details and may change between releases.</p>
+<h2 id="make-a-focused-change">Make a focused change</h2>
+<p>Create a branch from <code>main</code>. Describe the problem and the behavior your change should produce, then keep the implementation and its documentation in the same pull request.</p>
+<ul>
+<li>Preserve note bodies when editing frontmatter. Use the existing data API and its Obsidian <code>processFrontMatter</code> path rather than replacing whole files from UI components.</li>
+<li>Keep settings writes on the existing settings writer path so retries, conflict detection and failure reporting remain consistent.</li>
+<li>Build DOM content with text-safe APIs. Use the owning element&#39;s document or Obsidian&#39;s active document for pop-out window support.</li>
+<li>Validate data read from settings and user input. Reuse the <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/helpers/regexSafety.ts">regular-expression helpers</a> where applicable.</li>
+<li>Use Obsidian theme variables and the <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/ui/tokens/tokens.css">design tokens</a>. Keep controls usable with a keyboard and give icon-only buttons accessible names.</li>
+<li>Release subscriptions, event handlers and other resources when the owning view closes.</li>
+<li>Keep TypeScript types meaningful. Explain unavoidable suppressions and remove temporary debug output before review.</li>
+</ul>
+<p>Formatting is configured in the repository. <code>npm run format</code> rewrites all of <code>src</code>, so check its diff and avoid unrelated formatting changes.</p>
+<h2 id="check-the-result">Check the result</h2>
+<p>Run these commands from the repository root:</p>
+<pre><code class="language-sh">npm run build
+npm test -- --runInBand
+npm run lint
+npm run svelte-check -- --fail-on-warnings
+</code></pre>
+<p>Use focused tests while developing; run the full suite before submitting a pull request. Tests are located alongside their modules and under <code>src/__tests__</code>. Add regression coverage when fixing behavior that could recur. For a documentation-only change, check links, examples and any tests that validate the changed reference material.</p>
+<p>UI changes also need an Obsidian check: open the affected view, perform the changed action, and verify its result after reopening the view or reloading the plugin when persistence is involved. Describe the vault, Obsidian version and checks in the pull request without including private notes.</p>
+<p>For the 3.7.1 stabilization candidate, use the <a href="../read/development-3.7.1.html">completion baseline</a>. In the maintainer workspace, run <code>borshkit задача проверить release-371</code>, then <code>borshkit задача итог release-371</code>. Automated success does not accept manual criteria; the user decides those. Merge, push and release require the user&#39;s instruction.</p>
+<h2 id="translate-the-interface">Translate the interface</h2>
+<p>UI translations live in <a href="https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/stores/translations">src/lib/stores/translations</a>: English, Russian, Ukrainian and Simplified Chinese. Add or update corresponding keys in all four language files. Keep labels short and explain unfamiliar concepts in the user guide.</p>
+<p>English is the reference text. The Russian, Ukrainian and Chinese strings for recent features (gallery layouts and card size, card fields, resizable card frames, board thumbnails, the settings Filters tab) were written by the maintainers without a review by native speakers. Corrections from people who use the plugin in these languages are welcome:</p>
+<ul>
+<li><strong>Report a wording problem.</strong> Open an issue with the <a href="https://github.com/ParkPavel/obs-projects-plus/issues/new?template=translation.yml">Translation</a> form: the language, where the text appears in the plugin, the current text and your suggestion. A screenshot helps.</li>
+<li><strong>Fix it yourself.</strong> Search for the current text in the language file to find its key, change the value and keep the key unchanged. Keep every placeholder such as <code>{{count}}</code> or <code>{{name}}</code> exactly as it is; the text around it may move.</li>
+<li><strong>Check before a pull request.</strong> <code>npm test -- R0_26_i18nKeyCoverage</code> checks that every key exists in all four files with the same placeholders, and <code>npm test -- R0_30_sentenceCase</code> checks the English capitalization.</li>
+<li>A label that does not fit the space it is shown in is a layout problem too: say so in the issue rather than shortening the meaning.</li>
+</ul>
+<h2 id="paired-documentation">Paired documentation</h2>
+<p>Each document has a version in two languages: a file with a base name and a file with a language suffix (<code>-RU</code> or <code>-EN</code>). The index <a href="../read/readme.html">docs/README.md</a>, the <a href="../read/error_codes.html">error codes</a> and two short in-vault pages hold both languages in one file. Pairing is checked by <code>src/__tests__/R0_25_documentationPairs.test.ts</code>: if you edit one language, edit the other in the same commit.</p>
+<h2 id="submit-a-pull-request">Submit a pull request</h2>
+<p>State what was wrong, what now happens and how you checked it. Include screenshots for visible changes and mention limitations or checks you could not perform. Update the relevant user guide or API reference when behavior changes. Record release-facing changes in <a href="../read/changelog.html">CHANGELOG.md</a> and <a href="../read/changelog-ru.html">CHANGELOG-RU.md</a>.</p>
+<p>Do not include credentials, vault contents, local logs or machine-specific configuration. Report bugs through <a href="https://github.com/ParkPavel/obs-projects-plus/issues">GitHub Issues</a>, with reproduction steps, plugin and Obsidian versions, operating system, and expected and actual results.</p>
+<h2 id="release-a-version">Release a version</h2>
+<p>Maintainers release from <code>main</code>, which accepts changes only through a pull request with a green <code>build</code> check.</p>
+<ol>
+<li>On a branch, set the version with <code>npm version X.Y.Z --tag-version-prefix=&quot;&quot; --no-git-tag-version</code>. The <code>version</code> hook copies it to <code>manifest.json</code> and adds it to <code>versions.json</code>; it never increments on its own.</li>
+<li>Update both changelogs, rebuild with <code>npm run build</code> and commit <code>main.js</code> — it is tracked in Git and must match the release commit. Build from a checkout with LF line endings: with <code>core.autocrlf</code> on Windows, whitespace in Svelte templates carries <code>\r</code> into the bundle, and it no longer matches the release, which CI builds on Linux. The release asset is the reference — if in doubt, commit it.</li>
+<li>Merge the pull request, then push the tag <code>X.Y.Z</code> — the version itself, without <code>v</code> — on the merge commit. The release workflow refuses a tag that differs from <code>manifest.json</code>, builds the plugin and publishes <code>main.js</code>, <code>manifest.json</code> and <code>styles.css</code>.</li>
+</ol>
+<p>A beta for <a href="https://github.com/TfTHacker/obsidian42-brat">BRAT</a> is a tag <code>X.Y.Z-beta.N</code> on a commit of <code>main</code>, with <code>X.Y.Z</code> above the current version (after 3.7.0: <code>3.7.1-beta.1</code>); the workflow publishes it as a pre-release with the beta version in its manifest, leaving <code>manifest.json</code> on <code>main</code> untouched.</p>
+<h2 id="license-and-attribution">License and attribution</h2>
+<p>Contributions to the plugin are licensed under <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache 2.0</a>. Preserve applicable copyright and license notices. The original plugin was created by <a href="https://github.com/marcusolsson">Marcus Olsson</a>; this fork is maintained by Park Pavel. The separate <a href="../read/obsidian-projects-types-readme.html">type package</a> declares an MIT license.</p>
+<p class="doc-source"><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/CONTRIBUTING.md">Page source ↗</a></p></article></main>
+<footer class="site-footer"><a class="wordmark" href="../en.html">Projects Plus</a><p>An open-source project by Park Pavel. Based on Obsidian Projects by Marcus Olsson.</p><div><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache-2.0</a><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE">Attribution</a><a href="https://github.com/ParkPavel/obs-projects-plus/issues">Feedback</a></div></footer>
+<aside class="search-panel" aria-label="Search documentation"><label for="doc-search">Search documentation</label><div class="search-input-wrap"><input id="doc-search" type="search" placeholder="Search…" autocomplete="off" aria-controls="search-results"><kbd>/</kbd></div><ul id="search-results" hidden></ul><p id="search-status" role="status" aria-live="polite" data-empty="No matches. Try “calendar”, “formula” or “source”."></p></aside>
+</body></html>

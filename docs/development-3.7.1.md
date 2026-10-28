@@ -1,5 +1,7 @@
 # 3.7.1 stabilization baseline
 
+> Historical specification, captured on 2026-10-08. It does not describe the current release candidate. Use the [user guide](user-guide-EN.md) and [changelog](../CHANGELOG.md) for current product information.
+
 [Русский](development-3.7.1-RU.md)
 
 Snapshot: 2026-10-08. This document consolidates the existing implementation, the original 19-point tester report and the completion requirements for the 3.7.1 candidate. It is a stabilization specification, not a release announcement or a claim that every scenario works.

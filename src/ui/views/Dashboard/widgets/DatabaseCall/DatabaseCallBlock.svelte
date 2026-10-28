@@ -29,6 +29,7 @@
   import { i18n } from "src/lib/stores/i18n";
   import { getContext, onMount, onDestroy } from "svelte";
   import { writable } from "svelte/store";
+  import { providePaletteProject } from "src/ui/paletteProject";
   import {
     DATA_PROVIDER_REGISTRY_CONTEXT_KEY,
     type DataProvider,
@@ -65,6 +66,8 @@
   import { isRenderableTab, linkTab, resolveTabView, scopeTabFrame, sortTabRecords, unlinkTab } from "./linkedView";
   import { tabLinkMenu } from "./tabLinkMenu";
   import { detachInherited, inheritFieldLayout } from "./fieldLayout";
+  import EmbeddedViewSettings from "./EmbeddedViewSettings.svelte";
+  import { initialEmbeddedConfig, embeddedViewDefinition } from "./embeddedView";
 
   export let frame: DataFrame;
   export let api: ViewApi;
@@ -237,8 +240,12 @@
   // filter then come from that view, live; `effectiveFrame` already carries the
   // block's own filter, so the view's filter narrows it further (AND).
   $: sourceProjectId = sourceState.kind === "ready" ? sourceState.projectId : project?.id;
+  const paletteProject = writable<string | undefined>(undefined);
+  providePaletteProject(paletteProject);
+  $: paletteProject.set(sourceProjectId);
   $: sourceViews = ($settings.projects.find((p) => p.id === sourceProjectId) ?? project)?.views ?? ([] as ViewDefinition[]);
   $: resolvedTab = activeTab ? resolveTabView(activeTab, sourceViews) : undefined;
+  $: embeddedSettingsView = activeTab ? embeddedViewDefinition(activeTab, resolvedTab?.config ?? {}) : undefined;
   $: tabScope = scopeTabFrame(effectiveFrame, resolvedTab, hasSubFilter || autoFilter !== null || masterSelected);
   $: activeTabTableConfig = inheritFieldLayout(resolvedTab?.config as DataTableConfig | undefined, dashboardTableConfig);
 
@@ -278,7 +285,7 @@
       id: `tab-${Date.now()}`,
       label: sameType > 0 ? `${base} ${sameType + 1}` : base,
       viewType,
-      config: {},
+      config: initialEmbeddedConfig(viewType),
     };
     dispatch("configChange", {
       ...config,
@@ -559,6 +566,16 @@
         {readonly}
         on:change={handleSubFilterChange}
       />
+      {#if !readonly && activeTab && embeddedSettingsView && activeTab.viewType !== "table" && isRenderableTab(activeTab)}
+        {#key activeTab.id}
+          <EmbeddedViewSettings
+            view={embeddedSettingsView}
+            fields={viewFrame.fields}
+            linkedName={resolvedTab?.view?.name}
+            onUnlink={resolvedTab?.link === "live" ? () => activeTab && replaceTab(unlinkTab(activeTab, sourceViews)) : undefined}
+            onChange={handleViewConfigChange} />
+        {/key}
+      {/if}
     </div>
     {#if filterLabel === "relation" && masterSide}
       <span class="ppp-dbc-filter-label ppp-dbc-filter-label--relation" aria-label={$i18n.t("views.dashboard.database-call.filtered-by-relation")}>
@@ -632,6 +649,7 @@
     {/if}
     <div
       class="ppp-database-call-content"
+      class:ppp-database-call-content--visual={activeTab && activeTab.viewType !== "table" && isRenderableTab(activeTab)}
       role="tabpanel"
       id="ppp-tab-panel-{activeTabId}"
       aria-labelledby="ppp-tab-{activeTabId}"
@@ -790,9 +808,17 @@
 
   .ppp-database-call-content {
     flex: 1;
+    min-height: 0;
     overflow: hidden;
     display: flex;
     flex-direction: column;
+  }
+  .ppp-database-call-content--visual {
+    flex: 1 1 30em;
+    height: 30em;
+    max-height: 65vh;
+    min-height: 12em;
+    overflow: auto;
   }
 
   .ppp-dbc-filter-label {

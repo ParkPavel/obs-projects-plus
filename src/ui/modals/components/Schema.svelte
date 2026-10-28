@@ -322,6 +322,9 @@
   }
   .ppp-schema-actions {
     display: inline-flex;
+    flex-wrap: wrap;
+    min-width: 0;
+    max-width: 100%;
     gap: var(--ppp-space-2);
   }
   @media (max-width: 30rem) {
@@ -335,6 +338,8 @@
   }
   /* Touch sizing — Apple-grade thumb target. */
   .ppp-schema-actions :global(button) {
-    min-height: 2.25rem;
+    min-height: 2.75rem;
+    max-width: 100%;
+    white-space: normal;
   }
 </style>

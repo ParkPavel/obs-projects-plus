@@ -32,8 +32,6 @@ export const DND_CONSTANTS = {
   MIN_DURATION_MINUTES: 15,
   /** Default duration for new events created via tap (minutes) */
   CREATION_DEFAULT_DURATION: 60,
-  /** Auto-confirm timeout for touch-tap creation preview (ms) */
-  CREATION_CONFIRM_TIMEOUT: 3000,
   /** Triangle handle size on desktop (rem) */
   TRIANGLE_SIZE_DESKTOP: 0.5,
   /** Triangle handle size on touch devices (rem) */

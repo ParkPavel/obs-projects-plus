@@ -12,7 +12,7 @@ mean that a new release has been published.
 
 ### Safety and stability
 
-- Dragging board columns can no longer hang Obsidian: a handler leak is closed, a column dropped where it
+- Board column dragging closes a handler leak: a column dropped where it
   was writes nothing, and a drag that never ends is released on its own.
 - The calendar no longer freezes on the month view: day cells create no hidden frames and at most 24 months
   stay in memory.
@@ -22,6 +22,8 @@ mean that a new release has been published.
   those. A missing note is no longer counted as saved. Adding, renaming or deleting a field offers the same
   retry over the notes it could not write.
 - The relations index no longer scans the vault again after the plugin is turned off or reloaded.
+- New notes are prepared with complete frontmatter before file creation; invalid template YAML refuses
+  creation. Failed property writes keep the draft for retry, and Tab waits for the write result.
 - New command "Start-up report (copy)": how long Obsidian took before the plugin and each stage of the
   plugin's start-up, copied as text — for measuring a slow start on a phone.
 
@@ -32,9 +34,11 @@ mean that a new release has been published.
   window. Extra columns go behind "+N". Multi-day strips are thin colour bands, packed per week.
 - Week and day: an event shorter than an hour (from 15 minutes) is drawn at its length; an overnight event is
   drawn in parts per day; an event of 24 hours or more lives in the all-day row.
-- Week and day: a drag over the time grid creates the event over exactly that range (it was always one hour);
-  on a phone a tap on empty time opens the creation preview, and the day opens from its header. The length
-  a tap or click creates is a view setting: 15, 30, 60 (default), 90 or 120 minutes.
+- Week and day: dragging over the time grid passes the selected range to the creation form. On a phone,
+  hold empty time for 500 ms to preview it, then stretch with the same finger and release to open the form.
+  A short tap creates nothing. Small finger movements preserve the configured duration:
+  15, 30, 60 (default), 90 or 120 minutes. Moving the draft behind the form is still in development.
+- The agenda's custom list combines the selected date with its list conditions.
 - The day window on a computer opens beside the day's cell — right, else left, else under or over it — at one
   width, whether the date, the background, "+N", the keyboard or the year view opened it (it could stand at
   the screen's edge, far from the day). It keeps its side while open; on a phone it stays a bottom sheet.
@@ -54,6 +58,7 @@ mean that a new release has been published.
 
 ### Board
 
+- During a column drag, columns fold temporarily and restore their saved collapsed state afterwards.
 - Columns drag by their grip again; the column menu has Move left / Move right.
 - Pinning a column is a view setting and no longer follows the status options.
 - Columns move at any board zoom, on a phone too; while a column or a card is being dragged, the zoom (pinch,
@@ -62,6 +67,13 @@ mean that a new release has been published.
 
 ### Dashboard and data
 
+- Block menus offer insertion above and below. Embedded board, calendar and gallery tabs expose their
+  shared view settings. New embedded calendars start in week view with event bars.
+- Adding a view chooses its type from a menu and edits its name in the tab strip before saving.
+- Formula previews use the same dependency evaluation as application, including dataset aggregates.
+  Saved formulas can be loaded for editing; empty or conflicting names and dependency cycles block Apply.
+- Favourite colours follow synced plugin settings, with a shared fallback and separate project palettes.
+  Legacy local favourites migrate only after settings load successfully.
 - "+ Block" in the plugin's bar adds a block after the selected one (a tap or click on a block's header
   selects it, a thin frame marks it), else after the block most on screen; the block list names the place.
   On a phone the "+" between blocks is gone.

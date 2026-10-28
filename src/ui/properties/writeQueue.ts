@@ -9,13 +9,16 @@
  */
 
 export interface WriteQueue {
-  /** Run `task` after every task queued before it; resolves when it is done. */
-  run(task: () => Promise<unknown>): Promise<void>;
+  /** Resolves true only when the write reached storage; false is reported. */
+  run(task: () => Promise<unknown>): Promise<boolean>;
   /** Tasks queued or running. */
   pending(): number;
 }
 
-export function createWriteQueue(onBusyChange?: (busy: boolean) => void): WriteQueue {
+export function createWriteQueue(
+  onBusyChange?: (busy: boolean) => void,
+  onFailure?: (error: unknown) => void,
+): WriteQueue {
   let tail: Promise<void> = Promise.resolve();
   let count = 0;
   return {
@@ -24,15 +27,21 @@ export function createWriteQueue(onBusyChange?: (busy: boolean) => void): WriteQ
       if (count === 1) onBusyChange?.(true);
       const next = tail.then(async () => {
         try {
-          await task();
+          const applied = await task();
+          if (applied === false) throw new Error("The property change was not applied to the note");
+          return true;
         } catch (error) {
           console.error("[Projects+] note properties: write failed", error);
+          try { onFailure?.(error); }
+          catch (notificationError) { console.error("[Projects+] failed to report a write error", notificationError); }
+          return false;
         } finally {
           count -= 1;
           if (count === 0) onBusyChange?.(false);
         }
       });
-      tail = next;
+      // The following write must still run even if a notification throws.
+      tail = next.then(() => undefined, () => undefined);
       return next;
     },
     pending: () => count,

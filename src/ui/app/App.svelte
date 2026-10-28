@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, createEventDispatcher } from "svelte";
-  import { get } from "svelte/store";
+  import { get, writable } from "svelte/store";
+  import { providePaletteProject } from "src/ui/paletteProject";
 
   import { Notice } from "obsidian";
   import { v4 as uuidv4 } from "uuid";
@@ -29,7 +30,10 @@
   import { getAPI, isPluginEnabled } from "obsidian-dataview";
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import { CreateProjectModal } from "src/ui/modals/createProjectModal";
-  import { AddViewModal } from "src/ui/modals/addViewModal";
+  import { customViews } from "src/lib/stores/customViews";
+  import { nextUniqueViewName } from "src/lib/helpers";
+  import { openContextMenu, type ContextMenuAnchor } from "src/lib/contextMenu";
+  import { DEFAULT_VIEW } from "src/settings/settings";
   import { ConfirmDialogModal } from "src/ui/modals/confirmDialog";
   import CompactNavBar from "src/ui/components/Navigation/CompactNavBar.svelte";
   import { provideBlockOutline } from "src/ui/views/Dashboard/layout/blockOutline";
@@ -54,6 +58,9 @@
 
   export let projectId: ProjectId | undefined;
   export let viewId: ViewId | undefined;
+  const paletteProject = writable<string | undefined>(undefined);
+  providePaletteProject(paletteProject);
+  $: paletteProject.set(project?.id);
 
   const dispatch = createEventDispatcher();
 
@@ -354,13 +361,42 @@
     settings.updateView(project.id, updatedView);
   }
 
-  function handleAddView(project: ProjectDefinition | undefined) {
+  let newView: { name: string; commit: (name: string) => void; cancel: () => void } | null = null;
+  let newViewProjectId: ProjectId | undefined;
+  $: if (newView && newViewProjectId !== project?.id) newView = null;
+  function isCurrentProject(id: ProjectId): boolean { return project?.id === id; }
+
+  function handleAddView(project: ProjectDefinition | undefined, anchor: ContextMenuAnchor = null) {
     if (!project) return;
-    new AddViewModal($app, project, (projectId, view) => {
-      settings.addView(projectId, view);
-      dispatch("viewIdChange", view.id);
-      viewId = view.id;
-    }).open();
+    const targetId = project.id;
+    const seen = new Set<string>();
+    const choices = Object.values($customViews).flatMap((implementation) => {
+      const raw = implementation.getViewType();
+      const type = raw === "database" ? "dashboard" : raw;
+      if (seen.has(type)) return [];
+      seen.add(type);
+      const builtIn = ["table", "board", "calendar", "gallery", "dashboard"].includes(type);
+      const title = builtIn ? $i18n.t(`views.${type}.name`) : implementation.getDisplayName();
+      return [{ title, icon: implementation.getIcon(), onClick: () => {
+        const target = $settings.projects.find((item) => item.id === targetId);
+        if (!target || !isCurrentProject(targetId)) return;
+        newViewProjectId = targetId;
+        newView = {
+          name: nextUniqueViewName(target.views, title),
+          cancel: () => (newView = null),
+          commit: (name) => {
+            const current = $settings.projects.find((item) => item.id === targetId);
+            if (!current || !isCurrentProject(targetId) || current.views.some((item) => item.name === name)) return;
+            const created = { ...DEFAULT_VIEW, id: uuidv4(), name, type: type === "table" ? "database" : type };
+            settings.addView(targetId, created);
+            newView = null;
+            dispatch("viewIdChange", created.id);
+            viewId = created.id;
+          },
+        };
+      } }];
+    });
+    openContextMenu(choices, anchor);
   }
 
   let settingsMenuOpen = false;
@@ -423,11 +459,12 @@
 <div class="projects-container" style:--ppp-below-nav-h={belowNav}>
   <CompactNavBar
     {views}
+    {newView}
     viewId={view?.id}
     {view}
     agendaOpen={navAgendaOpen}
     on:viewChange={(event) => (viewId = event.detail)}
-    on:addView={() => handleAddView(project)}
+    on:addView={(event) => handleAddView(project, event.detail)}
     on:openSettings={(event) => handleOpenSettings(event.detail)}
     on:centerToday={handleCenterToday}
     on:toggleAgenda={handleToggleAgenda}

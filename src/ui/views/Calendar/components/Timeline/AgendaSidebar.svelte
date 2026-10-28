@@ -413,6 +413,13 @@
   }
   
   $: agenda = buildAgenda(records, selectedDate, project.dateFormat?.writeFormat);
+  // Custom lists are local views of the selected day, not independent vault
+  // queries. Reuse the calendar's parsing/timezone and multi-day classification
+  // before the list applies its own conditions (date AND list conditions).
+  $: dayRecordIds = new Set(agenda
+    .filter(event => event.category === 'today' || event.category === 'allday' || event.category === 'multiday')
+    .map(event => event.id));
+  $: customRecords = records.filter(record => dayRecordIds.has(record.id));
   
   $: grouped = CATEGORY_ORDER.reduce((acc, cat) => {
     acc[cat] = agenda.filter(e => e.category === cat);
@@ -774,7 +781,7 @@
                 <AgendaCustomListComponent
                   {list}
                   collapsed={collapsedCustomLists.has(list.id)}
-                  {records}
+                  records={customRecords}
                   {titleField}
                   {onRecordClick}
                   {selectedDate}

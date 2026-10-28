@@ -113,8 +113,8 @@
     column.id === SHADOW_PLACEHOLDER_ITEM_ID ||
     column.id === SHADOW_PLACEHOLDER_ITEM_ID.toString();
 
-  const getColumnFootprint = (column: Pick<Column, "collapse"> | undefined) =>
-    column?.collapse ? COLLAPSED_COLUMN_FOOTPRINT : columnWidth;
+  const getColumnFootprint = (column: Pick<Column, "collapse"> | undefined, dragging: boolean) =>
+    dragging || column?.collapse ? COLLAPSED_COLUMN_FOOTPRINT : columnWidth;
 
   const hasMatchingOrder = (items: Column[], order: string[]) =>
     items.length === order.length && items.every((item, index) => item.id === order[index]);
@@ -409,6 +409,47 @@
     zoom = 1;
     onZoomChange(1);
   }
+  function compactColumnClone(element: HTMLElement | undefined): void {
+  // i3-board: the library calls this first while its clone is not in the
+  // document yet; that clone measures 0×0, and pinning it to 0rem put
+  // the hit point (the clone's centre) at the column's top-left corner —
+  // half a column away from the finger, so an expanded column never
+  // landed anywhere (a collapsed one, 3rem wide, barely noticed). The
+  // library has already sized the clone from the real column in px.
+  if (!element || !element.isConnected) return;
+  const rect = element.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return;
+  const root = rootFontPx(element.ownerDocument);
+  // w4-p08 (N6): on a zoomed board the column's rect is scaled, and the
+  // clone (outside the board's transform) holds unscaled content. As
+  // for cards (scaleDraggedClone): the logical size, drawn at the zoom.
+  // The scaled clone measures the same rect again, so this is stable.
+  const scale = zoom > 0 ? zoom : 1;
+  // Compact the visual copy only. The live column retains its handle
+  // and saved collapse flag; removing its handle used to strand drag.
+  const column = element.querySelector<HTMLElement>("section.projects--board--column");
+  if (column) {
+    column.classList.add("collapse");
+    column.style.marginRight = remAt(COLLAPSED_COLUMN_FOOTPRINT - columnWidth, root);
+    for (const child of Array.from(column.children)) {
+      if (!child.classList.contains("projects--board--column--header")) child.remove();
+    }
+  }
+  const width = remAt(COLLAPSED_COLUMN_FOOTPRINT, root);
+  const height = remAt(columnWidth, root);
+  if (scale !== 1) {
+    element.classList.add("ppp-board-scaled-clone");
+    element.style.scale = String(scale);
+  }
+  element.style.width = width;
+  element.style.minWidth = width;
+  element.style.maxWidth = width;
+  element.style.height = height;
+  element.style.minHeight = height;
+  element.style.boxSizing = "border-box";
+  element.style.zIndex = "30";
+  }
+
 </script>
 
 <!-- ios-g1 G2: interior swipes pan the board instead of opening Obsidian's
@@ -432,6 +473,7 @@
               {onEdit}
               width={columnWidth}
               collapse={column.collapse}
+              temporaryCollapse={isDraggingColumns}
               pinned={column.pinned}
               persisted={column.persisted}
               name={column.id}
@@ -489,36 +531,7 @@
         dropTargetStyle: {
           outline: "none",
         },
-        transformDraggedElement: (element) => {
-          // i3-board: the library calls this first while its clone is not in the
-          // document yet; that clone measures 0×0, and pinning it to 0rem put
-          // the hit point (the clone's centre) at the column's top-left corner —
-          // half a column away from the finger, so an expanded column never
-          // landed anywhere (a collapsed one, 3rem wide, barely noticed). The
-          // library has already sized the clone from the real column in px.
-          if (!element || !element.isConnected) return;
-          const rect = element.getBoundingClientRect();
-          if (rect.width === 0 || rect.height === 0) return;
-          const root = rootFontPx(element.ownerDocument);
-          // w4-p08 (N6): on a zoomed board the column's rect is scaled, and the
-          // clone (outside the board's transform) holds unscaled content. As
-          // for cards (scaleDraggedClone): the logical size, drawn at the zoom.
-          // The scaled clone measures the same rect again, so this is stable.
-          const scale = zoom > 0 ? zoom : 1;
-          const width = remAt(rect.width / scale, root);
-          const height = remAt(rect.height / scale, root);
-          if (scale !== 1) {
-            element.classList.add("ppp-board-scaled-clone");
-            element.style.scale = String(scale);
-          }
-          element.style.width = width;
-          element.style.minWidth = width;
-          element.style.maxWidth = width;
-          element.style.height = height;
-          element.style.minHeight = height;
-          element.style.boxSizing = "border-box";
-          element.style.zIndex = "30";
-        },
+        transformDraggedElement: compactColumnClone,
         // Overwritten by `dragHandleZone`; `gateDisabledGrip` below enforces it.
         dragDisabled: dataReadOnly || columnZoneDisabled,
         morphDisabled: true,
@@ -532,11 +545,11 @@
       on:finalize={handleDndFinalize}
     >
       {#each dndUnpinnedColumns as column (column.id)}
-        {@const footprint = toRem(getColumnFootprint(column))}
+        {@const footprint = toRem(getColumnFootprint(column, isDraggingColumns))}
         <div
           class="projects--board--column--dndwrapper"
           class:projects--board--column--dndwrapper--placeholder={isShadowPlaceholder(column)}
-          class:projects--board--column--dndwrapper--collapsed={column.collapse}
+          class:projects--board--column--dndwrapper--collapsed={column.collapse || isDraggingColumns}
           data-dnd-width={footprint}
           style={`width: ${footprint}; min-width: ${footprint}; max-width: ${footprint};`}
           aria-hidden={isShadowPlaceholder(column) ? "true" : undefined}
@@ -560,6 +573,7 @@
               {onEdit}
               width={columnWidth}
               collapse={column.collapse}
+              temporaryCollapse={isDraggingColumns}
               pinned={column.pinned}
               persisted={column.persisted}
               name={column.id}

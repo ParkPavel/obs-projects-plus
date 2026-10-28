@@ -130,6 +130,10 @@ A filter limits displayed records; it does not delete notes. A view's filter liv
 
 Formulas calculate values from fields. Begin with a small expression over numeric fields, such as `budget - spent`. Check the result against a known record before using it in summary statistics. The built-in editor helps you choose fields and functions; valid operations depend on data types.
 
+**Project formulas and dashboard formulas.** A formula configured on a project property belongs to that property and is available in the project's views. The dashboard's “Formulas” action creates a computed field for that dashboard. It is a working calculation, rather than a separate preview calculator: Apply saves its definition in the view settings and recalculates it for the records. It does not rewrite Markdown properties.
+
+In the dashboard panel, enter a new name such as `Remaining` and the expression `budget - spent`. Preview shows the first record in the dashboard's data. A reference such as `budget` reads the current record; `SUM(@budget)` aggregates that column across the dashboard's complete dataset, rather than just the first row. Check the filters and source first. After applying, the field is available to that page's tables and widgets. Saved formulas appear in the panel: select a name to edit its expression. An empty name, a collision with an ordinary property, invalid syntax or a circular dependency cannot be applied.
+
 A relation points to notes in another project. For example, a YAML link can look like this:
 
 ```yaml

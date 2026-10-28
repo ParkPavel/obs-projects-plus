@@ -53,10 +53,12 @@ describe("DataApi.createNote with a body", () => {
     expect(text.indexOf("date:")).toBeLessThan(text.indexOf("First line"));
   });
 
-  it("hands the body to the file system as the note's content", async () => {
+  it("hands the complete note to the file system in one creation", async () => {
     const { fs, createdWith } = memoryFs();
     await new DataApi(fs).createNote(record, [], "", "Body only");
-    expect(createdWith).toEqual(["Body only"]);
+    expect(createdWith).toHaveLength(1);
+    expect(createdWith[0]).toContain("date:");
+    expect(createdWith[0]).toContain("Body only");
   });
 
   it("does not read a template when a body is given", async () => {
@@ -71,7 +73,9 @@ describe("DataApi.createNote with a body", () => {
     const { fs, createdWith } = memoryFs(looked);
     await new DataApi(fs).createNote(record, [], "Templates/visit.md", "");
     expect(looked).toEqual([]);
-    expect(createdWith).toEqual([""]);
+    expect(createdWith).toHaveLength(1);
+    expect(createdWith[0]).toContain("date:");
+    expect(createdWith[0]).not.toContain("Body");
   });
 
   it("without a body it behaves as before: the template is looked up", async () => {

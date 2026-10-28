@@ -1152,6 +1152,7 @@
                     "menu-collapse": "折叠",
                     "menu-duplicate": "复制",
                     "menu-insert-after": "在后面插入块",
+                    "menu-insert-before": "在前面插入块",
                     "locked": "位置已固定",
                     "expand": "展开",
                     "collapse": "折叠组件",
@@ -1231,6 +1232,9 @@
                 },
                 "formula": {
                     "title": "公式编辑器",
+                    "scope": "为此仪表板中的每条记录创建或更新计算字段。预览显示仪表板数据中的第一条记录；列聚合使用完整数据集。Markdown 属性保持不变。",
+                    "saved": "已保存的仪表板公式 — 选择以编辑",
+                    "cycle": "此公式会产生循环依赖。请先移除引用循环再应用。",
                     "hint": "Ctrl+Enter 应用，Esc 取消",
                     "field-name": "字段名称",
                     "field-placeholder": "例如 计算预算",

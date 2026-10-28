@@ -1,6 +1,6 @@
 # Projects Plus
 
-[Русский](README-RU.md) · [User guide](docs/user-guide-EN.md) · [Documentation](docs/README.md) · [Roadmap](ROADMAP.md)
+[Русский](README-RU.md) · [Website & ideas](https://parkpavel.github.io/obs-projects-plus/en.html) · [User guide](docs/user-guide-EN.md) · [Documentation](docs/README.md) · [Roadmap](ROADMAP.md)
 
 Projects Plus helps you work with Obsidian notes as a project: compare records in a table, arrange them on a board, plan events in a calendar, and build an overview on a Dashboard.
 
@@ -32,7 +32,7 @@ To install a release by hand:
 The current version is **3.7.0**: configurable gallery layouts and card fields, resizable card frames, board thumbnails, filters in the view settings, touch-first behaviour on phones and tablets, and styles that follow your Obsidian theme. 3.6.3 named the plugin Projects Plus; 3.6.1 brought a demo of three linked projects. The first version in the Obsidian community catalogue format is 3.6.0. Packaged builds are in [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases); it needs Obsidian 1.8.7 or newer, on desktop or mobile. See the [changelog](CHANGELOG.md) for what changed.
 
 1. Choose a release and download **all three files** from it: `main.js`, `manifest.json`, and `styles.css`.
-2. Create `.obsidian/plugins/obs-projects-plus/` inside your vault and place the files there.
+2. Create `.obsidian/plugins/obs-projects-plus/` inside your vault and place the files there. If you use a custom Obsidian configuration folder, use that folder instead of `.obsidian`.
 3. Restart Obsidian and enable **Projects Plus** in Community plugins settings.
 
 When updating, replace these three files with files from the same build. Keep `data.json`: it contains your project and view settings.
@@ -60,10 +60,10 @@ To explore prepared data, use **Create demo project**: it creates three linked p
 
 ## Privacy and access
 
-Projects Plus works only with your vault through the Obsidian API. It makes no network requests and collects no data.
+Projects Plus works with your vault through the Obsidian API. It has no separate server or telemetry. External image and cover URLs may load over the network; use images stored in your vault for local-only content.
 
 - **Vault files.** To find the notes of a project and the records that link to one another, it lists the files in the vault and reads their properties. It writes to a note only when you edit a record, create one, or run an action such as creating the demo.
-- **Clipboard.** It writes to the clipboard only when you press the copy button in the formula debug panel; it never reads the clipboard.
+- **Clipboard.** It writes when you explicitly copy a formula debug report or startup report; it does not read the clipboard.
 - **Settings.** Projects and views are stored in the plugin's `data.json` inside your vault.
 
 ## Continue
@@ -74,6 +74,6 @@ Projects Plus works only with your vault through the Obsidian API. It makes no n
 - [Changelog](CHANGELOG.md) and [issue tracker](https://github.com/ParkPavel/obs-projects-plus/issues).
 - [Contributing](CONTRIBUTING.md) and [custom view API](docs/api.md).
 
-Development in the maintainer workspace is managed through Borshkit. See [Contributing](CONTRIBUTING.md) and the [3.7.1 completion baseline](docs/development-3.7.1.md); private task configuration is kept outside plugin history.
+See [Contributing](CONTRIBUTING.md) to report a reproducible issue, improve the documentation or contribute code. Release notes describe the behaviour and limits of each published version.
 
 Projects Plus is based on Marcus Olsson's [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects). The current maintainer is Park Pavel. Licensed under [Apache 2.0](https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE); see [NOTICE](https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE) for attribution.

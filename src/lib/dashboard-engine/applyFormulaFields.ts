@@ -24,7 +24,7 @@ import {
   type DataValue,
   type Optional,
 } from "src/lib/dataframe/dataframe";
-import { createFormulaPass, evaluateFormulaValue } from "src/lib/formula/extendedEvaluator";
+import { createFormulaPass, evaluateFormulaWithError } from "src/lib/formula/extendedEvaluator";
 import { resolveFieldName } from "src/lib/formula/formulaErrors";
 import { parseFormula, type FormulaNode } from "src/lib/helpers/formulaParser";
 import type { FormulaFieldDef } from "src/ui/views/Dashboard/types";
@@ -103,7 +103,8 @@ export function orderFormulaDefs<T extends { name: string; expression: string }>
 
 export function applyFormulaFields(
   frame: DataFrame,
-  formulaFields: readonly FormulaFieldDef[] | undefined
+  formulaFields: readonly FormulaFieldDef[] | undefined,
+  reportError?: (field: string, recordId: string, message: string) => void,
 ): DataFrame {
   if (!formulaFields || formulaFields.length === 0) return frame;
 
@@ -124,7 +125,9 @@ export function applyFormulaFields(
     records = records.map((record) => {
       let value: Optional<DataValue>;
       try {
-        value = evaluateFormulaValue(def.expression, record, current, pass);
+        const result = evaluateFormulaWithError(def.expression, record, current, pass);
+        value = result.value;
+        if (result.error) reportError?.(def.name, record.id, result.error);
       } catch {
         value = null;
       }

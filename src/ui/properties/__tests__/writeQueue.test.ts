@@ -45,4 +45,27 @@ describe("i3-props createWriteQueue", () => {
     expect(busy).toEqual([true, false]);
     spy.mockRestore();
   });
+
+  it("reports a failed write to the UI and distinguishes it from a saved write", async () => {
+    const failed = jest.fn();
+    const q = createWriteQueue(undefined, failed);
+    const error = new Error("disk full");
+    const spy = jest.spyOn(console, "error").mockImplementation(() => undefined);
+    const first = q.run(async () => { throw error; });
+    const second = q.run(async () => undefined);
+    await expect(first).resolves.toBe(false);
+    await expect(second).resolves.toBe(true);
+    expect(failed).toHaveBeenCalledWith(error);
+    expect(q.pending()).toBe(0);
+    spy.mockRestore();
+  });
+
+  it("does not report a writer's explicit refusal as success", async () => {
+    const failed = jest.fn();
+    const q = createWriteQueue(undefined, failed);
+    const spy = jest.spyOn(console, "error").mockImplementation(() => undefined);
+    await expect(q.run(async () => false)).resolves.toBe(false);
+    expect(failed).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
+  });
 });

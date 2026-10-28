@@ -13,7 +13,11 @@
     evaluateFormulaWithError,
     validateFormulaExpression,
   } from "src/lib/dashboard-engine/formulaEngine";
-  import type { DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
+  import type { DataFrame, DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
+  import type { FormulaFieldDef } from "../types";
+  import { previewFormulaField, formulaWouldCycle } from "./formulaPreview";
+  import { isImeKey } from "src/ui/components/fields/draftController";
+  import TextField from "src/ui/components/fields/TextField.svelte";
   import { i18n } from "src/lib/stores/i18n";
   import FormulaConstructor from "src/ui/components/FormulaConstructor/FormulaConstructor.svelte";
   import FormulaDebugPanel from "./FormulaDebugPanel.svelte";
@@ -21,6 +25,8 @@
   export let expression: string = "";
   export let fields: string[] = [];
   export let previewRecord: DataRecord | undefined = undefined;
+  export let previewFrame: DataFrame | undefined = undefined;
+  export let formulaFields: readonly FormulaFieldDef[] = [];
 
   const dispatch = createEventDispatcher<{
     apply: { name: string; expression: string };
@@ -79,16 +85,23 @@
   let runtimeError: string | null = null;
   let debugDismissed = false;
   let cursorPosition = 0;
+  $: previewCyclic = formulaWouldCycle(formulaFields, fieldName.trim(), inputValue);
+  $: nameTaken = fields.includes(fieldName.trim()) && !formulaFields.some(definition => definition.name === fieldName.trim());
+  $: canApply = !!fieldName.trim() && !!inputValue.trim() && !nameTaken && !previewCyclic && validateFormulaExpression(inputValue, fields).length === 0;
 
   // DG-9 / B5: preview waits for a 150 ms pause in typing; hints do not wait
   let previewTimer: ReturnType<typeof setTimeout> | undefined;
 
-  function schedulePreview(expr: string) {
+  function schedulePreview(expr: string, name: string, source: DataFrame | undefined, definitions: readonly FormulaFieldDef[]) {
     clearTimeout(previewTimer);
     previewTimer = setTimeout(() => {
       const hasContent = expr.trim().length > 0;
       const isValid = validateFormulaExpression(expr, fields).length === 0;
-      if (hasContent && isValid && previewRecord) {
+      if (hasContent && isValid && source) {
+        const result = previewFormulaField(source, definitions, name.trim(), expr);
+        previewValue = result.value;
+        runtimeError = result.error;
+      } else if (hasContent && isValid && previewRecord) {
         const result = evaluateFormulaWithError(expr, previewRecord);
         previewValue = result.value;
         runtimeError = result.error ?? null;
@@ -99,7 +112,7 @@
     }, 150);
   }
 
-  $: schedulePreview(inputValue);
+  $: schedulePreview(inputValue, fieldName, previewFrame, formulaFields);
 
   onDestroy(() => clearTimeout(previewTimer));
 
@@ -115,28 +128,45 @@
   }
 
   function handleApply() {
+    const name = fieldName.trim();
+    const taken = fields.includes(name) && !formulaFields.some(definition => definition.name === name);
+    if (!name || !inputValue.trim() || taken || formulaWouldCycle(formulaFields, name, inputValue) || validateFormulaExpression(inputValue, fields).length > 0) return;
     dispatch("apply", { name: fieldName.trim(), expression: inputValue.trim() });
   }
 </script>
 
-<div class="ppp-formula-bar" bind:this={barEl} on:focusout={adoptDeferred}>
+<div class="ppp-formula-bar" bind:this={barEl} on:focusout={adoptDeferred}
+  on:keydown={(event) => { if (event.key === "Escape" && !isImeKey(event)) dispatch("cancel"); }}>
   <div class="ppp-formula-header">
     <span class="ppp-formula-title">{$i18n.t("views.dashboard.formula.title")}</span>
     <span class="ppp-formula-hint">{$i18n.t("views.dashboard.formula.hint")}</span>
   </div>
+  <p class="ppp-formula-scope">{$i18n.t("views.dashboard.formula.scope")}</p>
+  {#if formulaFields.length > 0}
+    <div class="ppp-formula-saved" aria-label={$i18n.t("views.dashboard.formula.saved")}>
+      {#each formulaFields as definition (definition.name)}
+        <button type="button" on:click={() => { fieldName = definition.name; inputValue = definition.expression; }}>
+          ƒ {definition.name}
+        </button>
+      {/each}
+    </div>
+  {/if}
 
   <div class="ppp-formula-name-row">
     <label class="ppp-formula-label" for="formula-name">
       {$i18n.t("views.dashboard.formula.field-name")}
     </label>
-    <input
+    <TextField
       id="formula-name"
-      class="ppp-formula-name-input"
-      type="text"
-      bind:value={fieldName}
+      inputClass="ppp-formula-name-input"
+      value={fieldName}
+      on:input={(event) => (fieldName = event.detail)}
+      on:cancel={() => dispatch("cancel")}
       placeholder={$i18n.t("views.dashboard.formula.field-placeholder")}
     />
   </div>
+  {#if nameTaken}<p role="alert">{$i18n.t("modals.field.create.existing-name-error")}</p>{/if}
+  {#if previewCyclic}<p role="alert">{$i18n.t("views.dashboard.formula.cycle")}</p>{/if}
 
   <FormulaConstructor
     bind:value={inputValue}
@@ -170,7 +200,7 @@
     </button>
     <button
       class="ppp-btn ppp-btn--primary"
-      disabled={!inputValue.trim() || !fieldName.trim()}
+      disabled={!canApply}
       on:click={handleApply}
     >
       {$i18n.t("views.dashboard.formula.apply")}
@@ -179,6 +209,8 @@
 </div>
 
 <style>
+  .ppp-formula-scope { margin: 0; color: var(--text-muted); }
+  .ppp-formula-saved { display: flex; flex-wrap: wrap; gap: 0.25em; }
   .ppp-formula-bar {
     display: flex;
     flex-direction: column;
@@ -219,7 +251,7 @@
     white-space: nowrap;
   }
 
-  .ppp-formula-name-input {
+  .ppp-formula-name-row :global(.ppp-formula-name-input) {
     flex: 1;
     padding: 0.25rem 0.5rem;
     border: var(--ppp-border-width) solid var(--background-modifier-border);

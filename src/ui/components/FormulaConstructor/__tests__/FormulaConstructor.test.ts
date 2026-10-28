@@ -248,6 +248,22 @@ describe("FormulaConstructor", () => {
 	});
 
 	describe("keyboard contract", () => {
+		test("IME owns Enter, Escape and shortcut keys until composition ends", async () => {
+			const { container, component } = render(FormulaConstructor, { props: { value: "1 + 2", fields: [] } });
+			const commit = jest.fn();
+			component.$on("commit", commit);
+			const textarea = container.querySelector("textarea")!;
+			await fireEvent.compositionStart(textarea);
+			await fireEvent.keyDown(textarea, { key: "Enter", ctrlKey: true });
+			await fireEvent.keyDown(textarea, { key: " ", code: "Space", ctrlKey: true });
+			expect(commit).not.toHaveBeenCalled();
+			expect(document.querySelectorAll(".ppp-fc-suggestion")).toHaveLength(0);
+			await fireEvent.compositionEnd(textarea);
+			await fireEvent.keyDown(textarea, { key: "Enter", ctrlKey: true, isComposing: true });
+			expect(commit).not.toHaveBeenCalled();
+			await fireEvent.keyDown(textarea, { key: "Enter", ctrlKey: true });
+			expect(commit).toHaveBeenCalledTimes(1);
+		});
 		test("Escape closes the suggestion popover", async () => {
 			const { container } = render(FormulaConstructor, {
 				props: { fields: [] },

@@ -58,6 +58,26 @@ async function mount(lists: unknown[] = []) {
 
 const nameInput = (root: ParentNode) => root.querySelector<HTMLInputElement>(".agenda-list-name input")!;
 
+describe("custom agenda lists intersect the selected day with their conditions", () => {
+  it("scopes empty and filtered lists to the day, includes spanning events and follows date navigation", async () => {
+    const todo = { ...list("todo", "Todo", 0), filterGroup: { id:"g",conjunction:"AND",groups:[],filters:[{id:"s",field:"status",operator:"is",value:"todo",enabled:true}] } };
+    const records = [
+      {id:"today.md",values:{title:"Today",startDate:"2026-10-26",status:"todo"}},
+      {id:"done.md",values:{title:"Done",startDate:"2026-10-26",status:"done"}},
+      {id:"tomorrow.md",values:{title:"Tomorrow",startDate:"2026-10-27",status:"todo"}},
+      {id:"span.md",values:{title:"Spanning",startDate:"2026-10-25",endDate:"2026-10-27",status:"todo"}},
+      {id:"undated.md",values:{title:"Undated",status:"todo"}},
+    ];
+    const view=render(Sidebar,{props:{project:{id:"p",name:"Project",agenda:{mode:"custom",custom:{lists:[todo,list("all","All",1)]}}},
+      currentDate:dayjs("2026-10-26"),records,fields:[],titleField:"title",dateField:"startDate"}});
+    await settle();
+    const shown=()=>Array.from(view.container.querySelectorAll(".agenda-custom-list"),el=>Array.from(el.querySelectorAll(".item-title"),t=>t.textContent));
+    expect(shown()).toEqual([["Today","Spanning"],["Today","Done","Spanning"]]);
+    await view.component.$set({currentDate:dayjs("2026-10-27")});await settle();
+    expect(shown()).toEqual([["Tomorrow","Spanning"],["Tomorrow","Spanning"]]);
+  });
+});
+
 async function type(input: HTMLInputElement, text: string) {
   input.focus();
   await fireEvent.input(input, { target: { value: text } });

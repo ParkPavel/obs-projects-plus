@@ -45,7 +45,7 @@
     dispatch("input", next);
   }
 
-  function onCommit(e: CustomEvent<{ value: string; reason: "enter" | "blur" }>): void {
+  function onCommit(e: CustomEvent<{ value: string; reason: "enter" | "blur" | "tab" }>): void {
     const parsed = parseTypedDate(e.detail.value);
     if (parsed.kind === "invalid") return;
     if (parsed.kind === "empty") { emit(null); return; }

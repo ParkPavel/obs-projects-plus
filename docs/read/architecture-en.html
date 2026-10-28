@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Project architecture"><meta name="color-scheme" content="light dark">
+<meta name="referrer" content="strict-origin-when-cross-origin"><title>Project architecture · Projects Plus</title>
+<meta property="og:type" content="website"><meta property="og:title" content="Project architecture"><meta property="og:description" content="Project architecture"><meta property="og:url" content="https://parkpavel.github.io/obs-projects-plus/read/architecture-en.html"><meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://parkpavel.github.io/obs-projects-plus/read/architecture-en.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/site.css">
+<script type="module" src="../assets/site.js"></script></head>
+<body data-prefix="../" data-language="en"><a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header"><a class="wordmark" href="../en.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
+<nav aria-label="Main navigation"><a href="../en.html#ideas">Garden of ideas</a><a href="../read/user-guide-en.html">Documentation</a><a class="language" href="../read/architecture.html" hreflang="ru">Русский</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../en.html">← Explore the plugin</a><strong>On this page</strong><nav aria-label="On this page"><a href="#entry-points-and-interface">Entry points and interface</a><a href="#from-notes-to-a-view">From notes to a view</a><a href="#writes-and-persistence">Writes and persistence</a><a href="#errors-and-diagnostics">Errors and diagnostics</a><a href="#extension-boundaries">Extension boundaries</a></nav></aside><article class="doc-article"><p class="doc-version">Documentation follows the source code; an installed release may differ.</p><h1 id="project-architecture">Project architecture</h1>
+<p><a href="../read/architecture.html">Русский</a></p>
+<p>This map describes the code in this repository. It helps contributors find a feature&#39;s implementation. See <a href="../read/contributing.html">Contributing</a> for build and test instructions.</p>
+<h2 id="entry-points-and-interface">Entry points and interface</h2>
+<table>
+<thead>
+<tr>
+<th>Location</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/main.ts">src/main.ts</a></td>
+<td>Plugin lifecycle, settings initialization, commands and Obsidian integration</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/view.ts">src/view.ts</a></td>
+<td>Projects workspace view and registration of built-in and custom views</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/events.ts">src/events.ts</a></td>
+<td>Vault event handling</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/tree/main/src/managers">src/managers</a></td>
+<td>Command management</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/tree/main/src/ui/app">src/ui/app</a></td>
+<td>Project navigation, shared application UI and view lifecycle</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/tree/main/src/ui/views">src/ui/views</a></td>
+<td>Dashboard, Board, Calendar, Gallery and visualizer interfaces</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/ui/tokens/tokens.css">src/ui/tokens/tokens.css</a></td>
+<td>Shared visual tokens</td>
+</tr>
+</tbody></table>
+<p><code>ProjectsView.getProjectViews()</code> registers Board, Calendar, Gallery and Dashboard. The <code>database</code> view key remains an alias for Dashboard so older saved configurations can resolve their view. Visualizer panes also have their own Obsidian integration.</p>
+<p>The custom view lifecycle is connected in <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/ui/app/useView.ts">useView.ts</a>. It passes configuration, project data and write callbacks to the active view. Read the <a href="../read/api.html">API reference</a> before relying on that extension point.</p>
+<h2 id="from-notes-to-a-view">From notes to a view</h2>
+<ol>
+<li>A project definition selects a data source. The <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/datasources/index.ts">source factory</a> constructs a folder, tag, native-query or Dataview source. Dataview is optional; the factory reports when its backend is unavailable.</li>
+<li>A source reads notes through the <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/filesystem/README.md">filesystem abstraction</a> and produces a <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/dataframe/README.md">data frame</a>: field definitions, records and optional parsing errors.</li>
+<li><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/stores/README.md">Svelte stores</a> hold reactive data and coordinate invalidation when records change.</li>
+<li>The selected view renders that data. Dashboard widgets use the transformation, formula, relation and aggregation modules for their derived results.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Location</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/datasources/README.md">src/lib/datasources</a></td>
+<td>Source selection, queries and combining source results</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/metadata/README.md">src/lib/metadata</a></td>
+<td>YAML frontmatter encoding and decoding</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/engine">src/lib/engine</a></td>
+<td>Filtering, aggregation and cross-project calculations</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/dashboard-engine">src/lib/dashboard-engine</a></td>
+<td>Dashboard transformations, formula application, charts and caches</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/formula">src/lib/formula</a></td>
+<td>Formula parsing and evaluation</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/relations">src/lib/relations</a></td>
+<td>Relation contracts, inverse indexes, relation writes, declared field types and rollups (<a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/relations/rollupColumns.ts">rollupColumns.ts</a>)</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/visualizer">src/lib/visualizer</a></td>
+<td>Visualizer-specific property, relation and overlay handling</td>
+</tr>
+</tbody></table>
+<p><strong>Frames of other projects.</strong> A block, chart or rollup that reads another project gets its frame through <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/externalFrameResolver.ts">externalFrameResolver.ts</a>: that project&#39;s declared relation types, backlinks and rollups are applied as in its own view. Frames are cached in <code>App.svelte</code>; the cache is cleared when files change and when any project&#39;s source or field configuration changes. A block with another project&#39;s source is read-only — a write through its <code>ViewApi</code> would land in the wrong project.</p>
+<p>These directories describe responsibilities; dependencies do not all follow a strict layered boundary. Follow the imports and callers when changing a path shared by several views.</p>
+<h2 id="writes-and-persistence">Writes and persistence</h2>
+<p>Record and field edits enter through <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/viewApi.ts">ViewApi</a> and <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/dataApi.ts">dataApi.ts</a>. They coordinate filesystem writes and the displayed data frame. Properties are written through <code>processFrontMatter</code>, and read-modify-write goes through <code>Vault.process</code> on the file&#39;s current contents, so an edit made between the read and the write is not lost. Some updates are optimistic; a visible change alone does not prove that the note was written. Failure paths can restore the previous value and show a coded error.</p>
+<p>Settings schemas and migrations live in <a href="https://github.com/ParkPavel/obs-projects-plus/tree/main/src/settings">src/settings</a>. The runtime settings writer and reconciliation helpers live in <a href="https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/settings">src/lib/settings</a>, with lifecycle wiring in <code>src/main.ts</code>. Keep new settings writes on this path to preserve conflict checks and retry behavior.</p>
+<p>Note content is stored in the vault. Plugin configuration is stored in the plugin&#39;s <code>data.json</code>. Derived values, such as formula results, should not be treated as stored frontmatter fields.</p>
+<h2 id="errors-and-diagnostics">Errors and diagnostics</h2>
+<p>The error registry is <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/errors/errorCodes.ts">errorCodes.ts</a>; formatting and logging helpers are in the same directory. The bilingual <a href="../read/error_codes.html">error reference</a> explains what a user can do for each code. Preserve the meaning of existing codes when changing their presentation.</p>
+<h2 id="extension-boundaries">Extension boundaries</h2>
+<p><a href="../read/api.html">Custom views</a> are experimental. <code>src</code> modules, stores and settings structures are implementation interfaces, not a stable public SDK. The <a href="../read/obsidian-projects-types-readme.html">type package</a> is a separate compatibility surface and currently differs from the host in several places documented in the API reference.</p>
+<p>Before changing a shared type, inspect its consumers and the relevant tests. Source records, filters and write results cross multiple views, so a change that works in one widget may affect other interfaces.</p>
+<p class="doc-source"><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/docs/architecture-EN.md">Page source ↗</a></p></article></main>
+<footer class="site-footer"><a class="wordmark" href="../en.html">Projects Plus</a><p>An open-source project by Park Pavel. Based on Obsidian Projects by Marcus Olsson.</p><div><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache-2.0</a><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE">Attribution</a><a href="https://github.com/ParkPavel/obs-projects-plus/issues">Feedback</a></div></footer>
+<aside class="search-panel" aria-label="Search documentation"><label for="doc-search">Search documentation</label><div class="search-input-wrap"><input id="doc-search" type="search" placeholder="Search…" autocomplete="off" aria-controls="search-results"><kbd>/</kbd></div><ul id="search-results" hidden></ul><p id="search-status" role="status" aria-live="polite" data-empty="No matches. Try “calendar”, “formula” or “source”."></p></aside>
+</body></html>

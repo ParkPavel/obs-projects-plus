@@ -1204,6 +1204,7 @@
                     "menu-collapse": "Collapse",
                     "menu-duplicate": "Duplicate",
                     "menu-insert-after": "Insert block after",
+                    "menu-insert-before": "Insert block before",
                     "locked": "Position pinned",
                     "expand": "Expand",
                     "collapse": "Collapse widget",
@@ -1277,6 +1278,9 @@
                 },
                 "formula": {
                     "title": "Formula editor",
+                    "scope": "Creates or updates a computed field for every record in this dashboard. Preview shows the first record in the dashboard's data; column aggregates use that full dataset. Markdown properties stay unchanged.",
+                    "saved": "Saved dashboard formulas — select one to edit",
+                    "cycle": "This formula would create a circular dependency. Remove the reference loop before applying.",
                     "hint": "Ctrl+Enter to apply, Esc to cancel",
                     "field-name": "Field name",
                     "field-placeholder": "e.g. computed budget",

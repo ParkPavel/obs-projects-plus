@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Устройство проекта"><meta name="color-scheme" content="light dark">
+<meta name="referrer" content="strict-origin-when-cross-origin"><title>Устройство проекта · Projects Plus</title>
+<meta property="og:type" content="website"><meta property="og:title" content="Устройство проекта"><meta property="og:description" content="Устройство проекта"><meta property="og:url" content="https://parkpavel.github.io/obs-projects-plus/read/architecture.html"><meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://parkpavel.github.io/obs-projects-plus/read/architecture.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/site.css">
+<script type="module" src="../assets/site.js"></script></head>
+<body data-prefix="../" data-language="ru"><a class="skip-link" href="#main">К содержимому</a>
+<header class="site-header"><a class="wordmark" href="../index.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
+<nav aria-label="Основная навигация"><a href="../index.html#ideas">Сад идей</a><a href="../read/user-guide.html">Документация</a><a class="language" href="../read/architecture-en.html" hreflang="en">English</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../index.html">← Все возможности</a><strong>На этой странице</strong><nav aria-label="На этой странице"><a href="#точки-входа-и-интерфейс">Точки входа и интерфейс</a><a href="#от-заметок-к-представлению">От заметок к представлению</a><a href="#запись-и-хранение">Запись и хранение</a><a href="#ошибки-и-диагностика">Ошибки и диагностика</a><a href="#границы-расширения">Границы расширения</a></nav></aside><article class="doc-article"><p class="doc-version">Документация исходного кода; установленный выпуск может отличаться.</p><h1 id="устройство-проекта">Устройство проекта</h1>
+<p><a href="../read/architecture-en.html">English</a></p>
+<p>Эта карта описывает код в репозитории и помогает найти, где реализована та или иная возможность. Сборка и проверки — в <a href="../read/contributing-ru.html">руководстве для контрибьюторов</a>.</p>
+<h2 id="точки-входа-и-интерфейс">Точки входа и интерфейс</h2>
+<table>
+<thead>
+<tr>
+<th>Где</th>
+<th>За что отвечает</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/main.ts">src/main.ts</a></td>
+<td>Жизненный цикл плагина, инициализация настроек, команды и связь с Obsidian</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/view.ts">src/view.ts</a></td>
+<td>Рабочая область Projects и регистрация встроенных и сторонних видов</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/events.ts">src/events.ts</a></td>
+<td>Обработка событий хранилища</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/tree/main/src/managers">src/managers</a></td>
+<td>Управление командами</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/tree/main/src/ui/app">src/ui/app</a></td>
+<td>Навигация по проектам, общий интерфейс и жизненный цикл вида</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/tree/main/src/ui/views">src/ui/views</a></td>
+<td>Интерфейсы Dashboard, доски, календаря, галереи и визуализатора</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/ui/tokens/tokens.css">src/ui/tokens/tokens.css</a></td>
+<td>Общие визуальные токены</td>
+</tr>
+</tbody></table>
+<p><code>ProjectsView.getProjectViews()</code> регистрирует доску, календарь, галерею и Dashboard. Ключ <code>database</code> остаётся псевдонимом Dashboard, чтобы старые сохранённые настройки находили свой вид. У панелей визуализатора своя связка с Obsidian.</p>
+<p>Жизненный цикл стороннего вида подключён в <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/ui/app/useView.ts">useView.ts</a>: он передаёт виду настройку, данные проекта и обратные вызовы записи. Прежде чем опираться на эту точку расширения, прочтите <a href="../read/api-ru.html">справочник API</a>.</p>
+<h2 id="от-заметок-к-представлению">От заметок к представлению</h2>
+<ol>
+<li>Определение проекта выбирает источник данных. <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/datasources/index.ts">Фабрика источников</a> создаёт источник по папке, тегу, встроенному запросу или Dataview. Dataview необязателен; фабрика сообщает, когда его нет.</li>
+<li>Источник читает заметки через <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/filesystem/README.md">абстракцию файловой системы</a> и отдаёт <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/dataframe/README.md">фрейм данных</a>: описания полей, записи и, если были, ошибки разбора.</li>
+<li><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/stores/README.md">Хранилища Svelte</a> держат реактивные данные и согласуют их обновление при изменении записей.</li>
+<li>Выбранный вид отображает эти данные. Блоки Dashboard используют модули преобразований, формул, связей и агрегации для производных значений.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Где</th>
+<th>За что отвечает</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/datasources/README.md">src/lib/datasources</a></td>
+<td>Выбор источника, запросы и объединение результатов</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/metadata/README.md">src/lib/metadata</a></td>
+<td>Кодирование и разбор YAML-свойств заметки</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/engine">src/lib/engine</a></td>
+<td>Фильтрация, агрегация и расчёты между проектами</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/dashboard-engine">src/lib/dashboard-engine</a></td>
+<td>Преобразования Dashboard, применение формул, графики и кэши</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/formula">src/lib/formula</a></td>
+<td>Разбор и вычисление формул</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/relations">src/lib/relations</a></td>
+<td>Контракты связей, обратные индексы, запись связей, объявленные типы полей и свёртки (<a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/relations/rollupColumns.ts">rollupColumns.ts</a>)</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/visualizer">src/lib/visualizer</a></td>
+<td>Свойства, связи и наложения визуализатора</td>
+</tr>
+</tbody></table>
+<p><strong>Кадры других проектов.</strong> Блок, график или свёртка, читающие другой проект, получают его кадр через <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/externalFrameResolver.ts">externalFrameResolver.ts</a>: объявленные типы связей, обратные ссылки и свёртки этого проекта применяются так же, как в его собственном виде. Кадры кэшируются в <code>App.svelte</code>; кэш сбрасывается при изменении файлов и при смене источника или настройки полей любого проекта. Блок с чужим источником доступен только для чтения — запись через его <code>ViewApi</code> попала бы не в тот проект.</p>
+<p>Эти каталоги описывают ответственность, но зависимости не везде следуют строгой границе слоёв. Меняя путь, общий для нескольких видов, идите по импортам и вызывающим местам.</p>
+<h2 id="запись-и-хранение">Запись и хранение</h2>
+<p>Правки записей и полей проходят через <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/viewApi.ts">ViewApi</a> и <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/dataApi.ts">dataApi.ts</a>: они согласуют запись в файловую систему с показанным фреймом данных. Свойства пишутся через <code>processFrontMatter</code>, а чтение-изменение-запись — через <code>Vault.process</code> по текущему содержимому файла, чтобы правка, сделанная между чтением и записью, не терялась. Часть обновлений оптимистична — видимое изменение само по себе не доказывает, что заметка записана. Путь отказа умеет вернуть прежнее значение и показать ошибку с кодом.</p>
+<p>Схемы настроек и миграции лежат в <a href="https://github.com/ParkPavel/obs-projects-plus/tree/main/src/settings">src/settings</a>. Записывающий модуль и согласование настроек — в <a href="https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/settings">src/lib/settings</a>, связка жизненного цикла — в <code>src/main.ts</code>. Новые записи настроек ведите этим же путём, иначе потеряются проверка конфликтов и повторные попытки.</p>
+<p>Содержимое заметок хранится в хранилище, настройка плагина — в его <code>data.json</code>. Производные значения, например результаты формул, не следует считать сохранёнными свойствами заметки.</p>
+<h2 id="ошибки-и-диагностика">Ошибки и диагностика</h2>
+<p>Реестр ошибок — <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/errors/errorCodes.ts">errorCodes.ts</a>; форматирование и журналирование лежат рядом. Двуязычный <a href="../read/error_codes.html">справочник кодов</a> объясняет, что делать пользователю с каждым кодом. Меняя подачу кода, сохраняйте его смысл.</p>
+<h2 id="границы-расширения">Границы расширения</h2>
+<p><a href="../read/api-ru.html">Пользовательские виды</a> — экспериментальная возможность. Модули <code>src</code>, хранилища и структуры настроек — внутренние интерфейсы, а не стабильный публичный SDK. <a href="../read/obsidian-projects-types-readme-ru.html">Пакет типов</a> — отдельная поверхность совместимости, и сейчас он расходится с хостом в нескольких местах, описанных в справочнике API.</p>
+<p>Прежде чем менять общий тип, посмотрите его потребителей и относящиеся к нему тесты. Записи источника, фильтры и результаты записи проходят через несколько видов, поэтому изменение, работающее в одном блоке, может задеть другие интерфейсы.</p>
+<p class="doc-source"><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/docs/architecture.md">Исходник страницы ↗</a></p></article></main>
+<footer class="site-footer"><a class="wordmark" href="../index.html">Projects Plus</a><p>Открытый проект Park Pavel. Основан на Obsidian Projects Маркуса Олссона.</p><div><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache-2.0</a><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE">Attribution</a><a href="https://github.com/ParkPavel/obs-projects-plus/issues">Обратная связь</a></div></footer>
+<aside class="search-panel" aria-label="Поиск по документации"><label for="doc-search">Поиск по документации</label><div class="search-input-wrap"><input id="doc-search" type="search" placeholder="Поиск…" autocomplete="off" aria-controls="search-results"><kbd>/</kbd></div><ul id="search-results" hidden></ul><p id="search-status" role="status" aria-live="polite" data-empty="Ничего не найдено. Попробуйте «календарь», «formula» или «источник»."></p></aside>
+</body></html>

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Custom view types"><meta name="color-scheme" content="light dark">
+<meta name="referrer" content="strict-origin-when-cross-origin"><title>Custom view types · Projects Plus</title>
+<meta property="og:type" content="website"><meta property="og:title" content="Custom view types"><meta property="og:description" content="Custom view types"><meta property="og:url" content="https://parkpavel.github.io/obs-projects-plus/read/obsidian-projects-types-readme.html"><meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://parkpavel.github.io/obs-projects-plus/read/obsidian-projects-types-readme.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/site.css">
+<script type="module" src="../assets/site.js"></script></head>
+<body data-prefix="../" data-language="en"><a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header"><a class="wordmark" href="../en.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
+<nav aria-label="Main navigation"><a href="../en.html#ideas">Garden of ideas</a><a href="../read/user-guide-en.html">Documentation</a><a class="language" href="../read/obsidian-projects-types-readme-ru.html" hreflang="ru">Русский</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../en.html">← Explore the plugin</a><strong>On this page</strong><nav aria-label="On this page"><a href="#compatibility">Compatibility</a><a href="#license">License</a></nav></aside><article class="doc-article"><p class="doc-version">Documentation follows the source code; an installed release may differ.</p><h1 id="custom-view-types">Custom view types</h1>
+<p><a href="../read/obsidian-projects-types-readme-ru.html">Русский</a></p>
+<p>This package contains the <code>ProjectView</code> base class and TypeScript declarations used by third-party views for Projects Plus. It originates from the custom view extension in Marcus Olsson&#39;s <a href="https://github.com/marcusolsson/obsidian-projects">Obsidian Projects</a>.</p>
+<p>Start with the <a href="../read/api.html">English API reference</a> or <a href="../read/api-ru.html">русский справочник</a> for registration, lifecycle and an example.</p>
+<h2 id="compatibility">Compatibility</h2>
+<p>The API is experimental. This directory declares package version <code>3.0.0</code>; that version is separate from the plugin version. Compare <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/obsidian-projects-types/index.ts">index.ts</a> with the host&#39;s <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/customViewApi.ts">customViewApi.ts</a> when targeting a release. The package is not a complete mirror of the current host: notably, it lacks <code>updateProps</code> and the complete filter payload. The API reference documents the differences relevant to view authors.</p>
+<p>Use the <code>viewApi</code> instance supplied by the host. The class in this package contains empty method bodies for typing; constructing it does not create a working persistence service, and its class identity is not the host implementation&#39;s identity.</p>
+<h2 id="license">License</h2>
+<p><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/obsidian-projects-types/package.json">package.json</a> declares the MIT license for this package. Preserve applicable upstream attribution when redistributing it. The host plugin has its own <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache 2.0 license</a>.</p>
+<p class="doc-source"><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/obsidian-projects-types/README.md">Page source ↗</a></p></article></main>
+<footer class="site-footer"><a class="wordmark" href="../en.html">Projects Plus</a><p>An open-source project by Park Pavel. Based on Obsidian Projects by Marcus Olsson.</p><div><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache-2.0</a><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE">Attribution</a><a href="https://github.com/ParkPavel/obs-projects-plus/issues">Feedback</a></div></footer>
+<aside class="search-panel" aria-label="Search documentation"><label for="doc-search">Search documentation</label><div class="search-input-wrap"><input id="doc-search" type="search" placeholder="Search…" autocomplete="off" aria-controls="search-results"><kbd>/</kbd></div><ul id="search-results" hidden></ul><p id="search-status" role="status" aria-live="polite" data-empty="No matches. Try “calendar”, “formula” or “source”."></p></aside>
+</body></html>

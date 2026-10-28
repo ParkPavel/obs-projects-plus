@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Projects Plus user guide"><meta name="color-scheme" content="light dark">
+<meta name="referrer" content="strict-origin-when-cross-origin"><title>Projects Plus user guide · Projects Plus</title>
+<meta property="og:type" content="website"><meta property="og:title" content="Projects Plus user guide"><meta property="og:description" content="Projects Plus user guide"><meta property="og:url" content="https://parkpavel.github.io/obs-projects-plus/read/user-guide-en.html"><meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://parkpavel.github.io/obs-projects-plus/read/user-guide-en.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/site.css">
+<script type="module" src="../assets/site.js"></script></head>
+<body data-prefix="../" data-language="en"><a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header"><a class="wordmark" href="../en.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
+<nav aria-label="Main navigation"><a href="../en.html#ideas">Garden of ideas</a><a href="../read/user-guide-en.html">Documentation</a><a class="language" href="../read/user-guide.html" hreflang="ru">Русский</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../en.html">← Explore the plugin</a><strong>On this page</strong><nav aria-label="On this page"><a href="#understanding-your-data">Understanding your data</a><a href="#quick-start-the-demo">Quick start: the demo</a><a href="#creating-and-configuring-a-project">Creating and configuring a project</a><a href="#creating-and-editing-records">Creating and editing records</a><a href="#views">Views</a><a href="#filters-formulas-and-relations">Filters, formulas, and relations</a><a href="#computation-across-tables-and-projects">Computation across tables and projects</a><a href="#note-templates">Note templates</a><a href="#keyboard-and-touch">Keyboard and touch</a><a href="#settings-and-troubleshooting">Settings and troubleshooting</a></nav></aside><article class="doc-article"><p class="doc-version">Documentation follows the source code; an installed release may differ.</p><h1 id="projects-plus-user-guide">Projects Plus user guide</h1>
+<p><a href="../read/user-guide.html">Русский</a> · <a href="../read/readme.html">Documentation</a> · <a href="../read/readme.html">Installation and first project</a></p>
+<p>This guide describes the current source code. Some labels may differ in older builds; check the installed plugin version in its settings.</p>
+<h2 id="understanding-your-data">Understanding your data</h2>
+<p>A <strong>note</strong> is a Markdown file in your vault. A <strong>field</strong> is a note property, such as <code>status</code> or <code>startDate</code>. A <strong>project</strong> selects a set of notes through a data source. A <strong>view</strong> determines how that set is displayed. One project can have several views, and one note can belong to several projects.</p>
+<p>Editing a writable field updates the original file. Filters, block layout, and view settings are stored separately in <code>.obsidian/plugins/obs-projects-plus/data.json</code>. Include this file alongside your notes when backing up or moving a vault.</p>
+<p>Calculated fields and query results are not always writable. If you cannot edit a field, check its type and source; a displayed calculation is not necessarily a separate property in the Markdown file.</p>
+<h2 id="quick-start-the-demo">Quick start: the demo</h2>
+<p>When your vault has no project yet, the welcome dialog offers two ways in: the &quot;Demo: three linked projects&quot; card and a &quot;Create new project&quot; button. If you close the dialog, the same two actions stay on the empty projects screen. Later you can create the demo from the project menu (view settings → &quot;Projects&quot; → &quot;Create demo project&quot;) or with the <strong>Create demo project</strong> command.</p>
+<p>The demo is three projects of one story in the <code>Projects Plus - Демо 2</code> folder:</p>
+<table>
+<thead>
+<tr>
+<th>Project</th>
+<th>What it holds</th>
+<th>Views</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>&quot;Демо: Массажный кабинет&quot;</td>
+<td>a private massage practice: 5 services, 10 clients, half a year of visits and expenses</td>
+<td>&quot;Обзор кабинета&quot; (stats, profit by month, clients with their visits and wellbeing), &quot;Расписание&quot;, &quot;Визиты по статусам&quot;, &quot;Клиенты&quot; (a gallery with covers), &quot;Услуги и расходы&quot;</td>
+</tr>
+<tr>
+<td>&quot;Демо: Трекер&quot;</td>
+<td>a daily log kept by three of the practice&#39;s clients: weight, sleep, mood, energy, pain, training</td>
+<td>&quot;Динамика&quot; (the selected client&#39;s measures beside their wellbeing after visits), &quot;Календарь тренировок&quot;, &quot;Виды тренировок&quot;, &quot;Недели&quot;, &quot;Журнал&quot;</td>
+</tr>
+<tr>
+<td>&quot;Демо: Личный бюджет&quot;</td>
+<td>a personal budget: categories with limits and half a year of transactions</td>
+<td>&quot;Бюджет&quot; (the practice&#39;s income as its own series), &quot;Статьи&quot;, &quot;Операции по статьям&quot;, &quot;Календарь операций&quot;, &quot;Журнал&quot;</td>
+</tr>
+</tbody></table>
+<p>A client card in the practice stores nothing itself: visits, payments, debt, latest and average wellbeing and the last visit are reverse rollups over the visits, while current weight, training minutes and sleep come from the tracker, another project. The folder, field and view names are the actual Russian names the demo writes to your vault — the interface language does not translate them. Running it again restores missing notes and projects and duplicates nothing. Remove the demo like any other projects: delete the three projects in the menu and, if you like, the <code>Projects Plus - Демо 2</code> folder.</p>
+<h2 id="creating-and-configuring-a-project">Creating and configuring a project</h2>
+<p>Open the Obsidian command palette and choose <strong>Create new project plus</strong>. Enter a name and select a source. Folder paths are relative to the vault root, for example <code>Projects/Work</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>When to use it</th>
+<th>What to configure</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Folder</td>
+<td>Records are stored together</td>
+<td>Path and whether to include subfolders</td>
+</tr>
+<tr>
+<td>Tag</td>
+<td>Records are in different folders</td>
+<td>Tag and whether to include its hierarchy</td>
+</tr>
+<tr>
+<td>Query (filter)</td>
+<td>You need filtering without another plugin</td>
+<td>Source folder or tag, then filter conditions</td>
+</tr>
+<tr>
+<td>Dataview</td>
+<td>You need a Dataview query</td>
+<td>The enabled Dataview plugin and query text</td>
+</tr>
+</tbody></table>
+<p>Build a native query using the dialog fields: for example, source <code>Projects</code>, field <code>status</code>, equality operator, and value <code>todo</code>. With multiple conditions, choose whether all conditions or any condition must match.</p>
+<p>For Dataview, enter a complete query, including its type. For example:</p>
+<pre><code class="language-dataview">TABLE status, startDate
+FROM &quot;Projects&quot;
+WHERE status != &quot;done&quot;
+SORT startDate ASC
+</code></pre>
+<p>Project settings also let you add sources: folders, tags, or Dataview queries. This combines several note collections in one overview. A native query is available as the primary source; nested queries are not offered as additional sources.</p>
+<p>Also check the new-note folder, templates, default name, and excluded files. These matter especially for tag and query projects: selecting existing records and deciding where new notes are created are separate settings.</p>
+<h2 id="creating-and-editing-records">Creating and editing records</h2>
+<p>Use the project&#39;s create-note action or <strong>Create new note plus</strong>. Check the selected project in the dialog, enter a name, and choose a template if needed. In the calendar, double-clicking an empty cell can create a note.</p>
+<p>These properties are enough to begin:</p>
+<pre><code class="language-yaml">---
+title: Prepare meeting
+status: todo
+priority: high
+startDate: 2026-09-15
+endDate: 2026-09-15
+startTime: &quot;09:00&quot;
+endTime: &quot;10:00&quot;
+completed: false
+color: &quot;#2196F3&quot;
+tags:
+  - work
+---
+</code></pre>
+<p>Write dates as <code>YYYY-MM-DD</code> and times as <code>HH:mm</code>. Quoting times and colors helps preserve them as YAML strings. You choose the field names; map them in view settings afterward.</p>
+<p>Open a record through its name or card. In the Dashboard table, a normal click opens the note; Alt opens a record preview instead, and the same action is available from a row-menu entry. After editing, you can open the source file to inspect the stored value. If the plugin reports a write error, do not assume the change was saved.</p>
+<h2 id="views">Views</h2>
+<h3 id="dashboard-and-tables">Dashboard and tables</h3>
+<p>A Dashboard is a workspace made of blocks. Start with one data block: select its source and display mode, such as a table. Add charts, metrics, and other blocks as you need them.</p>
+<p>In a table you can edit writable cells, choose columns, sort, and filter records. A block&#39;s “Properties” entry configures field types, including text, number, checkbox, status, list, formula, and relation. Older saved Table and Database views are converted to Dashboard on load; they are not separate new installation modes.</p>
+<p>In the 3.7.1 stabilization candidate, Enter commits an edit and Escape cancels it; accepting an IME candidate does not close the cell. For numbers, use a decimal point without thousands separators. A malformed number or incomplete date is marked invalid and does not erase the stored value; intentionally clearing a valid control is still allowed. The record name opens the note, Alt-click opens its preview, and the name is keyboard accessible.</p>
+<p>Text lists in candidate 3.7.1 use per-item editing in the shared popup: Add item, remove the chosen row, Apply or Cancel. On a phone this uses the shared bottom sheet. Commas, quotes, duplicate and empty strings remain part of their values; a list never becomes a scalar string. Applying unchanged does not write the note; removing every item stores an empty list. Non-text entries in a mixed list retain their types and can be removed, but not edited as text. Numeric/date/boolean arrays in scalar columns are protected from such editing; a dedicated typed-array editor is not implemented yet. Popup positioning and software-keyboard behavior still require acceptance on a real phone.</p>
+<p>Large-table search runs in chunks: “…” replaces the count while waiting, followed by the complete result of the latest query. Changing or clearing the query cancels the previous search. “No matches” means a completed search with zero results, not a frozen table. These changes belong to the candidate, not the already installed 3.7.0.</p>
+<p>In wave 2 of candidate 3.7.1, Add widget immediately opens the type menu without an intermediate Widgets panel. A new tile is appended, focused and scrolled into view without rearranging existing tiles. The tile menu&#39;s lock pins its index in the vertical stack: it has no drag grip, and moving neighbors cannot change its index. This does not prevent editing, deletion or collapse. Title editing supports IME; Enter commits once and Escape cancels.</p>
+<p>Stats is a numeric summary, not a diagram. First configuration seeds editable cards for record count and, if a numeric field exists, its sum and average. Settings choose each card&#39;s field/operation, remove cards and select 2/3/4 columns. Narrow tiles reduce the grid to two or one column; clearing all cards leaves an explanation instead of resurrecting totals. A sparkline is a bounded preview of up to 200 points; the numeric aggregate uses every value. For a full diagram, add Chart. Read-only mode offers no configuration action for an unconfigured widget.</p>
+<p>Shared popups and suggestions use the visible window area when <code>visualViewport</code> exists; the first Escape closes inner suggestions, the next closes the window. With two popups open, only the topmost handles Escape and outside presses. These behaviors were tested with a modeled viewport; real software-keyboard and Obsidian popout behavior still requires manual acceptance.</p>
+<p>Each block can have its own source and filters. If two blocks show different records, compare those settings first. To link blocks, configure a dependency on a selected record: selecting a client in one block can then limit another block&#39;s data. Placing blocks next to each other does not create a link.</p>
+<h3 id="board">Board</h3>
+<p>Choose a grouping field such as <code>status</code>. Its values become columns. Dragging a card into another column changes the grouping field in the note, provided the record is writable.</p>
+<p>Use the grip to move cards and columns: a card&#39;s grip is the strip along its left edge, a column&#39;s grip leads its header. A pinned or read-only column cannot be dragged. Persistent columns keep workflow stages visible even when empty.</p>
+<p>In the view settings (gear → View) a board can show a cover from an image field on each card: on top, as a small square at the left, or none. A card without an image shows no thumbnail. Use consistent values for a shared process: <code>todo</code>, <code>doing</code>, and <code>done</code> are easier to maintain than several spellings of the same status.</p>
+<h3 id="calendar-and-agenda">Calendar and Agenda</h3>
+<p>Explicitly select event start and end fields in calendar settings. For the example above, use <code>startDate</code> and <code>endDate</code>; map the time fields to <code>startTime</code> and <code>endTime</code>, and color to <code>color</code>.</p>
+<p>When a start field is not configured or is absent, the calendar tries common fields, including <code>startDate</code> and <code>date</code>, then a date in the filename. Therefore, <code>date</code> <strong>can affect event placement</strong>. For predictable results, configure the start field explicitly and fill it in every relevant note.</p>
+<p>Switch between year-to-day scales. In week and day modes, timed events appear on a timeline; dragging changes their date or time, and resizing a bar changes its duration. In month and 2-weeks modes, drag a record onto another day to change its date. Use <strong>Today</strong> to return to the current date.</p>
+<p>Agenda is a sidebar with event lists. You can select a day and configure filters for individual lists. If an event appears in the calendar but not in Agenda, check the selected date and the list&#39;s filter.</p>
+<h3 id="gallery">Gallery</h3>
+<p>Gallery displays records as cards. In the view settings (gear → View) choose the cover field, the layout (grid, masonry or list), the card size (S, M, L or a width), the cover proportions and whether the image fills or fits its frame. The &quot;Fields on the card&quot; section lists the fields a card shows, in their order: move a field up or down, hide it, or show another one; computed fields (formulas and rollups) are marked ƒ, and field names can be shown or hidden.</p>
+<p>Cards can be resized: drag the handle at a card&#39;s lower right corner (or focus it and use the arrow keys). The size is saved in the view settings, for one card or, through &quot;Card height&quot; in the settings, for all cards of the view; &quot;Reset all card frames&quot; clears them. In a board the frame sets a card&#39;s height. If an image is missing, check the field value and whether the image file is available. A card&#39;s title opens the record&#39;s edit dialog, from which the note itself can be opened; in a read-only gallery the title opens the note directly. The card&#39;s menu opens the note in a new tab or window.</p>
+<h2 id="filters-formulas-and-relations">Filters, formulas, and relations</h2>
+<p>A filter limits displayed records; it does not delete notes. A view&#39;s filter lives in its settings (gear → Filters): the tab shows how many conditions are active, clears them all, and saves the filtered selection as a separate source (&quot;Save as source&quot;) for other views and blocks. Conditions can be combined using “all” or “any.” Project, view, and block filters act at different levels: clearing one filter does not necessarily clear the others.</p>
+<p>Formulas calculate values from fields. Begin with a small expression over numeric fields, such as <code>budget - spent</code>. Check the result against a known record before using it in summary statistics. The built-in editor helps you choose fields and functions; valid operations depend on data types.</p>
+<p><strong>Project formulas and dashboard formulas.</strong> A formula configured on a project property belongs to that property and is available in the project&#39;s views. The dashboard&#39;s “Formulas” action creates a computed field for that dashboard. It is a working calculation, rather than a separate preview calculator: Apply saves its definition in the view settings and recalculates it for the records. It does not rewrite Markdown properties.</p>
+<p>In the dashboard panel, enter a new name such as <code>Remaining</code> and the expression <code>budget - spent</code>. Preview shows the first record in the dashboard&#39;s data. A reference such as <code>budget</code> reads the current record; <code>SUM(@budget)</code> aggregates that column across the dashboard&#39;s complete dataset, rather than just the first row. Check the filters and source first. After applying, the field is available to that page&#39;s tables and widgets. Saved formulas appear in the panel: select a name to edit its expression. An empty name, a collision with an ordinary property, invalid syntax or a circular dependency cannot be applied.</p>
+<p>A relation points to notes in another project. For example, a YAML link can look like this:</p>
+<pre><code class="language-yaml">client: &quot;[[Clients/Maria Ivanova]]&quot;
+</code></pre>
+<p>The links in your frontmatter are the relation&#39;s data. Configuring a relation leaves them alone: it only tells the plugin where to resolve them. The plugin rewrites a link only when you change the value yourself — in a table cell or in the record editor — and then it writes the new one back to the frontmatter.</p>
+<p><strong>From links to a relation.</strong> In the menu of a block that reads the project, choose “Properties of «project»…”, find the row of the field you want, and choose “Configure.” Set “Type” to “Relation,” then pick the “Target project” — the base its links resolve in. The “Link database…” button opens the wizard, which previews the outcome before anything is saved — “Matched: 3; Not found: 0; Ambiguous: 0” — so a mismatch is visible in advance. A property that already exists as text becomes a relation; your notes are not rewritten.</p>
+<p>A formula, a rollup, the record&#39;s identifier and a derived property cannot become a relation: their values are computed or belong elsewhere, and a relation would overwrite what produces them. The wizard refuses with one wording for all four — computed, or identifying the record — without naming which case applied.</p>
+<p>If several notes share a filename, include the folder in the link. A missing or ambiguous link needs its address corrected; it does not mean a target record was created automatically.</p>
+<p><strong>A summary over related records.</strong> With the relation configured, add a field of type “Rollup”: pick the relation column under “Through relation” and a function such as “Count all.” The card then shows how many records are related — <code>2</code> for a client with two sessions, <code>0</code> for a client with none. No data pipeline is needed for this.</p>
+<p><strong>A chart over related data.</strong> The “+” in the block palette adds a “Chart”; its settings choose the type and the X and Y axes. Dates on the X axis group by day, week, month, quarter or year, and the Y axis can take a sum, an average, a min, a max, a median, a count or a unique count.</p>
+<p><strong>A first verifiable chart.</strong> Use three records with text field <code>status</code> and numeric <code>amount</code>: A/10, A/30, B/20. Add a chart, choose bars, X = <code>status</code>, Y = <code>amount</code>, aggregation “Sum”: expect A = 40 and B = 20. Switching to a line chart preserves these values. Operations depend on field type: text does not offer sum, while “Count all” counts records, including empty values, rather than adding numbers. A hint explains the chosen operation. If an old configuration is incompatible with its field, it remains visible with a warning: opening it does not change it; explicitly choose a supported operation. Explicitly changing Y preserves a compatible operation or selects “Count all”. Scatter does not use this aggregation choice.</p>
+<p><strong>Agenda filter operator.</strong> Press the operator button in a filter row. The menu uses the shared popup: arrows move focus, Enter/Space or pressing a button selects an item, and Escape cancels and restores focus to the trigger. Escape during IME composition does not dismiss input. Choosing an operator without a value clears the old value; opening and cancelling leave it unchanged. Actual soft-keyboard and separate Obsidian-window behavior still needs device verification.</p>
+<h2 id="computation-across-tables-and-projects">Computation across tables and projects</h2>
+<p><strong>A reverse rollup — a total over the records that link here.</strong> A client needs no field listing its visits: the visits link to the client. In the rollup field&#39;s settings, pick under “Through relation” a source marked “(links here)” — the project and the field through which its records point at this one. “Count all” gives the number of visits, “Sum” over the price field the amount paid, “Last value” over the wellbeing field the latest score. The client&#39;s note does not change: a rollup is computed, never written to the note, and cannot be edited.</p>
+<p><strong>First and last value</strong> are picked by an ordering field — usually a date. Choose it from the list; if the property you need is not there (the list knows only the fields configured in the source project), choose “Another field…” and type the property name.</p>
+<p><strong>Another project&#39;s data in charts and stats.</strong> In a chart&#39;s or stats block&#39;s settings, “Data from” switches the source to another project; the block&#39;s filter and pipeline then run over its records. While that project loads, the block says so instead of showing the current project&#39;s numbers. If the project was deleted, the list keeps an “Unavailable project” entry — choose “This project” to clear it.</p>
+<p><strong>Several series on one chart.</strong> Add series in the chart&#39;s settings: each has its own field and aggregation, and optionally another project, its own X field and the right-hand axis (for values of different scale, such as weight and training minutes). Series line up on the shared axis labels; a day without a value is a gap in the line, not a zero. Bars can go below zero: a month with a loss shows under the axis.</p>
+<p><strong>Follow the selection in another block.</strong> “Follow selection in” ties a chart or stats block to a table on the same Dashboard: pick a table row (row menu → “Filter linked blocks by this row”) and the chart shows only the records linked to it. In the demo, picking a client leaves that client&#39;s visits and tracker on the chart.</p>
+<p><strong>A block from another project is read-only.</strong> A data block whose source is another project is read-only as a whole: table cells cannot be edited, the row menu has no duplicate or delete, the board does not drag cards, and the calendar and gallery open no editor — a card opens the note. The record panel (“Show fields”) says which project the record belongs to. Edit such records in their own project.</p>
+<p><strong>The linked-block suggestion.</strong> When a project has a relation field, a suggestion “Add data block” appears above the blocks. It adds a block that shows the records related to the selected row: another project&#39;s records that link here, or — when the relation only points outward — the record the selected row links to. On a filtered view (for example, clients only) the block reads the project whole, so it can see the records the view&#39;s filter hides.</p>
+<p><strong>The three-project demo.</strong> The practice, the tracker and the budget (see &quot;Quick start: the demo&quot;) show computation at work. In the practice, clients and services count visits, revenue and wellbeing through reverse rollups, and weight, training and sleep through rollups over the tracker. On &quot;Обзор кабинета&quot; pick a client row (row menu → &quot;Filter linked blocks by this row&quot;): their visits and the wellbeing chart, with a mood series from the tracker, narrow to that client. The tracker&#39;s &quot;Динамика&quot; follows the client picked in its block of the practice&#39;s clients the same way. The budget shows the practice&#39;s income as a separate series beside its own income and expenses.</p>
+<h2 id="note-templates">Note templates</h2>
+<h3 id="built-in-templates">Built-in templates</h3>
+<p>Create a normal Markdown template file and add it to the project&#39;s template list. Select it when creating a note. Template content supports <code>{{title}}</code>, <code>{{date}}</code>, and <code>{{time}}</code>; dates and times accept a format, such as <code>{{date:YYYY-MM-DD}}</code>.</p>
+<pre><code class="language-markdown">---
+status: todo
+startDate: {{date:YYYY-MM-DD}}
+---
+
+# {{title}}
+
+## Work to do
+
+## Result
+</code></pre>
+<p>The default note-name setting supports date and time, for example <code>{{date:YYYY-MM-DD}} Task</code>. Variables such as <code>{{project}}</code> and <code>{{author}}</code>, and conditional blocks such as <code>{{#if ...}}</code>, are not features of the built-in processor.</p>
+<h3 id="templater">Templater</h3>
+<p>Files in the <a href="../read/templates-readme.html">templates folder</a> use Templater syntax (<code>&lt;% ... %&gt;</code>) and require the separately enabled Templater plugin. Create the note using its command and place the result in the project&#39;s folder. Projects Plus&#39;s built-in substitution does not execute Templater code.</p>
+<h2 id="keyboard-and-touch">Keyboard and touch</h2>
+<p>Assign global command shortcuts in Obsidian&#39;s Hotkeys settings. The plugin does not assign them by default. Command names follow the interface language.</p>
+<table>
+<thead>
+<tr>
+<th>Calendar action</th>
+<th>Keys while the calendar has focus</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Previous / next period</td>
+<td><code>←</code> / <code>→</code></td>
+</tr>
+<tr>
+<td>Return to today</td>
+<td><code>T</code></td>
+</tr>
+<tr>
+<td>Zoom in / out</td>
+<td><code>+</code> / <code>-</code></td>
+</tr>
+<tr>
+<td>Change zoom</td>
+<td><code>Ctrl</code> or <code>Cmd</code> + <code>←</code> / <code>→</code></td>
+</tr>
+<tr>
+<td>Return to the previous position</td>
+<td><code>Backspace</code></td>
+</tr>
+<tr>
+<td>Close the day overview</td>
+<td><code>Escape</code></td>
+</tr>
+</tbody></table>
+<p>These shortcuts are not intercepted while typing into a field. On touch screens, the calendar supports swiping between periods and a two-finger zoom gesture. To drag on the board, start from a grip; use ordinary scrolling to browse. A swipe that starts inside the plugin scrolls the plugin; only a swipe from the screen edge opens Obsidian&#39;s side panels. Individual gestures depend on the platform and view mode.</p>
+<h2 id="settings-and-troubleshooting">Settings and troubleshooting</h2>
+<p>Plugin settings include the project size limit, first day of the week, and property-writing preferences. Configure individual sources and views inside their project.</p>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>What to check</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A note is missing</td>
+<td>Source path, subfolders, tag, exclusions, and every filter level</td>
+</tr>
+<tr>
+<td>Only some records are loaded</td>
+<td>Project size limit</td>
+</tr>
+<tr>
+<td>An event appears on the wrong date</td>
+<td>Start field, stored date, and calendar timezone</td>
+</tr>
+<tr>
+<td>Dataview is unavailable</td>
+<td>Whether it is installed and enabled in this vault</td>
+</tr>
+<tr>
+<td>A field cannot be edited</td>
+<td>Field type, calculated value, and source write capability</td>
+</tr>
+<tr>
+<td><code>&lt;% ... %&gt;</code> remains in a note</td>
+<td>Whether the template was processed by Templater</td>
+</tr>
+<tr>
+<td>An edit did not persist</td>
+<td>Error message and actual Markdown file contents</td>
+</tr>
+<tr>
+<td>Settings cannot be saved after a conflict</td>
+<td>Plugin message; keep a copy of <code>data.json</code> before restoring</td>
+</tr>
+</tbody></table>
+<p>When reporting an issue, include the Obsidian and plugin versions, device, source type, reproduction steps, and expected and actual behavior. Attach a small anonymized note example. Do not submit your entire personal vault or settings containing private paths.</p>
+<p><a href="https://github.com/ParkPavel/obs-projects-plus/issues">Report an issue</a> · <a href="../read/api.html">Custom view API</a></p>
+<p class="doc-source"><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/docs/user-guide-EN.md">Page source ↗</a></p></article></main>
+<footer class="site-footer"><a class="wordmark" href="../en.html">Projects Plus</a><p>An open-source project by Park Pavel. Based on Obsidian Projects by Marcus Olsson.</p><div><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache-2.0</a><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE">Attribution</a><a href="https://github.com/ParkPavel/obs-projects-plus/issues">Feedback</a></div></footer>
+<aside class="search-panel" aria-label="Search documentation"><label for="doc-search">Search documentation</label><div class="search-input-wrap"><input id="doc-search" type="search" placeholder="Search…" autocomplete="off" aria-controls="search-results"><kbd>/</kbd></div><ul id="search-results" hidden></ul><p id="search-status" role="status" aria-live="polite" data-empty="No matches. Try “calendar”, “formula” or “source”."></p></aside>
+</body></html>

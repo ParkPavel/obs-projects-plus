@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Поддержка сайта документации"><meta name="color-scheme" content="light dark">
+<meta name="referrer" content="strict-origin-when-cross-origin"><title>Поддержка сайта документации · Projects Plus</title>
+<meta property="og:type" content="website"><meta property="og:title" content="Поддержка сайта документации"><meta property="og:description" content="Поддержка сайта документации"><meta property="og:url" content="https://parkpavel.github.io/obs-projects-plus/read/site-maintenance-ru.html"><meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://parkpavel.github.io/obs-projects-plus/read/site-maintenance-ru.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/site.css">
+<script type="module" src="../assets/site.js"></script></head>
+<body data-prefix="../" data-language="ru"><a class="skip-link" href="#main">К содержимому</a>
+<header class="site-header"><a class="wordmark" href="../index.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
+<nav aria-label="Основная навигация"><a href="../index.html#ideas">Сад идей</a><a href="../read/user-guide.html">Документация</a><a class="language" href="../read/site-maintenance.html" hreflang="en">English</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../index.html">← Все возможности</a><strong>На этой странице</strong><nav aria-label="На этой странице"><a href="#правки-и-сборка">Правки и сборка</a><a href="#просмотр-и-снимки">Просмотр и снимки</a></nav></aside><article class="doc-article"><p class="doc-version">Документация исходного кода; установленный выпуск может отличаться.</p><h1 id="поддержка-сайта-документации">Поддержка сайта документации</h1>
+<p><a href="../read/site-maintenance.html">English</a> · <a href="../read/readme.html">Документация</a></p>
+<p>Сайт проекта — статические файлы в <code>docs/</code>. В GitHub Pages нужно выбрать <strong>Deploy from a branch → main → /docs</strong>. Файл <code>.nojekyll</code> указывает Pages отдавать сохранённый HTML напрямую. Отдельный хостинг и сервер приложения не нужны.</p>
+<h2 id="правки-и-сборка">Правки и сборка</h2>
+<p>Исходником руководств остаётся Markdown. Двуязычные тексты главной страницы находятся в <code>scripts/site/content.mjs</code>, разметка — в <code>scripts/site/layout.mjs</code>. Локальные стили и браузерные взаимодействия — в <code>docs/assets/</code>. Используются системные шрифты, без сервиса шрифтов, аналитики и CDN.</p>
+<p>После изменения зависимостей выполните <code>npm ci</code>, затем:</p>
+<pre><code class="language-sh">node scripts/build-docs-site.mjs
+node scripts/check-docs-site.mjs
+node scripts/test-docs-site.mjs
+</code></pre>
+<p>Генератор использует <a href="https://marked.js.org/">Marked</a> (MIT), закреплённую зависимость разработки. Он формирует HTML в <code>docs/read/</code>, копирует локальные изображения и собирает двуязычный поисковый индекс. Сырой HTML экранируется, протоколы ссылок ограничены. В браузер посетителя не загружается сторонний рендерер.</p>
+<p>Сохраняйте с изменениями исходников обновлённые HTML и индекс. Проверка выявляет устаревший результат, отсутствующие файлы, сломанные локальные якоря и изображения без альтернативного текста. CI и workflow выпуска проверяют сайт до публикации. DOM-тесты проверяют взаимодействия, но не заменяют визуальную проверку в настольном и мобильном браузере.</p>
+<h2 id="просмотр-и-снимки">Просмотр и снимки</h2>
+<p>Команда <code>npm version</code> запускает version hook: обновляет метаданные плагина и пересобирает сайт перед
+добавлением документации в индекс Git. После ручного изменения версии тоже нужны генератор и проверки.</p>
+<p>Раздайте <code>docs/</code> локальным HTTP-сервером и проверьте <code>index.html</code> и <code>en.html</code>: узкую и широкую раскладку, клавиатуру, поиск, примеры и уменьшенное движение. Нужны проверки как в корне сервера, так и с префиксом <code>/obs-projects-plus/</code>.</p>
+<p>Пример на главной явно обозначен упрощённой интерактивной моделью, а не снимком плагина. Скриншоты продукта должны относиться к определённой сборке с демонстрационными заметками; сохраняйте сведения о версии, происхождении данных и среде съёмки. Не публикуйте личные хранилища и не выдавайте настольную эмуляцию за проверку iPhone.</p>
+<p class="doc-source"><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/docs/site-maintenance-RU.md">Исходник страницы ↗</a></p></article></main>
+<footer class="site-footer"><a class="wordmark" href="../index.html">Projects Plus</a><p>Открытый проект Park Pavel. Основан на Obsidian Projects Маркуса Олссона.</p><div><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache-2.0</a><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE">Attribution</a><a href="https://github.com/ParkPavel/obs-projects-plus/issues">Обратная связь</a></div></footer>
+<aside class="search-panel" aria-label="Поиск по документации"><label for="doc-search">Поиск по документации</label><div class="search-input-wrap"><input id="doc-search" type="search" placeholder="Поиск…" autocomplete="off" aria-controls="search-results"><kbd>/</kbd></div><ul id="search-results" hidden></ul><p id="search-status" role="status" aria-live="polite" data-empty="Ничего не найдено. Попробуйте «календарь», «formula» или «источник»."></p></aside>
+</body></html>

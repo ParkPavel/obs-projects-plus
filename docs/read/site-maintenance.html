@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Maintaining the documentation site"><meta name="color-scheme" content="light dark">
+<meta name="referrer" content="strict-origin-when-cross-origin"><title>Maintaining the documentation site · Projects Plus</title>
+<meta property="og:type" content="website"><meta property="og:title" content="Maintaining the documentation site"><meta property="og:description" content="Maintaining the documentation site"><meta property="og:url" content="https://parkpavel.github.io/obs-projects-plus/read/site-maintenance.html"><meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://parkpavel.github.io/obs-projects-plus/read/site-maintenance.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/site.css">
+<script type="module" src="../assets/site.js"></script></head>
+<body data-prefix="../" data-language="en"><a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header"><a class="wordmark" href="../en.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
+<nav aria-label="Main navigation"><a href="../en.html#ideas">Garden of ideas</a><a href="../read/user-guide-en.html">Documentation</a><a class="language" href="../read/site-maintenance-ru.html" hreflang="ru">Русский</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../en.html">← Explore the plugin</a><strong>On this page</strong><nav aria-label="On this page"><a href="#edit-and-build">Edit and build</a><a href="#preview-and-screenshots">Preview and screenshots</a></nav></aside><article class="doc-article"><p class="doc-version">Documentation follows the source code; an installed release may differ.</p><h1 id="maintaining-the-documentation-site">Maintaining the documentation site</h1>
+<p><a href="../read/site-maintenance-ru.html">Русский</a> · <a href="../read/readme.html">Documentation</a></p>
+<p>The project website is a static site in <code>docs/</code>. GitHub Pages should use <strong>Deploy from a branch → main → /docs</strong>. The <code>.nojekyll</code> file tells Pages to serve the checked-in HTML directly. A separate hosting service and runtime server are not required.</p>
+<h2 id="edit-and-build">Edit and build</h2>
+<p>Markdown guides remain the canonical documentation. The bilingual home-page copy lives in <code>scripts/site/content.mjs</code>; its layout is in <code>scripts/site/layout.mjs</code>. Local styles and browser interactions are in <code>docs/assets/</code>. Fonts are system fonts: no font service, analytics or CDN is used.</p>
+<p>Run <code>npm ci</code> when dependencies change, then:</p>
+<pre><code class="language-sh">node scripts/build-docs-site.mjs
+node scripts/check-docs-site.mjs
+node scripts/test-docs-site.mjs
+</code></pre>
+<p>The generator uses <a href="https://marked.js.org/">Marked</a> (MIT), a pinned development dependency. It renders Markdown into <code>docs/read/</code>, copies referenced local media, and produces the bilingual search index. It escapes raw HTML and restricts URL schemes. No renderer is downloaded or executed in the visitor&#39;s browser.</p>
+<p>Commit the regenerated HTML and search index with their source changes. The check command refuses stale output, missing files, broken local anchors and images without alternative text. CI and the release workflow run these checks before publication. The DOM tests cover interactions; they are not a substitute for visual checks in desktop and mobile browsers.</p>
+<h2 id="preview-and-screenshots">Preview and screenshots</h2>
+<p><code>npm version</code> runs the version hook, updates plugin metadata and regenerates the site before staging
+the generated documentation. If changing the version manually, run the generator and checks as well.</p>
+<p>Serve <code>docs/</code> through a local HTTP server and check both <code>index.html</code> and <code>en.html</code>, narrow and wide layouts, keyboard navigation, search, examples and reduced motion. Test both from the site root and from the <code>/obs-projects-plus/</code> project prefix.</p>
+<p>The home-page example is explicitly labelled a simplified interactive model, not a plugin screenshot. Product screenshots must come from an identified build using sample notes, with the version, data origin and capture environment recorded. Do not publish personal vaults or present desktop emulation as an iPhone test.</p>
+<p class="doc-source"><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/docs/site-maintenance.md">Page source ↗</a></p></article></main>
+<footer class="site-footer"><a class="wordmark" href="../en.html">Projects Plus</a><p>An open-source project by Park Pavel. Based on Obsidian Projects by Marcus Olsson.</p><div><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache-2.0</a><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE">Attribution</a><a href="https://github.com/ParkPavel/obs-projects-plus/issues">Feedback</a></div></footer>
+<aside class="search-panel" aria-label="Search documentation"><label for="doc-search">Search documentation</label><div class="search-input-wrap"><input id="doc-search" type="search" placeholder="Search…" autocomplete="off" aria-controls="search-results"><kbd>/</kbd></div><ul id="search-results" hidden></ul><p id="search-status" role="status" aria-live="polite" data-empty="No matches. Try “calendar”, “formula” or “source”."></p></aside>
+</body></html>

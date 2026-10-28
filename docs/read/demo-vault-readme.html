@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Projects Plus demo vault"><meta name="color-scheme" content="light dark">
+<meta name="referrer" content="strict-origin-when-cross-origin"><title>Projects Plus demo vault · Projects Plus</title>
+<meta property="og:type" content="website"><meta property="og:title" content="Projects Plus demo vault"><meta property="og:description" content="Projects Plus demo vault"><meta property="og:url" content="https://parkpavel.github.io/obs-projects-plus/read/demo-vault-readme.html"><meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://parkpavel.github.io/obs-projects-plus/read/demo-vault-readme.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/site.css">
+<script type="module" src="../assets/site.js"></script></head>
+<body data-prefix="../" data-language="en"><a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header"><a class="wordmark" href="../en.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
+<nav aria-label="Main navigation"><a href="../en.html#ideas">Garden of ideas</a><a href="../read/user-guide-en.html">Documentation</a><a class="language" href="../index.html" hreflang="ru">Русский</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../en.html">← Explore the plugin</a><strong>On this page</strong><nav aria-label="On this page"><a href="#open-the-demo">Open the demo</a><a href="#data-you-can-explore">Data you can explore</a><a href="#a-short-walkthrough">A short walkthrough</a><a href="#keep-the-experiment-reproducible">Keep the experiment reproducible</a></nav></aside><article class="doc-article"><p class="doc-version">Documentation follows the source code; an installed release may differ.</p><h1 id="projects-plus-demo-vault">Projects Plus demo vault</h1>
+<p><a href="../read/user-guide.html">Русское руководство</a> · <a href="../read/user-guide-en.html">English guide</a></p>
+<p>This folder is a sample vault with fictional project, team, and client notes. It is separate from the demo created by the plugin&#39;s <strong>Create demo project</strong> command. Use a copy of this folder to explore without changing the repository&#39;s examples.</p>
+<p>Это отдельное демонстрационное хранилище с вымышленными проектами, участниками команды и клиентами. Оно отличается от демо, создаваемого командой плагина. Для экспериментов скопируйте папку целиком, включая скрытую <code>.obsidian</code>.</p>
+<h2 id="open-the-demo">Open the demo</h2>
+<ol>
+<li>Copy this entire directory, including <code>.obsidian</code>, to a location for your demo vault.</li>
+<li>Download <code>main.js</code>, <code>manifest.json</code>, and <code>styles.css</code> from the same <a href="https://github.com/ParkPavel/obs-projects-plus/releases">plugin release</a>.</li>
+<li>Put those three files in the copy&#39;s <code>.obsidian/plugins/obs-projects-plus/</code> directory. Keep the supplied <code>data.json</code>.</li>
+<li>Open the copied folder as a vault in Obsidian and enable <strong>Projects Plus</strong> in Community plugins settings.</li>
+<li>Run <strong>Show projects plus</strong> from the command palette and select <strong>Demo Project</strong>.</li>
+</ol>
+<p>The saved configuration includes <strong>Demo Project</strong> and <strong>Team Members</strong>. You do not need to create duplicate projects. Older saved view settings are migrated when loaded by the current plugin. If you copied only the notes and omitted <code>.obsidian</code>, create a folder project for <code>Projects</code> manually; the prepared views will not be present.</p>
+<p>Скопируйте в папку плагина три файла одного релиза, сохраните готовый <code>data.json</code>, откройте копию как хранилище и включите плагин. Затем выберите <strong>Demo Project</strong>. Создавать его повторно не нужно. Если скрытая папка <code>.obsidian</code> не была скопирована, настройте проект по папке <code>Projects</code> самостоятельно.</p>
+<h2 id="data-you-can-explore">Data you can explore</h2>
+<table>
+<thead>
+<tr>
+<th>Folder</th>
+<th>Contents</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Projects/</code></td>
+<td>Task, meeting, and project notes</td>
+<td>Main data source</td>
+</tr>
+<tr>
+<td><code>Team/</code></td>
+<td>Team member notes</td>
+<td>Targets for <code>assignee</code> and <code>reviewer</code> links</td>
+</tr>
+<tr>
+<td><code>Clients/</code></td>
+<td>Client notes</td>
+<td>An additional source to try</td>
+</tr>
+</tbody></table>
+<p>The supplied configuration contains status filter tabs, summary cards, a data table, and relation targets. Notes include dates, statuses, priorities, numeric metrics, and wiki-links. Dates are fixed example data: a calendar opened on today&#39;s date may initially show no events. Navigate to a date found in one of the notes.</p>
+<p>Даты в примерах фиксированные. Если календарь пуст на сегодняшней дате, откройте заметку и перейдите к дате из её <code>startDate</code>.</p>
+<h2 id="a-short-walkthrough">A short walkthrough</h2>
+<h3 id="1-inspect-a-record">1. Inspect a record</h3>
+<p>Open a note in <code>Projects</code>, then find it in <strong>Demo Project</strong>. Compare its YAML properties with the displayed row. Change a writable property such as <code>status</code>, reopen the Markdown file, and check the stored value.</p>
+<h3 id="2-try-a-board-and-calendar">2. Try a board and calendar</h3>
+<p>Add a Board view grouped by <code>status</code>. Move a card between columns and inspect the note&#39;s status afterward.</p>
+<p>Add a Calendar view and map start/end dates to <code>startDate</code> and <code>endDate</code>, times to <code>startTime</code> and <code>endTime</code>, and color to <code>color</code>. Navigate to one of the sample event dates. Explicit field mappings make it easier to see why a note appears on a particular day.</p>
+<h3 id="3-follow-a-relation">3. Follow a relation</h3>
+<p>Inspect an <code>assignee</code> or <code>reviewer</code> link and open the corresponding note in <code>Team</code>. The supplied relation settings point to <strong>Team Members</strong>. If a link is unresolved, check its spelling and whether that project is available.</p>
+<h3 id="4-add-an-overview-block">4. Add an overview block</h3>
+<p>On Dashboard, add a chart or summary block and select the data source. Start with a count by <code>status</code> or a sum of <code>budget</code>; compare the result with a few source records. Filters affect the records included in the result.</p>
+<h3 id="5-combine-sources">5. Combine sources</h3>
+<p>In <strong>Demo Project</strong> settings, add <code>Clients</code> as another folder source. Client notes have different properties from task notes, so some columns will be empty. Remove the additional source to return to the original selection; the client files remain in the vault.</p>
+<h2 id="keep-the-experiment-reproducible">Keep the experiment reproducible</h2>
+<p>Record the plugin version you installed. To restart, make another copy of this demo directory and install the same release. Replacing only notes does not reset saved filters, views, or layout in <code>data.json</code>.</p>
+<p>Для полного сброса эксперимента создайте свежую копию этой папки и установите тот же релиз. Замена одних заметок не сбрасывает фильтры и расположение блоков в <code>data.json</code>.</p>
+<p><a href="https://github.com/ParkPavel/obs-projects-plus/issues">Report a problem</a> · <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">License</a></p>
+<p class="doc-source"><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/demo-vault/README.md">Page source ↗</a></p></article></main>
+<footer class="site-footer"><a class="wordmark" href="../en.html">Projects Plus</a><p>An open-source project by Park Pavel. Based on Obsidian Projects by Marcus Olsson.</p><div><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache-2.0</a><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE">Attribution</a><a href="https://github.com/ParkPavel/obs-projects-plus/issues">Feedback</a></div></footer>
+<aside class="search-panel" aria-label="Search documentation"><label for="doc-search">Search documentation</label><div class="search-input-wrap"><input id="doc-search" type="search" placeholder="Search…" autocomplete="off" aria-controls="search-results"><kbd>/</kbd></div><ul id="search-results" hidden></ul><p id="search-status" role="status" aria-live="polite" data-empty="No matches. Try “calendar”, “formula” or “source”."></p></aside>
+</body></html>

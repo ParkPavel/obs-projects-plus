@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import { migrateLegacyFavorites } from "src/lib/stores/palettes";
 import { installCrashLog, installLongTaskWatch } from "src/lib/errors/crashLog";
 import isoWeek from "dayjs/plugin/isoWeek";
 import localizedFormat from "dayjs/plugin/localizedFormat";
@@ -514,6 +515,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       this.ensureCommands(value.preferences.commands, value.projects);
       writer.push(value);
     });
+    migrateLegacyFavorites(this.confirmedOnDisk !== null);
 
     // Best effort on shutdown: the last coalesced write is torn off the
     // debounce. Obsidian documents this event as "not guaranteed to actually

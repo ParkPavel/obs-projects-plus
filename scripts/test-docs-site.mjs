@@ -1,0 +1,46 @@
+// DOM behaviour checks, deliberately not claimed as visual/browser acceptance.
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+const require=createRequire(import.meta.url);
+const { JSDOM }=require('jsdom');
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const script=await fs.readFile(path.join(root,'docs/assets/site.js'),'utf8');
+const index=JSON.parse(await fs.readFile(path.join(root,'docs/search-index.json'),'utf8'));
+for(const [language,filename] of [['ru','index.html'],['en','en.html']]){
+  const html=await fs.readFile(path.join(root,'docs',filename),'utf8');
+  const dom=new JSDOM(html,{url:`https://example.test/obs-projects-plus/${filename}`,runScripts:'outside-only'});
+  const {window}=dom,{document}=window;
+  window.HTMLElement.prototype.scrollIntoView=()=>undefined;
+  window.fetch=async()=>({ok:true,json:async()=>index});
+  new vm.Script(script).runInContext(dom.getInternalVMContext());
+  const select=document.querySelector('select[data-note="0"]');
+  select.value='2';select.dispatchEvent(new window.Event('change',{bubbles:true}));
+  assert.match(document.getElementById('demo-markdown').textContent,/status: done/);
+  document.querySelector('[data-view="board"]').click();
+  assert.equal(document.querySelectorAll('.demo-column').length,3);
+  assert.equal(document.querySelectorAll('.demo-column')[2].querySelectorAll('.demo-card').length,2);
+  document.querySelector('[data-view="table"]').click();
+  assert.equal(document.querySelector('select[data-note="0"]').value,'2','switching views must preserve the data');
+  document.querySelector('[data-view="calendar"]').click();
+  assert.equal(document.querySelectorAll('.demo-day').length,3);
+  const category=document.querySelectorAll('[data-filter]')[1];category.click();
+  assert.equal([...document.querySelectorAll('[data-category]')].filter(card=>!card.hidden).length,2);
+  document.querySelector('[data-filter="all"]').click();
+  assert.equal([...document.querySelectorAll('[data-category]')].filter(card=>!card.hidden).length,6);
+  document.dispatchEvent(new window.KeyboardEvent('keydown',{key:'/',bubbles:true,cancelable:true}));
+  assert.equal(document.activeElement.id,'doc-search');
+  const search=document.getElementById('doc-search');search.value='formula';search.dispatchEvent(new window.Event('input',{bubbles:true}));
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.ok(document.querySelectorAll('#search-results a').length>0,`${language}: documentation search`);
+  search.dispatchEvent(new window.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+  assert.equal(document.querySelectorAll('#search-results a').length,0);
+  document.getElementById('copy-path').click();
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.ok(document.getElementById('copy-status').textContent,'copy failure has a usable fallback');
+  dom.window.close();
+}
+console.log('Site DOM PASS: view/data continuity, recipe filters, both search languages, keyboard and clipboard fallback. Visual QA is separate.');

@@ -24,7 +24,7 @@
    */
   import { onDestroy, onMount, tick } from "svelte";
   import { get } from "svelte/store";
-  import { TFile, type App, type EventRef } from "obsidian";
+  import { Notice, TFile, type App, type EventRef } from "obsidian";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { settings } from "src/lib/stores/settings";
@@ -96,11 +96,16 @@
   let collapsed = false;
   let editingKey: string | null = null;
   let editError: string | null = null;
+  let editSession = 0;
+  let editRevision = 0;
+  let pendingValueWrite: Promise<boolean> | null = null;
   let renamingKey: string | null = null;
+  let renameSession = 0;
   let renameError: string | null = null;
   let paletteKey: string | null = null;
   let choiceOptions: ComboOption[] = [];
   let adding = false;
+  let addRevision = 0;
   let addError: string | null = null;
   let inverseIndex: InverseIndex = new Map();
   let editField: TextField | null = null;
@@ -117,7 +122,9 @@
   let dropIndex: number | null = null;
 
   // i3-props: one queue for every write of this block, in the order asked.
-  const queue = createWriteQueue();
+  const queue = createWriteQueue(undefined, () => {
+    new Notice(get(i18n).t("modals.note.edit.save-error"));
+  });
   // i3-final: other notes' values, kept until the metadata cache reports a change.
   const usedCache = createUsedValuesCache({
     files: () => app.vault.getMarkdownFiles?.() ?? [],
@@ -175,18 +182,22 @@
   }
 
   // ── Writes (queued; the target file is the one the action was taken on) ──
-  function persistOverlay(next: NoteOverlay): Promise<void> {
+  async function persistOverlay(next: NoteOverlay): Promise<boolean> {
     overlay = next;
     const target = file;
-    return queue.run(() => writeOverlay(app, target, next));
+    const saved = await queue.run(() => writeOverlay(app, target, next));
+    if (!saved && overlay === next && file.path === target.path) {
+      overlay = readOverlay(app.metadataCache.getFileCache(target)?.frontmatter ?? {});
+    }
+    return saved;
   }
 
-  function writeKey(key: string, value: CellValue): Promise<void> {
+  function writeKey(key: string, value: CellValue): Promise<boolean> {
     const target = file;
     return queue.run(() => writeCellValue(app, target, key, value));
   }
 
-  function writeType(key: string, type: PropertyType | null): Promise<void> {
+  function writeType(key: string, type: PropertyType | null): Promise<boolean> {
     const target = file;
     return queue.run(() => setPropertyType(app, target, key, type));
   }
@@ -220,6 +231,8 @@
     const key = editingKey;
     if (key === null || rowKeyOf(e.target) !== key) return;
     e.preventDefault();
+    const entry = entries.find((item) => item.key === key);
+    if (entry && !isListType(typeOf(entry))) e.stopPropagation();
     void tabFrom(key, e.shiftKey ? -1 : 1, e.target as HTMLElement);
   }
 
@@ -233,18 +246,20 @@
   }
 
   async function tabFrom(key: string, dir: -1 | 1, from: HTMLElement): Promise<void> {
-    // Let the field's own Tab handling run first (ComboField commits on it).
-    await Promise.resolve();
+    const targetPath = file.path;
     if (editingKey === key) {
       const entry = entries.find((en) => en.key === key);
       const type = entry ? typeOf(entry) : null;
       // A draft the type refuses stays open with its error, as Enter would.
-      if (entry && type && editable(entry, type) && !isListType(type) && from instanceof HTMLInputElement) {
-        const plan = planValueWrite(entry.value, from.value, type);
-        if (plan.kind === "invalid") {
-          editError = t(plan.i18nKey);
-          return;
+      if (entry && type && editable(entry, type) && !isListType(type)) {
+        if (!pendingValueWrite) {
+          if (type === "select" || type === "status") comboField?.commitForNavigation();
+          else editField?.commitForNavigation();
         }
+        if (pendingValueWrite) await pendingValueWrite;
+        await tick();
+        // A refused write keeps its editor; an unrelated session owns its focus.
+        if (editingKey !== null || file.path !== targetPath) return;
       }
       if (from.isConnected) from.blur();
       await tick();
@@ -272,6 +287,9 @@
   async function moveTo(key: string, to: number): Promise<void> {
     const keys = reorderedKeys(entries, key, to);
     if (!keys) return;
+    const target = file;
+    if (!(await queue.run(() => reorderProperties(app, target, keys)))) return;
+    if (file.path !== target.path) return;
     if (frontmatter) {
       const next = { ...frontmatter };
       if (reorderKeysIn(next, keys)) {
@@ -279,8 +297,6 @@
         overlay = readOverlay(next);
       }
     }
-    const target = file;
-    await queue.run(() => reorderProperties(app, target, keys));
   }
 
   function moveBy(key: string, step: -1 | 1): Promise<void> {
@@ -372,6 +388,9 @@
     if (type === "select" || type === "status") {
       choiceOptions = namesToOptions(usedValues(entry.key));
     }
+    editSession += 1;
+    editRevision = 0;
+    pendingValueWrite = null;
     editingKey = entry.key;
     editError = null;
     await tick();
@@ -382,6 +401,8 @@
   function endEdit(refocus = false): void {
     const key = editingKey;
     editingKey = null;
+    editSession += 1;
+    pendingValueWrite = null;
     editError = null;
     if (refocus && key !== null) void focusRow(key);
   }
@@ -392,13 +413,29 @@
     draft: string,
     reason: string,
   ): Promise<void> {
+    const session = editSession;
+    const revision = editRevision;
+    const targetPath = file.path;
     const plan = planValueWrite(entry.value, draft, type);
     if (plan.kind === "invalid") {
       editError = t(plan.i18nKey);
       return;
     }
+    let saved = true;
+    if (plan.kind === "write") {
+      const pending = writeKey(entry.key, plan.value);
+      pendingValueWrite = pending;
+      saved = await pending;
+      if (pendingValueWrite === pending) pendingValueWrite = null;
+    }
+    if (editSession !== session || editRevision !== revision || file.path !== targetPath || editingKey !== entry.key) return;
+    if (!saved) {
+      editError = t("modals.note.edit.save-error");
+      editField?.retryCommit();
+      comboField?.retryCommit();
+      return;
+    }
     endEdit(reason === "enter" || reason === "select");
-    if (plan.kind === "write") await writeKey(entry.key, plan.value);
   }
 
   function validDraft(type: CellEditType): (draft: string) => boolean {
@@ -461,6 +498,7 @@
   // ── Rename / delete ──────────────────────────────────────
   async function startRename(key: string): Promise<void> {
     if (editingKey === key) endEdit();
+    renameSession += 1;
     renamingKey = key;
     renameError = null;
     await tick();
@@ -470,6 +508,7 @@
   function endRename(refocus = false): void {
     const key = renamingKey;
     renamingKey = null;
+    renameSession += 1;
     renameError = null;
     if (refocus && key !== null) void focusRow(key);
   }
@@ -481,10 +520,17 @@
       else renameError = t(`views.visualizer.block.errors.${verdict.reason}`);
       return;
     }
-    endRename();
     const target = file;
     const to = verdict.key;
-    await queue.run(() => renameProperty(app, target, from, to));
+    const session = renameSession;
+    const saved = await queue.run(() => renameProperty(app, target, from, to));
+    if (renameSession !== session || renamingKey !== from || file.path !== target.path) return;
+    if (!saved) {
+      renameError = t("modals.note.edit.save-error");
+      renameField?.retryCommit();
+      return;
+    }
+    endRename();
     if (reason === "enter") void focusRow(to);
   }
 
@@ -498,6 +544,7 @@
 
   // ── New property ─────────────────────────────────────────
   async function startAdd(): Promise<void> {
+    addRevision += 1;
     adding = true;
     addError = null;
     await tick();
@@ -515,12 +562,20 @@
       addError = t(`views.visualizer.block.errors.${verdict.reason}`);
       return;
     }
+    const targetPath = file.path;
+    const revision = addRevision;
+    const saved = await writeKey(verdict.key, "");
+    if (file.path !== targetPath || !adding || revision !== addRevision) return;
+    if (!saved) {
+      addError = t("modals.note.edit.save-error");
+      addField?.retryCommit();
+      return;
+    }
     adding = false;
     addError = null;
-    await writeKey(verdict.key, "");
-    editingKey = verdict.key;
     await tick();
-    editField?.focus();
+    const entry = entries.find((en) => en.key === verdict.key);
+    if (entry) await startEdit(entry, typeOf(entry));
   }
 
   // ── Menus ────────────────────────────────────────────────
@@ -742,6 +797,7 @@
                 error={renameError !== null}
                 commitUnchanged
                 on:commit={(e) => commitRename(entry.key, e.detail.value, e.detail.reason)}
+                on:input={() => { renameSession += 1; renameError = null; }}
                 on:cancel={() => endRename(true)}
               />
               {#if renameError}
@@ -811,8 +867,12 @@
                 commitUnchanged
                 ariaLabel={entry.key}
                 on:commit={(e) => commitText(entry, type, e.detail.value, e.detail.reason)}
+                on:input={() => { editRevision += 1; editError = null; }}
                 on:cancel={() => endEdit(true)}
               />
+              {#if editError}
+                <span class="ppp-note-props__error" role="alert">{editError}</span>
+              {/if}
             {:else if canEdit && editingKey === entry.key}
               <TextField
                 bind:this={editField}
@@ -822,6 +882,7 @@
                 commitUnchanged
                 inputMode={type === "number" ? "decimal" : type === "email" ? "email" : type === "url" ? "url" : type === "phone" ? "tel" : "text"}
                 on:commit={(e) => commitText(entry, type, e.detail.value, e.detail.reason)}
+                on:input={() => { editRevision += 1; editError = null; }}
                 on:cancel={() => endEdit(true)}
               />
               {#if editError}
@@ -931,7 +992,9 @@
           ariaLabel={t("views.visualizer.block.name-placeholder")}
           commitUnchanged
           on:commit={(e) => commitAdd(e.detail.value)}
+          on:input={() => { addRevision += 1; addError = null; }}
           on:cancel={() => {
+            addRevision += 1;
             adding = false;
             addError = null;
           }}

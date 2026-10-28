@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Как участвовать в Projects Plus"><meta name="color-scheme" content="light dark">
+<meta name="referrer" content="strict-origin-when-cross-origin"><title>Как участвовать в Projects Plus · Projects Plus</title>
+<meta property="og:type" content="website"><meta property="og:title" content="Как участвовать в Projects Plus"><meta property="og:description" content="Как участвовать в Projects Plus"><meta property="og:url" content="https://parkpavel.github.io/obs-projects-plus/read/contributing-ru.html"><meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://parkpavel.github.io/obs-projects-plus/read/contributing-ru.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/site.css">
+<script type="module" src="../assets/site.js"></script></head>
+<body data-prefix="../" data-language="ru"><a class="skip-link" href="#main">К содержимому</a>
+<header class="site-header"><a class="wordmark" href="../index.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
+<nav aria-label="Основная навигация"><a href="../index.html#ideas">Сад идей</a><a href="../read/user-guide.html">Документация</a><a class="language" href="../read/contributing.html" hreflang="en">English</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../index.html">← Все возможности</a><strong>На этой странице</strong><nav aria-label="На этой странице"><a href="#собрать-локально">Собрать локально</a><a href="#найти-нужный-код">Найти нужный код</a><a href="#вносить-изменение">Вносить изменение</a><a href="#проверить-результат">Проверить результат</a><a href="#перевести-интерфейс">Перевести интерфейс</a><a href="#документация-парная">Документация парная</a><a href="#отправить-pull-request">Отправить pull request</a><a href="#выпустить-версию">Выпустить версию</a><a href="#лицензия-и-авторство">Лицензия и авторство</a></nav></aside><article class="doc-article"><p class="doc-version">Документация исходного кода; установленный выпуск может отличаться.</p><h1 id="как-участвовать-в-projects-plus">Как участвовать в Projects Plus</h1>
+<p><a href="../read/contributing.html">English</a></p>
+<p>Projects Plus — плагин Obsidian, форк <a href="https://github.com/marcusolsson/obsidian-projects">Obsidian Projects</a>. Это руководство о том, как собрать плагин, изменить его и проверить результат. В рабочем пространстве сопровождающего разработка координируется через Borshkit. Начните с локального <code>borshkit/START-HERE.md</code>; контракты задач и доказательства приёмки — закрытые материалы пространства, не файлы исполнения плагина.</p>
+<h2 id="собрать-локально">Собрать локально</h2>
+<p>Нужен Node.js 22 — та же версия, что в CI, — и npm. Из клона репозитория:</p>
+<pre><code class="language-sh">npm ci
+npm run build
+</code></pre>
+<p>Сборка проверяет типы TypeScript и собирает плагин через esbuild. Файлы, которые нужны в хранилище: <code>main.js</code>, <code>manifest.json</code> и <code>styles.css</code>. Для пересборки на каждое сохранение запустите <code>npm run dev</code>.</p>
+<p><code>npm run build</code> и <code>npm run dev</code> перезаписывают сборочные файлы в копии проекта, включая отслеживаемый <code>main.js</code>. В рабочих копиях задач сопровождающего используйте изолированную сборку. Из корня рабочего пространства, с явными путями копии и результата:</p>
+<pre><code class="language-sh">node handoff/2026-10-07-claudex-to-borshkit/tools/build-branch.mjs &lt;candidate-checkout&gt; &lt;output-directory&gt;
+</code></pre>
+<p>Этот помощник находится в рабочем пространстве сопровождающего, а не в отдельном клоне репозитория. Он учитывает незакоммиченные изменения исходников и записывает хеши результата, не заменяя отслеживаемую сборку. Зависимости каждой рабочей копии задачи устанавливайте через <code>npm ci</code>; не подключайте общий <code>node_modules</code> через junction.</p>
+<p>Чтобы проверить плагин в Obsidian, скопируйте эти три файла в <code>.obsidian/plugins/obs-projects-plus/</code> отдельного тестового хранилища. Создайте папку, если её нет, включите плагин в настройках сторонних плагинов и перезагружайте его после каждой сборки. Работайте на примерных заметках: проверка редактирования и удаления меняет файлы хранилища.</p>
+<h2 id="найти-нужный-код">Найти нужный код</h2>
+<p>Начните с <a href="../read/architecture.html">карты устройства проекта</a>. Плагин написан на TypeScript и Svelte, использует API Obsidian и хранилища Svelte. Точные зависимости и параметры компилятора — в <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/package.json">package.json</a>, <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/package-lock.json">package-lock.json</a> и <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/tsconfig.json">tsconfig.json</a>.</p>
+<p>Авторам сторонних видов нужен <a href="../read/api-ru.html">справочник API</a>. Внутренние модули — детали реализации и могут меняться между выпусками.</p>
+<h2 id="вносить-изменение">Вносить изменение</h2>
+<p>Создайте ветку от <code>main</code>. Опишите задачу и поведение, которое должно получиться, и держите реализацию вместе с её документацией в одном pull request.</p>
+<ul>
+<li>Сохраняйте текст заметки при правке свойств. Используйте существующий data API и его путь через <code>processFrontMatter</code> Obsidian, а не перезапись файла целиком из компонента интерфейса.</li>
+<li>Пишите настройки только существующим модулем записи настроек — иначе теряются повторные попытки, обнаружение конфликта и сообщение об отказе.</li>
+<li>Стройте DOM безопасными для текста способами. Для поддержки отдельных окон берите документ владеющего элемента или активный документ Obsidian.</li>
+<li>Проверяйте данные из настроек и пользовательский ввод. Где уместно, используйте <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/helpers/regexSafety.ts">помощники для регулярных выражений</a>.</li>
+<li>Используйте переменные темы Obsidian и <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/ui/tokens/tokens.css">токены оформления</a>. Управление должно работать с клавиатуры, а кнопкам без подписи нужны доступные имена.</li>
+<li>Освобождайте подписки, обработчики событий и прочие ресурсы при закрытии вида.</li>
+<li>Держите типы осмысленными. Неизбежные подавления объясняйте, а временный отладочный вывод убирайте до ревью.</li>
+</ul>
+<p>Форматирование настроено в репозитории. <code>npm run format</code> переписывает весь <code>src</code>, поэтому просматривайте его диф и не приносите посторонних правок форматирования.</p>
+<h2 id="проверить-результат">Проверить результат</h2>
+<p>Из корня репозитория:</p>
+<pre><code class="language-sh">npm run build
+npm test -- --runInBand
+npm run lint
+npm run svelte-check -- --fail-on-warnings
+</code></pre>
+<p>Во время работы удобны точечные тесты; перед отправкой pull request прогоняйте весь набор. Тесты лежат рядом со своими модулями и в <code>src/__tests__</code>. Исправляя поведение, которое может вернуться, добавляйте покрытие. Для правки одной документации проверьте ссылки, примеры и тесты, которые сверяют изменённый справочный материал.</p>
+<p>Изменения интерфейса нужно проверить и в Obsidian: откройте затронутый вид, выполните изменённое действие и убедитесь в результате после повторного открытия вида или перезагрузки плагина, если дело касается сохранения. Опишите в pull request хранилище, версию Obsidian и проделанные проверки — без содержимого личных заметок.</p>
+<p>Для кандидата стабилизации 3.7.1 используйте <a href="../read/development-3.7.1-ru.html">матрицу завершения</a>. В рабочем пространстве сопровождающего выполните <code>borshkit задача проверить release-371</code>, затем <code>borshkit задача итог release-371</code>. Успех автоматики не принимает ручные критерии: их решает пользователь. Merge, push и выпуск требуют его указания.</p>
+<h2 id="перевести-интерфейс">Перевести интерфейс</h2>
+<p>Переводы интерфейса лежат в <a href="https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/stores/translations">src/lib/stores/translations</a>: английский, русский, украинский и упрощённый китайский. Ключи добавляйте или правьте во всех четырёх файлах. Подписи держите короткими, а незнакомые понятия объясняйте в руководстве пользователя.</p>
+<p>Опорный текст — английский. Русские, украинские и китайские строки для недавних функций (раскладки и размер карточек галереи, поля карточки, изменяемые рамки карточек, миниатюры в канбане, вкладка «Фильтры» в настройках) написаны сопровождающими без проверки носителями языка. Правки от тех, кто пользуется плагином на этих языках, приветствуются:</p>
+<ul>
+<li><strong>Сообщить о неудачной формулировке.</strong> Откройте issue по форме <a href="https://github.com/ParkPavel/obs-projects-plus/issues/new?template=translation.yml">Translation</a>: язык, где в плагине встречается текст, текущий вариант и ваше предложение. Снимок экрана помогает.</li>
+<li><strong>Исправить самому.</strong> Найдите текущий текст в файле языка — так найдётся его ключ; поменяйте значение, ключ не трогайте. Каждую подстановку вида <code>{{count}}</code> или <code>{{name}}</code> сохраняйте в точности, текст вокруг неё можно переставлять.</li>
+<li><strong>Проверить перед pull request.</strong> <code>npm test -- R0_26_i18nKeyCoverage</code> проверяет, что каждый ключ есть во всех четырёх файлах с теми же подстановками, а <code>npm test -- R0_30_sentenceCase</code> — регистр в английском.</li>
+<li>Если подпись не помещается в отведённое место, это тоже проблема вёрстки: напишите об этом в issue, а не сокращайте смысл.</li>
+</ul>
+<h2 id="документация-парная">Документация парная</h2>
+<p>У каждого документа есть версия на двух языках: файл с базовым именем и файл с суффиксом языка (<code>-RU</code> или <code>-EN</code>). Указатель <a href="../read/readme.html">docs/README.md</a>, <a href="../read/error_codes.html">коды ошибок</a> и две короткие страницы внутри хранилища держат оба языка в одном файле. Парность проверяет тест <code>src/__tests__/R0_25_documentationPairs.test.ts</code>: правите один язык — правьте и второй в том же коммите.</p>
+<h2 id="отправить-pull-request">Отправить pull request</h2>
+<p>Напишите, что было не так, что происходит теперь и как вы это проверили. Для видимых изменений приложите снимки экрана, упомяните ограничения и проверки, которые выполнить не удалось. Обновляйте руководство пользователя или справочник API, когда меняется поведение. Изменения, заметные при обновлении, записывайте в <a href="../read/changelog.html">CHANGELOG.md</a> и <a href="../read/changelog-ru.html">CHANGELOG-RU.md</a>.</p>
+<p>Не включайте учётные данные, содержимое хранилища, локальные журналы и настройки, привязанные к вашей машине. Об ошибках сообщайте через <a href="https://github.com/ParkPavel/obs-projects-plus/issues">GitHub Issues</a>: шаги воспроизведения, версии плагина и Obsidian, операционная система, ожидаемый и фактический результат.</p>
+<h2 id="выпустить-версию">Выпустить версию</h2>
+<p>Релиз выпускается из <code>main</code>, который принимает изменения только через pull request с зелёной проверкой <code>build</code>.</p>
+<ol>
+<li>В ветке задайте версию командой <code>npm version X.Y.Z --tag-version-prefix=&quot;&quot; --no-git-tag-version</code>. Хук <code>version</code> копирует её в <code>manifest.json</code> и добавляет в <code>versions.json</code>; сам он версию не повышает.</li>
+<li>Обновите обе истории изменений, пересоберите <code>npm run build</code> и закоммитьте <code>main.js</code> — он хранится в Git и должен совпадать с коммитом релиза. Собирайте из копии с концами строк LF: при <code>core.autocrlf</code> в Windows пробелы в шаблонах Svelte уносят <code>\r</code> в бандл, и он перестаёт совпадать с релизом, который CI собирает на Linux. Эталон — файл из релиза; при сомнении закоммитьте его.</li>
+<li>Слейте pull request и запушьте тег <code>X.Y.Z</code> — саму версию, без <code>v</code> — на коммите слияния. Релизный workflow отклоняет тег, не совпадающий с <code>manifest.json</code>, собирает плагин и публикует <code>main.js</code>, <code>manifest.json</code> и <code>styles.css</code>.</li>
+</ol>
+<p>Бета для <a href="https://github.com/TfTHacker/obsidian42-brat">BRAT</a> — это тег <code>X.Y.Z-beta.N</code> на коммите <code>main</code>, где <code>X.Y.Z</code> выше текущей версии (после 3.7.0 — <code>3.7.1-beta.1</code>): workflow публикует её как предрелиз с бета-версией в манифесте релиза, не меняя <code>manifest.json</code> в <code>main</code>.</p>
+<h2 id="лицензия-и-авторство">Лицензия и авторство</h2>
+<p>Вклад в плагин распространяется под <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache 2.0</a>. Сохраняйте применимые уведомления об авторстве и лицензии. Оригинальный плагин создал <a href="https://github.com/marcusolsson">Marcus Olsson</a>, этот форк ведёт Park Pavel. Отдельный <a href="../read/obsidian-projects-types-readme-ru.html">пакет типов</a> объявляет лицензию MIT.</p>
+<p class="doc-source"><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/CONTRIBUTING-RU.md">Исходник страницы ↗</a></p></article></main>
+<footer class="site-footer"><a class="wordmark" href="../index.html">Projects Plus</a><p>Открытый проект Park Pavel. Основан на Obsidian Projects Маркуса Олссона.</p><div><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache-2.0</a><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE">Attribution</a><a href="https://github.com/ParkPavel/obs-projects-plus/issues">Обратная связь</a></div></footer>
+<aside class="search-panel" aria-label="Поиск по документации"><label for="doc-search">Поиск по документации</label><div class="search-input-wrap"><input id="doc-search" type="search" placeholder="Поиск…" autocomplete="off" aria-controls="search-results"><kbd>/</kbd></div><ul id="search-results" hidden></ul><p id="search-status" role="status" aria-live="polite" data-empty="Ничего не найдено. Попробуйте «календарь», «formula» или «источник»."></p></aside>
+</body></html>
