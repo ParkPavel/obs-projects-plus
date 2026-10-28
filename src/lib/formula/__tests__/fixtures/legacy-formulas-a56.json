@@ -1,0 +1,1967 @@
+{
+  "head": "a56ed9bf7c8c39a973da04e57ec998c197d6a749",
+  "reference": "2026-10-28T04:00:00.000Z",
+  "scope": "Actual runtime public APIs; frozen clock; synthetic records only; only i18n text resolver substituted. Engine compatibility baseline, not host/UI acceptance.",
+  "records": [
+    {
+      "id": "synthetic-a.md",
+      "values": {
+        "amount": "12",
+        "due": "2026-10-01",
+        "tags": [
+          "urgent",
+          "work"
+        ],
+        "status": "Active",
+        "done": false,
+        "сумма": 3,
+        "link": "[[folder/note|Label]]"
+      }
+    },
+    {
+      "id": "synthetic-b.md",
+      "values": {
+        "amount": 0,
+        "due": "2026-10-29",
+        "tags": [],
+        "status": "",
+        "done": true,
+        "сумма": 0,
+        "link": null
+      }
+    },
+    {
+      "id": "synthetic-c.md",
+      "values": {
+        "amount": "12abc",
+        "due": "invalid",
+        "tags": [
+          "other"
+        ],
+        "status": null,
+        "done": false,
+        "сумма": -2,
+        "link": "[[note]]"
+      }
+    }
+  ],
+  "rows": [
+    {
+      "expression": "amount = 12",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "\"2026-10-28\" < \"2026-10-29\"",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "AND(1, true)",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": true
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": true
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "OR(1, false)",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": true
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": true
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "NOT(false)",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": true
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": true
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "amount + 2 = 14",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": true
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "1 / 0",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "done = \"unexpected\"",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "status = \" active \"",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": true
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "Amount = 12",
+      "legacyValidation": [
+        {
+          "message": "Unknown field: Amount"
+        }
+      ],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "сумма + 2",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": 5
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": 2
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "link = \"Label\"",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": true
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "IS_EMPTY(status)",
+      "legacyValidation": [],
+      "computedValidation": [
+        "Unknown function: IS_EMPTY"
+      ],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "IS_NOT_EMPTY(status)",
+      "legacyValidation": [],
+      "computedValidation": [
+        "Unknown function: IS_NOT_EMPTY"
+      ],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "CONTAINS(tags, \"urgent\")",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": true
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "NOT_CONTAINS(tags, \"urgent\")",
+      "legacyValidation": [],
+      "computedValidation": [
+        "Unknown function: NOT_CONTAINS"
+      ],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "STARTS_WITH(status, \"A\")",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": true
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "ENDS_WITH(status, \"e\")",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": true
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "TODAY() = \"2026-10-28\"",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": true
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": true
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "NOW()",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": "2026-10-28T04:00:00.000Z"
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": "2026-10-28T04:00:00.000Z"
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": "2026-10-28T04:00:00.000Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "TOMORROW()",
+      "legacyValidation": [],
+      "computedValidation": [
+        "Unknown function: TOMORROW"
+      ],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "YESTERDAY()",
+      "legacyValidation": [],
+      "computedValidation": [
+        "Unknown function: YESTERDAY"
+      ],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "IS_TODAY(due)",
+      "legacyValidation": [],
+      "computedValidation": [
+        "Unknown function: IS_TODAY"
+      ],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "IS_THIS_WEEK(due)",
+      "legacyValidation": [],
+      "computedValidation": [
+        "Unknown function: IS_THIS_WEEK"
+      ],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "IS_THIS_MONTH(due)",
+      "legacyValidation": [],
+      "computedValidation": [
+        "Unknown function: IS_THIS_MONTH"
+      ],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "IS_BEFORE(due, TODAY())",
+      "legacyValidation": [],
+      "computedValidation": [
+        "Unknown function: IS_BEFORE"
+      ],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "IS_AFTER(due, TODAY())",
+      "legacyValidation": [],
+      "computedValidation": [
+        "Unknown function: IS_AFTER"
+      ],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "IS_ON_AND_BEFORE(due, TODAY())",
+      "legacyValidation": [],
+      "computedValidation": [
+        "Unknown function: IS_ON_AND_BEFORE"
+      ],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "IS_ON_AND_AFTER(due, TODAY())",
+      "legacyValidation": [],
+      "computedValidation": [
+        "Unknown function: IS_ON_AND_AFTER"
+      ],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "IS_OVERDUE(due)",
+      "legacyValidation": [],
+      "computedValidation": [
+        "Unknown function: IS_OVERDUE"
+      ],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "IS_UPCOMING(due)",
+      "legacyValidation": [],
+      "computedValidation": [
+        "Unknown function: IS_UPCOMING"
+      ],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "DATE_ADD(due, 1, \"day\")",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": "2026-10-02"
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": "2026-10-30"
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "DATE_SUB(due, 1, \"day\")",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": "2026-09-30"
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": "2026-10-28"
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "HAS_ANY_OF(tags, [\"urgent\"])",
+      "legacyValidation": [],
+      "computedValidation": [
+        "Unknown function: HAS_ANY_OF"
+      ],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "HAS_ALL_OF(tags, [\"urgent\", \"work\"])",
+      "legacyValidation": [],
+      "computedValidation": [
+        "Unknown function: HAS_ALL_OF"
+      ],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "HAS_NONE_OF(tags, [\"urgent\"])",
+      "legacyValidation": [],
+      "computedValidation": [
+        "Unknown function: HAS_NONE_OF"
+      ],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "result": false
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "result": true
+          },
+          "computed": {
+            "result": {
+              "value": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "SUM(@amount)",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "thrown": "Unknown function: SUM"
+          },
+          "computed": {
+            "result": {
+              "value": 12
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "thrown": "Unknown function: SUM"
+          },
+          "computed": {
+            "result": {
+              "value": 12
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "thrown": "Unknown function: SUM"
+          },
+          "computed": {
+            "result": {
+              "value": 12
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "COUNT(@amount)",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "thrown": "Unknown function: COUNT"
+          },
+          "computed": {
+            "result": {
+              "value": 2
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "thrown": "Unknown function: COUNT"
+          },
+          "computed": {
+            "result": {
+              "value": 2
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "thrown": "Unknown function: COUNT"
+          },
+          "computed": {
+            "result": {
+              "value": 2
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "SUMIF(@amount, \">0\")",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "thrown": "Unknown function: SUMIF"
+          },
+          "computed": {
+            "result": {
+              "value": 12
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "thrown": "Unknown function: SUMIF"
+          },
+          "computed": {
+            "result": {
+              "value": 12
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "thrown": "Unknown function: SUMIF"
+          },
+          "computed": {
+            "result": {
+              "value": 12
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "IF(false, 1 / 0, 7)",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "thrown": "Unknown function: IF"
+          },
+          "computed": {
+            "result": {
+              "value": 7
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "thrown": "Unknown function: IF"
+          },
+          "computed": {
+            "result": {
+              "value": 7
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "thrown": "Unknown function: IF"
+          },
+          "computed": {
+            "result": {
+              "value": 7
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "LET(\"x\", 3, x + 1)",
+      "legacyValidation": [
+        {
+          "message": "Unknown field: x"
+        }
+      ],
+      "computedValidation": [
+        "Unknown field: x"
+      ],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "thrown": "Unknown function: LET"
+          },
+          "computed": {
+            "result": {
+              "value": 4
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "thrown": "Unknown function: LET"
+          },
+          "computed": {
+            "result": {
+              "value": 4
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "thrown": "Unknown function: LET"
+          },
+          "computed": {
+            "result": {
+              "value": 4
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "MAP([1,2], \"item\", item + 1)",
+      "legacyValidation": [
+        {
+          "message": "Unknown field: item"
+        }
+      ],
+      "computedValidation": [
+        "Unknown field: item"
+      ],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "thrown": "Unknown function: MAP"
+          },
+          "computed": {
+            "result": {
+              "value": [
+                2,
+                3
+              ]
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "thrown": "Unknown function: MAP"
+          },
+          "computed": {
+            "result": {
+              "value": [
+                2,
+                3
+              ]
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "thrown": "Unknown function: MAP"
+          },
+          "computed": {
+            "result": {
+              "value": [
+                2,
+                3
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "LEFT(\"abc\", 1)",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "thrown": "Unknown function: LEFT"
+          },
+          "computed": {
+            "result": {
+              "value": "a"
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "thrown": "Unknown function: LEFT"
+          },
+          "computed": {
+            "result": {
+              "value": "a"
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "thrown": "Unknown function: LEFT"
+          },
+          "computed": {
+            "result": {
+              "value": "a"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "NOT(1, 2)",
+      "legacyValidation": [],
+      "computedValidation": [],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "thrown": "NOT expects 1 argument"
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "thrown": "NOT expects 1 argument"
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "thrown": "NOT expects 1 argument"
+          },
+          "computed": {
+            "result": {
+              "value": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "MYSTERY(1)",
+      "legacyValidation": [
+        {
+          "message": "Expected EOF but got LPAREN"
+        }
+      ],
+      "computedValidation": [
+        "Expected EOF but got LPAREN"
+      ],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "thrown": "Expected EOF but got LPAREN"
+          },
+          "computed": {
+            "result": {
+              "value": null,
+              "error": "Expected EOF but got LPAREN"
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "thrown": "Expected EOF but got LPAREN"
+          },
+          "computed": {
+            "result": {
+              "value": null,
+              "error": "Expected EOF but got LPAREN"
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "thrown": "Expected EOF but got LPAREN"
+          },
+          "computed": {
+            "result": {
+              "value": null,
+              "error": "Expected EOF but got LPAREN"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expression": "AND(",
+      "legacyValidation": [
+        {
+          "message": "Unexpected token: EOF"
+        }
+      ],
+      "computedValidation": [
+        "Unexpected token: EOF"
+      ],
+      "records": [
+        {
+          "id": "synthetic-a.md",
+          "legacy": {
+            "thrown": "Unexpected token: EOF"
+          },
+          "computed": {
+            "result": {
+              "value": null,
+              "error": "Unexpected token: EOF"
+            }
+          }
+        },
+        {
+          "id": "synthetic-b.md",
+          "legacy": {
+            "thrown": "Unexpected token: EOF"
+          },
+          "computed": {
+            "result": {
+              "value": null,
+              "error": "Unexpected token: EOF"
+            }
+          }
+        },
+        {
+          "id": "synthetic-c.md",
+          "legacy": {
+            "thrown": "Unexpected token: EOF"
+          },
+          "computed": {
+            "result": {
+              "value": null,
+              "error": "Unexpected token: EOF"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
