@@ -33,7 +33,9 @@
   import { get } from "svelte/store";
   import { onDestroy, onMount, tick } from "svelte";
   import CalendarDraftSheet from "./draft/CalendarDraftSheet.svelte";
-  import { createCalendarDraft, draftMapping, draftRecord, isDraftId, mappingKey } from "./draft/calendarDraft";
+  import { createCalendarDraft, draftMapping, draftRecord, interceptDraft, isDraftId, mappingKey } from "./draft/calendarDraft";
+  import { valueSuggestions, templateFoldersOf } from "src/lib/suggestions/valueSuggestions";
+  import { namesToOptions } from "src/ui/components/fields/comboOptions";
   import {
     getFirstDayOfWeek,
     parseDateInTimezone,
@@ -240,6 +242,7 @@
   )) draftCtl.cancel();
   $: draftUntitled = $i18n.t("modals.note.create.untitled");
   $: shownDraft = draftState.draft ? draftRecord(draftState.draft, draftUntitled) : null;
+  $: draftStatusOptions = namesToOptions(valueSuggestions(records, fields.find((f) => f.name === draftMap.status), { templateFolders: templateFoldersOf($app) }));
   $: draftKey = draftState.draft ? `${draftState.draft.session}.${draftState.draft.revision}` : "";
   // The draft is added to the frame, never put in its place.
   $: displayFrame = shownDraft ? { ...frame, records: [...frame.records, shownDraft] } : frame;
@@ -1016,7 +1019,7 @@
   async function handleDayPopupRecordDelete(record: DataRecord) {
     if (dataReadOnly) return;
     // Deleting a draft discards it: there is no file under its id.
-    if (isDraftId(record.id)) { draftCtl.cancel(); return; }
+    if (interceptDraft(record.id, draftCtl, () => draftCtl.cancel())) return;
     try {
       await api.deleteRecord(record.id);
       // Remove from popup records
@@ -1150,7 +1153,7 @@
 
   async function handleDayPopupRecordCheck(record: DataRecord, checked: boolean) {
     if (dataReadOnly) return;
-    if (isDraftId(record.id)) { draftCtl.edit({ done: checked }); return; }
+    if (interceptDraft(record.id, draftCtl, () => draftCtl.edit({ done: checked }))) return;
     if (!booleanField) return;
     
     try {
@@ -1187,7 +1190,7 @@
    */
   async function handleDayPopupRecordColorChange(record: DataRecord, color: string) {
     if (dataReadOnly) return;
-    if (isDraftId(record.id)) { draftCtl.edit({ color }); return; }
+    if (interceptDraft(record.id, draftCtl, () => draftCtl.edit({ color }))) return;
     const colorFieldName = config?.eventColorField;
     if (!colorFieldName) {
       new Notice(noticeFor(COLOR_FIELD_REQUIRED));
@@ -1363,7 +1366,7 @@
   async function handleRecordChange(date: dayjs.Dayjs, record: DataRecord, options?: RecordChangeOptions) {
     if (dataReadOnly) return;
     // A moved or stretched draft changes in memory, through the same builder.
-    if (isDraftId(record?.id)) { draftCtl.move(date, options); return; }
+    if (interceptDraft(record?.id, draftCtl, () => draftCtl.move(date, options))) return;
     // Validate record integrity first
     const recordValidation = validateRecordIntegrity(record);
     if (!recordValidation.isValid) {
@@ -1510,7 +1513,7 @@
 
   function handleRecordCheck(record: DataRecord, checked: boolean) {
     if (dataReadOnly) return;
-    if (isDraftId(record.id)) { draftCtl.edit({ done: checked }); return; }
+    if (interceptDraft(record.id, draftCtl, () => draftCtl.edit({ done: checked }))) return;
     if (!booleanField) {
       calendarLogger.warn('No boolean field configured for check operations', { component: 'CalendarView' });
       new Notice(noticeFor(CHECK_FIELD_REQUIRED));
@@ -1546,7 +1549,7 @@
   function handleRecordClick(entry: DataRecord, event?: MouseEvent) {
     if (!entry) return;
     // A draft has no note to peek at: its form is where it is edited.
-    if (isDraftId(entry.id)) { draftSheet?.focusName(); return; }
+    if (interceptDraft(entry.id, draftCtl, () => draftSheet?.focusName())) return;
     void activateRecord({ id: entry.id, readonly: dataReadOnly || readonly }, event, { app: get(app) });
   }
 
@@ -2027,6 +2030,7 @@
       bind:this={draftSheet}
       controller={draftCtl}
       templates={project.templates}
+      statusOptions={draftStatusOptions}
       nameProblem={(fileName) => noteNameProblem($app, project, fileName)}
       autoFocus={!isMobile}
       returnFocus={calendarRootEl}

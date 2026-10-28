@@ -17,12 +17,16 @@
   import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
   import TextField from "src/ui/components/fields/TextField.svelte";
+  import ComboField from "src/ui/components/fields/ComboField.svelte";
+  import type { ComboOption } from "src/ui/components/fields/comboOptions";
+  import ColorPicker from "src/ui/components/ColorPicker/ColorPicker.svelte";
   import DateField from "src/ui/components/fields/DateField.svelte";
   import { isImeKey } from "src/ui/components/fields/draftController";
-  import { draftFileName, type CalendarDraft, type CalendarDraftController } from "./calendarDraft";
+  import { conflictingDraftFields, draftFileName, type CalendarDraft, type CalendarDraftController } from "./calendarDraft";
 
   export let controller: CalendarDraftController;
   export let templates: readonly string[] = [];
+  export let statusOptions: ComboOption[] = [];
   /** Why a file name cannot be used ("" when it can): the create window's rules. */
   export let nameProblem: (fileName: string) => string = () => "";
   /** Desktop: the name is selected on open. A phone keeps its keyboard down. */
@@ -38,6 +42,8 @@
   // takes it as well (a tap on a phone does not blur the field first).
   let typedName = "";
   let typedIcon = "";
+  let typedStatus = "";
+  let colorOpen = false;
   let seeded = -1;
 
   $: state = $controller;
@@ -46,18 +52,22 @@
   function seed(d: CalendarDraft | null): void {
     if (!d || d.session === seeded) return;
     seeded = d.session;
+    colorOpen = false;
     typedName = d.name;
     typedIcon = d.icon;
+    typedStatus = d.status;
   }
 
   $: untitled = $i18n.t("modals.note.create.untitled");
-  $: problem = draft ? nameProblem(draftFileName({ ...draft, name: typedName }, untitled)) : "";
+  $: conflicts = draft ? conflictingDraftFields(draft.mapping) : [];
+  $: problem = conflicts.length ? $i18n.t("views.calendar.draft.mapping-conflict", { fields: conflicts.join(", ") })
+    : draft ? nameProblem(draftFileName({ ...draft, name: typedName }, untitled)) : "";
   $: computed = draft ? computedOf(draft) : [];
   $: writable = (name: string | undefined) => !!name && !computed.includes(name);
 
   function computedOf(d: CalendarDraft): string[] {
     const m = d.mapping;
-    const mapped = [m.start, m.end, m.startTime, m.endTime, m.creation, m.color, m.icon, m.check];
+    const mapped = [m.start, m.end, m.startTime, m.endTime, m.creation, m.color, m.icon, m.check, m.status];
     return [...new Set(mapped.filter((n): n is string => !!n && m.computed.includes(n)))];
   }
 
@@ -68,7 +78,7 @@
 
   function confirm(): void {
     if (!draft || state.saving || problem) return;
-    if (typedName !== draft.name || typedIcon !== draft.icon) controller.edit({ name: typedName, icon: typedIcon });
+    controller.edit({ name: typedName, icon: typedIcon, status: typedStatus });
     onConfirm();
   }
 
@@ -186,7 +196,7 @@
         <DateField
           withTime
           value={draft.start.toDate()}
-          disabled={state.saving}
+          disabled={state.saving || !writable(draft.mapping.start) || !writable(draft.mapping.startTime)}
           ariaLabel={$i18n.t("views.calendar.draft.start")}
           on:change={(e) => { const next = at(e.detail); if (next) controller.setStart(next); }}
         />
@@ -197,11 +207,27 @@
         <DateField
           withTime
           value={draft.end.toDate()}
-          disabled={state.saving}
+          disabled={state.saving || !writable(draft.mapping.end) || !writable(draft.mapping.endTime)}
           ariaLabel={$i18n.t("views.calendar.draft.end")}
           on:change={(e) => { const next = at(e.detail); if (next) controller.setEnd(next); }}
         />
       </div>
+
+      {#if writable(draft.mapping.status)}
+        <div class="ppp-draft-sheet__field">
+          <label class="ppp-draft-sheet__caption" for="{uid}-status">{$i18n.t("views.calendar.draft.status")}</label>
+          <ComboField
+            id="{uid}-status"
+            value={draft.status}
+            options={statusOptions}
+            allowCustom
+            disabled={state.saving}
+            on:draftChange={(e) => (typedStatus = e.detail)}
+            on:commit={(e) => { typedStatus = e.detail.value; controller.edit({ status: typedStatus }); }}
+            on:cancel={() => (typedStatus = draft?.status ?? "")}
+          />
+        </div>
+      {/if}
 
       {#if writable(draft.mapping.check)}
         <label class="ppp-draft-sheet__field ppp-draft-sheet__check">
@@ -233,15 +259,15 @@
 
       {#if writable(draft.mapping.color)}
         <div class="ppp-draft-sheet__field">
-          <label class="ppp-draft-sheet__caption" for="{uid}-color">{$i18n.t("views.calendar.draft.color")}</label>
+          <span class="ppp-draft-sheet__caption">{$i18n.t("views.calendar.draft.color")}</span>
           <span class="ppp-draft-sheet__color">
-            <input
-              id="{uid}-color"
-              type="color"
-              value={draft.color || "#808080"}
+            <button type="button"
+              aria-label={$i18n.t("views.calendar.draft.color")}
+              aria-expanded={colorOpen}
               disabled={state.saving}
-              on:change={(e) => controller.edit({ color: e.currentTarget.value })}
-            />
+              on:click={() => (colorOpen = !colorOpen)}>
+              <Icon name="palette" /> {draft.color}
+            </button>
             {#if draft.color}
               <button
                 type="button"
@@ -255,6 +281,9 @@
               </button>
             {/if}
           </span>
+          {#if colorOpen && !state.saving}
+            <ColorPicker value={draft.color || "#808080"} on:change={(e) => controller.edit({ color: e.detail })} />
+          {/if}
         </div>
       {/if}
     </div>
@@ -274,7 +303,7 @@
     max-block-size: 55%;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: 0.5em 0.75em calc(0.75em + env(safe-area-inset-bottom, 0rem));
+    padding: 0.5em 0.75em calc(0.75em + env(safe-area-inset-bottom, 0em));
     background: var(--background-primary);
     border-top: var(--ppp-border-width) solid var(--background-modifier-border);
     box-shadow: var(--shadow-s);
@@ -311,15 +340,15 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--ppp-touch-target, 2.75rem);
-    min-block-size: var(--ppp-touch-target, 2.75rem);
+    min-inline-size: var(--ppp-touch-target, 2.75em);
+    min-block-size: var(--ppp-touch-target, 2.75em);
     transition: transform 120ms ease-out;
   }
   .ppp-draft-sheet__button:active:not(:disabled) {
     transform: scale(0.96);
   }
   .ppp-draft-sheet__button:focus-visible {
-    outline: var(--ppp-border-width-thick, 0.125rem) solid var(--interactive-accent);
+    outline: var(--ppp-border-width-thick, 0.125em) solid var(--interactive-accent);
     outline-offset: 0.125em;
   }
   .ppp-draft-sheet__fields {
@@ -352,11 +381,6 @@
     display: flex;
     align-items: center;
     gap: 0.5em;
-  }
-  .ppp-draft-sheet__color input {
-    inline-size: 2.75em;
-    block-size: 2em;
-    padding: 0;
   }
   .ppp-draft-sheet__problem,
   .ppp-draft-sheet__error {

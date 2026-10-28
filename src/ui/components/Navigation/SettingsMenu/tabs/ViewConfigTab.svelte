@@ -68,6 +68,7 @@
   $: startTimeField = (view?.config?.["startTimeField"] as string) ?? "";
   $: endTimeField = (view?.config?.["endTimeField"] as string) ?? "";
   $: checkField = (view?.config?.["checkField"] as string) ?? "";
+  $: statusField = (view?.config?.["statusField"] as string) ?? "";
 
   // Board-specific settings
   $: columnWidth = (view?.config?.["columnWidth"] as number) ?? 270;
@@ -268,17 +269,6 @@
               </label>
             </div>
             
-            <!-- svelte-ignore a11y-label-has-associated-control -->
-            <label>
-              {$i18n.t('settings-menu.view-config.calendar.timeline.event-color-field')}
-              <TextField
-                value={eventColorField}
-                placeholder={$i18n.t('settings-menu.view-config.calendar.timeline.hints.event-color-placeholder')}
-                on:commit={(e) => emitUpdate({ eventColorField: e.detail.value })}
-              />
-              <span class="hint">{$i18n.t('settings-menu.view-config.calendar.timeline.hints.event-color-field')}</span>
-            </label>
-            
             <label class="checkbox">
               <input
                 class="ppp-touch-target"
@@ -385,6 +375,21 @@
               on:change={(e) => emitUpdate({ checkField: e.detail })}
             />
             <span class="hint">{$i18n.t('settings-menu.view-config.calendar.field-mapping.hints.check')}</span>
+          </label>
+
+          <label for="fieldlist-status-input">
+            {$i18n.t('settings-menu.view-config.calendar.field-mapping.status')}
+            <FieldComboInput fields={stringFields} id="fieldlist-status" value={statusField}
+              placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
+              on:change={(e) => emitUpdate({ statusField: e.detail || undefined })} />
+          </label>
+
+          <label for="fieldlist-color-input">
+            {$i18n.t('settings-menu.view-config.calendar.timeline.event-color-field')}
+            <FieldComboInput fields={stringFields} id="fieldlist-color" value={eventColorField}
+              placeholder={$i18n.t('settings-menu.view-config.calendar.timeline.hints.event-color-placeholder')}
+              on:change={(e) => emitUpdate({ eventColorField: e.detail || undefined })} />
+            <span class="hint">{$i18n.t('settings-menu.view-config.calendar.timeline.hints.event-color-field')}</span>
           </label>
 
           <label for="fieldlist-icon-calendar-input">

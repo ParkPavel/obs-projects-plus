@@ -54,6 +54,7 @@ export interface DraftMapping {
   readonly icon?: string | undefined;
   /** The done checkbox (checkField): the status the calendar already shows. */
   readonly check?: string | undefined;
+  readonly status?: string | undefined;
   /** Computed fields: shown, never written. */
   readonly computed: readonly string[];
 }
@@ -79,13 +80,20 @@ export function draftMapping({ config, fields, start, end, creation, check }: Dr
     color: config?.eventColorField || undefined,
     icon: config?.iconField || undefined,
     check: check ?? (config?.checkField || undefined),
+    status: config?.statusField || undefined,
     computed: fields.filter((f) => f.derived).map((f) => f.name),
   };
 }
 
 /** One key per mapping: a draft begun under another mapping is not this view's. */
 export function mappingKey(m: DraftMapping): string {
-  return [m.start, m.end, m.startTime, m.endTime, m.creation, m.color, m.icon, m.check, ...m.computed].join("|");
+  return JSON.stringify([m.start, m.end, m.startTime, m.endTime, m.creation, m.color, m.icon, m.check, m.status, m.computed]);
+}
+
+/** Different values cannot be safely written into the same property. */
+export function conflictingDraftFields(m: DraftMapping): string[] {
+  const names = [m.start, m.end, m.startTime, m.endTime, m.creation, m.check, m.status, m.color, m.icon].filter((n): n is string => !!n);
+  return [...new Set(names.filter((name, index) => names.indexOf(name) !== index))];
 }
 
 export interface CalendarDraft {
@@ -101,6 +109,7 @@ export interface CalendarDraft {
   readonly color: string;
   readonly icon: string;
   readonly done: boolean;
+  readonly status: string;
   /** The view's defaults (filter prefill), written under the mapped values. */
   readonly prefill: Values;
   readonly mapping: DraftMapping;
@@ -182,6 +191,7 @@ export function draftRecord(draft: CalendarDraft, untitled: string): DataRecord 
   if (m.color) values[m.color] = draft.color || null;
   if (m.icon) values[m.icon] = draft.icon.trim() || null;
   if (m.check) values[m.check] = draft.done;
+  if (m.status) values[m.status] = draft.status || null;
   const title = (draftFileName(draft, untitled) || untitled).replace(/[\\/]/g, " ");
   return { id: `${DRAFT_ID_PREFIX}${draft.session}/${title}.md`, values };
 }
@@ -204,14 +214,9 @@ export function draftPayload(draft: CalendarDraft, today: Dayjs, untitled: strin
   if (m.start === "name") delete values["name"];
   if (m.creation) values[m.creation] = today.format(DAY);
   if (m.check) values[m.check] = draft.done;
-  if (m.color) {
-    if (draft.color) values[m.color] = draft.color;
-    else delete values[m.color];
-  }
-  if (m.icon) {
-    if (draft.icon.trim()) values[m.icon] = draft.icon.trim();
-    else delete values[m.icon];
-  }
+  if (m.status) values[m.status] = draft.status || null;
+  if (m.color) values[m.color] = draft.color || null;
+  if (m.icon) values[m.icon] = draft.icon.trim() || null;
   for (const name of m.computed) delete values[name];
   return { name: draftFileName(draft, untitled), templatePath: draft.templatePath, values };
 }
@@ -229,7 +234,7 @@ export interface DraftBegin {
   readonly mapping: DraftMapping;
 }
 
-export type DraftEdit = Partial<Pick<CalendarDraft, "name" | "templatePath" | "color" | "icon" | "done">>;
+export type DraftEdit = Partial<Pick<CalendarDraft, "name" | "templatePath" | "color" | "icon" | "done" | "status">>;
 
 export interface DraftState {
   readonly draft: CalendarDraft | null;
@@ -238,10 +243,11 @@ export interface DraftState {
   readonly error: string | null;
 }
 
-export type ConfirmResult = "saved" | "failed" | "busy" | "stale" | "none";
+export type ConfirmResult = "saved" | "failed" | "busy" | "stale" | "none" | "invalid";
 
 export interface CalendarDraftController extends Readable<DraftState> {
   getState(): DraftState;
+  owns(id: string): boolean;
   begin(input: DraftBegin): CalendarDraft | null;
   move(date: Dayjs, options?: RecordChangeOptions): void;
   edit(fields: DraftEdit): void;
@@ -252,6 +258,13 @@ export interface CalendarDraftController extends Readable<DraftState> {
   cancel(): void;
   confirm(save: (payload: DraftPayload, draft: CalendarDraft) => Promise<unknown>, today: Dayjs, untitled: string): Promise<ConfirmResult>;
   destroy(): void;
+}
+
+/** A stale gesture must not edit a replacement draft or reach a file API. */
+export function interceptDraft(id: unknown, controller: CalendarDraftController, action: () => void): boolean {
+  if (typeof id !== "string" || !isDraftId(id)) return false;
+  if (controller.owns(id)) action();
+  return true;
 }
 
 const textOf = (value: unknown): string => (typeof value === "string" ? value : "");
@@ -273,6 +286,7 @@ export function createCalendarDraft(): CalendarDraftController {
   return {
     subscribe: store.subscribe,
     getState: () => state,
+    owns: (id) => alive && !!state.draft && id.startsWith(`${DRAFT_ID_PREFIX}${state.draft.session}/`),
 
     begin(input) {
       if (!alive || state.saving) return null;
@@ -299,6 +313,7 @@ export function createCalendarDraft(): CalendarDraftController {
         color: mapping.color ? textOf(prefill[mapping.color]) : "",
         icon: mapping.icon ? textOf(prefill[mapping.icon]) : "",
         done: mapping.check ? prefill[mapping.check] === true : false,
+        status: mapping.status ? textOf(prefill[mapping.status]) : "",
         prefill,
         mapping,
       };
@@ -334,6 +349,7 @@ export function createCalendarDraft(): CalendarDraftController {
       const draft = state.draft;
       if (!alive || !draft) return "none";
       if (state.saving) return "busy";
+      if (conflictingDraftFields(draft.mapping).length) return "invalid";
       const session = draft.session;
       set({ draft, saving: true, error: null });
       const current = () => alive && state.draft?.session === session;

@@ -202,6 +202,23 @@ describe("cancel, refusals and one write at a time", () => {
 });
 
 describe("what is written", () => {
+  it("refuses conflicting mappings instead of overwriting status with a colour", async () => {
+    const ctl = createCalendarDraft();
+    ctl.begin(begin(mapping({ status: "stage", color: "stage" })));
+    const save = jest.fn();
+    expect(await ctl.confirm(save, TODAY, UNTITLED)).toBe("invalid");
+    expect(save).not.toHaveBeenCalled();
+    expect(ctl.getState().draft).not.toBeNull();
+  });
+  it("keeps textual status separate from completion and preserves false/zero defaults", () => {
+    const ctl = createCalendarDraft();
+    ctl.begin(begin(mapping({ status: "stage" }), { prefill: { stage: "Queued", done: false, effort: 0 } }));
+    expect(ctl.getState().draft?.status).toBe("Queued");
+    ctl.edit({ status: "Active" });
+    expect(draftPayload(ctl.getState().draft!, TODAY, UNTITLED).values).toMatchObject({ stage: "Active", done: false, effort: 0 });
+    ctl.edit({ status: "" });
+    expect(draftPayload(ctl.getState().draft!, TODAY, UNTITLED).values["stage"]).toBeNull();
+  });
   it("a computed property is shown, never written — not even from the defaults", () => {
     const ctl = createCalendarDraft();
     const m = mapping({}, [field("done", true), field("score", true)]);
@@ -220,14 +237,14 @@ describe("what is written", () => {
     expect(payload.values).toMatchObject({ startTime: "10:00", endDate: "2026-10-26", endTime: "11:00" });
   });
 
-  it("defaults give the done state, colour and icon; a cleared colour is not written", () => {
+  it("defaults give the done state, colour and icon; clearing explicitly overrides a template colour", () => {
     const ctl = createCalendarDraft();
     ctl.begin(begin(mapping(), { prefill: { done: true, color: "#00aa00", icon: "⭐" } }));
     const d = ctl.getState().draft!;
     expect([d.done, d.color, d.icon]).toEqual([true, "#00aa00", "⭐"]);
     ctl.edit({ color: "" });
     const values = draftPayload(ctl.getState().draft!, TODAY, UNTITLED).values;
-    expect(values).not.toHaveProperty("color");
+    expect(values["color"]).toBeNull();
     expect(values["done"]).toBe(true);
   });
 });

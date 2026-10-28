@@ -971,7 +971,20 @@
                 "events-count_one": "{{count}} event",
                 "events-count_other": "{{count}} events",
                 "reset-to-original": "Reset to original",
-                "reset-to-original-time": "Reset to original time"
+                "reset-to-original-time": "Reset to original time",
+                "draft": {
+                    "title": "New event",
+                    "discard": "Discard event",
+                    "start": "Starts",
+                    "end": "Ends",
+                    "done": "Done",
+                    "status": "Status",
+                    "icon": "Icon",
+                    "color": "Colour",
+                    "clear-color": "Clear colour",
+                    "computed": "Read-only computed fields: {{fields}}",
+                    "mapping-conflict": "Choose distinct mapped properties before saving: {{fields}}"
+                }
             },
             "gallery": {
                 "name": "Gallery",
@@ -2256,7 +2269,8 @@
                             "start-time": "Separate start time field (HH:mm)",
                             "end-time": "Separate end time field",
                             "check": "Field for marking completion (completed, done, etc.)"
-                        }
+                        },
+                        "status": "Status field"
                     }
                 },
                 "board": {

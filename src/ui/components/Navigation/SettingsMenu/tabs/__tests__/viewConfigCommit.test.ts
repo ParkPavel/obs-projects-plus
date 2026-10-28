@@ -290,6 +290,20 @@ describe("settings-binds — a checkbox (board freeze columns) and the table tog
 });
 
 describe("settings-binds — the calendar field mapping keeps its value shapes", () => {
+  it.each(["year", "month", "week", "day"])("offers colour and textual status mappings in %s", async (interval) => {
+    const m = mount("calendar", { interval });
+    const status = m.q<HTMLInputElement>("#fieldlist-status-input");
+    const color = m.q<HTMLInputElement>("#fieldlist-color-input");
+    expect(status).not.toBeNull();
+    expect(color).not.toBeNull();
+    await edit(status, "status");
+    change(status);
+    await edit(color, "cover");
+    change(color);
+    await tick();
+    expect(m.updates).toEqual([{ statusField: "status" }, { eventColorField: "cover" }]);
+    m.destroy();
+  });
   it("a mapping field emits the text itself (an empty one too), the icon field clears to undefined", async () => {
     const m = mount("calendar", { dateField: "due", iconField: "status" });
     const date = m.q<HTMLInputElement>("#fieldlist-date-input");

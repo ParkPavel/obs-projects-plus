@@ -1009,7 +1009,20 @@
                 "next-year": "下一年",
                 "events-count_other": "{{count}} 个事件",
                 "reset-to-original": "重置为原始值",
-                "reset-to-original-time": "重置为原始时间"
+                "reset-to-original-time": "重置为原始时间",
+                "draft": {
+                    "title": "新建事件",
+                    "discard": "放弃事件",
+                    "start": "开始",
+                    "end": "结束",
+                    "done": "已完成",
+                    "status": "状态",
+                    "icon": "图标",
+                    "color": "颜色",
+                    "clear-color": "清除颜色",
+                    "computed": "只读计算字段：{{fields}}",
+                    "mapping-conflict": "保存前请为各项选择不同的映射属性：{{fields}}"
+                }
             },
             "gallery": {
                 "name": "画册",
@@ -2353,7 +2366,8 @@
                             "start-time": "单独的开始时间字段 (HH:mm)",
                             "end-time": "单独的结束时间字段",
                             "check": "用于标记完成状态的字段 (completed, done 等)"
-                        }
+                        },
+                        "status": "状态字段"
                     }
                 },
                 "board": {

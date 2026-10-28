@@ -749,6 +749,7 @@
             filterConditions={tabScope.filterConditions}
           />
         {:else if activeTab.viewType === "calendar" && project}
+          {#key activeTab.id}
           <CalendarView
             {project}
             frame={viewFrame}
@@ -760,6 +761,7 @@
             onConfigChange={handleCalendarConfigChange}
             {dataVersion}
           />
+          {/key}
         {:else if activeTab.viewType === "gallery" && project}
           <GalleryView
             {project}

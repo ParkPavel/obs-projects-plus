@@ -22,6 +22,8 @@ export interface CalendarConfig {
   // Creation date field — auto-filled when creating notes, NOT used for event start detection
   readonly dateField?: string;       // default: "date" (creation date)
   readonly checkField?: string;
+  /** A textual status, separate from the completion checkbox. */
+  readonly statusField?: string;
   /** NPLAN-D2 — page-level icon field (emoji or lucide icon name). */
   readonly iconField?: string;
   readonly centerOn?: string | null;

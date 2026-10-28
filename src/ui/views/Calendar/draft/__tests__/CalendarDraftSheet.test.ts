@@ -64,7 +64,7 @@ describe("CalendarDraftSheet — there at once, and not in the way", () => {
     m.ctl.move(dayjs("2026-10-27"), { startTime: "14:00", endTime: "15:00", endDate: dayjs("2026-10-27") });
     await tick();
     expect(m.sheet()).toHaveAttribute("data-draft-session", String(draft.session));
-    const times = [...m.container.querySelectorAll<HTMLInputElement>("input.ppp-date-field__text")].map((i) => i.value);
+    const times = Array.from(m.container.querySelectorAll<HTMLInputElement>("input.ppp-date-field__text")).map((i) => i.value);
     expect(times[0]).toContain("14:00");
     expect(times[1]).toContain("15:00");
   });
@@ -121,6 +121,16 @@ describe("CalendarDraftSheet — keys", () => {
 });
 
 describe("CalendarDraftSheet — writing", () => {
+  it("captures an unblurred textual status when ✓ is pressed", async () => {
+    const m = mount();
+    begin(m.ctl, { mapping: draftMapping({ config: { statusField: "stage" }, fields: [] }) });
+    await tick();
+    const input = m.container.querySelector<HTMLInputElement>('input[id$="-status"]')!;
+    await fireEvent.input(input, { target: { value: "Active" } });
+    await fireEvent.click(m.confirmButton());
+    expect(m.onConfirm).toHaveBeenCalledTimes(1);
+    expect(m.ctl.getState().draft?.status).toBe("Active");
+  });
   it("a refusal is shown beside the form and the typed values stay", async () => {
     const m = mount();
     begin(m.ctl);
