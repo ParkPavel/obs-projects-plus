@@ -9,6 +9,8 @@ type ViewTab = import("../../../types").ViewTab;
 type ViewApi = import("src/lib/viewApi").ViewApi;
 type DataFrame = import("src/lib/dataframe/dataframe").DataFrame;
 import DatabaseCallBlock from "../DatabaseCallBlock.svelte";
+import { isMobileDevice } from "src/lib/stores/ui";
+import { close as closeDrawer, isOpenNow } from "src/lib/stores/agendaDrawer";
 
 // Break the heavy view import cycles, while mounting the actual block, shared
 // settings panel, settings controls, configChange dispatcher and local-fork path.
@@ -17,6 +19,7 @@ jest.mock("src/ui/views/Calendar/CalendarView.svelte", () => require("src/ui/com
 jest.mock("src/ui/views/Gallery/GalleryView.svelte", () => require("src/ui/components/EmptyState/EmptyState.svelte"));
 jest.mock("../DataTableContent.svelte", () => require("src/ui/components/EmptyState/EmptyState.svelte"));
 jest.mock("src/ui/modals/createNoteModal", () => ({ CreateNoteModal: jest.fn() }));
+jest.mock("src/lib/stores/ui", () => ({ ...jest.requireActual("src/lib/stores/ui"), isMobileDevice: require("svelte/store").writable(false) }));
 jest.mock("src/lib/stores/i18n", () => ({
   i18n: require("svelte/store").writable({ t: (key: string, options?: { name?: string }) => options?.name ? `${key} ${options.name}` : key }),
 }));
@@ -24,7 +27,7 @@ jest.mock("src/lib/stores/settings", () => ({
   settings: Object.assign(require("svelte/store").writable({ projects: [] }), { updateViewConfig: jest.fn() }),
 }));
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); (isMobileDevice as import("svelte/store").Writable<boolean>).set(false); });
 const source = {
   ...DEFAULT_VIEW, id: "source-view", name: "Publication plan", type: "board",
   config: { groupByField: "status", thumbnailLayout: "none", custom: { retained: 7 } },
@@ -84,4 +87,23 @@ test("local forks deep-copy nested settings, filter and sort, retaining the narr
   ] } as DataFrame;
   expect(scopeTabFrame(frame, resolveTabView(first, [source]), false).frame.records.map(r => r.id)).toEqual(["open"]);
   expect(localTabWithConfig({ ...linked("missing"), linkedViewId: "gone" }, [], { color: "blue" }).linkedViewId).toBeUndefined();
+});
+
+test("the mobile block header opens its own calendar drawer without opening the host project", async () => {
+  (isMobileDevice as import("svelte/store").Writable<boolean>).set(true);
+  const project = { ...DEFAULT_PROJECT, id: "host", name: "Host" };
+  const frame: DataFrame = { fields: [], records: [] };
+  const key = "block:host:widget:calendar-tab";
+  const rendered = render(DatabaseCallBlock, {
+    project, frame, fields: [], api: {} as ViewApi, readonly: false, getRecordColor: () => null,
+    widgetId: "widget", config: { viewTabs: [{ id: "calendar-tab", label: "Calendar", viewType: "calendar", config: {} }] },
+  });
+  try {
+    const button = rendered.container.querySelector<HTMLButtonElement>("[data-embedded-agenda-toggle]")!;
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+    await fireEvent.click(button);
+    expect(isOpenNow(key)).toBe(true);
+    expect(isOpenNow(project.id)).toBe(false);
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+  } finally { closeDrawer(key); }
 });

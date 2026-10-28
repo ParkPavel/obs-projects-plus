@@ -108,6 +108,8 @@
   export let embedded: boolean = false;
   /** The data source's agenda defaults, separate from the host's write project. */
   export let agendaProject: ProjectDefinition | undefined = undefined;
+  /** Embedded drawers use a block/tab key, never the standalone project key. */
+  export let agendaKey: string | undefined = undefined;
   export let filterConditions: import("src/settings/settings").FilterCondition[] = [];
 
   // Navigation & Animation Controllers (v3.0.0)
@@ -228,6 +230,7 @@
   onDestroy(() => {
     if (_saveConfigTimer !== null) clearTimeout(_saveConfigTimer);
     _saveConfigTimer = null;
+    if (embedded) closeAgendaDrawer(agendaKey);
   });
 
   // Reactive frame data - dataVersion forces re-evaluation on every data update
@@ -1713,7 +1716,7 @@
 
   // Agenda Logic
   $: effectiveAgendaProject = embedded
-    ? { ...(agendaProject ?? project), agenda: config?.localAgenda ?? (agendaProject ?? project).agenda }
+    ? { ...(agendaProject ?? project), ...(config?.localAgenda ? { agenda: config.localAgenda } : {}) }
     : project;
 
   function latestAgendaProject(): ProjectDefinition {
@@ -1728,7 +1731,7 @@
   // stores true) must not cover the grid on entry.
   // Mobile drawer: session store shared with the navbar toggle (App.svelte), keyed by the
   // project id (the same key App uses). Never persisted; default closed.
-  $: drawerKey = project?.id;
+  $: drawerKey = embedded ? agendaKey : project?.id;
   $: drawerOpen = drawerKey ? $agendaDrawer[drawerKey] === true : false;
   $: agendaVisible = isMobile
     ? drawerOpen  // Mobile: session store

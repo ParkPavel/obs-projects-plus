@@ -3,6 +3,7 @@ import { tick } from "svelte";
 import { DEFAULT_PROJECT } from "src/settings/settings";
 import BoardView from "../BoardView.svelte";
 import { settings } from "src/lib/stores/settings";
+import { DataFieldType } from "src/lib/dataframe/dataframe";
 
 jest.mock("src/ui/modals/createNoteModal", () => ({ CreateNoteModal: jest.fn() }));
 jest.mock("src/lib/record/openRecord", () => ({ activateRecord: jest.fn() }));
@@ -15,7 +16,7 @@ jest.mock("src/ui/components/Layout", () => ({
 afterEach(() => { cleanup(); jest.restoreAllMocks(); });
 const props = () => ({
   project: { ...DEFAULT_PROJECT, id: "project", name: "Project" },
-  frame: { fields: ["status", "priority"].map(name => ({ name, type: "string" as const, identifier: false, derived: false, repeated: false, typeConfig: { options: ["low", "high"] } })), records: [] },
+  frame: { fields: ["status", "priority"].map(name => ({ name, type: DataFieldType.String, identifier: false, derived: false, repeated: false, typeConfig: { options: ["low", "high"] } })), records: [] },
   readonly: false, api: {} as import("src/lib/viewApi").ViewApi,
   getRecordColor: () => null, sortRecords: (records: readonly import("src/lib/dataframe/dataframe").DataRecord[]) => [...records],
   getRecord: () => undefined, hasSort: false, hasFilter: false,

@@ -6,10 +6,13 @@ import CalendarView from "../CalendarView.svelte";
 import { settings } from "src/lib/stores/settings";
 import { openContextMenu } from "src/lib/contextMenu";
 import { newAgendaList } from "../agenda/newAgendaList";
+import { isMobileDevice } from "src/lib/stores/ui";
+import { toggle as toggleDrawer, close as closeDrawer, isOpenNow } from "src/lib/stores/agendaDrawer";
 
 jest.mock("src/ui/modals/createNoteModal", () => ({ CreateNoteModal: jest.fn(), initialNoteName: jest.fn(), noteNameProblem: jest.fn() }));
 jest.mock("src/lib/record/openRecord", () => ({ activateRecord: jest.fn(), openRecord: jest.fn(), modeFromNewLeaf: jest.fn() }));
 jest.mock("src/lib/contextMenu", () => ({ openContextMenu: jest.fn() }));
+jest.mock("src/lib/stores/ui", () => ({ ...jest.requireActual("src/lib/stores/ui"), isMobileDevice: require("svelte/store").writable(false) }));
 jest.mock("dayjs", () => ({ __esModule: true, default: jest.requireActual("dayjs") }));
 jest.mock("src/ui/components/Layout", () => ({
   ViewLayout: jest.requireActual("src/ui/components/Layout/ViewLayout.svelte").default,
@@ -25,6 +28,7 @@ jest.mock("../components/Calendar/YearHeatmap.svelte", () => require("src/ui/com
 
 beforeEach(() => {
   Object.assign(globalThis, { activeDocument: document, activeWindow: window });
+  (isMobileDevice as import("svelte/store").Writable<boolean>).set(false);
   jest.useFakeTimers(); jest.clearAllMocks();
 });
 afterEach(() => { cleanup(); jest.restoreAllMocks(); jest.clearAllTimers(); jest.useRealTimers(); });
@@ -113,4 +117,24 @@ test.each(["arrow-down", "trash-2"])("embedded agenda action %s updates local li
   expect(result.localAgenda.custom.lists.map((list: { name: string }) => list.name)).toEqual(icon === "arrow-down" ? ["Second", "First"] : ["Second"]);
   expect(write).not.toHaveBeenCalled();
   expect(source.agenda.custom.lists.map(list => list.name)).toEqual(["First", "Second"]);
+});
+
+test("mobile embedded drawers ignore the project key and close only their own session on destroy", async () => {
+  (isMobileDevice as import("svelte/store").Writable<boolean>).set(true);
+  const p = props();
+  const first = render(CalendarView, { ...p, agendaKey: "block-first" });
+  const second = render(CalendarView, { ...p, agendaKey: "block-second" });
+  try {
+    toggleDrawer(p.project.id); await tick();
+    expect(document.querySelectorAll(".agenda")).toHaveLength(0);
+    toggleDrawer("block-first"); await tick();
+    expect(document.querySelectorAll(".agenda")).toHaveLength(1);
+    expect(isOpenNow("block-second")).toBe(false);
+    first.component.$destroy();
+    expect(isOpenNow("block-first")).toBe(false);
+    expect(isOpenNow(p.project.id)).toBe(true);
+    expect(isOpenNow("block-second")).toBe(false);
+  } finally {
+    second.component.$destroy(); closeDrawer(p.project.id); closeDrawer("block-first");
+  }
 });

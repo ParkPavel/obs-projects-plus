@@ -9,6 +9,9 @@
    * a table tab takes the dashboard's field list as its default (`fieldLayout.ts`).
    */
   import { createEventDispatcher } from "svelte";
+  import { Icon } from "obsidian-svelte";
+  import { isMobileDevice } from "src/lib/stores/ui";
+  import { agendaDrawer, toggle as toggleAgendaDrawer } from "src/lib/stores/agendaDrawer";
   import type {
     DataFrame,
     DataRecord,
@@ -234,6 +237,7 @@
   $: tabs = (config["viewTabs"] as ViewTab[]) ?? [];
   $: activeTabId = String(config["activeTabId"] ?? tabs[0]?.id ?? "");
   $: activeTab = tabs.find((t) => t.id === activeTabId) ?? tabs[0];
+  $: embeddedAgendaKey = `block:${project?.id ?? ""}:${widgetId}:${activeTab?.id ?? ""}`;
 
   // i3-final (B3): a tab may follow a view of the project it reads (the source
   // project for a linked-source block, else this one). Its config, sort and
@@ -551,6 +555,14 @@
         on:tabRemove={handleTabRemove}
         on:tabRename={handleTabRename}
       />
+      {#if $isMobileDevice && project && activeTab?.viewType === "calendar"}
+        <button type="button" class="clickable-icon" data-embedded-agenda-toggle
+          aria-label={$i18n.t("views.calendar.agenda.title")}
+          aria-expanded={$agendaDrawer[embeddedAgendaKey] === true}
+          on:click={() => toggleAgendaDrawer(embeddedAgendaKey)}>
+          <Icon name="panel-right" size="sm" />
+        </button>
+      {/if}
       <BlockFilterBar
         filter={subFilter}
         fields={frame.fields}
@@ -751,6 +763,7 @@
           <CalendarView
             embedded={true}
             agendaProject={sourceProject}
+            agendaKey={embeddedAgendaKey}
             {project}
             frame={viewFrame}
             {api}
