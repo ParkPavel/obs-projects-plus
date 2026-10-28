@@ -1,4 +1,4 @@
-import { isPluginEnabled } from "obsidian-dataview";
+import { isPluginEnabled } from "src/lib/datasources/dataview/host";
 import { derived } from "svelte/store";
 
 import { app } from "./obsidian";

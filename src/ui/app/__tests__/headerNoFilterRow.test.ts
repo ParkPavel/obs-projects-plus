@@ -16,7 +16,7 @@ import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { tick } from "svelte";
 
-jest.mock("obsidian-dataview", () => ({ getAPI: () => undefined, isPluginEnabled: () => false }), { virtual: true });
+jest.mock("src/lib/datasources/dataview/host", () => ({ getAPI: () => undefined, isPluginEnabled: () => false }));
 jest.mock("src/ui/app/View.svelte", () => ({
   __esModule: true,
   default: jest.requireActual("src/__mocks__/obsidian-svelte.js").Icon,

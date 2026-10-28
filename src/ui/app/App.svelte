@@ -27,7 +27,7 @@
   // Shell → UI → Engine → Data dependency direction.
   import { invalidateAll as invalidateTransformAll } from "src/lib/dashboard-engine/transformCache";
   import { dataSource, registerDataFrameInvalidation } from "src/lib/stores/dataframe";
-  import { getAPI, isPluginEnabled } from "obsidian-dataview";
+  import { getAPI, isPluginEnabled } from "src/lib/datasources/dataview/host";
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import { CreateProjectModal } from "src/ui/modals/createProjectModal";
   import { customViews } from "src/lib/stores/customViews";

@@ -14,7 +14,6 @@ import "./ui/tokens/tokens.css";
 
 import { either } from "fp-ts";
 import { Plugin, TFile, TFolder, WorkspaceLeaf, addIcon, Notice } from "obsidian";
-import "obsidian-dataview";
 import { createDataRecord, createProject } from "src/lib/dataApi";
 import { api } from "src/lib/stores/api";
 import { i18n, syncLocale } from "src/lib/stores/i18n";

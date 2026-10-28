@@ -28,7 +28,7 @@
   import { settings } from "src/lib/stores/settings";
   import { interpolateTemplate } from "src/lib/templates/interpolate";
   import { agendaEmoji } from "src/ui/views/Calendar/agenda/agendaEmoji";
-  import { getAPI, isPluginEnabled } from "obsidian-dataview";
+  import { getAPI, isPluginEnabled } from "src/lib/datasources/dataview/host";
   import type { ProjectDefinition } from "src/settings/settings";
   import type {
     AgendaCustomList,
