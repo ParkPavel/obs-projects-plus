@@ -8,12 +8,10 @@ export function parsePickerColor(input: string, doc: Document) {
   if (hex) return { color: hex, hsv: hexToHsv(hex)! };
   const css = normalizeColor(input);
   if (css) {
-    const probe = doc.createElement("span");
-    probe.hidden = true;
+    const probe = (doc.body ?? doc.documentElement).createSpan({ attr: { hidden: "" } });
     probe.style.color = css;
-    if (probe.style.color) {
-      (doc.body ?? doc.documentElement).appendChild(probe);
-      try {
+    try {
+      if (probe.style.color) {
         const resolved = doc.defaultView?.getComputedStyle(probe).color;
         const match = resolved?.match(/^rgba?\(\s*([\d.]+),\s*([\d.]+),\s*([\d.]+)(?:,\s*([\d.]+))?\s*\)$/);
         if (match) {
@@ -24,9 +22,9 @@ export function parsePickerColor(input: string, doc: Document) {
           // palettes accept opaque HEX only; never flatten a transparent color.
           return { color: match[4] !== undefined && Number(match[4]) < 1 ? css : rgb, hsv: hexToHsv(rgb)! };
         }
-      } finally {
-        probe.remove();
       }
+    } finally {
+      probe.remove();
     }
   }
   // No inferred replacement for an invalid/unresolved incoming color.
