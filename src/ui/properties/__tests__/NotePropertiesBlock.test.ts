@@ -24,6 +24,9 @@ jest.mock("src/ui/components/ColorPicker", () => ({
 import "@testing-library/jest-dom";
 import { render, waitFor } from "@testing-library/svelte";
 import { tick } from "svelte";
+import { get } from "svelte/store";
+import { settings } from "src/lib/stores/settings";
+import { DEFAULT_PROJECT } from "src/settings/settings";
 // Required, not imported: esbuild-jest runs babel hoisting on files with
 // jest.mock, and babel refuses an imported binding also used as a type.
 const { TFile } = require("obsidian");
@@ -31,7 +34,7 @@ type TFile = { path: string };
 
 const NotePropertiesBlock = require("../NotePropertiesBlock.svelte").default;
 
-function setup(fm: Record<string, unknown>, other?: Record<string, unknown>) {
+function setup(fm: Record<string, unknown>, other?: Record<string, unknown>, parentProjectId?: string) {
   const file = new TFile("Notes/a.md");
   const getMarkdownFiles = jest.fn(() => [file, new TFile("Notes/b.md")]);
   const listeners: Array<(f: TFile) => void> = [];
@@ -52,7 +55,8 @@ function setup(fm: Record<string, unknown>, other?: Record<string, unknown>) {
     vault: { getMarkdownFiles, getAbstractFileByPath: () => null },
     workspace: { openLinkText: jest.fn(), getLeaf: jest.fn() },
   };
-  const result = render(NotePropertiesBlock, { props: { app, file } });
+  const Component = parentProjectId === undefined ? NotePropertiesBlock : require("./fixtures/PaletteNoteHost.svelte").default;
+  const result = render(Component, { props: { app, file, ...(parentProjectId === undefined ? {} : { projectId: parentProjectId }) } });
   return { ...result, processFrontMatter, getMarkdownFiles };
 }
 
@@ -446,5 +450,91 @@ describe("i3-final NotePropertiesBlock", () => {
     swatch().click();
     await flush();
     expect(getMarkdownFiles).toHaveBeenCalledTimes(1);
+  });
+
+  it("chooses saved colors explicitly, isolating two note headers and each project's changes", async () => {
+    const original = get(settings);
+    const shared = [{ color: "#112233", name: "Shared" }];
+    settings.set({ ...original, preferences: { ...original.preferences, colorFavorites: shared }, projects: [
+      { ...DEFAULT_PROJECT, id: "one", name: "Query palette", dataSource: { kind: "dataview", config: { query: "TABLE FROM #other" } }, colorFavorites: [{ color: "#445566", name: "One" }] },
+      { ...DEFAULT_PROJECT, id: "two", name: "Second palette" },
+    ] });
+    const fm = { tint: "#ff0000" };
+    const first = setup(fm), second = setup({ ...fm });
+    try {
+      await tick();
+      for (const m of [first, second]) (m.container.querySelector(".ppp-note-props__swatch.is-button") as HTMLButtonElement).click();
+      await flush();
+      const select = first.container.querySelector<HTMLSelectElement>("[data-palette-scope]")!;
+      const otherSelect = second.container.querySelector<HTMLSelectElement>("[data-palette-scope]")!;
+      expect(select).not.toBeNull();
+      expect(select.value).toBe(""); // never infer query membership from the note folder
+      expect(first.container.querySelector(".favorites-grid")?.textContent).not.toContain("One");
+      select.value = "one"; select.dispatchEvent(new Event("change", { bubbles: true }));
+      await flush();
+      expect(otherSelect.value).toBe("");
+      (first.container.querySelector("button.star-btn") as HTMLButtonElement).click();
+      await flush();
+      const state = get(settings);
+      expect(state.projects[0]!.colorFavorites?.map(f => f.color)).toEqual(["#445566", "#ff0000"]);
+      expect(state.projects[1]!.colorFavorites).toBeUndefined();
+      expect(state.preferences.colorFavorites).toEqual(shared);
+      expect(first.processFrontMatter).not.toHaveBeenCalled();
+      expect(fm.tint).toBe("#ff0000");
+      select.value = "two"; select.dispatchEvent(new Event("change", { bubbles: true }));
+      await flush();
+      (first.container.querySelector("button.star-btn") as HTMLButtonElement).click();
+      await flush();
+      expect(get(settings).projects[1]!.colorFavorites?.map(f => f.color)).toEqual(["#112233", "#ff0000"]);
+      expect(get(settings).preferences.colorFavorites).toEqual(shared);
+      // Deletion cannot leave a hidden stale target, even while the picker stays open.
+      settings.set({ ...get(settings), projects: get(settings).projects.filter(p => p.id !== "two") });
+      await flush();
+      expect(select.value).toBe("");
+      select.value = "one"; select.dispatchEvent(new Event("change", { bubbles: true }));
+      await flush();
+      first.component.$set({ file: new TFile("Elsewhere/new.md") });
+      await flush();
+      expect(first.container.querySelector<HTMLSelectElement>("[data-palette-scope]")!.value).toBe("");
+    } finally { first.component.$destroy(); second.component.$destroy(); settings.set(original); }
+  });
+
+  it("keeps an explicit parent palette context and reacts when that owner changes", async () => {
+    const original = get(settings);
+    settings.set({ ...original, projects: [
+      { ...DEFAULT_PROJECT, id: "one", name: "One", colorFavorites: [{ color: "#112233", name: "One" }] },
+      { ...DEFAULT_PROJECT, id: "two", name: "Two", colorFavorites: [{ color: "#445566", name: "Two" }] },
+    ] });
+    const m = setup({ tint: "#ff0000" }, undefined, "one");
+    try {
+      await tick();
+      (m.container.querySelector(".ppp-note-props__swatch.is-button") as HTMLButtonElement).click();
+      await flush();
+      expect(m.container.querySelector("[data-palette-scope]")).toBeNull();
+      m.component.$set({ projectId: "two" });
+      await flush();
+      (m.container.querySelector("button.star-btn") as HTMLButtonElement).click();
+      await flush();
+      expect(get(settings).projects[0]!.colorFavorites?.map(f => f.color)).toEqual(["#112233"]);
+      expect(get(settings).projects[1]!.colorFavorites?.map(f => f.color)).toEqual(["#445566", "#ff0000"]);
+    } finally { m.component.$destroy(); settings.set(original); }
+  });
+
+  it("a color gesture started on one note cannot commit into the next note", async () => {
+    const m = setup({ tint: "#ff0000" });
+    try {
+      await tick();
+      (m.container.querySelector(".ppp-note-props__swatch.is-button") as HTMLButtonElement).click();
+      await flush();
+      const hue = m.container.querySelector<HTMLElement>(".hue-slider")!;
+      jest.spyOn(hue, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, top: 0, left: 0, right: 100, bottom: 10, width: 100, height: 10, toJSON() { return {}; } });
+      hue.dispatchEvent(new MouseEvent("mousedown", { clientX: 50, bubbles: true, cancelable: true }));
+      await tick();
+      m.component.$set({ file: new TFile("Elsewhere/next.md") });
+      await flush();
+      window.dispatchEvent(new MouseEvent("mouseup"));
+      await flush();
+      expect(m.processFrontMatter).not.toHaveBeenCalled();
+    } finally { m.component.$destroy(); }
   });
 });

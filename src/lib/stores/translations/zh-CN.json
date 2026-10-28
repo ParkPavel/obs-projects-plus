@@ -1951,8 +1951,12 @@
                 "pick-color": "选择颜色",
                 "favorites": "收藏",
                 "favorites-empty-hint": "按 ⭐ 添加",
+                "favorites-scope": "收藏颜色",
+                "shared-favorites": "通用",
+                "project-favorites-hint": "收藏颜色的更改仅影响所选项目。",
+                "used-in-notes": "笔记中使用的颜色",
                 "hex-code": "HEX 代码",
-                "invalid-format": "格式无效",
+                "invalid-format": "请输入 #RGB 或 #RRGGBB",
                 "expand-palette": "展开调色板",
                 "collapse-palette": "折叠调色板"
             },

@@ -677,8 +677,12 @@
                 "pick-color": "Выбор цвета",
                 "favorites": "Избранное",
                 "favorites-empty-hint": "Нажмите ⭐ чтобы добавить",
+                "favorites-scope": "Избранные цвета",
+                "shared-favorites": "Общие",
+                "project-favorites-hint": "Изменения избранного сохраняются только для выбранного проекта.",
+                "used-in-notes": "Цвета из заметок",
                 "hex-code": "HEX код",
-                "invalid-format": "Неверный формат",
+                "invalid-format": "Введите #RGB или #RRGGBB",
                 "expand-palette": "Развернуть палитру",
                 "collapse-palette": "Свернуть палитру"
             },

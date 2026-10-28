@@ -113,11 +113,11 @@
     },
     {
       "name": "read/user-guide-en.html",
-      "sha256": "bfeed6837f942e46ee2afd483c03bcd6beb53f5c3ca537b7d71b2b3927969a7d"
+      "sha256": "70ddd7264f8d5907c8c5c6b461fb783e2fcfa4356f7b9e750a1a7c8fc025d79e"
     },
     {
       "name": "read/user-guide.html",
-      "sha256": "4a29f552291b74e924d09d7cbcfb05ee35d3a947138cb766f95622fb2ddfb63e"
+      "sha256": "33d8adffdb4979b1c89b2b7d30f765b6b58f3ddf170d291b7bccf2c763ec4cf0"
     },
     {
       "name": "read/templates-readme.html",
@@ -149,7 +149,7 @@
     },
     {
       "name": "search-index.json",
-      "sha256": "d791e3bb209aa58493d2d26dfdd99e1bc21b00f96c30c99a710483a624d03646"
+      "sha256": "bcbc42c419714f33825c85ae16f7ee550a24eba000b58d953ee1cb0890cab15e"
     },
     {
       "name": ".nojekyll",

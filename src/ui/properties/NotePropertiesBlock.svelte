@@ -23,7 +23,7 @@
    * values other notes hold are memoized (usedValuesCache).
    */
   import { onDestroy, onMount, tick } from "svelte";
-  import { get } from "svelte/store";
+  import { get, writable } from "svelte/store";
   import { Notice, TFile, type App, type EventRef } from "obsidian";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
@@ -60,6 +60,8 @@
   import ComboField from "src/ui/components/fields/ComboField.svelte";
   import { namesToOptions, type ComboOption } from "src/ui/components/fields/comboOptions";
   import { ColorPicker } from "src/ui/components/ColorPicker";
+  import PaletteScopeSelect from "src/ui/components/ColorPicker/PaletteScopeSelect.svelte";
+  import { providePaletteProject, usePaletteProject } from "src/ui/paletteProject";
   import { RelationPickerModal, pathFromFile } from "src/ui/views/VisualizerPane/RelationPickerModal";
   import ChipsEditor from "./ChipsEditor.svelte";
   import { createWriteQueue } from "./writeQueue";
@@ -86,6 +88,18 @@
   export let app: App;
   export let file: TFile;
   export let inverseIndexStore: InverseIndexStore | undefined = undefined;
+
+  // Keep a parent's explicit owner (e.g. NotePeek); a standalone header offers
+  // a deliberate choice rather than inferring query membership from a folder.
+  const inheritedPaletteProject = usePaletteProject();
+  const notePaletteProject = writable<string | undefined>(undefined);
+  providePaletteProject(inheritedPaletteProject ?? notePaletteProject);
+  let paletteOwnerPath = file.path;
+  $: if (file.path !== paletteOwnerPath) {
+    paletteOwnerPath = file.path;
+    notePaletteProject.set(undefined);
+  }
+  $: if ($notePaletteProject && !$settings.projects.some(p => p.id === $notePaletteProject)) notePaletteProject.set(undefined);
 
   const EMPTY_OVERLAY: NoteOverlay = { hidden: [], pinned: [], order: [] };
   const READONLY_TYPES = new Set<string>(["formula", "rollup"]);
@@ -961,15 +975,17 @@
               </div>
             {/if}
             {#if canEdit && paletteKey === entry.key && isColorValue(entry.value)}
-              <!-- i3-props: the shared picker — its favourites are the calendar's. -->
-              <div class="ppp-note-props__palette">
-                <ColorPicker
-                  value={normalizeColor(entry.value) ?? DEFAULT_COLOR}
-                  projectPalette={paletteColors}
-                  projectPaletteLabel={t("views.visualizer.block.color.project", { defaultValue: "Colors in this project" })}
-                  on:change={(e) => commitColor(entry, e.detail)}
-                />
-              </div>
+              {#key file.path}
+                <div class="ppp-note-props__palette">
+                  {#if !inheritedPaletteProject}<PaletteScopeSelect projectId={notePaletteProject} projects={$settings.projects} />{/if}
+                  <ColorPicker
+                    value={normalizeColor(entry.value) ?? DEFAULT_COLOR}
+                    projectPalette={paletteColors}
+                    projectPaletteLabel={t("components.color.used-in-notes")}
+                    on:change={(e) => commitColor(entry, e.detail)}
+                  />
+                </div>
+              {/key}
             {/if}
           </div>
 

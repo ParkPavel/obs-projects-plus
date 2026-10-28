@@ -199,6 +199,16 @@ The default note-name setting supports date and time, for example `{{date:YYYY-M
 
 Files in the [templates folder](../templates/README.md) use Templater syntax (`<% ... %>`) and require the separately enabled Templater plugin. Create the note using its command and place the result in the project's folder. Projects Plus's built-in substitution does not execute Templater code.
 
+## Saved colors
+
+Click a color swatch in the note header. Under “Saved colors”, choose “Shared” or a project name. A project without its own set starts from the shared colors; adding or removing a saved color after selecting a project changes only that project's set. Choosing a set does not recolor the note.
+
+Inside a project view, the palette keeps that project's context. A standalone note header offers an explicit choice and returns to Shared when you switch notes. A note's folder is not treated as proof of membership in a query project.
+
+For an exact color, enter `#RGB` or `#RRGGBB` (the `#` is optional) and apply. Four, five and eight digits are rejected. The entered color is preserved exactly; moving a slider chooses a new shade. Switching notes cancels an unfinished gesture in the note's palette.
+
+Sets are stored in plugin settings. Transfer those settings with your chosen sync tool to use them on another device; there is no separate palette server. If saving fails, check the plugin's notice and do not reload with unsaved changes.
+
 ## Keyboard and touch
 
 Assign global command shortcuts in Obsidian's Hotkeys settings. The plugin does not assign them by default. Command names follow the interface language.

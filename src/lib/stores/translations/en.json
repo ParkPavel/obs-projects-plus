@@ -1857,8 +1857,12 @@
                 "pick-color": "Pick color",
                 "favorites": "Favorites",
                 "favorites-empty-hint": "Press ⭐ to add",
+                "favorites-scope": "Saved colors",
+                "shared-favorites": "Shared",
+                "project-favorites-hint": "Changes to saved colors apply only to the selected project.",
+                "used-in-notes": "Colors used in notes",
                 "hex-code": "HEX code",
-                "invalid-format": "Invalid format",
+                "invalid-format": "Use #RGB or #RRGGBB",
                 "expand-palette": "Expand palette",
                 "collapse-palette": "Collapse palette"
             },

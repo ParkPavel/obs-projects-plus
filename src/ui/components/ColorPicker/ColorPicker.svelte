@@ -4,6 +4,7 @@
   import TextField from '../fields/TextField.svelte';
   import { i18n } from '../../../lib/stores/i18n';
   import { hexToHsv, hsvToHex } from '../../../lib/colors/math';
+  import { normalizeHexColor } from 'src/lib/colors/recordColor';
   import { DEFAULT_COLOR } from 'src/lib/stores/palettes';
   import { useFavoritesStore } from 'src/ui/paletteProject';
   const favoritesStore = useFavoritesStore();
@@ -26,6 +27,8 @@
   let hueValue = 220;
   let saturationValue = 70;
   let valueValue = 95;
+  // Integer HSV is a slider preview, not a lossless encoding of typed HEX.
+  let exactHex: string | null = null;
   
   // Refs
   let satLightElement: HTMLDivElement;
@@ -75,6 +78,8 @@
     parseHex(value);
   });
   
+  // Track incoming props only: a local gesture must not re-parse the old
+  // prop while its owner is still saving and has not echoed the new value.
   let lastExternalValue = value;
   $: if (value !== lastExternalValue) {
     lastExternalValue = value;
@@ -82,12 +87,13 @@
   }
   
   // Current hex from HSV
-  $: currentHex = hsvToHex(hueValue, saturationValue, valueValue);
+  $: currentHex = exactHex ?? hsvToHex(hueValue, saturationValue, valueValue);
   
   function parseHex(hex: string) {
     if (!hex) return;
     const result = hexToHsv(hex);
     if (result) {
+      exactHex = normalizeHexColor(hex);
       hueValue = result.h;
       saturationValue = result.s;
       valueValue = result.v;
@@ -96,15 +102,13 @@
   
   // Apply color immediately
   function applyColor() {
-    const hex = hsvToHex(hueValue, saturationValue, valueValue);
-    lastExternalValue = hex;
+    const hex = exactHex ?? hsvToHex(hueValue, saturationValue, valueValue);
     dispatch('change', hex);
   }
   
   // Select from favorites
   function selectColor(color: string) {
     parseHex(color);
-    lastExternalValue = color;
     dispatch('change', color);
   }
   
@@ -165,8 +169,11 @@
     if (rect.width <= 0 || rect.height <= 0) return;
     const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
     const y = Math.max(0, Math.min(clientY - rect.top, rect.height));
-    saturationValue = Math.round((x / rect.width) * 100);
-    valueValue = Math.round(100 - (y / rect.height) * 100);
+    const nextSaturation = Math.round((x / rect.width) * 100);
+    const nextValue = Math.round(100 - (y / rect.height) * 100);
+    if (nextSaturation !== saturationValue || nextValue !== valueValue) exactHex = null;
+    saturationValue = nextSaturation;
+    valueValue = nextValue;
   }
   
   // === Hue slider handlers ===
@@ -225,14 +232,16 @@
     const rect = hueSliderElement.getBoundingClientRect();
     if (rect.width <= 0) return;
     const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
-    hueValue = Math.round((x / rect.width) * 360);
+    const nextHue = Math.round((x / rect.width) * 360);
+    if (nextHue !== hueValue) exactHex = null;
+    hueValue = nextHue;
   }
   
   // === Hex input handlers ===
   function applyCustomHex() {
     const clean = customHexInput.trim();
-    if (/^#?[0-9A-Fa-f]{3,6}$/.test(clean)) {
-      const hex = clean.startsWith('#') ? clean : '#' + clean;
+    const hex = normalizeHexColor(clean.startsWith('#') ? clean : '#' + clean);
+    if (hex !== null) {
       parseHex(hex);
       hexInputError = false;
       customHexInput = '';

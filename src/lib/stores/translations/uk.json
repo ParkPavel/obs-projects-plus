@@ -1981,8 +1981,12 @@
                 "pick-color": "Вибір кольору",
                 "favorites": "Обране",
                 "favorites-empty-hint": "Натисніть ⭐ щоб додати",
+                "favorites-scope": "Вибрані кольори",
+                "shared-favorites": "Спільні",
+                "project-favorites-hint": "Зміни вибраних кольорів зберігаються лише для вибраного проєкту.",
+                "used-in-notes": "Кольори з нотаток",
                 "hex-code": "HEX код",
-                "invalid-format": "Невірний формат",
+                "invalid-format": "Введіть #RGB або #RRGGBB",
                 "expand-palette": "Розгорнути палітру",
                 "collapse-palette": "Згорнути палітру"
             },
