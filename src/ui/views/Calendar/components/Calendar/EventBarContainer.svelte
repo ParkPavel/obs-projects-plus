@@ -7,6 +7,7 @@
   import { barDragView, type TimelineDragManager } from '../../dnd/TimelineDragManager';
   import { app } from 'src/lib/stores/obsidian';
   import { openRecord } from "src/lib/record/openRecord";
+  import { isDraftId } from '../../draft/calendarDraft';
   import { layoutOverlapClusters, MIN_EVENT_VISUAL_MINUTES } from '../../utils/eventLayout';
   
   /**
@@ -99,8 +100,11 @@
    */
   function handleEventClick(event: MouseEvent, record: DataRecord) {
     if (!onEventClick) return;
-    
-    if (event.shiftKey) {
+
+    // w4-calendar-draft: a draft has no note to open in a tab or window.
+    if (isDraftId(record.id)) {
+      onEventClick(record);
+    } else if (event.shiftKey) {
       // Shift+click: open in new window
       void openRecord({ id: record.id }, "window", { app: $app });
     } else if (event.ctrlKey || event.metaKey) {

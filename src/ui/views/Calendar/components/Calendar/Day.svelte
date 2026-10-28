@@ -6,6 +6,7 @@
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
   import { openRecord } from "src/lib/record/openRecord";
+  import { isDraftId } from "../../draft/calendarDraft";
   import { createEventDispatcher, onMount } from "svelte";
   import DateDisplay from "./Date.svelte";
   import EventList from "./EventList.svelte";
@@ -377,8 +378,11 @@
    */
   function handleBarClick(event: MouseEvent, record: DataRecord) {
     event.stopPropagation();
-    
-    if (event.shiftKey) {
+
+    // w4-calendar-draft: a draft has no note to open in a tab or window.
+    if (isDraftId(record.id)) {
+      onRecordClick?.(record);
+    } else if (event.shiftKey) {
       // Shift+click: open in new window
       void openRecord({ id: record.id }, "window", { app: $app });
     } else if (event.ctrlKey || event.metaKey) {

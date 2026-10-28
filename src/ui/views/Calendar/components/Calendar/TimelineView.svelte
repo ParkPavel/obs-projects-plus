@@ -10,6 +10,7 @@
   import { getDisplayName, cleanWikiLink } from "src/ui/views/Board/components/Board/boardHelpers";
   import { app } from "src/lib/stores/obsidian";
   import { openRecord, modeFromNewLeaf } from "src/lib/record/openRecord";
+  import { isDraftId } from "../../draft/calendarDraft";
   import EventTimeline from './EventTimeline.svelte';
   import CurrentTimeLine from './CurrentTimeLine.svelte';
   import DayColumn from './DayColumn.svelte';
@@ -227,7 +228,8 @@
       if (!records) continue;
       const found = records.find(r => r.record.id === recordId);
       if (found) {
-        if (openMode) {
+        // w4-calendar-draft: a draft has no note to open in a tab or window.
+        if (openMode && !isDraftId(found.record.id)) {
           // Ctrl/Shift+click: open in tab or window
           void openRecord({ id: found.record.id }, modeFromNewLeaf(openMode), { app: $app });
         } else if (onRecordClick) {

@@ -26,12 +26,14 @@
     ViewContent,
     ViewLayout,
   } from "src/ui/components/Layout";
-  import { CreateNoteModal } from "src/ui/modals/createNoteModal";
+  import { CreateNoteModal, initialNoteName, noteNameProblem } from "src/ui/modals/createNoteModal";
   import {
     getRecordColorContext,
   } from "src/ui/views/helpers";
   import { get } from "svelte/store";
-  import { onMount, tick } from "svelte";
+  import { onDestroy, onMount, tick } from "svelte";
+  import CalendarDraftSheet from "./draft/CalendarDraftSheet.svelte";
+  import { createCalendarDraft, draftMapping, draftRecord, isDraftId, mappingKey } from "./draft/calendarDraft";
   import {
     getFirstDayOfWeek,
     parseDateInTimezone,
@@ -211,6 +213,36 @@
   // Reactive frame data - dataVersion forces re-evaluation on every data update
   $: fields = dataVersion >= 0 ? frame.fields : frame.fields;
   $: records = dataVersion >= 0 ? frame.records : frame.records;
+
+  // w4-calendar-draft: what a hold, a drag or a click on the grid creates is a
+  // draft until ✓ (draft/calendarDraft.ts). The calendar draws it as one more
+  // record of the frame it processes; the agenda and every write path do not
+  // see it as a note.
+  const draftCtl = createCalendarDraft();
+  onDestroy(() => draftCtl.destroy());
+  let draftSheet: CalendarDraftSheet | null = null;
+  $: draftMap = draftMapping({
+    config,
+    fields,
+    start: dateField?.name,
+    end: endDateField?.name,
+    creation: creationDateField?.name,
+    check: booleanField?.name,
+  });
+  $: draftOwner = `${project.id}|${mappingKey(draftMap)}`;
+  $: draftState = $draftCtl;
+  // Another project, read-only data or, outside its own write, another mapping:
+  // the draft is not this view's any more.
+  $: if (draftState.draft && (
+    readonly || dataReadOnly ||
+    !draftState.draft.owner.startsWith(`${project.id}|`) ||
+    (!draftState.saving && draftState.draft.owner !== draftOwner)
+  )) draftCtl.cancel();
+  $: draftUntitled = $i18n.t("modals.note.create.untitled");
+  $: shownDraft = draftState.draft ? draftRecord(draftState.draft, draftUntitled) : null;
+  $: draftKey = draftState.draft ? `${draftState.draft.session}.${draftState.draft.revision}` : "";
+  // The draft is added to the frame, never put in its place.
+  $: displayFrame = shownDraft ? { ...frame, records: [...frame.records, shownDraft] } : frame;
   
   // Agenda records filtering (v3.0.4)
   // Standard mode: use all records (AgendaSidebar handles its own date filtering)
@@ -943,7 +975,8 @@
    */
   function handleDayTap(date: dayjs.Dayjs, records: DataRecord[], event?: Event) {
     dayPopupDate = date;
-    dayPopupRecords = records;
+    // The day window lists notes; the draft is edited in its own form.
+    dayPopupRecords = records.filter((r) => !isDraftId(r.id));
     // Duck-typed: in a popout window the target is not an instance of THIS
     // bundle's HTMLElement.
     const tapTarget = event?.target;
@@ -965,6 +998,7 @@
    */
   function handleDayPopupRecordOpenInNewWindow(record: DataRecord) {
     showDayPopup = false;
+    if (isDraftId(record.id)) return;
     const app_instance = get(app);
     // On mobile use 'tab' (window not supported), on desktop use 'window'
     const openMode = isMobile ? 'tab' : 'window';
@@ -981,6 +1015,8 @@
   
   async function handleDayPopupRecordDelete(record: DataRecord) {
     if (dataReadOnly) return;
+    // Deleting a draft discards it: there is no file under its id.
+    if (isDraftId(record.id)) { draftCtl.cancel(); return; }
     try {
       await api.deleteRecord(record.id);
       // Remove from popup records
@@ -1001,7 +1037,7 @@
   }) {
     if (dataReadOnly) return;
     const { record, targetDates, customTime } = event;
-    if (!dateField) return;
+    if (!dateField || isDraftId(record.id)) return;
 
     try {
       const startFieldName = dateField.name;
@@ -1079,7 +1115,7 @@
    * the popup cannot take it down.
    */
   function handleDayPopupRecordDuplicateRequest(record: DataRecord) {
-    if (dataReadOnly || !processedData) return;
+    if (dataReadOnly || !processedData || isDraftId(record.id)) return;
     const processed = processedData.processed.find((pr) => pr.record.id === record.id);
     if (!processed) return;
     duplicateRequest = { record, processed, existing: processedData };
@@ -1114,6 +1150,7 @@
 
   async function handleDayPopupRecordCheck(record: DataRecord, checked: boolean) {
     if (dataReadOnly) return;
+    if (isDraftId(record.id)) { draftCtl.edit({ done: checked }); return; }
     if (!booleanField) return;
     
     try {
@@ -1150,6 +1187,7 @@
    */
   async function handleDayPopupRecordColorChange(record: DataRecord, color: string) {
     if (dataReadOnly) return;
+    if (isDraftId(record.id)) { draftCtl.edit({ color }); return; }
     const colorFieldName = config?.eventColorField;
     if (!colorFieldName) {
       new Notice(noticeFor(COLOR_FIELD_REQUIRED));
@@ -1190,7 +1228,7 @@
       );
       
       // Force cache invalidation — reset version so $: block re-fires
-      lastProcessedVersion = -1;
+      lastProcessedKey = '';
       
       calendarLogger.debug('Color change completed successfully', { component: 'CalendarView', action: 'colorChange' });
       
@@ -1214,7 +1252,7 @@
   // Now: processCalendarData runs ONCE; sortedGroupedRecords derived from result (zero extra grouping)
   
   let cachedProcessedData: ProcessedCalendarData | null = null;
-  let lastProcessedVersion = -1;
+  let lastProcessedKey = '';
   let lastProcessedConfigKey = '';
   
   // CRITICAL: Use function-call pattern to break Svelte's self-referential dependency tracking.
@@ -1223,32 +1261,36 @@
   //   → $: block runs → writes -1/'' (even same values) → $$invalidate → component dirty
   //   → flush() sees dirty[0] === -1 (reset before fragment.p runs) → pushes back → re-runs → ∞
   // Function body is NOT analyzed for $: dependencies — only the explicit arguments are tracked.
-  $: updateProcessedData(dateField, config, records, dataVersion, frame, getRecordColor, project.dateFormat?.writeFormat);
+  // w4-calendar-draft: a draft is drawn even before the frame has a date field.
+  $: processedStartField = dateField?.name ?? (shownDraft ? draftMap.start : undefined);
+  $: updateProcessedData(processedStartField, config, records, dataVersion, draftKey, displayFrame, getRecordColor, project.dateFormat?.writeFormat);
   function updateProcessedData(
-    df: typeof dateField,
+    startField: string | undefined,
     cfg: typeof config,
     recs: typeof records,
     dv: typeof dataVersion,
+    dk: string,
     fr: typeof frame,
     getColor: typeof getRecordColor,
     writeFormat?: string
   ): void {
-    const startField = df?.name;
-    
-    if (startField && cfg && recs && recs.length > 0) {
+    if (startField && cfg && recs && fr.records.length > 0) {
       // Cheap change detection: dataVersion increments on every data update,
       // configKey only includes fields that affect processing
       const configKey = `${cfg.startDateField}|${cfg.endDateField}|${cfg.startTimeField}|${cfg.endTimeField}|${cfg.eventColorField}|${cfg.timezone}|${cfg.startHour}|${cfg.endHour}|${writeFormat}`;
-      
-      if (dv !== lastProcessedVersion || configKey !== lastProcessedConfigKey) {
-        lastProcessedVersion = dv;
+      // The draft's session and revision join the data version as text: a sum
+      // of two counters could repeat a key already processed.
+      const versionKey = `${dv}|${dk}`;
+
+      if (versionKey !== lastProcessedKey || configKey !== lastProcessedConfigKey) {
+        lastProcessedKey = versionKey;
         lastProcessedConfigKey = configKey;
         cachedProcessedData = processCalendarData(fr, cfg, getColor, writeFormat);
-        calendarLogger.debug('[Perf] processCalendarData called', { data: { dataVersion: dv, records: recs.length } });
+        calendarLogger.debug('[Perf] processCalendarData called', { data: { dataVersion: dv, records: fr.records.length } });
       }
     } else {
       cachedProcessedData = null;
-      lastProcessedVersion = -1;
+      lastProcessedKey = '';
       lastProcessedConfigKey = '';
     }
   }
@@ -1320,6 +1362,8 @@
    */
   async function handleRecordChange(date: dayjs.Dayjs, record: DataRecord, options?: RecordChangeOptions) {
     if (dataReadOnly) return;
+    // A moved or stretched draft changes in memory, through the same builder.
+    if (isDraftId(record?.id)) { draftCtl.move(date, options); return; }
     // Validate record integrity first
     const recordValidation = validateRecordIntegrity(record);
     if (!recordValidation.isValid) {
@@ -1466,6 +1510,7 @@
 
   function handleRecordCheck(record: DataRecord, checked: boolean) {
     if (dataReadOnly) return;
+    if (isDraftId(record.id)) { draftCtl.edit({ done: checked }); return; }
     if (!booleanField) {
       calendarLogger.warn('No boolean field configured for check operations', { component: 'CalendarView' });
       new Notice(noticeFor(CHECK_FIELD_REQUIRED));
@@ -1500,6 +1545,8 @@
    */
   function handleRecordClick(entry: DataRecord, event?: MouseEvent) {
     if (!entry) return;
+    // A draft has no note to peek at: its form is where it is edited.
+    if (isDraftId(entry.id)) { draftSheet?.focusName(); return; }
     void activateRecord({ id: entry.id, readonly: dataReadOnly || readonly }, event, { app: get(app) });
   }
 
@@ -1511,6 +1558,13 @@
    * @param startTime - Optional start time (HH:mm format or dayjs with time)
    */
   function handleRecordAdd(date: dayjs.Dayjs, startTime?: string, endTime?: string) {
+    // w4-calendar-draft: a time picked on the grid (hold, drag, click, Enter)
+    // opens a draft; nothing is written until its ✓. A day without a time
+    // (the month, the agenda, the day window) still opens the create window.
+    if (startTime && !readonly && !dataReadOnly) {
+      beginDraft(date, startTime, endTime);
+      return;
+    }
     if (!dateField) {
       new Notice(noticeFor(DATE_REQUIRED));
       return;
@@ -1595,6 +1649,39 @@
       }, context).open();
     } catch (error) {
       calendarLogger.error('Error opening create modal', error, { component: 'CalendarView', action: 'createModal' });
+    }
+  }
+
+  /** A held, dragged or clicked range becomes the draft (a second one moves it). */
+  function beginDraft(date: dayjs.Dayjs, startTime: string, endTime?: string): void {
+    draftCtl.begin({
+      owner: draftOwner,
+      day: date,
+      startTime,
+      endTime,
+      durationMinutes: creationDurationOf(config),
+      name: initialNoteName(project, { date, time: startTime }),
+      templatePath: project.templates.at(0) ?? "",
+      prefill: getFilterValuesFromConditions(filterConditions),
+      mapping: draftMap,
+    });
+  }
+
+  /**
+   * ✓ — the draft's one write: defaults, template and every mapped value go
+   * through the view API's complete create (`api.addRecord`). A refusal keeps
+   * the draft and its form; a second ✓ during the write is refused by the
+   * controller.
+   */
+  async function confirmDraft(): Promise<void> {
+    if (dataReadOnly || readonly) return;
+    const result = await draftCtl.confirm(
+      ({ name, templatePath, values }) => api.addRecord(createDataRecord(name, project, values), fields, templatePath),
+      dayjs(),
+      get(i18n).t("modals.note.create.untitled")
+    );
+    if (result === "failed") {
+      calendarLogger.warn('Draft was not written', { component: 'CalendarView', action: 'confirmDraft' });
     }
   }
 
@@ -1932,7 +2019,21 @@
       />
     {/if}
   </div>
-  
+
+  <!-- w4-calendar-draft: the draft's form, under the calendar in the leaf's
+       own column — the grid above stays free to move and stretch the draft. -->
+  {#if draftState.draft}
+    <CalendarDraftSheet
+      bind:this={draftSheet}
+      controller={draftCtl}
+      templates={project.templates}
+      nameProblem={(fileName) => noteNameProblem($app, project, fileName)}
+      autoFocus={!isMobile}
+      returnFocus={calendarRootEl}
+      onConfirm={() => void confirmDraft()}
+    />
+  {/if}
+
   {#if isLoading}
     <div class="loading-overlay">
       <div class="loading-spinner">
