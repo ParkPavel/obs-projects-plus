@@ -90,9 +90,11 @@ Reopen the vault so the plugin reads the file as it now stands. Make no further 
 
 ### Что делать
 
-Сначала посмотрите текст уведомления: в нём назван путь копии, если её удалось сделать. Пока вы не
-сохранили копию, **не меняйте ни одной настройки** — первая же запись перезапишет `data.json`
-значениями по умолчанию. Подробности — в консоли разработчика.
+Сначала посмотрите текст уведомления: путь копии называется только после её полной проверки чтением.
+Если копию проверить не удалось, плагин не разрешает перезаписывать оригинал. Проверьте доступ
+к хранилищу и сделайте ручную копию `data.json`. Новые изменения остаются только в текущем сеансе
+до проверенного резервирования; не перезагружайте плагин с несохранёнными правками. После восстановления
+доступа следующая правка или внешнее событие запускает повторную сверку.
 
 ### What happened
 
@@ -104,7 +106,7 @@ data.json could not be read or parsed, so the plugin started from defaults and l
 
 ### What to do
 
-The file was left untouched. Copy it somewhere safe before changing any setting, then reopen the vault.
+The file was left untouched. A recovery path is reported only after its complete contents are read back. If verification fails, the plugin refuses to overwrite the original. Check storage access and keep a manual backup of data.json. Changes remain in this session until a recovery copy is verified; do not reload with unsaved edits. After access is restored, a subsequent edit or external settings event triggers reconciliation again.
 
 ## PPP-104
 
@@ -132,7 +134,7 @@ data.json parsed but matched no known settings version, so there was nothing tha
 
 ### What to do
 
-A copy of the unreadable file was written beside it, named in the notice. Defaults are in use until you restore from that copy.
+Defaults are in use in this session. Check the notice for a verified copy path; if no copy could be verified, the original is protected from overwrite. Follow the PPP-103 recovery steps above.
 
 ## PPP-105
 
@@ -178,41 +180,38 @@ Nothing is lost. **Follow the path in the notice** — it is the answer, because
 
 ### Что случилось
 
-`data.json` изменил кто-то другой, а сохранить чужую версию не удалось ни одним из способов: ни
-файлом рядом с настройками, ни заметкой в хранилище.
+Другую версию data.json не удалось сохранить в проверенную резервную копию.
 
 ### Почему
 
-Не прошли обе записи — копия рядом с `data.json` (или папка плагина неизвестна, и писать рядом
-некуда) и заметка в хранилище. Поэтому чужая версия сейчас существует ровно в двух местах: строкой в
-консоли разработчика и в самом `data.json`, который плагин удерживает незаписанным до вашей следующей
-правки. Отказ этих двух записей **не означает**, что хранилище не принимает запись вообще.
+Ни копию рядом с data.json, ни заметку восстановления не удалось записать и полностью прочитать
+обратно. Это может быть отказ записи, неполное содержимое или ошибка чтения. Плагин не разрешает
+перезапись оригинала без проверенной копии. Отказ резервирования не означает, что хранилище
+не принимает обычную запись вообще.
 
 ### Что делать
 
-Чужая версия сейчас цела: пока вы сами не измените настройку, плагин ничего поверх неё не пишет.
-Поэтому по порядку: на компьютере откройте консоль разработчика (Ctrl+Shift+I) и найдите строку
-`PPP-106` — под ней полный текст чужой версии, скопируйте его, если он нужен. Либо скопируйте сам
-`data.json` из папки плагина. И только потом меняйте настройки: **ваша первая же правка снимет
-удержание и запишет файл вашей версией**.
-
-Отдельно о причине отказа: она в той же консоли. Это может быть занятый синхронизатором файл, права
-на папку плагина или неизвестное расположение папки — вывод в консоли скажет точнее. Из того, что не
-удалось записать копию, **не следует**, что хранилище вообще не принимает запись.
+Плагин сохраняет оригинал и не считает обычную правку разрешением его затереть. На компьютере
+откройте консоль разработчика (Ctrl+Shift+I), найдите строку PPP-106 и скопируйте другую версию.
+Можно вручную скопировать data.json из папки плагина. Проверьте доступ к хранилищу. Следующая
+правка или внешнее событие повторит сверку; сохранить изменения поверх оригинала можно только
+после проверенной копии. Не перезагружайте плагин с несохранёнными правками: они существуют
+только в текущем сеансе. Причину отказа ищите в консоли: возможны права на папку, конфликт
+синхронизации или неизвестное расположение папки плагина.
 
 ### What happened
 
-Projects+: data.json was changed outside this window, and the other version could not be saved anywhere — not beside the file, not as a note in the vault. On desktop it is printed in the developer console. Nothing is being written over it until you change a setting yourself.
+Projects+: data.json changed outside this window, but its recovery copy could not be verified. The original is protected; changes remain unsaved until a copy is verified. Check storage access and keep a manual backup. On desktop, the other version is also in the developer console.
 
 ### Why
 
-Both the copy beside data.json and the note in the vault failed to write, so the other version survives in two places only: the console line, and data.json itself, which this session is holding unwritten until your next change.
+Neither the copy beside data.json nor the recovery note could be written and read back completely. The original remains protected from overwrite.
 
 ### What to do
 
-The other version is intact for now: nothing is written over it until you change a setting yourself. So, in order: on desktop, open the developer console (Ctrl+Shift+I) and find the `PPP-106` line — the full text of the other version is printed under it, and you can copy it from there. Or copy `data.json` itself out of the plugin folder. Only then change a setting: **your first edit lifts the hold and writes the file with your version.**
+The plugin protects the original; an ordinary edit does not authorize overwriting it. On desktop, open the developer console (Ctrl+Shift+I) and find the PPP-106 line to copy the other version, or manually back up data.json from the plugin folder. Check storage access. A subsequent edit or external settings event triggers reconciliation again; replacement requires a verified recovery copy. Do not reload with unsaved changes: they exist only in this session.
 
-As for why the copy failed, the console says: a file held by a synchroniser, permissions on the plugin folder, or a plugin folder whose location is unknown. That the copy could not be written does NOT mean the vault is refusing writes in general.
+For the cause of the failure, check the console: possible causes include permissions, synchronisation conflicts or an unknown plugin directory. Failure to preserve a copy does not mean that ordinary vault writes are impossible.
 
 ## PPP-201
 

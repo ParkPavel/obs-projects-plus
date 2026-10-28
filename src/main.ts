@@ -1198,6 +1198,11 @@ export default class ProjectsPlusPlugin extends Plugin {
    * exists to prevent, one level down.
    */
   private async copyBrokenSettings(reason: string): Promise<string | null> {
+    // Observing damaged bytes does not authorize replacing their only copy.
+    // Clear stale permission before recovery; grant an exact base only after
+    // the sibling copy has been written AND read back without alteration.
+    this.confirmedOnDisk = null;
+    this.confirmedRawOnDisk = null;
     const adapter = this.app.vault.adapter;
     const dir = this.manifest.dir;
     const raw = await readRawSettings(adapter, dir);
@@ -1207,10 +1212,11 @@ export default class ProjectsPlusPlugin extends Plugin {
       );
       return null;
     }
-    this.confirmedRawOnDisk = raw;
     const path = await writeBrokenCopy(adapter, dir, raw, reason, new Date());
     if (path === null) {
       console.error("[Projects+] Failed to write the forensic copy of settings");
+    } else {
+      this.confirmedRawOnDisk = raw;
     }
     return path;
   }
@@ -1228,15 +1234,12 @@ export default class ProjectsPlusPlugin extends Plugin {
       const copiedTo = await this.copyBrokenSettings(
         err instanceof Error ? err.message : String(err)
       );
-      // #202 adds the token and leaves the sentences alone. Both branches are
-      // the same event with different outcomes for the forensic copy — one
-      // code, and which branch ran is what the words already say. The warning
-      // about the next save overwriting the evidence is load-bearing and stays
-      // in the Notice rather than moving to a tooltip nothing raises here.
+      // The same event has two outcomes: only a verified copy grants a raw
+      // recovery base. Without one, checked persistence refuses the overwrite.
       new Notice(
         withCode(
           copiedTo === null
-            ? "Projects+: failed to load settings — using defaults. The file on disk was left untouched but could NOT be copied: back it up before changing anything, or the next save overwrites it. See the console."
+            ? "Projects+: failed to load settings — using defaults. The original could NOT be copied and verified. It is left untouched; changes cannot be saved until a recovery copy is verified. Check storage access and keep a manual backup. See the console."
             : `Projects+: failed to load settings — using defaults. The unreadable file was copied to "${copiedTo}".`,
           SETTINGS_UNREADABLE
         ),
@@ -1265,7 +1268,7 @@ export default class ProjectsPlusPlugin extends Plugin {
         withCode(
           copiedTo !== null
             ? `Projects+: settings file is corrupted (${result.left.message}). Defaults restored; the original payload was copied to "${copiedTo}".`
-            : `Projects+: settings file is corrupted (${result.left.message}). Defaults restored, but the original payload could NOT be copied — do not change any setting if you want to recover it, because the next save rewrites data.json. See the console.`,
+            : `Projects+: settings file is corrupted (${result.left.message}). Defaults are used in this session, but the original could NOT be copied and verified. It is left untouched; changes cannot be saved until a recovery copy is verified. Check storage access and keep a manual backup. See the console.`,
           SETTINGS_CORRUPTED
         ),
         15000

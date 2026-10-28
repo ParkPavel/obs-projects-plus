@@ -167,7 +167,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
      *
      * A separate code rather than a softer wording of PPP-105, because the
      * user's next move is different and urgent: the other version exists only
-     * as `data.json`, and this plugin's next ordinary save overwrites it. The
+     * as `data.json`, and no replacement is permitted without a verified copy. The
      * #195 rule applies one level up — a notice must never name a file that
      * was not written.
      */
@@ -176,9 +176,9 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     key: "save-status.conflict-uncopied.notice",
     causeKey: "errors.causes.settings-conflict-uncopied",
     caption:
-      "Projects+: data.json was changed outside this window, and the other version could not be saved anywhere — not beside the file, not as a note in the vault. On desktop it is printed in the developer console. Nothing is being written over it until you change a setting yourself.",
+      "Projects+: data.json changed outside this window, but its recovery copy could not be verified. The original is protected; changes remain unsaved until a copy is verified. Check storage access and keep a manual backup. On desktop, the other version is also in the developer console.",
     cause:
-      "Both the copy beside data.json and the note in the vault failed to write, so the other version survives in two places only: the console line, and data.json itself, which this session is holding unwritten until your next change.",
+      "Neither the copy beside data.json nor the recovery note could be written and read back completely. The original remains protected from overwrite.",
   },
   {
     code: "PPP-201",

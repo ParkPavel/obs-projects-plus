@@ -2198,7 +2198,7 @@
                 "settings-unreadable": "无法读取或解析 data.json，因此插件使用默认值启动，并保持磁盘上的文件不变。",
                 "settings-corrupted": "data.json 已解析，但与任何已知的设置版本都不匹配，因此没有可迁移的内容。",
                 "settings-conflict": "本次会话持有自己的更改时，其他窗口、同步工具或手动编辑替换了 data.json，因此无法直接丢弃任何一个版本。",
-                "settings-conflict-uncopied": "data.json 旁的副本和库中的笔记都无法写入，因此另一个版本只保留在两个位置：控制台输出，以及 data.json 本身 — 本次会话会将其保持未写入状态，直到您下次更改。",
+                "settings-conflict-uncopied": "data.json 旁的副本和恢复笔记均未能完成写入并完整读回。原文件受到保护，不会被覆盖。",
                 "record-write-failed": "写入笔记的 frontmatter 失败，因此屏幕上的值已回滚到磁盘上的内容。",
                 "records-write-failed": "批量写入在中途失败，因此该批次中的每条记录都已回滚到磁盘上的内容。",
                 "records-write-partial": "对多条笔记的更改会逐条写入；部分笔记不存在或拒绝写入。列表见控制台。",
@@ -2287,7 +2287,7 @@
                 "notice": "Projects+：data.json 已在此窗口之外被修改，无法直接采用。已保留您的版本，磁盘上的版本另存为 {{path}}。"
             },
             "conflict-uncopied": {
-                "notice": "Projects+：data.json 已在此窗口之外被修改，且对方的版本无处保存 — 既无法存放在该文件旁，也无法作为库中的笔记。它现在只存在于两处：开发者控制台，以及 data.json 本身；在您自行更改设置之前，不会有任何内容覆盖它。"
+                "notice": "Projects+：data.json 已被此窗口以外的程序修改，但恢复副本未能通过验证。原文件受到保护；在副本通过验证之前，更改不会保存。请检查仓库访问权限并手动备份。在桌面端，开发者控制台中也有另一版本的内容。"
             }
         },
         "settings-menu": {

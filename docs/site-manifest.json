@@ -97,7 +97,7 @@
     },
     {
       "name": "read/error_codes.html",
-      "sha256": "89bb0012e7b632b00b818fcf4bbccf05fd1e63f2e19babd6034b0cadb2c2845c"
+      "sha256": "6422bc6fe4673262a286e8d96a7cda5444bdad54b31f5c85fe647bc3a1c55d2e"
     },
     {
       "name": "read/readme.html",
@@ -149,7 +149,7 @@
     },
     {
       "name": "search-index.json",
-      "sha256": "7ec46325a877b5891ed5ee403dfcb37a6e2169df7c2eab7d6be51b39db6bd465"
+      "sha256": "d791e3bb209aa58493d2d26dfdd99e1bc21b00f96c30c99a710483a624d03646"
     },
     {
       "name": ".nojekyll",
