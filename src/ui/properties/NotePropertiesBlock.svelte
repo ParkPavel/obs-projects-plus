@@ -95,10 +95,6 @@
   const notePaletteProject = writable<string | undefined>(undefined);
   providePaletteProject(inheritedPaletteProject ?? notePaletteProject);
   let paletteOwnerPath = file.path;
-  $: if (file.path !== paletteOwnerPath) {
-    paletteOwnerPath = file.path;
-    notePaletteProject.set(undefined);
-  }
   $: if ($notePaletteProject && !$settings.projects.some(p => p.id === $notePaletteProject)) notePaletteProject.set(undefined);
 
   const EMPTY_OVERLAY: NoteOverlay = { hidden: [], pinned: [], order: [] };
@@ -130,6 +126,12 @@
 
   // i3-final: the colours other notes use, read once when the palette opens.
   let paletteColors: string[] = [];
+  $: if (file.path !== paletteOwnerPath) {
+    paletteOwnerPath = file.path;
+    notePaletteProject.set(undefined);
+    paletteKey = null;
+    paletteColors = [];
+  }
   // i3-final: a grip drag in progress — the row, its pointer, the slot it would land in.
   let dragKey: string | null = null;
   let dragPointer: number | null = null;

@@ -3,7 +3,8 @@
   import { Icon } from "obsidian-svelte";
   import TextField from '../fields/TextField.svelte';
   import { i18n } from '../../../lib/stores/i18n';
-  import { hexToHsv, hsvToHex } from '../../../lib/colors/math';
+  import { hsvToHex } from '../../../lib/colors/math';
+  import { parsePickerColor } from './parsePickerColor';
   import { normalizeHexColor } from 'src/lib/colors/recordColor';
   import { DEFAULT_COLOR } from 'src/lib/stores/palettes';
   import { useFavoritesStore } from 'src/ui/paletteProject';
@@ -11,7 +12,7 @@
 
   const dispatch = createEventDispatcher<{ change: string }>();
 
-  /** Current color value (hex) */
+  /** Current color; existing CSS notation is accepted alongside opaque HEX. */
   export let value: string = DEFAULT_COLOR;
   /**
    * Optional palette of colors already in use by the surrounding project
@@ -27,7 +28,8 @@
   let hueValue = 220;
   let saturationValue = 70;
   let valueValue = 95;
-  // Integer HSV is a slider preview, not a lossless encoding of typed HEX.
+  // Integer HSV is not lossless. Retain exact HEX (or incoming alpha CSS)
+  // until an actual slider change; empty means unresolved, so Apply is blocked.
   let exactHex: string | null = null;
   
   // Refs
@@ -90,20 +92,18 @@
   $: currentHex = exactHex ?? hsvToHex(hueValue, saturationValue, valueValue);
   
   function parseHex(hex: string) {
-    if (!hex) return;
-    const result = hexToHsv(hex);
-    if (result) {
-      exactHex = normalizeHexColor(hex);
-      hueValue = result.h;
-      saturationValue = result.s;
-      valueValue = result.v;
-    }
+    if (!satLightElement) return;
+    const parsed = parsePickerColor(hex, satLightElement.ownerDocument);
+    exactHex = parsed?.color ?? '';
+    hueValue = parsed?.hsv.h ?? 0;
+    saturationValue = parsed?.hsv.s ?? 0;
+    valueValue = parsed?.hsv.v ?? 0;
   }
   
   // Apply color immediately
   function applyColor() {
     const hex = exactHex ?? hsvToHex(hueValue, saturationValue, valueValue);
-    dispatch('change', hex);
+    if (hex) dispatch('change', hex);
   }
   
   // Select from favorites
@@ -313,6 +313,7 @@
       </div>
       <button
         class="action-btn star-btn"
+        disabled={!normalizeHexColor(currentHex)}
         on:click|stopPropagation={() => favoritesStore.add(currentHex.toLowerCase())}
         type="button"
         title={$i18n.t('components.color.add-to-favorites')}
@@ -322,6 +323,7 @@
       <button 
         class="action-btn apply-btn"
         on:click|stopPropagation={applyColor}
+        disabled={!currentHex}
         type="button"
         title={$i18n.t('components.color.apply-color')}
       >
@@ -412,7 +414,7 @@
           ariaLabel={$i18n.t('components.color.hex-code')}
           inputClass="hex-input"
           error={hexInputError}
-          on:input={(e) => (customHexInput = e.detail.slice(0, 9))}
+          on:input={(e) => (customHexInput = e.detail)}
           on:commit={(e) => { if (e.detail.reason === 'enter') applyCustomHex(); }}
         />
       </span>

@@ -205,7 +205,7 @@ Click a color swatch in the note header. Under “Saved colors”, choose “Sha
 
 Inside a project view, the palette keeps that project's context. A standalone note header offers an explicit choice and returns to Shared when you switch notes. A note's folder is not treated as proof of membership in a query project.
 
-For an exact color, enter `#RGB` or `#RRGGBB` (the `#` is optional) and apply. Four, five and eight digits are rejected. The entered color is preserved exactly; moving a slider chooses a new shade. Switching notes cancels an unfinished gesture in the note's palette.
+For an exact color, enter `#RGB` or `#RRGGBB` (the `#` is optional) and apply. Four, five and eight digits are rejected. The color is preserved as normalized six-digit HEX, without rounding (`#ABC` becomes `#aabbcc`); moving a slider chooses a new shade. Existing CSS colors update the preview and sliders. An incoming transparent color keeps its alpha until you choose an opaque replacement; saved colors accept opaque HEX only. Switching notes closes the palette and cancels an unfinished gesture.
 
 Sets are stored in plugin settings. Transfer those settings with your chosen sync tool to use them on another device; there is no separate palette server. If saving fails, check the plugin's notice and do not reload with unsaved changes.
 

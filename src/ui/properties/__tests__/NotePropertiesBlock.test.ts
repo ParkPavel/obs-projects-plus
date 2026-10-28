@@ -495,8 +495,28 @@ describe("i3-final NotePropertiesBlock", () => {
       await flush();
       first.component.$set({ file: new TFile("Elsewhere/new.md") });
       await flush();
+      expect(first.container.querySelector(".color-picker")).toBeNull();
+      (first.container.querySelector(".ppp-note-props__swatch.is-button") as HTMLButtonElement).click();
+      await flush();
       expect(first.container.querySelector<HTMLSelectElement>("[data-palette-scope]")!.value).toBe("");
     } finally { first.component.$destroy(); second.component.$destroy(); settings.set(original); }
+  });
+
+  it("reopens with the new note's property colors instead of the old suggestions", async () => {
+    const m = setup({ tint: "#ff0000" }, { shade: "#00ff00" });
+    try {
+      await tick();
+      (m.container.querySelector(".ppp-note-props__swatch.is-button") as HTMLButtonElement).click();
+      await flush();
+      const suggestions = () => [...m.container.querySelectorAll(".color-picker > .palette-section:nth-child(2) .color-swatch")].map(el => el.getAttribute("title"));
+      expect(suggestions()).toEqual(["#ff0000"]);
+      m.component.$set({ file: new TFile("Notes/b.md") });
+      await flush();
+      expect(m.container.querySelector(".color-picker")).toBeNull();
+      (m.container.querySelector(".ppp-note-props__swatch.is-button") as HTMLButtonElement).click();
+      await flush();
+      expect(suggestions()).toEqual(["#00ff00"]);
+    } finally { m.component.$destroy(); }
   });
 
   it("keeps an explicit parent palette context and reacts when that owner changes", async () => {

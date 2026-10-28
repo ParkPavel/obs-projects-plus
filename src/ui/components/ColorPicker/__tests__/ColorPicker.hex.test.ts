@@ -12,7 +12,7 @@ function mount() {
   return { target, component, change, destroy() { component.$destroy(); target.remove(); } };
 }
 
-test.each(["#1234", "12345", "#12345678", "#xyz"])("invalid HEX %s cannot apply an old or truncated color", async (input) => {
+test.each(["#1234", "12345", "#12345678", "#xyz", "#123456  invalid"])("invalid HEX %s cannot apply an old or truncated color", async (input) => {
   const m = mount();
   try {
     await tick();
@@ -23,7 +23,7 @@ test.each(["#1234", "12345", "#12345678", "#xyz"])("invalid HEX %s cannot apply 
   } finally { m.destroy(); }
 });
 
-test.each([["#abc", "#aabbcc"], ["ABCDEF", "#abcdef"], [" #123456 ", "#123456"], ["#1A2b3C", "#1a2b3c"]])("typed %s stays exact in apply, preview and saved colors", async (input, expected) => {
+test.each([["#abc", "#aabbcc"], ["ABCDEF", "#abcdef"], ["   #123456   ", "#123456"], ["#1A2b3C", "#1a2b3c"]])("typed %s stays exact in apply, preview and saved colors", async (input, expected) => {
   const original = get(settings);
   settings.set({ ...original, preferences: { ...original.preferences, colorFavorites: [] } });
   const m = mount();
@@ -51,4 +51,33 @@ test.each([["#abc", "#aabbcc"], ["ABCDEF", "#abcdef"], [" #123456 ", "#123456"],
     window.dispatchEvent(new MouseEvent("mouseup"));
     expect(m.change.mock.calls[m.change.mock.calls.length - 1]![0].detail).toBe("#000000");
   } finally { m.destroy(); settings.set(original); }
+});
+
+test.each([["red", "#ff0000", 0], ["rgb(0, 255, 0)", "#00ff00", 120], ["hsl(240, 100%, 50%)", "#0000ff", 240], ["rgba(0, 0, 255, 0.5)", "rgba(0, 0, 255, 0.5)", 240], ["transparent", "transparent", 0]])("incoming CSS %s replaces the previous preview and slider state", async (input, expected, hue) => {
+  const m = mount();
+  // This Jest environment predates browser computed-color resolution for
+  // names/HSL. Supply only that browser boundary; RGB cases use its real DOM.
+  const computed = ({ red: "rgb(255, 0, 0)", "hsl(240, 100%, 50%)": "rgb(0, 0, 255)", transparent: "rgba(0, 0, 0, 0)" } as Record<string, string>)[input];
+  const resolver = computed ? jest.spyOn(window, "getComputedStyle").mockReturnValue({ color: computed } as CSSStyleDeclaration) : null;
+  try {
+    await tick();
+    m.component.$set({ value: "#aabbcc" }); await tick();
+    m.component.$set({ value: input }); await tick();
+    expect(m.target.querySelector<HTMLElement>(".hex-preview")!.style.getPropertyValue("--preview-color")).toBe(expected);
+    expect(m.target.querySelector(".hue-slider")!.getAttribute("aria-valuenow")).toBe(String(hue));
+    await fireEvent.click(m.target.querySelector(".preview-row .apply-btn")!);
+    expect(m.change.mock.calls[0]![0].detail).toBe(expected);
+    expect((m.target.querySelector("button.star-btn") as HTMLButtonElement).disabled).toBe(input === "transparent" || input.startsWith("rgba"));
+  } finally { m.destroy(); resolver?.mockRestore(); }
+});
+
+test("unresolved external color cannot apply the previous value or an invented replacement", async () => {
+  const m = mount();
+  try {
+    await tick();
+    m.component.$set({ value: "rgb(not a color)" }); await tick();
+    expect((m.target.querySelector(".preview-row .apply-btn") as HTMLButtonElement).disabled).toBe(true);
+    await fireEvent.click(m.target.querySelector(".preview-row .apply-btn")!);
+    expect(m.change).not.toHaveBeenCalled();
+  } finally { m.destroy(); }
 });
