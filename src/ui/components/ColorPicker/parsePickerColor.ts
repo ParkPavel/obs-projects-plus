@@ -1,5 +1,6 @@
 import { hexToHsv } from "src/lib/colors/math";
 import { normalizeHexColor } from "src/lib/colors/recordColor";
+import { toNumber } from "src/lib/engine/numeric";
 import { normalizeColor } from "src/lib/visualizer/colors";
 
 /** Resolve existing CSS notation in the picker's own document, not the main window. */
@@ -16,11 +17,11 @@ export function parsePickerColor(input: string, doc: Document) {
         const match = resolved?.match(/^rgba?\(\s*([\d.]+),\s*([\d.]+),\s*([\d.]+)(?:,\s*([\d.]+))?\s*\)$/);
         if (match) {
           const rgb = "#" + match.slice(1, 4).map(channel =>
-            Math.max(0, Math.min(255, Math.round(Number(channel)))).toString(16).padStart(2, "0")
+            Math.max(0, Math.min(255, Math.round(toNumber(channel) ?? 0))).toString(16).padStart(2, "0")
           ).join("");
           // Alpha survives until a deliberate HSV/HEX replacement. Saved
           // palettes accept opaque HEX only; never flatten a transparent color.
-          return { color: match[4] !== undefined && Number(match[4]) < 1 ? css : rgb, hsv: hexToHsv(rgb)! };
+          return { color: (toNumber(match[4]) ?? 1) < 1 ? css : rgb, hsv: hexToHsv(rgb)! };
         }
       }
     } finally {
