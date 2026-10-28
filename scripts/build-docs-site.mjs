@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { Marked } from 'marked';
 import { languages } from './site/content.mjs';
 import { page, homepage, escapeHtml, repoUrl } from './site/layout.mjs';
+import { safeHref, resolveRepoReference, readRepoFile, writeRepoFile } from './site/paths.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const check = process.argv.includes('--check');
@@ -21,23 +22,23 @@ const urls = new Map(sources.map(source => [source, `read/${source.startsWith('d
 const outputs = new Map();
 const media = new Map();
 const index = [];
-const safeUrl = href => [...href].every(c=>c.charCodeAt(0)>32) && (!/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(href) || /^(?:https?:|mailto:)/i.test(href));
 function resolveLink(source, href, image = false) {
-  if (!safeUrl(href)) return '';
+  if (!safeHref(href) || (image && /^mailto:/i.test(href))) return '';
   if (/^(?:https?:|mailto:|#)/i.test(href)) return href;
-  const [filename, hash = ''] = href.split('#');
-  const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(source), decodeURI(filename)));
-  if (resolved.startsWith('../') || path.posix.isAbsolute(resolved)) return '';
+  const reference = resolveRepoReference(source, href);
+  if (!reference) return '';
+  const { source: resolved, hash } = reference;
   if (image) {
     const target = `media/${resolved.replaceAll('/','--')}`;
+    if (media.has(target) && media.get(target) !== resolved) throw new Error(`Media output collision: ${resolved}`);
     media.set(target, resolved);
-    return `../${target}${hash ? '#'+hash : ''}`;
+    return `../${target.split('/').map(encodeURIComponent).join('/')}${hash ? '#'+hash : ''}`;
   }
   if (urls.has(resolved)) return `../${urls.get(resolved)}${hash ? '#'+hash : ''}`;
   return `${repoUrl}/blob/main/${resolved.split('/').map(encodeURIComponent).join('/')}${hash ? '#'+hash : ''}`;
 }
 for (const source of sources) {
-  const markdown = (await fs.readFile(path.join(root,source),'utf8')).replace(/^\uFEFF/,'');
+  const markdown = (await readRepoFile(root,source)).toString('utf8').replace(/^\uFEFF/,'');
   const lang = /-RU\.md$/.test(source) || ['docs/user-guide.md','docs/architecture.md'].includes(source) ? 'ru' : 'en';
   const t = languages[lang];
   const title = /^#\s+(.+)$/m.exec(markdown)?.[1] || source;
@@ -71,7 +72,7 @@ for (const source of sources) {
   // The two deliberately bilingual indexes are useful to searches in either language.
   if(['docs/README.md','docs/ERROR_CODES.md','templates/README.md','demo-vault/README.md'].includes(source)) index.push({title,lang:lang==='ru'?'en':'ru',url,text});
 }
-for (const [target,source] of media) outputs.set(target,await fs.readFile(path.join(root,source)));
+for (const [target,source] of media) outputs.set(target,await readRepoFile(root,source));
 for(const [lang,t] of Object.entries(languages))outputs.set(t.home,page({lang,t,title:t.title,description:t.description,body:homepage(lang,t),canonical:t.home}));
 outputs.set('search-index.json',JSON.stringify(index)+'\n');
 outputs.set('.nojekyll','');
@@ -80,9 +81,9 @@ const manifest={schemaVersion:1,sourceVersion:JSON.parse(await fs.readFile(path.
 outputs.set('site-manifest.json',JSON.stringify(manifest,null,2)+'\n');
 const stale=[];
 for (const [relative,content] of outputs) {
-  const target=path.join(root,'docs',relative);
-  if(check){ const actual=await fs.readFile(target).catch(()=>null);if(!actual||!actual.equals(Buffer.from(content)))stale.push(relative); }
-  else { await fs.mkdir(path.dirname(target),{recursive:true});await fs.writeFile(target,content); }
+  const output=`docs/${relative}`;
+  if(check){ const actual=await readRepoFile(root,output).catch(error=>{if(error.code==='ENOENT')return null;throw error;});if(!actual||!actual.equals(Buffer.from(content)))stale.push(relative); }
+  else await writeRepoFile(root,output,content);
 }
 if(stale.length){console.error(`Generated documentation is stale: ${stale.join(', ')}. Run node scripts/build-docs-site.mjs.`);process.exitCode=1;}
 else console.log(`${check?'Checked':'Built'} ${outputs.size} static files for main/docs.`);

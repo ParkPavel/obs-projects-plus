@@ -2,8 +2,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { readRepoFile } from './site/paths.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const docs=path.join(root,'docs');
+const security=spawnSync(process.execPath,['--test',path.join(root,'scripts/site/paths.test.mjs')],{cwd:root,encoding:'utf8'});
+if(security.status!==0){process.stderr.write(security.stderr||security.stdout||'Site path security checks failed.');process.exit(1);}
 const generated=spawnSync(process.execPath,[path.join(root,'scripts/build-docs-site.mjs'),'--check'],{cwd:root,encoding:'utf8'});
 if(generated.status!==0){process.stderr.write(generated.stderr||generated.stdout);process.exit(1);}
 const manifest=JSON.parse(await fs.readFile(path.join(docs,'site-manifest.json'),'utf8'));
@@ -19,9 +22,9 @@ for(const {name} of manifest.files.filter(f=>f.name.endsWith('.html'))){
     const raw=match[1].replaceAll('&amp;','&');
     if(/^(?:https?:|mailto:|data:)/.test(raw))continue;
     const [relative,fragment]=raw.split('#');
-    const target=relative?path.resolve(path.dirname(file),decodeURI(relative)):file;
+    const target=relative?path.resolve(path.dirname(file),decodeURIComponent(relative)):file;
     if(target!==docs&&!target.startsWith(docs+path.sep)){problems.push(`${name}: link escapes docs: ${raw}`);continue;}
-    const bytes=await fs.readFile(target).catch(()=>null);
+    const bytes=await readRepoFile(docs,path.relative(docs,target).split(path.sep).join('/')).catch(error=>{if(error.code==='ENOENT')return null;throw error;});
     if(!bytes){problems.push(`${name}: missing ${raw}`);continue;}
     if(fragment&&target.endsWith('.html')){
       const id=decodeURIComponent(fragment);
