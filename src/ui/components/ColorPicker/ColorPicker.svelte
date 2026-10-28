@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, createEventDispatcher } from 'svelte';
+  import { onDestroy, onMount, createEventDispatcher } from 'svelte';
   import { Icon } from "obsidian-svelte";
   import TextField from '../fields/TextField.svelte';
   import { i18n } from '../../../lib/stores/i18n';
@@ -34,6 +34,22 @@
   // Drag state
   let isDraggingSatLight = false;
   let isDraggingHue = false;
+  let dragWindow: Window | null = null;
+
+  function stopWatching(): void {
+    dragWindow?.removeEventListener('mousemove', handleSatLightMouseMove);
+    dragWindow?.removeEventListener('mouseup', handleSatLightMouseUp);
+    dragWindow?.removeEventListener('mousemove', handleHueMouseMove);
+    dragWindow?.removeEventListener('mouseup', handleHueMouseUp);
+    dragWindow = null;
+  }
+
+  function cancelDrag(): void {
+    stopWatching();
+    isDraggingSatLight = isDraggingHue = false;
+    parseHex(value);
+  }
+  onDestroy(cancelDrag);
   
   // Hex input
   let customHexInput = '';
@@ -96,10 +112,13 @@
   function handleSatLightMouseDown(e: MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
+    stopWatching();
+    isDraggingHue = false;
     isDraggingSatLight = true;
     updateSatLight(e.clientX, e.clientY);
-    window.addEventListener('mousemove', handleSatLightMouseMove);
-    window.addEventListener('mouseup', handleSatLightMouseUp);
+    dragWindow = satLightElement.ownerDocument.defaultView;
+    dragWindow?.addEventListener('mousemove', handleSatLightMouseMove);
+    dragWindow?.addEventListener('mouseup', handleSatLightMouseUp);
   }
   
   function handleSatLightMouseMove(e: MouseEvent) {
@@ -109,9 +128,9 @@
   }
   
   function handleSatLightMouseUp() {
+    if (!isDraggingSatLight) return;
     isDraggingSatLight = false;
-    window.removeEventListener('mousemove', handleSatLightMouseMove);
-    window.removeEventListener('mouseup', handleSatLightMouseUp);
+    stopWatching();
     applyColor();
   }
   
@@ -135,6 +154,7 @@
   }
   
   function handleSatLightTouchEnd() {
+    if (!isDraggingSatLight) return;
     isDraggingSatLight = false;
     applyColor();
   }
@@ -142,6 +162,7 @@
   function updateSatLight(clientX: number, clientY: number) {
     if (!satLightElement) return;
     const rect = satLightElement.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
     const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
     const y = Math.max(0, Math.min(clientY - rect.top, rect.height));
     saturationValue = Math.round((x / rect.width) * 100);
@@ -152,10 +173,13 @@
   function handleHueMouseDown(e: MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
+    stopWatching();
+    isDraggingSatLight = false;
     isDraggingHue = true;
     updateHue(e.clientX);
-    window.addEventListener('mousemove', handleHueMouseMove);
-    window.addEventListener('mouseup', handleHueMouseUp);
+    dragWindow = hueSliderElement.ownerDocument.defaultView;
+    dragWindow?.addEventListener('mousemove', handleHueMouseMove);
+    dragWindow?.addEventListener('mouseup', handleHueMouseUp);
   }
   
   function handleHueMouseMove(e: MouseEvent) {
@@ -165,9 +189,9 @@
   }
   
   function handleHueMouseUp() {
+    if (!isDraggingHue) return;
     isDraggingHue = false;
-    window.removeEventListener('mousemove', handleHueMouseMove);
-    window.removeEventListener('mouseup', handleHueMouseUp);
+    stopWatching();
     applyColor();
   }
   
@@ -191,6 +215,7 @@
   }
   
   function handleHueTouchEnd() {
+    if (!isDraggingHue) return;
     isDraggingHue = false;
     applyColor();
   }
@@ -198,6 +223,7 @@
   function updateHue(clientX: number) {
     if (!hueSliderElement) return;
     const rect = hueSliderElement.getBoundingClientRect();
+    if (rect.width <= 0) return;
     const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
     hueValue = Math.round((x / rect.width) * 360);
   }
@@ -235,6 +261,7 @@
       on:touchstart|stopPropagation|preventDefault={handleSatLightTouchStart}
       on:touchmove|stopPropagation={handleSatLightTouchMove}
       on:touchend|stopPropagation={handleSatLightTouchEnd}
+      on:touchcancel|stopPropagation={cancelDrag}
       role="slider"
       aria-label={$i18n.t("components.color-picker.saturation-brightness")}
       aria-valuenow={saturationValue}
@@ -255,6 +282,7 @@
       on:touchstart|stopPropagation|preventDefault={handleHueTouchStart}
       on:touchmove|stopPropagation={handleHueTouchMove}
       on:touchend|stopPropagation={handleHueTouchEnd}
+      on:touchcancel|stopPropagation={cancelDrag}
       role="slider"
       aria-label={$i18n.t("components.color-picker.hue")}
       aria-valuenow={hueValue}

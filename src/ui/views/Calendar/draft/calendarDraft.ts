@@ -96,7 +96,7 @@ export function mappingKey(m: DraftMapping): string {
 
 /** Different values cannot be safely written into the same property. */
 export function conflictingDraftFields(m: DraftMapping): string[] {
-  const names = [m.start, m.end, m.startTime, m.endTime, m.creation, m.check, m.status, m.color, m.icon].filter((n): n is string => !!n);
+  const names = [m.start, m.end === m.start ? undefined : m.end, m.startTime, m.endTime, m.creation, m.check, m.status, m.color, m.icon].filter((n): n is string => !!n);
   return [...new Set(names.filter((name, index) => names.indexOf(name) !== index))];
 }
 
@@ -131,7 +131,7 @@ function timeValues(start: Dayjs, end: Dayjs, m: DraftMapping): Record<string, s
   return {
     [m.start]: start.format(DAY),
     [m.startTime]: start.format(CLOCK),
-    [m.end]: end.format(DAY),
+    ...(m.end !== m.start ? { [m.end]: end.format(DAY) } : {}),
     [m.endTime]: end.format(CLOCK),
   };
 }
@@ -151,10 +151,10 @@ export function movedRange(
 ): { start: Dayjs; end: Dayjs } {
   const m = draft.mapping;
   const values = timeValues(draft.start, draft.end, m);
-  const { updates } = buildRecordChangeUpdates({
+  const { updates, newStartDate } = buildRecordChangeUpdates({
     values,
     dateFieldName: m.start,
-    endDateFieldName: m.end,
+    endDateFieldName: m.end === m.start ? undefined : m.end,
     startTimeFieldName: m.startTime,
     endTimeFieldName: m.endTime,
     targetDate: date.startOf("day"),
@@ -165,8 +165,10 @@ export function movedRange(
   const next = { ...values, ...updates };
   // The builder writes `YYYY-MM-DD`, which dayjs reads as a local day.
   const read = (dayName: string, clockName: string) => clockOn(dayjs(next[dayName]), next[clockName] ?? "00:00");
-  const start = read(m.start, m.startTime);
-  let end = read(m.end, m.endTime);
+  const start = m.end === m.start ? clockOn(newStartDate, next[m.startTime] ?? "00:00") : read(m.start, m.startTime);
+  let end = m.end === m.start ? clockOn(start, next[m.endTime] ?? "00:00") : read(m.end, m.endTime);
+  if (m.end === m.start && end.isBefore(start)) end = end.add(1, "day");
+  if (m.end === m.start && options?.endDate) end = clockOn(options.endDate, next[m.endTime] ?? "00:00");
   if (options?.endTime && !options.startTime && !options.endDate) {
     const shift = start.startOf("day").diff(draft.start.startOf("day"), "day");
     end = clockOn(draft.end.add(shift, "day"), options.endTime);
@@ -207,6 +209,15 @@ export interface DraftPayload {
   readonly values: Values;
 }
 
+/** The single-date time model can infer an overnight end, but not multiple days. */
+export function draftNeedsSeparateEnd(draft: CalendarDraft): boolean {
+  if (draft.mapping.start !== draft.mapping.end) return false;
+  let inferred = clockOn(draft.start, draft.end.format(CLOCK));
+  if (inferred.isBefore(draft.start)) inferred = inferred.add(1, "day");
+  if (inferred.isSame(draft.start)) inferred = draft.start.add(1, "hour");
+  return !inferred.isSame(draft.end, "minute");
+}
+
 /**
  * What confirm writes: the defaults, then start/end date and time (written even
  * when the frame has no such field yet), the creation date as today, the done
@@ -218,7 +229,7 @@ export function draftPayload(draft: CalendarDraft, today: Dayjs, untitled: strin
   const values: Values = { ...draft.prefill, ...timeValues(draft.start, draft.end, m) };
   if (m.start === "name") delete values["name"];
   if (m.creation) values[m.creation] = today.format(DAY);
-  if (m.check && (draft.done || draft.edited.includes("done"))) values[m.check] = draft.done;
+  if (m.check && (!draft.templatePath || draft.done || draft.edited.includes("done"))) values[m.check] = draft.done;
   if (m.status && (draft.status || draft.edited.includes("status"))) values[m.status] = draft.status || null;
   if (m.color && (draft.color || draft.edited.includes("color"))) values[m.color] = draft.color || null;
   if (m.icon && (draft.icon.trim() || draft.edited.includes("icon"))) values[m.icon] = draft.icon.trim() || null;
@@ -358,7 +369,7 @@ export function createCalendarDraft(): CalendarDraftController {
       const draft = state.draft;
       if (!alive || !draft) return "none";
       if (state.saving) return "busy";
-      if (conflictingDraftFields(draft.mapping).length) return "invalid";
+      if (conflictingDraftFields(draft.mapping).length || draftNeedsSeparateEnd(draft)) return "invalid";
       const session = draft.session;
       set({ draft, saving: true, error: null });
       const current = () => alive && state.draft?.session === session;

@@ -1024,7 +1024,8 @@
                     "mapping-conflict": "保存前请为各项选择不同的映射属性：{{fields}}",
                     "template-default": "来自模板",
                     "template-hint": "未更改的属性保留模板值。使用橡皮擦可明确清除值。",
-                    "clear-value": "清除 {{field}}"
+                    "clear-value": "清除 {{field}}",
+                    "separate-end": "此持续时间需要在视图设置中选择单独的结束日期属性。"
                 }
             },
             "gallery": {
@@ -2361,14 +2362,15 @@
                         "end-date": "结束 (endDate)",
                         "start-time": "开始时间 (startTime)",
                         "end-time": "结束时间 (endTime)",
-                        "check": "状态字段 (check)",
+                        "check": "完成复选框字段",
                         "hints": {
                             "date": "创建笔记时自动填充。不参与确定事件开始时间",
                             "start-date": "多日事件的开始日期",
                             "end-date": "多日事件的结束日期",
                             "start-time": "单独的开始时间字段 (HH:mm)",
                             "end-time": "单独的结束时间字段",
-                            "check": "用于标记完成状态的字段 (completed, done 等)"
+                            "check": "用于标记完成状态的字段 (completed, done 等)",
+                            "status": "例如“待处理”或“进行中”的文本阶段，与完成复选框分开。"
                         },
                         "status": "状态字段"
                     }

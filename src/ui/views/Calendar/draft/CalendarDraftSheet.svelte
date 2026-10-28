@@ -22,7 +22,7 @@
   import ColorPicker from "src/ui/components/ColorPicker/ColorPicker.svelte";
   import DateField from "src/ui/components/fields/DateField.svelte";
   import { isImeKey } from "src/ui/components/fields/draftController";
-  import { conflictingDraftFields, draftFileName, type CalendarDraft, type CalendarDraftController } from "./calendarDraft";
+  import { conflictingDraftFields, draftNeedsSeparateEnd, draftFileName, type CalendarDraft, type CalendarDraftController } from "./calendarDraft";
 
   export let controller: CalendarDraftController;
   export let templates: readonly string[] = [];
@@ -60,8 +60,10 @@
 
   $: untitled = $i18n.t("modals.note.create.untitled");
   $: conflicts = draft ? conflictingDraftFields(draft.mapping) : [];
-  $: problem = conflicts.length ? $i18n.t("views.calendar.draft.mapping-conflict", { fields: conflicts.join(", ") })
-    : draft ? nameProblem(draftFileName({ ...draft, name: typedName }, untitled)) : "";
+  $: rangeConflict = draft ? draftNeedsSeparateEnd(draft) : false;
+  $: mappingProblem = conflicts.length ? $i18n.t("views.calendar.draft.mapping-conflict", { fields: conflicts.join(", ") })
+    : rangeConflict ? $i18n.t("views.calendar.draft.separate-end") : "";
+  $: problem = mappingProblem || (draft ? nameProblem(draftFileName({ ...draft, name: typedName }, untitled)) : "");
   $: computed = draft ? computedOf(draft) : [];
   $: writable = (name: string | undefined) => !!name && !computed.includes(name);
   $: inheritedDone = !!draft?.templatePath && !!draft.mapping.check
@@ -71,6 +73,11 @@
     const m = d.mapping;
     const mapped = [m.start, m.end, m.startTime, m.endTime, m.creation, m.color, m.icon, m.check, m.status];
     return [...new Set(mapped.filter((n): n is string => !!n && m.computed.includes(n)))];
+  }
+
+  function reflectMixed(node: HTMLInputElement, value: boolean) {
+    node.indeterminate = value;
+    return { update(next: boolean) { node.indeterminate = next; } };
   }
 
   /** Move focus to the name (the draft was tapped on the grid). */
@@ -156,8 +163,8 @@
       </button>
     </div>
 
-    {#if conflicts.length}
-      <p class="ppp-draft-sheet__error" role="alert">{problem}</p>
+    {#if mappingProblem}
+      <p class="ppp-draft-sheet__error" role="alert">{mappingProblem}</p>
     {/if}
 
     {#if state.error}
@@ -174,13 +181,13 @@
           id="{uid}-name"
           value={draft.name}
           inputClass="ppp-draft-sheet__input"
-          error={!!problem && !conflicts.length}
+          error={!!problem && !mappingProblem}
           disabled={state.saving}
           on:input={(e) => (typedName = e.detail)}
           on:commit={onNameCommit}
           on:cancel={() => (typedName = draft?.name ?? "")}
         />
-        {#if problem && !conflicts.length}<span class="ppp-draft-sheet__problem">{problem}</span>{/if}
+        {#if problem && !mappingProblem}<span class="ppp-draft-sheet__problem">{problem}</span>{/if}
       </div>
 
       {#if templates.length}
@@ -237,7 +244,7 @@
             on:commit={(e) => { typedStatus = e.detail.value; controller.edit({ status: typedStatus }); }}
             on:cancel={() => (typedStatus = draft?.status ?? "")}
           />
-          <button type="button" class="clickable-icon" disabled={state.saving}
+          <button type="button" class="ppp-draft-sheet__button clickable-icon" disabled={state.saving || (!draft.templatePath && !draft.status && !typedStatus)}
             aria-label={$i18n.t("views.calendar.draft.clear-value", { field: $i18n.t("views.calendar.draft.status") })}
             on:click={() => { typedStatus = ""; controller.edit({ status: "" }); }}><Icon name="eraser" /></button>
         </div>
@@ -249,7 +256,7 @@
             class="ppp-touch-target"
             type="checkbox"
             checked={draft.done}
-            bind:indeterminate={inheritedDone}
+            use:reflectMixed={inheritedDone}
             aria-checked={inheritedDone ? "mixed" : draft.done}
             disabled={state.saving}
             on:change={(e) => controller.edit({ done: e.currentTarget.checked })}
@@ -271,7 +278,7 @@
             on:commit={onIconCommit}
             on:cancel={() => (typedIcon = draft?.icon ?? "")}
           />
-          <button type="button" class="clickable-icon" disabled={state.saving}
+          <button type="button" class="ppp-draft-sheet__button clickable-icon" disabled={state.saving || (!draft.templatePath && !draft.icon && !typedIcon)}
             aria-label={$i18n.t("views.calendar.draft.clear-value", { field: $i18n.t("views.calendar.draft.icon") })}
             on:click={() => { typedIcon = ""; controller.edit({ icon: "" }); }}><Icon name="eraser" /></button>
         </div>
@@ -281,7 +288,7 @@
         <div class="ppp-draft-sheet__field">
           <span class="ppp-draft-sheet__caption">{$i18n.t("views.calendar.draft.color")}</span>
           <span class="ppp-draft-sheet__color">
-            <button type="button"
+            <button type="button" class="ppp-draft-sheet__button"
               aria-label={$i18n.t("views.calendar.draft.color")}
               aria-expanded={colorOpen}
               disabled={state.saving}
@@ -293,7 +300,7 @@
                 class="ppp-draft-sheet__button clickable-icon"
                 aria-label={$i18n.t("views.calendar.draft.clear-color")}
                 title={$i18n.t("views.calendar.draft.clear-color")}
-                disabled={state.saving}
+                disabled={state.saving || (!draft.templatePath && !draft.color)}
                 on:click={() => controller.edit({ color: "" })}
               >
                 <Icon name="eraser" />

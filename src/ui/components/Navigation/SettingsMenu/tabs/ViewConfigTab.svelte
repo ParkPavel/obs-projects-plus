@@ -382,6 +382,7 @@
             <FieldComboInput fields={stringFields} id="fieldlist-status" value={statusField}
               placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
               on:change={(e) => emitUpdate({ statusField: e.detail || undefined })} />
+            <span class="hint">{$i18n.t('settings-menu.view-config.calendar.field-mapping.hints.status')}</span>
           </label>
 
           <label for="fieldlist-color-input">

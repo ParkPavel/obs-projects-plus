@@ -22,9 +22,14 @@ it.each([false, true])("preserves untouched template values and clears only expl
     mapping: draftMapping({ config: { statusField: "stage", iconField: "icon", eventColorField: "color", checkField: "done" }, fields: [] }) });
   if (edited) ctl.edit({ status: "", icon: "", color: "", done: false });
   const create = jest.fn(async (_path: string, _content: string) => new CreatedFile());
-  const api = new DataApi({ create, getFile: () => null, getAllFiles: () => [] });
   const template = '---\nstage: Queued\nicon: star\ncolor: "#ff8800"\ndone: true\n---\nTemplate body';
-  await ctl.confirm(({ values }) => api.createNote({ id: "new.md", values }, [], "", template), dayjs(), "Untitled");
+  const templateFile = new CreatedFile();
+  const read = jest.spyOn(templateFile, "read").mockResolvedValue(template);
+  const getFile = jest.fn((path: string) => path === "Template.md" ? templateFile : null);
+  const api = new DataApi({ create, getFile, getAllFiles: () => [] });
+  await ctl.confirm(({ values, templatePath }) => api.createNote({ id: "new.md", values }, [], templatePath), dayjs(), "Untitled");
+  expect(getFile).toHaveBeenCalledWith("Template.md");
+  expect(read).toHaveBeenCalledTimes(1);
   expect(create).toHaveBeenCalledTimes(1);
   const content = create.mock.calls[0]![1];
   const fields = parse(content.split("---")[1]!);

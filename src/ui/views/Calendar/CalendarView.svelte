@@ -892,7 +892,7 @@
   // not a Date-typed field, and a resize of its strip had nowhere to write.
   $: endDateField =
     resolveFieldByName(fields.filter((f) => !f.repeated), config?.endDateField) ??
-    ["endDate", "end", "due"].map((n) => fields.find((f) => !f.repeated && f.name === n)).find((f) => f !== undefined);
+    ["endDate", "end", "due"].map((n) => fields.find((f) => !f.repeated && f.name === n)).find((f) => f !== undefined && f.name !== startDateField?.name);
 
   $: booleanField = resolveFieldByName(fields, config?.checkField, DataFieldType.Boolean) ??
     fields.find((field) => config?.checkField === field.name);

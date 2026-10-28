@@ -986,7 +986,8 @@
                     "mapping-conflict": "Choose distinct mapped properties before saving: {{fields}}",
                     "template-default": "From template",
                     "template-hint": "Untouched properties keep the template values. Use the eraser to clear a value explicitly.",
-                    "clear-value": "Clear {{field}}"
+                    "clear-value": "Clear {{field}}",
+                    "separate-end": "This duration needs a separate end-date property in the view settings."
                 }
             },
             "gallery": {
@@ -2264,14 +2265,15 @@
                         "end-date": "End (endDate)",
                         "start-time": "Start time (startTime)",
                         "end-time": "End time (endTime)",
-                        "check": "Status field (check)",
+                        "check": "Completion checkbox field",
                         "hints": {
                             "date": "Automatically filled when note is created. Does not determine event start",
                             "start-date": "Start date for multi-day events",
                             "end-date": "End date for multi-day events",
                             "start-time": "Separate start time field (HH:mm)",
                             "end-time": "Separate end time field",
-                            "check": "Field for marking completion (completed, done, etc.)"
+                            "check": "Field for marking completion (completed, done, etc.)",
+                            "status": "Text such as Queued or Active; separate from the completion checkbox."
                         },
                         "status": "Status field"
                     }

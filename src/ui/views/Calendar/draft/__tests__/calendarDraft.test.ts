@@ -202,6 +202,35 @@ describe("cancel, refusals and one write at a time", () => {
 });
 
 describe("what is written", () => {
+  it("writes an untouched unchecked value without a template, so false filters still match", () => {
+    const ctl = createCalendarDraft();
+    ctl.begin(begin(mapping(), { templatePath: "" }));
+    expect(draftPayload(ctl.getState().draft!, TODAY, UNTITLED).values["done"]).toBe(false);
+  });
+
+  it.each([false, true])("supports an explicit single-date mapping (overnight=%s)", async (overnight) => {
+    const ctl = createCalendarDraft();
+    const cfg = { startDateField: "due", endDateField: "due" };
+    const m = draftMapping({ config: cfg, fields: [field("due")], start: "due", end: "due" });
+    ctl.begin(begin(m, { startTime: overnight ? "23:00" : "10:00", endTime: overnight ? "25:00" : "11:00" }));
+    const d = ctl.getState().draft!;
+    const record = draftRecord(d, UNTITLED);
+    const drawn = processCalendarData({ fields: [], records: [record] }, cfg).index.get(record.id)!;
+    expect(drawn.timeInfo?.startTime.format("YYYY-MM-DD HH:mm")).toBe(d.start.format("YYYY-MM-DD HH:mm"));
+    expect(drawn.timeInfo?.endTime.format("YYYY-MM-DD HH:mm")).toBe(d.end.format("YYYY-MM-DD HH:mm"));
+    const save = jest.fn(() => Promise.resolve());
+    expect(await ctl.confirm(save, TODAY, UNTITLED)).toBe("saved");
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it("requires a separate end field for a multi-day range that one date cannot represent", async () => {
+    const ctl = createCalendarDraft();
+    ctl.begin(begin(mapping({ start: "due", end: "due" })));
+    ctl.setEnd(dayjs("2026-10-29T11:00"));
+    const save = jest.fn();
+    expect(await ctl.confirm(save, TODAY, UNTITLED)).toBe("invalid");
+    expect(save).not.toHaveBeenCalled();
+  });
   it.each(["due", "end", "endDate"])("does not treat the lone implicit date %s as two explicit mappings", async (name) => {
     const ctl = createCalendarDraft();
     const m = draftMapping({ config: undefined, fields: [field(name)], start: name, end: name });

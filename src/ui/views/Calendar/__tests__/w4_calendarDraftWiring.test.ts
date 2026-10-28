@@ -22,6 +22,18 @@ function fnBody(code: string, signature: RegExp): string {
   return fn.body.getText(ast);
 }
 
+function hasIdentifier(code: string, name: string): boolean {
+  const script = /<script[^>]*>([\s\S]*?)<\/script>/.exec(code)?.[1] ?? code;
+  const ast = ts.createSourceFile("view.ts", script, ts.ScriptTarget.Latest, true);
+  let found = false;
+  function visit(node: ts.Node): void {
+    if (ts.isIdentifier(node) && node.text === name) found = true;
+    ts.forEachChild(node, visit);
+  }
+  visit(ast);
+  return found;
+}
+
 describe("a time on the grid opens a draft, not a note", () => {
   const add = fnBody(view, /function handleRecordAdd\(/);
 
@@ -61,7 +73,8 @@ describe("the calendar draws the draft beside the notes", () => {
     const body = fnBody(view, /function updateProcessedData\(/);
     expect(body).toMatch(/const versionKey = `\$\{dv\}\|\$\{dk\}`;/);
     expect(body).toMatch(/versionKey !== lastProcessedKey/);
-    expect(body).not.toMatch(/lastProcessedVersion/);
+    expect(hasIdentifier(view, "lastProcessedVersion")).toBe(false);
+    expect(hasIdentifier(view.replace("</script>", "let lastProcessedVersion = 0;\n</script>"), "lastProcessedVersion")).toBe(true);
   });
 
   it("the agenda lists notes only", () => {
