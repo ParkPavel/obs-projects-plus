@@ -129,6 +129,7 @@ describe("CalendarDraftSheet — writing", () => {
     await fireEvent.click(m.confirmButton());
     expect(m.onConfirm).toHaveBeenCalledTimes(1);
     expect(m.ctl.getState().draft?.edited).toEqual([]);
+    expect(m.ctl.getState().draft?.revision).toBe(0);
   });
   it("captures an unblurred textual status when ✓ is pressed", async () => {
     const m = mount();
@@ -163,6 +164,12 @@ describe("CalendarDraftSheet — writing", () => {
     await tick();
     expect(m.confirmButton()).toBeDisabled();
     expect(m.sheet()).toHaveAttribute("aria-busy", "true");
+    const discard = m.container.querySelector<HTMLButtonElement>(".ppp-draft-sheet__bar button")!;
+    expect(discard).toBeDisabled();
+    await fireEvent.click(discard);
+    await key(m.nameInput(), "Escape");
+    expect(m.ctl.getState().saving).toBe(true);
+    expect(m.ctl.getState().draft).not.toBeNull();
     await fireEvent.click(m.confirmButton());
     expect(m.onConfirm).not.toHaveBeenCalled();
     finish();

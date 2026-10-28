@@ -345,6 +345,7 @@ export function createCalendarDraft(): CalendarDraftController {
 
     edit(fields) {
       const draft = editable();
+      if (Object.keys(fields).length === 0) return;
       if (draft) {
         const touched = (["color", "icon", "status", "done"] as const).filter((key) => key in fields);
         change(draft, { ...fields, edited: [...new Set([...draft.edited, ...touched])] });

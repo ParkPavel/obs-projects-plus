@@ -27,6 +27,7 @@
   export let controller: CalendarDraftController;
   export let templates: readonly string[] = [];
   export let statusOptions: ComboOption[] = [];
+  export let projectPalette: string[] = [];
   /** Why a file name cannot be used ("" when it can): the create window's rules. */
   export let nameProblem: (fileName: string) => string = () => "";
   /** Desktop: the name is selected on open. A phone keeps its keyboard down. */
@@ -111,7 +112,7 @@
     if (e.key !== "Escape" || isImeKey(e) || e.defaultPrevented) return;
     e.preventDefault();
     e.stopPropagation();
-    controller.cancel();
+    if (!state.saving) controller.cancel();
   }
 
   const at = (date: Date | null) => (date ? dayjs(date) : null);
@@ -146,7 +147,8 @@
         class="ppp-draft-sheet__button clickable-icon"
         aria-label={$i18n.t("views.calendar.draft.discard")}
         title={$i18n.t("views.calendar.draft.discard")}
-        on:click={() => controller.cancel()}
+        disabled={state.saving}
+        on:click={() => { if (!state.saving) controller.cancel(); }}
       >
         <Icon name="x" />
       </button>
@@ -307,7 +309,7 @@
               </button>
           </span>
           {#if colorOpen && !state.saving}
-            <ColorPicker value={draft.color || "#808080"} on:change={(e) => controller.edit({ color: e.detail })} />
+            <ColorPicker value={draft.color || "#808080"} {projectPalette} on:change={(e) => controller.edit({ color: e.detail })} />
           {/if}
         </div>
       {/if}

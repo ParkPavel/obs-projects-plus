@@ -36,6 +36,8 @@
   import { createCalendarDraft, draftMapping, draftRecord, interceptDraft, isDraftId, mappingKey } from "./draft/calendarDraft";
   import { valueSuggestions, templateFoldersOf } from "src/lib/suggestions/valueSuggestions";
   import { namesToOptions } from "src/ui/components/fields/comboOptions";
+  import { normalizeColor } from "src/lib/visualizer/colors";
+  import { hexToHsv } from "src/lib/colors/math";
   import {
     getFirstDayOfWeek,
     parseDateInTimezone,
@@ -243,6 +245,10 @@
   $: draftUntitled = $i18n.t("modals.note.create.untitled");
   $: shownDraft = draftState.draft ? draftRecord(draftState.draft, draftUntitled) : null;
   $: draftStatusOptions = namesToOptions(valueSuggestions(records, fields.find((f) => f.name === draftMap.status), { templateFolders: templateFoldersOf($app) }));
+  $: draftProjectPalette = [...new Set([
+    ...valueSuggestions(records, fields.find((f) => f.name === draftMap.color)),
+    ...records.map(getRecordColor),
+  ].map(normalizeColor).filter((color): color is string => color !== null && hexToHsv(color) !== null))];
   $: draftKey = draftState.draft ? `${draftState.draft.session}.${draftState.draft.revision}` : "";
   // The draft is added to the frame, never put in its place.
   $: displayFrame = shownDraft ? { ...frame, records: [...frame.records, shownDraft] } : frame;
@@ -892,7 +898,7 @@
   // not a Date-typed field, and a resize of its strip had nowhere to write.
   $: endDateField =
     resolveFieldByName(fields.filter((f) => !f.repeated), config?.endDateField) ??
-    ["endDate", "end", "due"].map((n) => fields.find((f) => !f.repeated && f.name === n)).find((f) => f !== undefined && f.name !== startDateField?.name);
+    ["endDate", "end", "due"].map((n) => fields.find((f) => !f.repeated && f.name === n)).find((f) => f !== undefined);
 
   $: booleanField = resolveFieldByName(fields, config?.checkField, DataFieldType.Boolean) ??
     fields.find((field) => config?.checkField === field.name);
@@ -2031,6 +2037,7 @@
       controller={draftCtl}
       templates={project.templates}
       statusOptions={draftStatusOptions}
+      projectPalette={draftProjectPalette}
       nameProblem={(fileName) => noteNameProblem($app, project, fileName)}
       autoFocus={!isMobile}
       returnFocus={calendarRootEl}
