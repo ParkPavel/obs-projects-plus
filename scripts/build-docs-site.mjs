@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { Marked } from 'marked';
 import { languages } from './site/content.mjs';
 import { page, homepage, escapeHtml, repoUrl } from './site/layout.mjs';
-import { safeHref, resolveRepoReference, readRepoFile, writeRepoFile, documentationRoutes } from './site/paths.mjs';
+import { safeHref, resolveRepoReference, readRepoFile, readPublicMedia, readDocumentationSource, writeRepoFile, documentationRoutes } from './site/paths.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const check = process.argv.includes('--check');
@@ -18,6 +18,7 @@ const sources = [
 ];
 const slug = text => text.toLowerCase().replace(/<[^>]*>/g,'').replace(/[^\p{L}\p{N}\s-]/gu,'').trim().replace(/\s+/g,'-');
 const urls = documentationRoutes(sources);
+const publicSources = new Set(sources);
 const outputs = new Map();
 const media = new Map();
 const index = [];
@@ -37,7 +38,7 @@ function resolveLink(source, href, image = false) {
   return `${repoUrl}/blob/main/${resolved.split('/').map(encodeURIComponent).join('/')}${hash ? '#'+hash : ''}`;
 }
 for (const source of sources) {
-  const markdown = (await readRepoFile(root,source)).toString('utf8').replace(/^\uFEFF/,'');
+  const markdown = (await readDocumentationSource(root,source,publicSources)).toString('utf8').replace(/^\uFEFF/,'');
   const lang = /-RU\.md$/.test(source) || ['docs/user-guide.md','docs/architecture.md'].includes(source) ? 'ru' : 'en';
   const t = languages[lang];
   const title = /^#\s+(.+)$/m.exec(markdown)?.[1] || source;
@@ -71,7 +72,7 @@ for (const source of sources) {
   // The two deliberately bilingual indexes are useful to searches in either language.
   if(['docs/README.md','docs/ERROR_CODES.md','templates/README.md','demo-vault/README.md'].includes(source)) index.push({title,lang:lang==='ru'?'en':'ru',url,text});
 }
-for (const [target,source] of media) outputs.set(target,await readRepoFile(root,source));
+for (const [target,source] of media) outputs.set(target,await readPublicMedia(root,source));
 for(const [lang,t] of Object.entries(languages))outputs.set(t.home,page({lang,t,title:t.title,description:t.description,body:homepage(lang,t),canonical:t.home}));
 outputs.set('search-index.json',JSON.stringify(index)+'\n');
 outputs.set('.nojekyll','');

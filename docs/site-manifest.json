@@ -105,11 +105,11 @@
     },
     {
       "name": "read/site-maintenance-ru.html",
-      "sha256": "8227f2cf3806d0d1ffe816424b378af56ef09850bf0f4bd462bf163df83a813c"
+      "sha256": "d95cd2a40e2d9a83dc8e6f3594aadcc52940b5990f416b6f9cfd8f89fc56c03d"
     },
     {
       "name": "read/site-maintenance.html",
-      "sha256": "f42ac3d039bcd1f75b1549e35cbc0b357a7134085da2e3345f43399759933f13"
+      "sha256": "4c6157d75b9b06df2c753c5fa69f441ce211c56a8f5e56671e8e9bbed7781c8e"
     },
     {
       "name": "read/user-guide-en.html",
@@ -149,7 +149,7 @@
     },
     {
       "name": "search-index.json",
-      "sha256": "76b412907e81012db14027f6e5ca4672512939874df8f15adccea9cee41759d5"
+      "sha256": "7ec46325a877b5891ed5ee403dfcb37a6e2169df7c2eab7d6be51b39db6bd465"
     },
     {
       "name": ".nojekyll",

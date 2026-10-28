@@ -20,6 +20,8 @@ node scripts/check-docs-site.mjs
 node scripts/test-docs-site.mjs
 </code></pre>
 <p>The generator uses <a href="https://marked.js.org/">Marked</a> (MIT), a pinned development dependency. It renders Markdown into <code>docs/read/</code>, copies referenced local media, and produces the bilingual search index. It escapes raw HTML and restricts URL schemes. No renderer is downloaded or executed in the visitor&#39;s browser.</p>
+<p>Place local images in the public <code>images/</code>, <code>docs/assets/</code> or <code>docs/media/</code> folders. Supported files are PNG, JPEG, GIF, WebP, SVG, AVIF, BMP and ICO. Hidden files and other project folders cannot be copied as images; a symbolic link&#39;s actual target must satisfy the same public-image policy. The generator also refuses reads or generated writes outside the repository.</p>
+<p>Markdown sources must be declared public guides. Hidden Markdown files and guide links pointing to undeclared private files are refused before their content is read.</p>
 <p>Commit the regenerated HTML and search index with their source changes. The check command refuses stale output, missing files, broken local anchors and images without alternative text. CI and the release workflow run these checks before publication. The DOM tests cover interactions; they are not a substitute for visual checks in desktop and mobile browsers.</p>
 <h2 id="preview-and-screenshots">Preview and screenshots</h2>
 <p><code>npm version</code> runs the version hook, updates plugin metadata and regenerates the site before staging

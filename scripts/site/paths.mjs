@@ -43,17 +43,30 @@ function within(root, target) {
   return relative !== '..' && !relative.startsWith('..' + path.sep) && !path.isAbsolute(relative);
 }
 
+const publicMediaPath = relative => isRepoPath(relative)
+  && relative.split('/').every(part=>!part.startsWith('.'))
+  && /^(?:images\/|docs\/(?:assets|media)\/)/.test(relative)
+  && /\.(?:avif|bmp|gif|ico|jpe?g|png|svg|webp)$/i.test(relative);
+
 /** Check both lexical and actual containment before reading any source bytes. */
-export async function readRepoFile(root, relative) {
+async function readAllowedFile(root, relative, permitted, area = 'public documentation media areas') {
   if (!isRepoPath(relative)) throw new Error(`Unsafe repository file: ${relative}`);
+  if (!permitted(relative)) throw new Error(`File is outside ${area}: ${relative}`);
   const realRoot = await fs.realpath(root);
   const candidate = path.resolve(realRoot, ...relative.split('/'));
   if (!within(realRoot, candidate)) throw new Error(`Repository path escapes root: ${relative}`);
   const realFile = await fs.realpath(candidate);
   if (!within(realRoot, realFile)) throw new Error(`Repository symlink escapes root: ${relative}`);
+  if (!permitted(path.relative(realRoot,realFile).split(path.sep).join('/'))) throw new Error(`Symlink target is outside ${area}: ${relative}`);
   const stat = await fs.stat(realFile);
   if (!stat.isFile()) throw new Error(`Repository source is not a file: ${relative}`);
   return fs.readFile(realFile);
+}
+
+export function readRepoFile(root, relative) { return readAllowedFile(root,relative,()=>true); }
+export function readPublicMedia(root, relative) { return readAllowedFile(root,relative,publicMediaPath); }
+export function readDocumentationSource(root, relative, sources) {
+  return readAllowedFile(root,relative,target=>sources.has(target)&&target.split('/').every(part=>!part.startsWith('.')),'declared public documentation sources');
 }
 
 /** Generated output may not follow an existing directory/file link outside. */

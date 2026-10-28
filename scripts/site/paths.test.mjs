@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import { test, after } from 'node:test';
-import { safeHref, resolveRepoReference, readRepoFile, writeRepoFile, documentationRoutes } from './paths.mjs';
+import { safeHref, resolveRepoReference, readRepoFile, readPublicMedia, readDocumentationSource, writeRepoFile, documentationRoutes } from './paths.mjs';
 
 const fixture = await fs.mkdtemp(path.join(os.tmpdir(), 'ppp-site-paths-'));
 const repo = path.join(fixture, 'repo');
@@ -16,8 +16,9 @@ await fs.writeFile(path.join(repo, 'media', 'cover #100%.png'), Buffer.from([137
 await fs.writeFile(path.join(outside, 'secret.md'), 'outside fixture: never publish');
 const link = path.join(repo, 'media', 'outside');
 await fs.symlink(outside, link, process.platform === 'win32' ? 'junction' : 'dir');
+const links = [link];
 after(async () => {
-  await fs.unlink(link);
+  for(const target of links)await fs.unlink(target);
   const resolved = path.resolve(fixture);
   assert.equal(path.dirname(resolved), path.resolve(os.tmpdir()));
   assert.ok(path.basename(resolved).startsWith('ppp-site-paths-'));
@@ -61,11 +62,44 @@ test('ordinary Markdown and binary media are read without mangling percent/hash 
   assert.deepEqual(await readRepoFile(repo, 'media/cover #100%.png'), Buffer.from([137,80,78,71,13,10,26,10]));
 });
 
+test('media reads only public image areas, including the actual target of inside-repository links', async () => {
+  await fs.mkdir(path.join(repo,'images'));
+  await fs.mkdir(path.join(repo,'private'));
+  await fs.writeFile(path.join(repo,'images','screen.png'),'public fixture');
+  await fs.writeFile(path.join(repo,'private','secret.png'),'private fixture');
+  assert.equal((await readPublicMedia(repo,'images/screen.png')).toString(),'public fixture');
+  for(const name of ['.git/config','borshkit/tasks/private.png','.local-run/private.png','private/secret.png','README.md','images/.hidden.png','images/log.txt']){
+    await assert.rejects(readPublicMedia(repo,name),/outside public documentation media/);
+  }
+  const privateLink=path.join(repo,'images','private');
+  await fs.symlink(path.join(repo,'private'),privateLink,process.platform==='win32'?'junction':'dir');
+  links.push(privateLink);
+  await assert.rejects(readPublicMedia(repo,'images/private/secret.png'),/Symlink target is outside public documentation media/);
+  await fs.writeFile(path.join(outside,'secret.png'),'outside private fixture');
+  const outsideLink=path.join(repo,'images','outside');
+  await fs.symlink(outside,outsideLink,process.platform==='win32'?'junction':'dir');
+  links.push(outsideLink);
+  await assert.rejects(readPublicMedia(repo,'images/outside/secret.png'),/symlink escapes root/);
+});
+
 test('the real symlink target is checked before reading Markdown or media outside the repository', async () => {
   await assert.rejects(readRepoFile(repo, 'media/outside/secret.md'), /symlink escapes root/);
   await assert.rejects(readRepoFile(repo, '../outside/secret.md'), /Unsafe repository file/);
   await assert.rejects(readRepoFile(repo, path.join(outside, 'secret.md')), /Unsafe repository file/);
   await assert.rejects(readRepoFile(repo, 'media'), /not a file/);
+});
+
+test('a declared guide cannot symlink into undeclared private files inside the repository', async () => {
+  await fs.writeFile(path.join(repo,'private','secret.md'),'private guide fixture');
+  const guideLink=path.join(repo,'docs','private');
+  await fs.symlink(path.join(repo,'private'),guideLink,process.platform==='win32'?'junction':'dir');
+  links.push(guideLink);
+  const sources=new Set(['README.md','docs/private/secret.md']);
+  assert.equal((await readDocumentationSource(repo,'README.md',sources)).toString(),'# Read me');
+  await assert.rejects(readDocumentationSource(repo,'docs/private/secret.md',sources),/Symlink target is outside declared public documentation sources/);
+  sources.add('docs/.private.md');
+  await fs.writeFile(path.join(repo,'docs','.private.md'),'hidden fixture');
+  await assert.rejects(readDocumentationSource(repo,'docs/.private.md',sources),/File is outside declared public documentation sources/);
 });
 
 test('missing legitimate files still fail explicitly instead of silently removing images', async () => {
