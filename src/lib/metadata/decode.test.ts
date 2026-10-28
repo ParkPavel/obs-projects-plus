@@ -2,7 +2,18 @@ import { describe, expect, it } from "@jest/globals";
 import { either as E } from "fp-ts";
 import { decodeFrontMatter, parseYaml, preprocessYaml } from "./decode";
 
+// Exercise the installed parser, rather than the root manual YAML mock.
+jest.mock("yaml", () => jest.requireActual("../../../node_modules/yaml/dist/index.js"));
+
 describe("decodeFrontMatter", () => {
+  it("reports deeply nested YAML as a parser error rather than a stack RangeError", () => {
+    // Spaces keep this flow collection from being treated as an Obsidian [[link]].
+    const nested = "[ ".repeat(5000) + "1" + " ]".repeat(5000);
+    const result = decodeFrontMatter(`---\ndeep: ${nested}\n---\n# Body stays intact`);
+    expect(E.isLeft(result)).toBe(true);
+    if (E.isLeft(result)) expect(result.left.name).toBe("YAMLParseError");
+  });
+
   it("should decode note with Markdown content", () => {
     expect(
       decodeFrontMatter(

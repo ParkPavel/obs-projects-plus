@@ -81,7 +81,7 @@
     "tslib": "^2.6.2",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.55.0",
-    "uuid": "^11.0.3",
-    "yaml": "^2.4.2"
+    "uuid": "11.1.1",
+    "yaml": "2.8.3"
   }
 }
