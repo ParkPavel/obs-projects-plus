@@ -324,15 +324,15 @@
       }
       const type = result.value.type;
       if (type === "table") {
-        const count = result.value.values.length;
+        const count = result.value.values?.length ?? 0;
         dvPreviewStatus = "success";
         dvPreviewMessage = $i18n.t("modals.project.dataview.preview-table", { count });
       } else if (type === "list") {
-        const count = result.value.values.length;
+        const count = result.value.values?.length ?? 0;
         dvPreviewStatus = "success";
         dvPreviewMessage = $i18n.t("modals.project.dataview.preview-list", { count });
       } else if (type === "task") {
-        const count = result.value.values.length;
+        const count = result.value.values?.length ?? 0;
         dvPreviewStatus = "success";
         dvPreviewMessage = $i18n.t("modals.project.dataview.preview-task", { count });
       } else {
