@@ -724,7 +724,9 @@
             />
           {/if}
         {:else if activeTab.viewType === "board" && project}
+          {#key activeTab.id}
           <BoardView
+            embedded={true}
             {project}
             frame={viewFrame}
             {api}
@@ -739,9 +741,11 @@
             hasFilter={tabScope.hasFilter}
             filterConditions={tabScope.filterConditions}
           />
+          {/key}
         {:else if activeTab.viewType === "calendar" && project}
           {#key activeTab.id}
           <CalendarView
+            embedded={true}
             {project}
             frame={viewFrame}
             {api}
@@ -755,6 +759,7 @@
           />
           {/key}
         {:else if activeTab.viewType === "gallery" && project}
+          {#key activeTab.id}
           <GalleryView
             {project}
             frame={viewFrame}
@@ -765,6 +770,7 @@
             config={galleryConfig}
             onConfigChange={handleGalleryConfigChange}
           />
+          {/key}
         {:else if !isRenderableTab(activeTab)}
           <!--
             i3-final (B3): list, timeline, chart and stats tabs were never

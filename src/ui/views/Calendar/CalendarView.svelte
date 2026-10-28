@@ -104,6 +104,8 @@
   export let onConfigChange: (cfg: CalendarConfig) => void;
   // Data version counter - incremented on each data update to force Svelte reactivity
   export let dataVersion: number = 0;
+  /** Embedded settings belong to the tab; project navigation cache is unrelated. */
+  export let embedded: boolean = false;
   export let filterConditions: import("src/settings/settings").FilterCondition[] = [];
 
   // Navigation & Animation Controllers (v3.0.0)
@@ -133,6 +135,7 @@
    * Save current view state to localStorage
    */
   function saveViewState(): void {
+    if (embedded) return;
     try {
       const state: PersistedViewState = {
         date: (focusedDate || dayjs()).format('YYYY-MM-DD'),
@@ -153,6 +156,7 @@
    * Load view state from localStorage
    */
   function loadViewState(): PersistedViewState | null {
+    if (embedded) return null;
     try {
       const stored = loadAppLocal(getStorageKey());
       if (!stored) return null;
@@ -213,6 +217,16 @@
       onConfigChange(cfg);
     }, 0);
   }
+
+  function applyAutomaticConfig(cfg: CalendarConfig) {
+    if (embedded) config = cfg;
+    else saveConfig(cfg);
+  }
+
+  onDestroy(() => {
+    if (_saveConfigTimer !== null) clearTimeout(_saveConfigTimer);
+    _saveConfigTimer = null;
+  });
 
   // Reactive frame data - dataVersion forces re-evaluation on every data update
   $: fields = dataVersion >= 0 ? frame.fields : frame.fields;
@@ -647,7 +661,7 @@
     
     // Apply all startup config changes in one write
     if (Object.keys(startupConfig).length > 0) {
-      saveConfig({ ...config, ...startupConfig } as CalendarConfig);
+      applyAutomaticConfig({ ...config, ...startupConfig } as CalendarConfig);
     }
     
     // Always navigate to today on fresh load
@@ -812,7 +826,7 @@
     // and left at today it pulled the month back on every update (the freeze
     // reported on 17.10).
     if (interval === 'month' || interval === '2weeks') setTimeout(() => navigateToDate('today'), 900);
-    saveConfig({ ...config, centerOn: null });
+    applyAutomaticConfig({ ...config, centerOn: null });
   }
   
   // Track interval changes - but DON'T auto-center if focusedDate is set

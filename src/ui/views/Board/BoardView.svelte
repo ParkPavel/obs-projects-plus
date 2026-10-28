@@ -65,6 +65,8 @@
 
   export let config: BoardConfig | undefined;
   export let onConfigChange: (cfg: BoardConfig) => void;
+  /** Automatic normalization must not detach a linked block from its source. */
+  export let embedded: boolean = false;
 
   export let hasSort: boolean;
   export let hasFilter: boolean;
@@ -83,7 +85,7 @@
     if (prevGroupByField !== undefined && currentGroupBy !== prevGroupByField) {
       // groupByField changed — persistedStatuses are from old field, reset
       const { persistedStatuses: _, ...restConfig } = config ?? {};
-      saveConfig(restConfig);
+      applyAutomaticConfig(restConfig);
     }
     prevGroupByField = currentGroupBy;
   }
@@ -445,6 +447,11 @@
     onConfigChange(cfg);
   }
 
+  function applyAutomaticConfig(cfg: BoardConfig) {
+    if (embedded) config = cfg;
+    else saveConfig(cfg);
+  }
+
   // cards-g5: saved card frames. A resize commits one card's override here,
   // once, through `saveConfig`; a further NEW override past the cap is refused
   // with a notice and nothing is evicted.
@@ -475,7 +482,7 @@
     const groupByFieldForInit = fields.find(f => config?.groupByField === f.name);
     if (config?.persistedStatuses === undefined && groupByFieldForInit) {
       const initialColumns = getColumns(records, config?.columns ?? {}, groupByFieldForInit, orderSyncField, !hasSort);
-      saveConfig({
+      applyAutomaticConfig({
         ...config,
         persistedStatuses: initialColumns.map(c => c.id),
       });
