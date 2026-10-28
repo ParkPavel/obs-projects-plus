@@ -32,12 +32,12 @@
   ],
   "files": [
     {
-      "name": "read/readme.html",
-      "sha256": "bed4bb30a7eb1b5054da0e24105399fd444f2f791f8e22c53f8335e69639dcff"
+      "name": "read/project-readme.html",
+      "sha256": "e9f94a320e478156de0c652d1f8fe2d37acca3cc1a561697e338be6b6cff7b3b"
     },
     {
       "name": "read/readme-ru.html",
-      "sha256": "02395efb80a73dd10b132f7af299ac18e369d63179323450390821d158fbf994"
+      "sha256": "712ce17418ce20988a129f8e7342b300ad77e3dbcb5860d498499c5d2cf6453c"
     },
     {
       "name": "read/changelog.html",
@@ -49,7 +49,7 @@
     },
     {
       "name": "read/roadmap.html",
-      "sha256": "9cf7c290105234444398887948c2115b8164f5149bd763dd55e381e43c39e3fe"
+      "sha256": "da6d8376feee40cde2e79b5deac00efb3050a9686845e1a8d3cc07f668b08759"
     },
     {
       "name": "read/roadmap-ru.html",
@@ -100,6 +100,10 @@
       "sha256": "89bb0012e7b632b00b818fcf4bbccf05fd1e63f2e19babd6034b0cadb2c2845c"
     },
     {
+      "name": "read/readme.html",
+      "sha256": "94fdd6a8d2082c02f3e5ece81fb722dcf51ed2f623b51f042f0b84a60b443201"
+    },
+    {
       "name": "read/site-maintenance-ru.html",
       "sha256": "8227f2cf3806d0d1ffe816424b378af56ef09850bf0f4bd462bf163df83a813c"
     },
@@ -109,7 +113,7 @@
     },
     {
       "name": "read/user-guide-en.html",
-      "sha256": "433f89febb93e6d31acd8b76403bc933b8d8d420bc88b35726148f064320e43e"
+      "sha256": "bfeed6837f942e46ee2afd483c03bcd6beb53f5c3ca537b7d71b2b3927969a7d"
     },
     {
       "name": "read/user-guide.html",
@@ -145,7 +149,7 @@
     },
     {
       "name": "search-index.json",
-      "sha256": "a918e61f4b4a3f0c30c153ea2b2574ee3167da1698596e4576952daa4cd6356b"
+      "sha256": "76b412907e81012db14027f6e5ca4672512939874df8f15adccea9cee41759d5"
     },
     {
       "name": ".nojekyll",

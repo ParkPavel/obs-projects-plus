@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { Marked } from 'marked';
 import { languages } from './site/content.mjs';
 import { page, homepage, escapeHtml, repoUrl } from './site/layout.mjs';
-import { safeHref, resolveRepoReference, readRepoFile, writeRepoFile } from './site/paths.mjs';
+import { safeHref, resolveRepoReference, readRepoFile, writeRepoFile, documentationRoutes } from './site/paths.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const check = process.argv.includes('--check');
@@ -17,8 +17,7 @@ const sources = [
   'templates/README.md','demo-vault/README.md','obsidian-projects-types/README.md','obsidian-projects-types/README-RU.md',
 ];
 const slug = text => text.toLowerCase().replace(/<[^>]*>/g,'').replace(/[^\p{L}\p{N}\s-]/gu,'').trim().replace(/\s+/g,'-');
-const stem = file => file.replace(/\.md$/i,'').toLowerCase().replaceAll('/','-');
-const urls = new Map(sources.map(source => [source, `read/${source.startsWith('docs/') ? stem(source.slice(5)) : stem(source)}.html`]));
+const urls = documentationRoutes(sources);
 const outputs = new Map();
 const media = new Map();
 const index = [];

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { readRepoFile } from './site/paths.mjs';
+import { languages } from './site/content.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const docs=path.join(root,'docs');
 const security=spawnSync(process.execPath,['--test',path.join(root,'scripts/site/paths.test.mjs')],{cwd:root,encoding:'utf8'});
@@ -11,6 +12,7 @@ const generated=spawnSync(process.execPath,[path.join(root,'scripts/build-docs-s
 if(generated.status!==0){process.stderr.write(generated.stderr||generated.stdout);process.exit(1);}
 const manifest=JSON.parse(await fs.readFile(path.join(docs,'site-manifest.json'),'utf8'));
 const problems=[];
+if(manifest.files.filter(f=>f.name.endsWith('.html')).length!==manifest.sources.length+Object.keys(languages).length)problems.push('A source document is missing its own page.');
 for(const {name} of manifest.files.filter(f=>f.name.endsWith('.html'))){
   const file=path.join(docs,name),html=await fs.readFile(file,'utf8');
   if(!/<html lang="(?:ru|en)">/.test(html))problems.push(`${name}: missing language`);
@@ -20,9 +22,10 @@ for(const {name} of manifest.files.filter(f=>f.name.endsWith('.html'))){
   if(/<script[^>]*>\s*[^<\s]/.test(html))problems.push(`${name}: inline script`);
   for(const match of html.matchAll(/\b(?:href|src)="([^"]*)"/g)){
     const raw=match[1].replaceAll('&amp;','&');
-    if(/^(?:https?:|mailto:|data:)/.test(raw))continue;
+    if(/^(?:https?:|mailto:|data:)/i.test(raw))continue;
     const [relative,fragment]=raw.split('#');
-    const target=relative?path.resolve(path.dirname(file),decodeURIComponent(relative)):file;
+    let target=relative?path.resolve(path.dirname(file),decodeURIComponent(relative)):file;
+    if(target===docs)target=path.join(docs,'index.html');
     if(target!==docs&&!target.startsWith(docs+path.sep)){problems.push(`${name}: link escapes docs: ${raw}`);continue;}
     const bytes=await readRepoFile(docs,path.relative(docs,target).split(path.sep).join('/')).catch(error=>{if(error.code==='ENOENT')return null;throw error;});
     if(!bytes){problems.push(`${name}: missing ${raw}`);continue;}

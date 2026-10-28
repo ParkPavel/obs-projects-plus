@@ -25,6 +25,19 @@ export function resolveRepoReference(source, href) {
   return { source: resolved, hash };
 }
 
+/** Keep the docs index route and give the root README its own document page. */
+export function documentationRoutes(sources) {
+  const routes = new Map(), owners = new Map();
+  for (const source of sources) {
+    if (!isRepoPath(source)) throw new Error(`Unsafe documentation source: ${source}`);
+    const name = source === 'README.md' ? 'project-readme.md' : source.startsWith('docs/') ? source.slice(5) : source;
+    const url = `read/${name.replace(/\.md$/i,'').toLowerCase().replaceAll('/','-')}.html`;
+    if (owners.has(url)) throw new Error(`Documentation route collision: ${owners.get(url)} and ${source} -> ${url}`);
+    owners.set(url,source); routes.set(source,url);
+  }
+  return routes;
+}
+
 function within(root, target) {
   const relative = path.relative(root, target);
   return relative !== '..' && !relative.startsWith('..' + path.sep) && !path.isAbsolute(relative);

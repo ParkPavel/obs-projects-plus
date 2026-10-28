@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import { test, after } from 'node:test';
-import { safeHref, resolveRepoReference, readRepoFile, writeRepoFile } from './paths.mjs';
+import { safeHref, resolveRepoReference, readRepoFile, writeRepoFile, documentationRoutes } from './paths.mjs';
 
 const fixture = await fs.mkdtemp(path.join(os.tmpdir(), 'ppp-site-paths-'));
 const repo = path.join(fixture, 'repo');
@@ -29,6 +29,15 @@ test('local relative links retain anchors and encoded filenames within the repos
   assert.deepEqual(resolveRepoReference('docs/guide.md', '../media/cover%20%23100%25.png'), { source: 'media/cover #100%.png', hash: '' });
 });
 
+test('the project README and documentation index never shadow one another', () => {
+  const routes = documentationRoutes(['README.md','README-RU.md','docs/README.md','docs/user-guide.md']);
+  assert.equal(routes.get('README.md'),'read/project-readme.html');
+  assert.equal(routes.get('docs/README.md'),'read/readme.html');
+  assert.equal(routes.get('README-RU.md'),'read/readme-ru.html');
+  assert.equal(new Set(routes.values()).size,4);
+  assert.throws(()=>documentationRoutes(['docs/a-b.md','docs/a/b.md']),/route collision/);
+});
+
 test('native absolute, drive-relative, UNC and encoded backslashes are refused on every OS', () => {
   for (const href of ['C:/secret.png', 'C:secret.png', 'C:\\secret.png', '//host/share/file.png', '\\\\host\\share\\file.png', '/etc/passwd', '..\\..\\secret.png', '..%5c..%5csecret.png', '%5c%5chost%5cshare.png', '%43%3a/secret.png', 'media/file.png:stream']) {
     assert.equal(resolveRepoReference('docs/guide.md', href), null, href);
@@ -43,7 +52,7 @@ test('plain and encoded traversal, malformed URI, unsafe schemes and controls ar
 });
 
 test('external HTTPS/mail and document anchors remain safe, unsafe protocols do not', () => {
-  for (const href of ['https://example.test/image.png', 'mailto:hello@example.test', '#install']) assert.equal(safeHref(href), true);
+  for (const href of ['https://example.test/image.png', 'HTTPS://example.test/image.png', 'mailto:hello@example.test', 'MAILTO:hello@example.test', '#install']) assert.equal(safeHref(href), true);
   for (const href of ['javascript:alert(1)', 'data:text/html,x', '//example.test/file', 'https://example.test/a\n']) assert.equal(safeHref(href), false);
 });
 
