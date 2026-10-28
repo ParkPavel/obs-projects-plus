@@ -1025,7 +1025,8 @@
                     "template-default": "来自模板",
                     "template-hint": "未更改的属性保留模板值。使用橡皮擦可明确清除值。",
                     "clear-value": "清除 {{field}}",
-                    "separate-end": "此持续时间需要在视图设置中选择单独的结束日期属性。"
+                    "separate-end": "此持续时间需要在视图设置中选择单独的结束日期属性。",
+                    "computed-time": "此视图使用计算日期或时间属性。请选择可写的日期和时间映射以在此创建事件。"
                 }
             },
             "gallery": {

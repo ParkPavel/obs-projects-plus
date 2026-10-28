@@ -22,7 +22,7 @@
   import ColorPicker from "src/ui/components/ColorPicker/ColorPicker.svelte";
   import DateField from "src/ui/components/fields/DateField.svelte";
   import { isImeKey } from "src/ui/components/fields/draftController";
-  import { conflictingDraftFields, draftNeedsSeparateEnd, draftFileName, type CalendarDraft, type CalendarDraftController } from "./calendarDraft";
+  import { conflictingDraftFields, draftNeedsSeparateEnd, hasComputedDraftTime, draftFileName, type CalendarDraft, type CalendarDraftController } from "./calendarDraft";
 
   export let controller: CalendarDraftController;
   export let templates: readonly string[] = [];
@@ -62,8 +62,10 @@
   $: untitled = $i18n.t("modals.note.create.untitled");
   $: conflicts = draft ? conflictingDraftFields(draft.mapping) : [];
   $: rangeConflict = draft ? draftNeedsSeparateEnd(draft) : false;
+  $: readonlyTime = draft ? hasComputedDraftTime(draft) : false;
   $: mappingProblem = conflicts.length ? $i18n.t("views.calendar.draft.mapping-conflict", { fields: conflicts.join(", ") })
-    : rangeConflict ? $i18n.t("views.calendar.draft.separate-end") : "";
+    : rangeConflict ? $i18n.t("views.calendar.draft.separate-end")
+    : readonlyTime ? $i18n.t("views.calendar.draft.computed-time") : "";
   $: problem = mappingProblem || (draft ? nameProblem(draftFileName({ ...draft, name: typedName }, untitled)) : "");
   $: computed = draft ? computedOf(draft) : [];
   $: writable = (name: string | undefined) => !!name && !computed.includes(name);
@@ -215,7 +217,7 @@
         <DateField
           withTime
           value={draft.start.toDate()}
-          disabled={state.saving || !writable(draft.mapping.start) || !writable(draft.mapping.startTime)}
+          disabled={state.saving || readonlyTime}
           ariaLabel={$i18n.t("views.calendar.draft.start")}
           on:change={(e) => { const next = at(e.detail); if (next) controller.setStart(next); }}
         />
@@ -226,7 +228,7 @@
         <DateField
           withTime
           value={draft.end.toDate()}
-          disabled={state.saving || !writable(draft.mapping.end) || !writable(draft.mapping.endTime)}
+          disabled={state.saving || readonlyTime}
           ariaLabel={$i18n.t("views.calendar.draft.end")}
           on:change={(e) => { const next = at(e.detail); if (next) controller.setEnd(next); }}
         />

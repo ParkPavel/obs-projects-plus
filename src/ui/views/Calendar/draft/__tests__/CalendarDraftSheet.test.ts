@@ -8,6 +8,7 @@ import "@testing-library/jest-dom";
 import { fireEvent, render } from "@testing-library/svelte";
 import dayjs from "dayjs";
 import { tick } from "svelte";
+import { DataFieldType } from "src/lib/dataframe/dataframe";
 
 import CalendarDraftSheet from "../CalendarDraftSheet.svelte";
 import { createCalendarDraft, draftMapping, type CalendarDraftController, type DraftBegin } from "../calendarDraft";
@@ -121,6 +122,20 @@ describe("CalendarDraftSheet — keys", () => {
 });
 
 describe("CalendarDraftSheet — writing", () => {
+  it("explains a computed time mapping instead of saving a note without its chosen date", async () => {
+    const m = mount();
+    begin(m.ctl, { mapping: draftMapping({ config: { startDateField: "calculated" }, fields: [
+      { name: "calculated", type: DataFieldType.Date, repeated: false, identifier: false, derived: true },
+    ] }) });
+    await tick();
+    expect(m.confirmButton()).toBeDisabled();
+    expect(m.container.querySelector('[role="alert"]')).not.toBeNull();
+    const dates = Array.from(m.container.querySelectorAll<HTMLInputElement>("input.ppp-date-field__text"));
+    expect(dates).toHaveLength(2);
+    expect(dates.every((input) => input.disabled)).toBe(true);
+    await fireEvent.click(m.confirmButton());
+    expect(m.onConfirm).not.toHaveBeenCalled();
+  });
   it("leaves untouched template properties inherited, with a mixed completion state", async () => {
     const m = mount();
     begin(m.ctl, { templatePath: "Template.md" });

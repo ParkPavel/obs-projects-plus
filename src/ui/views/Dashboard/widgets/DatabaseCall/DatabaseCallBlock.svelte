@@ -759,6 +759,7 @@
             {getRecordColor}
             config={calendarConfig}
             onConfigChange={handleCalendarConfigChange}
+            filterConditions={tabScope.filterConditions}
             {dataVersion}
           />
           {/key}

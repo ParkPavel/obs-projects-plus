@@ -202,6 +202,18 @@ describe("cancel, refusals and one write at a time", () => {
 });
 
 describe("what is written", () => {
+  it("cannot move or confirm a range mapped to computed time properties", async () => {
+    const ctl = createCalendarDraft();
+    ctl.begin(begin(mapping({}, [field("startDate", true)])));
+    const original = ctl.getState().draft!;
+    ctl.move(dayjs("2026-11-02"));
+    ctl.setStart(dayjs("2026-11-03T10:00"));
+    ctl.setEnd(dayjs("2026-11-04T11:00"));
+    expect(ctl.getState().draft).toBe(original);
+    const save = jest.fn();
+    expect(await ctl.confirm(save, TODAY, UNTITLED)).toBe("invalid");
+    expect(save).not.toHaveBeenCalled();
+  });
   it("writes an untouched unchecked value without a template, so false filters still match", () => {
     const ctl = createCalendarDraft();
     ctl.begin(begin(mapping(), { templatePath: "" }));

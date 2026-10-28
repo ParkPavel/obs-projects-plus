@@ -987,7 +987,8 @@
                     "template-default": "From template",
                     "template-hint": "Untouched properties keep the template values. Use the eraser to clear a value explicitly.",
                     "clear-value": "Clear {{field}}",
-                    "separate-end": "This duration needs a separate end-date property in the view settings."
+                    "separate-end": "This duration needs a separate end-date property in the view settings.",
+                    "computed-time": "This view uses computed time properties. Choose writable date and time mappings to create an event here."
                 }
             },
             "gallery": {

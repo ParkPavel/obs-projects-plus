@@ -245,10 +245,11 @@
   $: draftUntitled = $i18n.t("modals.note.create.untitled");
   $: shownDraft = draftState.draft ? draftRecord(draftState.draft, draftUntitled) : null;
   $: draftStatusOptions = namesToOptions(valueSuggestions(records, fields.find((f) => f.name === draftMap.status), { templateFolders: templateFoldersOf($app) }));
-  $: draftProjectPalette = [...new Set([
+  $: hasDraft = !!draftState.draft;
+  $: draftProjectPalette = hasDraft ? [...new Set([
     ...valueSuggestions(records, fields.find((f) => f.name === draftMap.color)),
     ...records.map(getRecordColor),
-  ].map(normalizeColor).filter((color): color is string => color !== null && hexToHsv(color) !== null))];
+  ].map(normalizeColor).filter((color): color is string => color !== null && hexToHsv(color) !== null))] : [];
   $: draftKey = draftState.draft ? `${draftState.draft.session}.${draftState.draft.revision}` : "";
   // The draft is added to the frame, never put in its place.
   $: displayFrame = shownDraft ? { ...frame, records: [...frame.records, shownDraft] } : frame;

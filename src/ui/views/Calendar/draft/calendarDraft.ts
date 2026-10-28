@@ -100,6 +100,11 @@ export function conflictingDraftFields(m: DraftMapping): string[] {
   return [...new Set(names.filter((name, index) => names.indexOf(name) !== index))];
 }
 
+export function hasComputedDraftTime(draft: CalendarDraft): boolean {
+  const m = draft.mapping;
+  return [m.start, m.end, m.startTime, m.endTime].some((name) => m.computed.includes(name));
+}
+
 export interface CalendarDraft {
   readonly session: number;
   /** Grows on every change; with the session it keys the calendar's cache. */
@@ -340,7 +345,7 @@ export function createCalendarDraft(): CalendarDraftController {
 
     move(date, options) {
       const draft = editable();
-      if (draft) change(draft, movedRange(draft, date, options));
+      if (draft && !hasComputedDraftTime(draft)) change(draft, movedRange(draft, date, options));
     },
 
     edit(fields) {
@@ -354,12 +359,12 @@ export function createCalendarDraft(): CalendarDraftController {
 
     setStart(start) {
       const draft = editable();
-      if (draft) change(draft, { start, end: start.add(draft.end.diff(draft.start, "minute"), "minute") });
+      if (draft && !hasComputedDraftTime(draft)) change(draft, { start, end: start.add(draft.end.diff(draft.start, "minute"), "minute") });
     },
 
     setEnd(end) {
       const draft = editable();
-      if (draft) change(draft, { end: end.isAfter(draft.start) ? end : minEnd(draft.start) });
+      if (draft && !hasComputedDraftTime(draft)) change(draft, { end: end.isAfter(draft.start) ? end : minEnd(draft.start) });
     },
 
     cancel() {
@@ -370,7 +375,7 @@ export function createCalendarDraft(): CalendarDraftController {
       const draft = state.draft;
       if (!alive || !draft) return "none";
       if (state.saving) return "busy";
-      if (conflictingDraftFields(draft.mapping).length || draftNeedsSeparateEnd(draft)) return "invalid";
+      if (conflictingDraftFields(draft.mapping).length || draftNeedsSeparateEnd(draft) || hasComputedDraftTime(draft)) return "invalid";
       const session = draft.session;
       set({ draft, saving: true, error: null });
       const current = () => alive && state.draft?.session === session;
