@@ -508,7 +508,7 @@ describe("i3-final NotePropertiesBlock", () => {
       await tick();
       (m.container.querySelector(".ppp-note-props__swatch.is-button") as HTMLButtonElement).click();
       await flush();
-      const suggestions = () => [...m.container.querySelectorAll(".color-picker > .palette-section:nth-child(2) .color-swatch")].map(el => el.getAttribute("title"));
+      const suggestions = () => Array.from(m.container.querySelectorAll(".color-picker > .palette-section:nth-child(2) .color-swatch")).map(el => el.getAttribute("title"));
       expect(suggestions()).toEqual(["#ff0000"]);
       m.component.$set({ file: new TFile("Notes/b.md") });
       await flush();
