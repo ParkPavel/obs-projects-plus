@@ -67,7 +67,7 @@
   import { tabLinkMenu } from "./tabLinkMenu";
   import { detachInherited, inheritFieldLayout } from "./fieldLayout";
   import EmbeddedViewSettings from "./EmbeddedViewSettings.svelte";
-  import { initialEmbeddedConfig, embeddedViewDefinition } from "./embeddedView";
+  import { initialEmbeddedConfig, embeddedViewDefinition, localTabWithConfig } from "./embeddedView";
 
   export let frame: DataFrame;
   export let api: ViewApi;
@@ -373,7 +373,7 @@
   }
 
   function handleDataTableConfigChange(e: CustomEvent<DataTableConfig>) {
-    if (!activeTab) return;
+    if (readonly || !activeTab) return;
     // i3-final (B4): store only what the tab says itself, not the dashboard's
     // field list it was shown with — or that list would freeze into the tab.
     const own = detachInherited(e.detail, activeTab.config as DataTableConfig, dashboardTableConfig);
@@ -389,19 +389,10 @@
   }
 
   function handleViewConfigChange(cfg: Record<string, unknown>) {
-    if (!activeTab) return;
-    // i3-final (B3): a followed view is edited where it lives, so the project
-    // view and every block following it change together.
-    if (resolvedTab?.link === "live" && resolvedTab.view && sourceProjectId) {
-      settings.updateViewConfig(sourceProjectId, resolvedTab.view.id, cfg);
-      return;
-    }
-    dispatch("configChange", {
-      ...config,
-      viewTabs: tabs.map((t) =>
-        t.id === activeTab.id ? { ...t, config: cfg } : t
-      ),
-    });
+    if (readonly || !activeTab) return;
+    // One block-local event carries the fork, including effective sort/filter.
+    // Neither the source project nor other blocks following it are changed.
+    replaceTab(localTabWithConfig(activeTab, sourceViews, cfg));
   }
 
   function handleTabRemove(e: CustomEvent<string>) {

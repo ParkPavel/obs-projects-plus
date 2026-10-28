@@ -1198,7 +1198,8 @@
                     "linked-view-missing": "The linked view was deleted — this tab shows its own settings",
                     "tab-unavailable": "This kind of view cannot be shown in a block",
                     "tab-unavailable-hint": "Delete this view from the tab menu, or add a table, board, calendar or gallery view.",
-                    "tab-needs-project": "This view needs a project to show"
+                    "tab-needs-project": "This view needs a project to show",
+                    "local-settings-hint": "Changing these settings creates a local copy for this block. The project view and other blocks keep their settings."
                 },
                 "field-presets": {
                     "label": "Layout",

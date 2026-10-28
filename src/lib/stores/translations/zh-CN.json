@@ -1459,7 +1459,8 @@
                     "linked-view-missing": "关联的视图已被删除——此标签页显示其自身的设置",
                     "tab-unavailable": "此类视图无法在块中显示",
                     "tab-unavailable-hint": "请在标签页菜单中删除此视图，或添加表格、看板、日历或画廊视图。",
-                    "tab-needs-project": "此视图需要一个项目才能显示"
+                    "tab-needs-project": "此视图需要一个项目才能显示",
+                    "local-settings-hint": "更改这些设置会为此区块创建本地副本。项目视图和其他区块将保留各自的设置。"
                 },
                 "group": {
                     "empty": "（空）"

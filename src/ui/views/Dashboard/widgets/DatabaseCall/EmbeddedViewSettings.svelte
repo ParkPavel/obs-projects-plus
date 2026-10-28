@@ -25,6 +25,7 @@
   <div class="embedded-view-settings">
     {#if linkedName}
       <p>{$i18n.t("views.dashboard.database-call.linked-view-label", { name: linkedName })}</p>
+      <p data-local-settings-hint>{$i18n.t("views.dashboard.database-call.local-settings-hint")}</p>
       {#if onUnlink}
         <button type="button" on:click={onUnlink}>{$i18n.t("views.dashboard.database-call.unlink-view")}</button>
       {/if}
