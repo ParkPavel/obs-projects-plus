@@ -228,9 +228,12 @@
   }
 
   onDestroy(() => {
+    // Standalone saves retain their deferred notification after close. Only a
+    // block callback could target a replacement tab and must be cancelled.
+    if (!embedded) return;
     if (_saveConfigTimer !== null) clearTimeout(_saveConfigTimer);
     _saveConfigTimer = null;
-    if (embedded) closeAgendaDrawer(agendaKey);
+    closeAgendaDrawer(agendaKey);
   });
 
   // Reactive frame data - dataVersion forces re-evaluation on every data update

@@ -80,6 +80,20 @@ test("standalone calendars retain restoration of their project navigation state"
   expect(p.onConfigChange).toHaveBeenCalledWith(expect.objectContaining({ interval: "day", centerOn: null }));
 });
 
+test("a standalone user scale change queued immediately before close still reaches its callback", async () => {
+  const p = props();
+  const rendered = render(CalendarView, { ...p, embedded: false });
+  await tick();
+  jest.advanceTimersByTime(1);
+  p.onConfigChange.mockClear();
+  // Startup restored day scale. A user zoom-out queues week before unmount.
+  await fireEvent.keyDown(rendered.container.querySelector('[role="application"]')!, { key: "-" });
+  rendered.component.$destroy();
+  jest.advanceTimersByTime(1);
+  expect(p.onConfigChange).toHaveBeenCalledTimes(1);
+  expect(p.onConfigChange).toHaveBeenCalledWith(expect.objectContaining({ interval: "week" }));
+});
+
 test("creating an embedded agenda list uses source defaults and stores it in the block, not either project", async () => {
   const p = props();
   const agenda = { mode: "custom" as const, standard: { inheritCalendarFilters: true }, custom: { lists: [] } };
