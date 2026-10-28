@@ -279,8 +279,8 @@
   const handleSortColumns =
     (field: DataField | undefined): OnSortColumns =>
     (columns) => {
-      if (dataReadOnly) return;
-      if (field?.name && field?.typeConfig && field.typeConfig?.options) {
+      // Column order is local presentation in a block, never shared schema.
+      if (!embedded && !dataReadOnly && field?.name && field?.typeConfig && field.typeConfig?.options) {
         settings.updateFieldConfig(
           project.id,
           field?.name,

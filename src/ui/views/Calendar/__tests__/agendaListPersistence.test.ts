@@ -20,7 +20,8 @@ function runHandler(name: string, latest: Project, detail: unknown): Project {
   const compiled = ts.transpileModule(node.getText(ast), { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText;
   let saved: Project | undefined;
   vm.runInNewContext(`let project; let _agendaGuard = false; ${compiled}; ${name}({ detail });`, {
-    getLatestProject: () => latest,
+    latestAgendaProject: () => latest,
+    embedded: false,
     settings: { updateProject: (next: Project) => { saved = next; } },
     setTimeout: (callback: () => void) => callback(),
     detail,

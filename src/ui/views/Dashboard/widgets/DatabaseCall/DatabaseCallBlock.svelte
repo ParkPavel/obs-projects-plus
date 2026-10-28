@@ -632,6 +632,9 @@
           name: resolvedTab.view.name,
         })}
       </span>
+      <span class="ppp-dbc-filter-label" data-local-settings-hint>
+        {$i18n.t("views.dashboard.database-call.local-settings-hint")}
+      </span>
     {:else if resolvedTab?.link === "missing"}
       <span class="ppp-dbc-filter-label ppp-dbc-filter-label--broken" data-tab-link="missing">
         {$i18n.t("views.dashboard.database-call.linked-view-missing", {

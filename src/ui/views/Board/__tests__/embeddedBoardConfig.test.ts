@@ -15,7 +15,7 @@ jest.mock("src/ui/components/Layout", () => ({
 afterEach(() => { cleanup(); jest.restoreAllMocks(); });
 const props = () => ({
   project: { ...DEFAULT_PROJECT, id: "project", name: "Project" },
-  frame: { fields: ["status", "priority"].map(name => ({ name, type: "string" as const, identifier: false, derived: false, repeated: false })), records: [] },
+  frame: { fields: ["status", "priority"].map(name => ({ name, type: "string" as const, identifier: false, derived: false, repeated: false, typeConfig: { options: ["low", "high"] } })), records: [] },
   readonly: false, api: {} as import("src/lib/viewApi").ViewApi,
   getRecordColor: () => null, sortRecords: (records: readonly import("src/lib/dataframe/dataframe").DataRecord[]) => [...records],
   getRecord: () => undefined, hasSort: false, hasFilter: false,
@@ -47,4 +47,14 @@ test("a read-only source cannot add column options to the host project's schema"
   await fireEvent.click(rendered.getByText("Probe column callback"));
   expect(write).not.toHaveBeenCalled();
   expect(p.onConfigChange).not.toHaveBeenCalled();
+});
+
+test.each([false, true])("embedded column reorder only saves local weights, even with dataReadOnly=%s", async (dataReadOnly) => {
+  const p = props();
+  const write = jest.spyOn(settings, "updateFieldConfig");
+  const rendered = render(BoardView, { ...p, dataReadOnly });
+  await fireEvent.click(rendered.getByText("Probe reorder callback"));
+  expect(write).not.toHaveBeenCalled();
+  expect(p.onConfigChange).toHaveBeenCalledWith(expect.objectContaining({ columns: { high: { weight: 0 }, low: { weight: 1 } } }));
+  expect(p.frame.fields[0]!.typeConfig.options).toEqual(["low", "high"]);
 });
