@@ -555,6 +555,13 @@
         on:tabRemove={handleTabRemove}
         on:tabRename={handleTabRename}
       />
+      <BlockFilterBar
+        filter={subFilter}
+        fields={frame.fields}
+        records={frame.records}
+        {readonly}
+        on:change={handleSubFilterChange}
+      />
       {#if $isMobileDevice && project && activeTab?.viewType === "calendar"}
         <button type="button" class="clickable-icon" data-embedded-agenda-toggle
           aria-label={$i18n.t("views.calendar.agenda.title")}
@@ -563,13 +570,6 @@
           <Icon name="panel-right" size="sm" />
         </button>
       {/if}
-      <BlockFilterBar
-        filter={subFilter}
-        fields={frame.fields}
-        records={frame.records}
-        {readonly}
-        on:change={handleSubFilterChange}
-      />
       {#if !readonly && activeTab && embeddedSettingsView && activeTab.viewType !== "table" && isRenderableTab(activeTab)}
         {#key activeTab.id}
           <EmbeddedViewSettings

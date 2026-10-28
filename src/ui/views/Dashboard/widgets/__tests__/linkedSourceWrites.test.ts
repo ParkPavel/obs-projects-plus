@@ -221,8 +221,11 @@ describe("#137 the pipeline editor reads the block's own source", () => {
 
 // Codex review of 23d98a6: the assertions above name "check" and "drag" but
 // only pinned the click guard — deleting the checkbox or drag guards left every
-// test green. Each write handler must open with the guard, before any write,
-// and every drag path must be disabled by it.
+// test green. Each shared-data write handler must open with the guard, before
+// any write, and every drag path must be disabled by it. Column sort now also
+// saves local presentation config: embeddedBoardConfig.test.ts exercises its
+// actual callback for embedded and standalone read-only sources, ensuring that
+// local weights never mutate the source schema.
 describe("#C4 every write path is guarded, handler by handler", () => {
   const read = (rel: string) => readFileSync(resolve(WIDGETS, rel), "utf8");
   const boardView = read("../../Board/BoardView.svelte");
@@ -243,7 +246,6 @@ describe("#C4 every write path is guarded, handler by handler", () => {
   it.each([
     ["check", /const handleRecordCheck =/],
     ["drag-update", /const handleRecordUpdate =/],
-    ["column sort", /const handleSortColumns =/],
     ["column delete", /const handleColumnDelete =/],
     ["column rename", /const handleColumnRename =/],
   ])("Board %s opens with the guard", (_name, signature) => {

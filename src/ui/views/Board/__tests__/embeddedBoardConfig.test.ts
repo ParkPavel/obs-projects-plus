@@ -50,10 +50,14 @@ test("a read-only source cannot add column options to the host project's schema"
   expect(p.onConfigChange).not.toHaveBeenCalled();
 });
 
-test.each([false, true])("embedded column reorder only saves local weights, even with dataReadOnly=%s", async (dataReadOnly) => {
+test.each([
+  { embedded: true, dataReadOnly: false },
+  { embedded: true, dataReadOnly: true },
+  { embedded: false, dataReadOnly: true },
+])("column reorder preserves source schema with embedded=$embedded, dataReadOnly=$dataReadOnly", async ({ embedded, dataReadOnly }) => {
   const p = props();
   const write = jest.spyOn(settings, "updateFieldConfig");
-  const rendered = render(BoardView, { ...p, dataReadOnly });
+  const rendered = render(BoardView, { ...p, embedded, dataReadOnly });
   await fireEvent.click(rendered.getByText("Probe reorder callback"));
   expect(write).not.toHaveBeenCalled();
   expect(p.onConfigChange).toHaveBeenCalledWith(expect.objectContaining({ columns: { high: { weight: 0 }, low: { weight: 1 } } }));
