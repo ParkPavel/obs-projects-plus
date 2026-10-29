@@ -1,6 +1,7 @@
 ﻿{
     "translation": {
         "formula-errors": {
+    "version": "此公式使用不支持的版本。请先更新 Projects Plus，再计算或更改公式。",
             "number": "数字格式不正确。请检查正负号、小数点和指数。",
             "string": "请使用相同类型的引号结束文本。",
             "escape": "反斜杠后的字符不受支持。请检查转义序列。",

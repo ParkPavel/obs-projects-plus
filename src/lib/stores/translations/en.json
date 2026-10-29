@@ -1,6 +1,7 @@
 ﻿{
     "translation": {
         "formula-errors": {
+    "version": "This formula uses an unsupported version. Update Projects Plus before evaluating or changing it.",
             "number": "Invalid number. Check its sign, decimal point and exponent.",
             "string": "Close the text with a matching quote.",
             "escape": "Unsupported character after a backslash. Check the escape sequence.",

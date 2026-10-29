@@ -12,7 +12,7 @@ import type { DataRecord, DataField } from 'src/lib/dataframe/dataframe';
 import type { AgendaFilter, AgendaFilterGroup, AgendaCustomList } from 'src/settings/v3/settings';
 import type { FilterOperator, FilterCondition, FilterDefinition } from 'src/settings/base/settings';
 import { isDateFilterOperator } from 'src/settings/base/settings';
-import { parseFormula, evaluateFormula } from 'src/lib/formula';
+import { parseFormula, evaluateFormula, evaluateVersionedFormula, createFormulaPass } from 'src/lib/formula';
 import { matchesCondition, matchesFilterConditions, type FilterOpts } from 'src/lib/engine/filterEvaluator';
 import { stripToDisplay } from 'src/lib/engine/wikilink';
 import { calendarLogger } from '../logger';
@@ -81,9 +81,19 @@ export function filterRecordsForList(
   records: DataRecord[],
   list: AgendaCustomList,
   baseDate: Dayjs = dayjs(),
-  _fields: DataField[] = []
+  fields: DataField[] = []
 ): DataRecord[] {
   if (list.filterMode === 'advanced' && list.filterFormula) {
+    if (list.formulaVersion !== undefined) {
+      const frame = { records, fields };
+      const referenceDate = baseDate.toDate();
+      const pass = createFormulaPass(frame, "unified-v1", referenceDate);
+      return records.filter(record => {
+        const result = evaluateVersionedFormula(list.filterFormula!, list.formulaVersion,
+          { record, frame, referenceDate, pass }, "legacy-filter");
+        return !result.error && Boolean(result.value);
+      });
+    }
     try {
       const ast = parseFormula(list.filterFormula);
       return records.filter(r => {

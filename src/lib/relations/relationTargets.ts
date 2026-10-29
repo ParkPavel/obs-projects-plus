@@ -11,6 +11,7 @@ export type FieldConfigRelationMap = Record<
   | {
       relation?: RelationFieldConfig;
       rollup?: RollupFieldConfig;
+      formulaVersion?: string;
       formula?: string;
       type?: import("src/lib/visualizer/propertyTypes").PropertyType;
     }

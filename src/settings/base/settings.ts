@@ -370,6 +370,7 @@ export type FieldConfig = StringFieldConfig &
      * ConfigureField formula sub-panel; consumed by the formula evaluator.
      * Absent/empty means the field has no expression yet.
      */
+    readonly formulaVersion?: string;
     readonly formula?: string;
   };
 

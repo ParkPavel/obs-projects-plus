@@ -352,6 +352,8 @@ export interface AggregationResult {
 // ── Database View Config ─────────────────────────────────────
 
 export interface FormulaFieldDef {
+  /** Absent retains compatibility rules; only explicit unified-v1 selects new rules. */
+  readonly formulaVersion?: string;
   readonly name: string;
   readonly expression: string;
   readonly resultType?: "string" | "number" | "date" | "boolean";

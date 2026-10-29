@@ -26,6 +26,7 @@ import { matchesFilterConditions } from "src/lib/engine/filterEvaluator";
 import { isNumeric, toNumber, toNumbers } from "src/lib/engine/numeric";
 import { aggregate, type RollupFunction } from "src/lib/engine/aggregate";
 import { createFormulaPass, evaluateFormulaValue } from "./formulaEngine";
+import { evaluateVersionedFormula } from "src/lib/formula/version";
 import { isUnsafePattern, MAX_REGEX_PATTERN_LENGTH } from "src/lib/helpers/regexSafety";
 import { joinKey } from "./joinKey";
 import dayjs from "dayjs";
@@ -473,6 +474,9 @@ function executeCompute(
   step: ComputeStep,
   warnings: string[]
 ): DataFrame {
+  if (step.columns.some(column => column.formulaVersion !== undefined)) {
+    return executeVersionedCompute(df, step, warnings);
+  }
   // First pass: compute all values to infer types
   const columnValues: (DataValue | undefined | null)[][] = step.columns.map(() => []);
   // i3-final: `df` is not changed while this step runs, so a column aggregate
@@ -518,6 +522,28 @@ function executeCompute(
   ];
 
   return { fields: newFields, records: newRecords };
+}
+
+/** New columns see complete earlier columns; legacy aggregates still read the input frame. */
+function executeVersionedCompute(df: DataFrame, step: ComputeStep, warnings: string[]): DataFrame {
+  let records = df.records.map(record => ({ ...record, values: { ...record.values } }));
+  const fields = [...df.fields];
+  const referenceDate = new Date();
+  const legacyPass = createFormulaPass(df, "legacy-computed", referenceDate);
+  for (const column of step.columns) {
+    const unified = column.formulaVersion === "unified-v1";
+    const frame = unified ? { fields: [...fields], records } : df;
+    const pass = unified ? createFormulaPass(frame, "unified-v1", referenceDate) : legacyPass;
+    records = records.map(record => {
+      const result = column.formulaVersion === undefined
+        ? { value: evaluateFormulaValue(column.expression, record, df, legacyPass) }
+        : evaluateVersionedFormula(column.expression, column.formulaVersion, { record, frame, pass, referenceDate });
+      if (result.error) warnings.push(`Compute error for '${column.name}' on record '${record.id}': ${result.error}`);
+      return { ...record, values: { ...record.values, [column.name]: result.value } };
+    });
+    fields.push({ name: column.name, type: inferFieldType(records.find(record => record.values[column.name] != null)?.values[column.name]), repeated: false, identifier: false, derived: true });
+  }
+  return { fields, records };
 }
 
 /**

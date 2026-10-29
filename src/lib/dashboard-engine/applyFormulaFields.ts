@@ -27,6 +27,8 @@ import {
 import { createFormulaPass, evaluateFormulaWithError } from "src/lib/formula/extendedEvaluator";
 import { resolveFieldName } from "src/lib/formula/formulaErrors";
 import { parseFormula, type FormulaNode } from "src/lib/helpers/formulaParser";
+import { evaluateVersionedFormula, formulaSemantics, type VersionedFormula } from "src/lib/formula/version";
+import { assertFormulaLimits, MAX_FORMULA_INPUT_LENGTH } from "src/lib/formula/limits";
 import type { FormulaFieldDef } from "src/ui/views/Dashboard/types";
 
 function inferType(value: Optional<DataValue>): DataFieldType {
@@ -50,17 +52,27 @@ function firstNonNull(
 }
 
 /** Every field or column name an expression mentions (unparseable → none). */
-export function referencedNames(expression: string): string[] {
+export function referencedNames(expression: string, formulaVersion?: string): string[] {
   let ast: FormulaNode;
-  try { ast = parseFormula(expression); } catch { return []; }
+  try {
+    const semantics = formulaSemantics(formulaVersion, "legacy-computed");
+    if (semantics === "unified-v1" && expression.length > MAX_FORMULA_INPUT_LENGTH) return [];
+    ast = parseFormula(expression, undefined, semantics === "unified-v1" ? "strict" : "legacy");
+    if (semantics === "unified-v1") assertFormulaLimits(ast);
+  } catch { return []; }
   const out: string[] = [];
-  const walk = (n: FormulaNode): void => {
+  const pending = [ast];
+  while (pending.length) {
+    const n = pending.pop()!;
     if (n.type === "field" || n.type === "column_ref") out.push(n.name);
-    else if (n.type === "function") n.args.forEach(walk);
-    else if (n.type === "operator") { walk(n.left); walk(n.right); }
-    else if (n.type === "array") n.items.forEach(walk);
-  };
-  walk(ast);
+    else if (n.type === "function") {
+      for (let i = n.args.length - 1; i >= 0; i--) pending.push(n.args[i]!);
+    }
+    else if (n.type === "operator") pending.push(n.right, n.left);
+    else if (n.type === "array") {
+      for (let i = n.items.length - 1; i >= 0; i--) pending.push(n.items[i]!);
+    }
+  }
   return out;
 }
 
@@ -70,14 +82,14 @@ export function referencedNames(expression: string): string[] {
  * stored value of that key (`qty = qty + 1`), so a self-reference is no loop.
  * Kahn's algorithm: linear in formulas + references, terminates on any input.
  */
-export function orderFormulaDefs<T extends { name: string; expression: string }>(
+export function orderFormulaDefs<T extends VersionedFormula & { name: string; expression: string }>(
   defs: readonly T[]
 ): { ordered: T[]; cyclic: Set<string> } {
   const names = defs.map((d) => d.name);
   const deps = new Map<string, Set<string>>();
   for (const d of defs) {
     const own = new Set<string>();
-    for (const ref of referencedNames(d.expression)) {
+    for (const ref of referencedNames(d.expression, d.formulaVersion)) {
       const target = resolveFieldName(ref, names);
       if (target !== undefined && target !== d.name) own.add(target);
     }
@@ -117,22 +129,32 @@ export function applyFormulaFields(
   for (const name of cyclic) for (const r of records) r.values[name] = null;
   for (const def of ordered) {
     // The frame as computed so far: column references read finished columns.
-    const current: DataFrame = { ...frame, records };
+    const fields = def.formulaVersion === "unified-v1"
+      ? [...frame.fields, ...ordered.slice(0, ordered.indexOf(def))
+        .filter(prior => !existingNames.has(prior.name))
+        .map(prior => ({ name: prior.name, type: inferType(firstNonNull(records, prior.name)), repeated: false, identifier: false, derived: true }))]
+      : frame.fields;
+    const current: DataFrame = { ...frame, fields, records };
     // i3-final: one pass per formula column — `SUM(@amount)` is computed once
     // for the column, not once per record (was O(N²) on large tables). The
     // pass belongs to `current`, which no later formula reuses.
-    const pass = createFormulaPass(current);
+    const pass = createFormulaPass(current, def.formulaVersion === "unified-v1" ? "unified-v1" : "legacy-computed");
     records = records.map((record) => {
       let value: Optional<DataValue>;
       try {
-        const result = evaluateFormulaWithError(def.expression, record, current, pass);
+        const result = def.formulaVersion === undefined
+          ? evaluateFormulaWithError(def.expression, record, current, pass)
+          : evaluateVersionedFormula(def.expression, def.formulaVersion, { record, frame: current, pass });
         value = result.value;
         if (result.error) reportError?.(def.name, record.id, result.error);
       } catch {
         value = null;
       }
-      record.values[def.name] = value;
-      return record;
+      if (def.formulaVersion === undefined) {
+        record.values[def.name] = value;
+        return record;
+      }
+      return { ...record, values: { ...record.values, [def.name]: value } };
     });
   }
   const newRecords = records;

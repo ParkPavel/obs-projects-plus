@@ -129,6 +129,25 @@ charged once; static node counts also bound cyclic or expanding external ASTs.
 Lazy branches retain their evaluation behavior. Legacy evaluation defaults and
 all saved compatibility results stay on their old syntax policy.
 
+Persisted base fields, view formulas, transform columns and Agenda lists may
+carry `formulaVersion: "unified-v1"`. An absent flag retains that surface's old
+rules; ordinary reads and saves do not migrate it. Unsupported or malformed
+versions return no computed value (Agenda excludes the record) rather than
+falling back to compatibility. Preserve unknown flags when retaining definitions.
+The current data-layer integration does not expose a new-mode selector yet:
+editor validation, help and explicit user selection must be integrated together.
+Preview accepts an optional versioned draft: omitting it retains the saved mode;
+an explicit empty draft selects compatibility. New computed columns see complete
+earlier columns and their schema. Legacy transform aggregates continue to read
+the original input frame, including in mixed-version steps. Agenda receives its
+record subset and reference date from its caller, not the whole vault or wall clock.
+
+Before enabling new rules, update all devices and back up settings. Older plugin
+binaries do not understand this flag and cannot fail closed on it. A rollback
+therefore requires restoring pre-update settings or explicitly converting each
+new-mode formula after comparing its results. The version flag is a compatibility
+contract for supporting binaries, not a guarantee of safe interpretation by old ones.
+
 The date shorthand used by visual filters (`today+1w`) remains a separate syntax
 for date values. Fixed rollup aggregation operations do not execute custom formula
 source. Neither is presented as another general-purpose formula evaluator.

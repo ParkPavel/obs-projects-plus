@@ -125,6 +125,7 @@
         break;
       case DataFieldType.Formula:
         keep("formula");
+        keep("formulaVersion");
         break;
       case DataFieldType.UniqueId:
         keep("uniqueIdPrefix");

@@ -136,6 +136,7 @@
       name: formData.name.trim(),
       icon: formData.icon,
       filterMode: formData.filterMode,
+      ...(list?.formulaVersion !== undefined ? { formulaVersion: list.formulaVersion } : {}),
       ...(formData.filterMode === 'visual' 
         ? { filterGroup: formData.filterGroup }
         : { filterFormula: formData.filterFormula || '' }

@@ -8,7 +8,7 @@ import type { PropertyType } from "src/lib/visualizer/propertyTypes";
  */
 export type DeclaredRelations = Record<
   string,
-  { relation?: { targetProjectId?: string }; formula?: string; type?: PropertyType } | undefined
+  { relation?: { targetProjectId?: string }; formula?: string; formulaVersion?: string; type?: PropertyType } | undefined
 >;
 
 /**
@@ -132,9 +132,9 @@ export function declaredPropertyType(field: DataField): PropertyType | undefined
 /** The base's formula properties, as the formula pass takes them (R3). */
 export function formulaPropertiesOf(
   fieldConfig: DeclaredRelations | undefined
-): { name: string; expression: string }[] {
+): { name: string; expression: string; formulaVersion?: string }[] {
   if (!fieldConfig) return [];
   return Object.entries(fieldConfig)
     .filter(([, cfg]) => typeof cfg?.formula === "string" && cfg.formula.trim() !== "")
-    .map(([name, cfg]) => ({ name, expression: cfg!.formula! }));
+    .map(([name, cfg]) => ({ name, expression: cfg!.formula!, ...(cfg!.formulaVersion !== undefined ? { formulaVersion: cfg!.formulaVersion } : {}) }));
 }

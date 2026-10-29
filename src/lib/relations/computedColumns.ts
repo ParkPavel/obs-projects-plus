@@ -23,12 +23,12 @@ import { applyRollupColumns } from "./rollupColumns";
  * formula that does. Everything else is computed before them. Stored order is
  * kept within each part; `applyFormulaFields` orders by dependency itself.
  */
-export function splitFormulasAroundRollups<T extends { name: string; expression: string }>(
+export function splitFormulasAroundRollups<T extends { name: string; expression: string; formulaVersion?: string }>(
   defs: readonly T[],
   rollupNames: ReadonlySet<string>
 ): { before: T[]; after: T[] } {
   const names = [...defs.map((d) => d.name), ...rollupNames];
-  const refs = new Map(defs.map((d) => [d.name, referencedNames(d.expression)]));
+  const refs = new Map(defs.map((d) => [d.name, referencedNames(d.expression, d.formulaVersion)]));
   const late = new Set<string>(rollupNames);
   let grew = true;
   while (grew) {

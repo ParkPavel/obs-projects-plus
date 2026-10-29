@@ -135,6 +135,8 @@ export interface ComputeStep extends TransformStepBase {
 
 /** A derived column: the name it takes, and the formula expression behind it. */
 export interface ComputedColumn {
+  /** Absent retains compatibility rules; only explicit unified-v1 selects new rules. */
+  readonly formulaVersion?: string;
   readonly name: string;
   readonly expression: string;
 }

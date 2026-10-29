@@ -2,7 +2,8 @@
  * Canonical formula entry: one AST runtime and executable function catalog.
  * Existing boolean/computed APIs retain their compatibility profiles. New
  * rules require an explicit evaluation context; saved formulas are not migrated
- * by importing this module. UI opt-in and persisted versions are a later layer.
+ * by importing this module. Persisted definitions carry an optional version;
+ * the explicit editor opt-in is integrated separately from the data layer.
  */
 export {
   tokenize,
@@ -48,6 +49,8 @@ export type {
 export { getFormulaCatalog, getFormulaDefinition } from "./catalog";
 export type { FormulaSemantics, FormulaDefinition } from "./catalog";
 export { validateExpression } from "./validation";
+export { formulaSemantics, evaluateVersionedFormula } from "./version";
+export type { VersionedFormula } from "./version";
 export type { FormulaSyntaxPolicy } from "./syntax";
 // i3-final: the criteria language of SUMIF / COUNTIF / the *IFS family
 export { compileCriterion, matchingRows } from "./criteria";

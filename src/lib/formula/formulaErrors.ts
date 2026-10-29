@@ -12,6 +12,7 @@ export function humanFormulaError(raw: string, fields: readonly string[] = []): 
     const text = get(i18n).t(`formula-errors.${key}`, opts);
     return text === `formula-errors.${key}` ? raw : text; // no translations loaded: keep the raw words
   };
+  if (raw === "Unsupported formula version") return t("version");
   let m: RegExpExecArray | null;
   if (/^Invalid numeric literal at position \d+$/.test(raw)) return t("number");
   if (raw === "Unterminated string literal") return t("string");

@@ -159,6 +159,7 @@ export type AgendaCustomList = {
   readonly filterGroup?: AgendaFilterGroup;
   // Advanced mode: formula string
   readonly filterFormula?: string;
+  readonly formulaVersion?: string;
   readonly order: number;
   readonly collapsed?: boolean;
   readonly color?: string;
