@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
+  import dayjs from 'dayjs';
   import { Icon } from 'obsidian-svelte';
   import { i18n } from 'src/lib/stores/i18n';
   import type { DataField, DataRecord } from 'src/lib/dataframe/dataframe';
@@ -27,6 +28,8 @@
   export let list: AgendaCustomList | null = null;
   export let fields: DataField[] = [];
   export let records: DataRecord[] = [];
+  export let referenceDate: dayjs.Dayjs = dayjs();
+  let formulaVersion = list?.formulaVersion;
   export let existingLists: AgendaCustomList[] = [];
   /** w4-input2: a new list's name already typed in place (the row's gear). */
   export let initialName = '';
@@ -136,7 +139,7 @@
       name: formData.name.trim(),
       icon: formData.icon,
       filterMode: formData.filterMode,
-      ...(list?.formulaVersion !== undefined ? { formulaVersion: list.formulaVersion } : {}),
+      ...(formulaVersion !== undefined ? { formulaVersion } : {}),
       ...(formData.filterMode === 'visual' 
         ? { filterGroup: formData.filterGroup }
         : { filterFormula: formData.filterFormula || '' }
@@ -326,6 +329,10 @@
       {:else}
         <AdvancedFilterEditor
           {fields}
+          {records}
+          {referenceDate}
+          version={formulaVersion}
+          on:modechange={(event) => { formulaVersion = event.detail.formulaVersion; }}
           bind:formula={formData.filterFormula}
         />
       {/if}

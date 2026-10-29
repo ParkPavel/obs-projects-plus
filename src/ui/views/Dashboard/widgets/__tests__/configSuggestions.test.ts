@@ -202,10 +202,10 @@ describe("PipelineEditor — field, function and formula boxes", () => {
     jest.useRealTimers();
   });
 
-  function mount(steps: Pipeline["steps"]) {
+  function mount(steps: Pipeline["steps"], sourceFields = fields) {
     const m = mountCollecting<Pipeline>(
       PipelineEditor,
-      { pipeline: { steps }, fields, source: { fields, records: [] }, availableSources: [] },
+      { pipeline: { steps }, fields: sourceFields, source: { fields: sourceFields, records: [] }, availableSources: [] },
       "apply"
     );
     const summary = m.target.querySelector<HTMLElement>(".ppp-step-summary");
@@ -312,13 +312,17 @@ describe("PipelineEditor — field, function and formula boxes", () => {
     m.destroy();
   });
 
-  test("compute: Enter commits the typed formula once", async () => {
-    const m = mount([{ type: "compute", columns: [{ name: "total", expression: "" }] }]);
+  test("compute: plain Enter keeps the draft; Ctrl+Enter commits the valid formula once", async () => {
+    const m = mount([{ type: "compute", columns: [{ name: "total", expression: "" }] }], fieldsOf("price"));
     await settle();
-    const formula = comboInputs(m.target)[0]!;
-    await enter(formula);
-    typeInto(formula, "price * 2");
-    press(formula, "Enter");
+    const formula = m.target.querySelector<HTMLTextAreaElement>("textarea")!;
+    formula.focus();
+    formula.value = "price * 2";
+    formula.dispatchEvent(new Event("input", { bubbles: true }));
+    await settle();
+    formula.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(m.events).toHaveLength(0);
+    formula.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", ctrlKey: true, bubbles: true }));
     formula.blur();
     await settle();
     jest.advanceTimersByTime(400);

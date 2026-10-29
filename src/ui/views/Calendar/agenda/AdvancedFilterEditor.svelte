@@ -1,33 +1,23 @@
-<!--
-  AdvancedFilterEditor — Calendar Agenda formula filter editor (#022.6).
-
-  Thin shell over `FormulaConstructorFull` (#077). The toolbar (Help toggle +
-  validation badge) and the help panel are owned by the wrapper; this file only
-  supplies Calendar-specific validate, snippets, and the Calendar-only function
-  reference via `helpExtraCategories`.
-
-  Public contract is preserved for the only consumer (`AgendaListEditor`):
-    • props: `formula: string`, `fields: DataField[]`
-    • event: `change` with `detail: string`
-
-  Calendar agenda formulas use functions resolved by `parseFormula`
-  (`IS_OVERDUE`, `IS_TODAY`, `HAS_ANY_OF`, …) which live outside the
-  canonical `EXTENDED_FUNCTIONS` registry. We therefore pass a custom
-  `validate` adapter built on `validateFormula` from `src/lib/formula`
-  so that Calendar-specific functions are NOT flagged as "Unknown".
--->
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-  import type { DataField } from 'src/lib/dataframe/dataframe';
-  import { validateFormula } from 'src/lib/formula';
+  import { createEventDispatcher, onDestroy } from 'svelte';
+  import dayjs from 'dayjs';
+  import FormulaMode from 'src/ui/components/FormulaEditor/FormulaMode.svelte';
+  import { formulaEditorSemantics, validateVersionedFormula } from 'src/lib/formula/version';
+  import { evaluateAgendaFormula } from './filterEngine';
+  import type { DataField, DataRecord } from 'src/lib/dataframe/dataframe';
   import { i18n } from 'src/lib/stores/i18n';
   import FormulaConstructorFull from 'src/ui/components/FormulaConstructor/FormulaConstructorFull.svelte';
 
   export let formula: string = '';
   export let fields: DataField[] = [];
+  export let records: DataRecord[] = [];
+  export let referenceDate: dayjs.Dayjs = dayjs();
+  export let version: string | undefined = undefined;
+  $: semantics = formulaEditorSemantics(version, 'legacy-filter');
 
   const dispatch = createEventDispatcher<{
     change: string;
+    modechange: import("src/lib/formula/version").VersionedFormula;
   }>();
 
   // i18n helper rooted at the Calendar agenda advanced-filter namespace.
@@ -39,14 +29,9 @@
   // Field-name list for FormulaConstructor (it expects string[], not DataField[]).
   $: fieldNames = fields.map((f) => f.name);
 
-  // Calendar-aware validator. `validateFormula` returns ValidationError[];
-  // FormulaConstructor's `validate` prop expects string[].
-  // We use this validator instead of the canonical `validateFormulaExpression`
-  // because Calendar agenda functions (`IS_OVERDUE`, `IS_TODAY`, etc.) are
-  // resolved inside `parseFormula`, NOT in `EXTENDED_FUNCTIONS`. Using the
-  // canonical validator would incorrectly flag them as "Unknown function".
+  // The selected executable profile owns validation as well as help.
   function calendarValidate(expr: string, availableFields: string[]): string[] {
-    return validateFormula(expr, availableFields).map((e) => e.message);
+    return validateVersionedFormula(expr, availableFields, version, 'legacy-filter');
   }
 
   // Snippet catalog tailored for Calendar agenda. Labels are localised via
@@ -75,36 +60,22 @@
     },
   ];
 
-  // Calendar-only functions that are resolved by `parseFormula` and therefore
-  // absent from the metadata registry FormulaHelpPanel reads. Surfaced as extra
-  // help sections so users still discover IS_OVERDUE/HAS_ANY_OF/etc.
-  $: helpExtraCategories = [
-    {
-      title: t('help-title-dates'),
-      entries: [
-        { signature: 'IS_TODAY(date)' },
-        { signature: 'IS_OVERDUE(date)' },
-        { signature: 'IS_THIS_WEEK(date)' },
-        { signature: 'IS_BEFORE(date1, date2)' },
-        { signature: 'TOMORROW()' },
-        { signature: 'YESTERDAY()' },
-      ],
-    },
-    {
-      title: t('help-title-checks'),
-      entries: [
-        { signature: 'IS_EMPTY(field)' },
-        { signature: 'IS_NOT_EMPTY(field)' },
-      ],
-    },
-    {
-      title: t('help-title-arrays'),
-      entries: [
-        { signature: 'HAS_ANY_OF(tags, ["a","b"])' },
-        { signature: 'HAS_ALL_OF(tags, ["a","b"])' },
-      ],
-    },
-  ];
+  let previewCount: number | null = null;
+  let previewError: string | null = null;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  function schedulePreview(expression: string, savedVersion: string | undefined, source: DataRecord[], schema: DataField[], date: dayjs.Dayjs) {
+    clearTimeout(timer);
+    previewCount = null;
+    previewError = null;
+    timer = setTimeout(() => {
+      if (!expression.trim() || validateVersionedFormula(expression, schema.map(field => field.name), savedVersion, 'legacy-filter').length) return;
+      const result = evaluateAgendaFormula(source, expression, savedVersion, date, schema);
+      previewCount = result.records.length;
+      previewError = result.error;
+    }, 700);
+  }
+  $: schedulePreview(formula, version, records, fields, referenceDate);
+  onDestroy(() => clearTimeout(timer));
 
   function handleChange(e: CustomEvent<string>) {
     formula = e.detail;
@@ -112,13 +83,23 @@
   }
 </script>
 
+<FormulaMode {version} on:change={(event) => { version = event.detail.formulaVersion; dispatch("modechange", event.detail); }} />
+{#if semantics}
 <FormulaConstructorFull
+  {semantics}
   value={formula}
   fields={fieldNames}
   validate={calendarValidate}
   {snippets}
-  {helpExtraCategories}
   placeholder={t('textarea-placeholder')}
   rows={6}
   on:change={handleChange}
-/>
+>
+  <div slot="preview" aria-live="polite">
+    {#if previewError}<p role="alert">{previewError}</p>
+    {:else if previewCount !== null}<p class="ppp-formula-agenda-preview">{$i18n.t("formula-mode.matches", { count: previewCount, total: records.length })}</p>{/if}
+  </div>
+</FormulaConstructorFull>
+{:else}
+  <textarea value={formula} rows={6} readonly aria-label={t("textarea-placeholder")}></textarea>
+{/if}

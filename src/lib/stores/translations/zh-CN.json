@@ -1,6 +1,35 @@
 ﻿{
     "translation": {
+        "formula-mode": {
+            "label": "公式规则",
+            "legacy": "兼容模式",
+            "modern": "新规则",
+            "checking": "正在检查…",
+            "warning": "选择新规则前，请在所有设备上更新 Projects Plus 并备份设置。旧版本会忽略此选项；回退时需要恢复设置，或比较结果后转换公式。",
+            "matches": "所选日期共有 {{total}} 条记录，其中 {{count}} 条匹配。"
+        },
+        "formula-profile-docs": {
+            "legacy-computed": {
+                "COUNT": "计算列表的每个位置，包括空白项。跳过单独的 null；兼容模式的 @列仅包含数值。",
+                "WORKDAYS": "按原有本地日期规则计算工作日。反向日期范围返回零。",
+                "TODAY": "设备当前日期，格式为 YYYY-MM-DD。",
+                "NOW": "设备当前时间，格式为 ISO 时间戳。"
+            },
+            "legacy-filter": {
+                "TODAY": "所选参考日期，格式为 YYYY-MM-DD。",
+                "NOW": "此次计算固定使用的参考时刻。",
+                "AND": "仅当所有参数均为布尔值 true 时返回 true。",
+                "OR": "任一参数为布尔值 true 时返回 true。"
+            },
+            "unified-v1": {
+                "COUNT": "计算非 null 值和列表项。跳过 null 和缺失项；false、零和空文本均计数。",
+                "WORKDAYS": "计算（较早日期，较晚日期] 内的有符号工作日差。交换日期会改变正负号；同一天为零。",
+                "TODAY": "所选参考日期，格式为 YYYY-MM-DD。",
+                "NOW": "此次计算固定使用的参考时刻。"
+            }
+        },
         "formula-errors": {
+            "column-mode": "Agenda 中的列引用需要新规则。请明确选择该模式，或使用针对当前记录的条件。",
     "version": "此公式使用不支持的版本。请先更新 Projects Plus，再计算或更改公式。",
             "number": "数字格式不正确。请检查正负号、小数点和指数。",
             "string": "请使用相同类型的引号结束文本。",
@@ -22,6 +51,23 @@
             "invalid": "无法读取公式：{{detail}}"
         },
         "formula-docs": {
+            "IS_EMPTY": "值缺失、空文本或空列表时返回 true；零和 false 视为已填写。",
+            "IS_NOT_EMPTY": "值存在且不是空文本或空列表时返回 true。",
+            "NOT_CONTAINS": "CONTAINS 的否定形式，不区分大小写。",
+            "TOMORROW": "参考日期的下一天，格式为 YYYY-MM-DD。",
+            "YESTERDAY": "参考日期的前一天，格式为 YYYY-MM-DD。",
+            "IS_TODAY": "日期与参考日相同时返回 true。",
+            "IS_THIS_WEEK": "日期属于参考周时返回 true；周的划分遵循当前日期区域设置。",
+            "IS_THIS_MONTH": "日期属于参考月份时返回 true。",
+            "IS_BEFORE": "日期早于另一个日历日时返回 true。",
+            "IS_AFTER": "日期晚于另一个日历日时返回 true。",
+            "IS_ON_AND_BEFORE": "日期等于或早于另一个日历日时返回 true。",
+            "IS_ON_AND_AFTER": "日期等于或晚于另一个日历日时返回 true。",
+            "IS_OVERDUE": "有效日期严格早于参考日时返回 true。",
+            "IS_UPCOMING": "有效日期严格晚于参考日时返回 true。",
+            "HAS_ANY_OF": "两个列表包含公共项时返回 true；使用严格相等比较。",
+            "HAS_ALL_OF": "列表包含第二个列表的所有项时返回 true；使用严格相等比较。",
+            "HAS_NONE_OF": "两个列表没有公共项时返回 true；使用严格相等比较。",
             "SUMIF": "满足条件的单元格之和（或同一行第三列之和）：5、\">10\"、\"完成\"、\"<>x\"、\"a*\"。",
             "COUNTIF": "满足条件的单元格数量：5、\">10\"、\"完成\"、\"<>x\"、\"a*\"，\"\" 表示空白。",
             "AVERAGEIF": "满足条件的单元格（或第三列）的平均值。无匹配时为空。",

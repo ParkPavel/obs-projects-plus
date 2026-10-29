@@ -779,6 +779,7 @@
             {#each dndLists as list (list.id)}
               {#if list.id !== SHADOW_PLACEHOLDER_ITEM_ID}
                 <AgendaCustomListComponent
+                  {fields}
                   {list}
                   collapsed={collapsedCustomLists.has(list.id)}
                   records={customRecords}
@@ -837,7 +838,8 @@
               <AgendaListEditor
                 list={editingList}
                 {fields}
-                {records}
+                records={customRecords}
+                referenceDate={selectedDate}
                 existingLists={customLists}
                 initialName={editorName}
                 on:save={handleSaveList}

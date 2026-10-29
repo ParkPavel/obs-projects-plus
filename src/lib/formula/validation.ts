@@ -24,6 +24,10 @@ export function validateFormulaRaw(expression: string, fields: string[], semanti
     const ast = parseFormula(expression, shared ? MAX_FORMULA_DEPTH : undefined, shared ? "strict" : "legacy");
     if (shared) assertFormulaLimits(ast);
     function check(node: FormulaNode, scope: ReadonlySet<string>): void {
+      if (!compatibility && semantics === "legacy-filter" && node.type === "column_ref") {
+        errors.push("Column references require new filter rules");
+        return;
+      }
       if (node.type === "field" || (shared && node.type === "column_ref")) {
         if (node.type === "field" && scope.has(node.name)) return;
         const found = semantics === "legacy-filter" ? fields.includes(node.name) : resolveFieldName(node.name, fields) !== undefined;

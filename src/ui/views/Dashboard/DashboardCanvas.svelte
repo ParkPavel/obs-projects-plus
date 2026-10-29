@@ -125,8 +125,8 @@
   const selectionStore: SelectionStore = createSelectionStore();
   setContext<SelectionStore>(SELECTION_CONTEXT_KEY, selectionStore);
   onDestroy(bindEscapeClear(selectionStore));
-  function handleFormulaApply(e: CustomEvent<{ name: string; expression: string }>) {
-    widgetController.applyFormulaField(e.detail.name, e.detail.expression);
+  function handleFormulaApply(e: CustomEvent<{ name: string; expression: string; draft?: import("src/lib/formula/version").VersionedFormula }>) {
+    widgetController.applyFormulaField(e.detail.name, e.detail.expression, e.detail.draft);
     showFormulaBar = false;
   }
   const suggest = createSuggestionController({

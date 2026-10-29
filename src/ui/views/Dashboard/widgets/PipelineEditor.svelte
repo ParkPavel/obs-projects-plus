@@ -17,6 +17,7 @@
   import { aggregationLabel, type AggregationName } from "src/lib/dashboard-engine/aggregationOptions";
   import { get } from "svelte/store";
   import { Icon } from "obsidian-svelte";
+  import VersionedFormulaEditor from "src/ui/components/FormulaEditor/VersionedFormulaEditor.svelte";
   import ComboField from "src/ui/components/fields/ComboField.svelte";
   import { namesToOptions } from "src/ui/components/fields/comboOptions";
   import { getOperatorsForField, getOperatorLabel } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
@@ -127,15 +128,9 @@
     "STD_DEV", "PCT_EMPTY", "PCT_NOT_EMPTY",
   ];
 
-  const FORMULA_SUGGESTIONS = [
-    "SUM(", "AVG(", "COUNT(", "MIN(", "MAX(", "MEDIAN(",
-    "IF(", "IFBLANK(", "ROUND(", "CONCAT(", "LEFT(", "RIGHT(", "DATE(",
-  ];
-
   // The suggestion lists the inputs above choose from (they were native datalists).
   // A function is chosen from its list only; a field or a formula is free text.
   const AGG_OPTIONS = namesToOptions(AGG_FUNCTIONS);
-  const FORMULA_OPTIONS = namesToOptions(FORMULA_SUGGESTIONS);
   $: fieldOptions = namesToOptions(fieldNames);
 
   function normalizeAggFunction(value: string, fallback: AggregationFunction): AggregationFunction {
@@ -369,6 +364,20 @@
     const cols = [...step.columns];
     cols[colIndex] = { ...cols[colIndex], name, expression };
     updateStep(stepIndex, { ...step, columns: cols });
+  }
+
+  function updateComputeMode(stepIndex: number, colIndex: number, version: string | undefined) {
+    const step = steps[stepIndex] as ComputeStep;
+    const cols = [...step.columns];
+    const { formulaVersion: _previousVersion, ...column } = cols[colIndex]!;
+    cols[colIndex] = { ...column, ...(version !== undefined ? { formulaVersion: version } : {}) };
+    updateStep(stepIndex, { ...step, columns: cols });
+  }
+
+  function computeFieldNames(list: readonly TransformStep[], names: string[], stepIndex: number, columnIndex: number): string[] {
+    const prior = list.slice(0, stepIndex).flatMap(step => step.type === "compute" ? step.columns.map(column => column.name) : []);
+    const current = (list[stepIndex] as ComputeStep).columns.slice(0, columnIndex).map(column => column.name);
+    return [...new Set([...names, ...prior, ...current])];
   }
 
   function removeComputeColumn(stepIndex: number, colIndex: number) {
@@ -743,15 +752,19 @@
                     value={col.name}
                     on:change={(e) => updateComputeColumn(i, ci, e.currentTarget.value, col.expression)}
                   />
-                  <ComboField
-                    inputClass="ppp-compute-expr"
-                    value={col.expression}
-                    options={FORMULA_OPTIONS}
-                    allowCustom
-                    placeholder={$i18n.t("views.dashboard.pipeline.formula-placeholder")}
-                    ariaLabel={$i18n.t("views.dashboard.pipeline.formula-placeholder")}
-                    on:commit={(e) => updateComputeColumn(i, ci, col.name, e.detail.value)}
-                  />
+                  <div class="ppp-compute-expr">
+                    <VersionedFormulaEditor
+                      expression={col.expression}
+                      version={col.formulaVersion}
+                      fields={computeFieldNames(steps, fieldNames, i, ci)}
+                      rows={3}
+                      showApply
+                      placeholder={$i18n.t("views.dashboard.pipeline.formula-placeholder")}
+                      ariaLabel={$i18n.t("views.dashboard.pipeline.formula-placeholder")}
+                      on:modechange={(event) => updateComputeMode(i, ci, event.detail.formulaVersion)}
+                      on:commit={(event) => updateComputeColumn(i, ci, col.name, event.detail)}
+                    />
+                  </div>
                   <button class="ppp-step-btn ppp-step-btn--danger" on:click={() => removeComputeColumn(i, ci)}>?</button>
                 </div>
               {/each}
@@ -1426,7 +1439,7 @@
   /* -- Compute rows -- */
   .ppp-compute-row {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.25rem;
   }
 
@@ -1440,20 +1453,15 @@
     color: var(--text-normal);
   }
 
-  /* The formula box is a ComboField: its wrapper takes the room, its input the look. */
-  .ppp-compute-row > :global(.ppp-combo) {
+  .ppp-compute-expr {
     flex: 1;
-    min-width: 8rem;
+    min-width: 0;
   }
 
-  .ppp-compute-row :global(.ppp-compute-expr) {
-    padding: 0.25rem 0.375rem;
-    font-size: var(--font-ui-smaller);
-    background: var(--background-primary);
-    border: var(--ppp-border-width) solid var(--background-modifier-border);
-    border-radius: var(--radius-s, 0.25rem);
-    color: var(--text-normal);
-    font-family: var(--font-monospace);
+  @media (max-width: 40rem) {
+    .ppp-compute-row { flex-wrap: wrap; }
+    .ppp-compute-name { flex: 1; min-width: 0; }
+    .ppp-compute-expr { order: 1; flex-basis: 100%; }
   }
 
   /* -- Unpivot -- */

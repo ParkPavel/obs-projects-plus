@@ -66,6 +66,7 @@ export function referencedNames(expression: string, formulaVersion?: string): st
     const n = pending.pop()!;
     if (n.type === "field" || n.type === "column_ref") out.push(n.name);
     else if (n.type === "function") {
+      if (formulaVersion === "unified-v1" && n.name.toUpperCase() === "PROP" && n.args[0]?.type === "literal" && typeof n.args[0].value === "string") out.push(n.args[0].value);
       for (let i = n.args.length - 1; i >= 0; i--) pending.push(n.args[i]!);
     }
     else if (n.type === "operator") pending.push(n.right, n.left);

@@ -20,8 +20,14 @@ import "@testing-library/jest-dom";
 import { fireEvent, render } from "@testing-library/svelte";
 import { tick } from "svelte";
 
-import AdvancedFilterEditor from "../AdvancedFilterEditor.svelte";
-import { DataFieldType, type DataField } from "src/lib/dataframe/dataframe";
+jest.mock("dayjs", () => {
+  const actual = jest.requireActual("dayjs");
+  return Object.assign(actual, { default: actual });
+});
+const AdvancedFilterEditor = require("../AdvancedFilterEditor.svelte").default;
+const { DataFieldType } = require("src/lib/dataframe/dataframe");
+type DataFieldType = import("src/lib/dataframe/dataframe").DataFieldType;
+type DataField = import("src/lib/dataframe/dataframe").DataField;
 
 function makeField(name: string, type: DataFieldType = DataFieldType.String): DataField {
 	return {
@@ -33,21 +39,26 @@ function makeField(name: string, type: DataFieldType = DataFieldType.String): Da
 	};
 }
 
+async function settleValidation() {
+  await tick();
+  jest.advanceTimersByTime(700);
+  await tick();
+}
+
 describe("AdvancedFilterEditor (Calendar agenda)", () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
 	describe("validation contract", () => {
 		test("Calendar-specific IS_OVERDUE is NOT flagged as unknown", async () => {
-			// Regression guard: the canonical `validateFormulaExpression` would
-			// reject IS_OVERDUE because it lives in parseFormula, not
-			// EXTENDED_FUNCTIONS. The migrated component must use validateFormula
-			// from src/lib/formula instead.
+			// The executable legacy-filter profile must include Calendar functions.
+			// Badge and child share one debounced validation result.
 			const { container } = render(AdvancedFilterEditor, {
 				props: {
 					formula: "IS_OVERDUE(dueDate)",
 					fields: [makeField("dueDate", DataFieldType.Date)],
 				},
 			});
-			await tick();
-			await tick();
+			await settleValidation();
 
 			// The FormulaConstructor surfaces errors as .ppp-fc-error nodes.
 			const errors = container.querySelectorAll(".ppp-fc-error");
@@ -65,8 +76,7 @@ describe("AdvancedFilterEditor (Calendar agenda)", () => {
 					fields: [makeField("dueDate", DataFieldType.Date)],
 				},
 			});
-			await tick();
-			await tick();
+			await settleValidation();
 
 			expect(container.querySelector(".ppp-fcf-hint-error")).not.toBeNull();
 			expect(container.querySelector(".ppp-fcf-hint-valid")).toBeNull();
@@ -94,16 +104,14 @@ describe("AdvancedFilterEditor (Calendar agenda)", () => {
 					fields: [makeField("dueDate", DataFieldType.Date)],
 				},
 			});
-			await tick();
-			await tick();
+			await settleValidation();
 			expect(container.querySelector(".ppp-fcf-hint-error")).not.toBeNull();
 
 			await rerender({
 				formula: "IS_EMPTY(dueDate)",
 				fields: [makeField("dueDate", DataFieldType.Date)],
 			});
-			await tick();
-			await tick();
+			await settleValidation();
 			expect(container.querySelector(".ppp-fcf-hint-error")).toBeNull();
 			expect(container.querySelector(".ppp-fcf-hint-valid")).not.toBeNull();
 		});

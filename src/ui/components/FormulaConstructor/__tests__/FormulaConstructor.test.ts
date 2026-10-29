@@ -51,7 +51,7 @@ describe("FormulaConstructor", () => {
 			const labels = Array.from(buttons).map((b) =>
 				(b.textContent ?? "").trim(),
 			);
-			expect(labels).toContain("SUM");
+			expect(labels).toContain("SUM(");
 		});
 
 		test("typing a field-prefix surfaces matching fields", async () => {

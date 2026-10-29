@@ -10,7 +10,13 @@
 export interface SuggestIndex {
   /** Functions first, then fields; case-insensitive prefix; at most `limit`. */
   suggest(word: string, limit?: number): string[];
+  suggestEntries(word: string, limit?: number): FormulaSuggestionEntry[];
   readonly stats: { comparisons: number };
+}
+
+export interface FormulaSuggestionEntry {
+  readonly label: string;
+  readonly kind: "function" | "field";
 }
 
 type Entry = { readonly key: string; readonly label: string };
@@ -37,21 +43,24 @@ export function buildSuggestIndex(functions: readonly string[], fields: readonly
     return lo;
   }
 
+  function collect(word: string, limit = 12): FormulaSuggestionEntry[] {
+    if (!word) return [];
+    const prefix = word.toUpperCase();
+    const out: FormulaSuggestionEntry[] = [];
+    for (let group = 0; group < lists.length; group++) {
+      const list = lists[group]!;
+      for (let i = lowerBound(list, prefix); i < list.length && out.length < limit; i++) {
+        stats.comparisons++;
+        if (!list[i]!.key.startsWith(prefix)) break;
+        out.push({ label: list[i]!.label, kind: group === 0 ? "function" : "field" });
+      }
+    }
+    return out;
+  }
   return {
     stats,
-    suggest(word: string, limit = 12): string[] {
-      if (!word) return [];
-      const prefix = word.toUpperCase();
-      const out: string[] = [];
-      for (const list of lists) {
-        for (let i = lowerBound(list, prefix); i < list.length && out.length < limit; i++) {
-          stats.comparisons++;
-          if (!list[i]!.key.startsWith(prefix)) break;
-          out.push(list[i]!.label);
-        }
-      }
-      return out;
-    },
+    suggestEntries: collect,
+    suggest: (word, limit) => collect(word, limit).map(entry => entry.label),
   };
 }
 

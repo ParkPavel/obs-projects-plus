@@ -25,12 +25,13 @@
   //     on:commit={() => handleApply()}
   //   />
 
-  import { afterUpdate, createEventDispatcher, onDestroy } from "svelte";
-  import { suggestIndexCache } from "src/lib/engine/formulaSuggestIndex";
+  import { afterUpdate, createEventDispatcher, onDestroy, tick } from "svelte";
+  import { suggestIndexCache, type FormulaSuggestionEntry } from "src/lib/engine/formulaSuggestIndex";
   import { debounceLatest } from "src/lib/engine/debounceLatest";
   import {
-    validateFormulaExpression,
-    getFormulaFunctions,
+    validateExpression,
+    getFormulaCatalog,
+    type FormulaSemantics,
   } from "src/lib/formula";
   import {
     getFormulaMetadata,
@@ -65,8 +66,9 @@
   export let value: string = "";
   export let fields: string[] = [];
   /** Custom validator; defaults to the canonical formula validator. */
-  export let validate: (expr: string, fields: string[]) => string[] =
-    (expr, flds) => validateFormulaExpression(expr, flds);
+  export let semantics: FormulaSemantics = "legacy-computed";
+  export let ariaLabel: string = "";
+  export let validate: ((expr: string, fields: string[]) => string[]) | undefined = undefined;
   export let placeholder: string = "";
   export let rows: number = 3;
   export let disabled: boolean = false;
@@ -87,6 +89,7 @@
     change: string;
     /** Emitted on Ctrl+Enter when the expression is valid. */
     commit: void;
+    validation: { errors: string[]; pending: boolean; value: string };
   }>();
 
   // ── State ───────────────────────────────────────────────────
@@ -94,13 +97,29 @@
   let showSuggestions = false;
   let cursorWord = "";
   let cursorPosition = 0;
-  let filteredSuggestions: string[] = [];
+  let filteredSuggestions: FormulaSuggestionEntry[] = [];
+  let columnContext = false;
   let selectedSuggestionIndex = -1;
   let activeSignature: FormulaMetadata | null = null;
   let textareaEl: HTMLTextAreaElement;
   let highlightEl: HTMLDivElement | null = null;
   let suggestionListEl: HTMLDivElement | null = null;
   let composing = false;
+
+  /** Help and external tools insert at the native selection, preserving surrounding text. */
+  export function insertText(text: string): void {
+    if (disabled || composing || !textareaEl) return;
+    const start = textareaEl.selectionStart ?? value.length;
+    const end = textareaEl.selectionEnd ?? start;
+    value = value.slice(0, start) + text + value.slice(end);
+    dispatch("change", value);
+    void tick().then(() => {
+      if (!textareaEl?.isConnected) return;
+      textareaEl.focus();
+      textareaEl.setSelectionRange(start + text.length, start + text.length);
+      updateCursor(textareaEl);
+    });
+  }
 
   // ── Syntax highlight (#077) ─────────────────────────────────
   type HighlightSegment = { text: string; cls: string };
@@ -125,10 +144,10 @@
 
   // Split `expr` into colored token segments + uncolored gaps (whitespace,
   // comments). Falls back to a single plain segment if the tokenizer throws.
-  function buildHighlightSegments(expr: string): HighlightSegment[] {
+  function buildHighlightSegments(expr: string, profile: FormulaSemantics): HighlightSegment[] {
     if (expr === "") return [];
     try {
-      const tokens = tokenize(expr);
+      const tokens = tokenize(expr, profile === "unified-v1" ? "strict" : "legacy");
       const segments: HighlightSegment[] = [];
       let pos = 0;
       for (const tok of tokens) {
@@ -151,7 +170,7 @@
     }
   }
 
-  $: highlightSegments = highlight ? buildHighlightSegments(value) : [];
+  $: highlightSegments = highlight ? buildHighlightSegments(value, semantics) : [];
 
   function syncScroll() {
     if (highlightEl && textareaEl) {
@@ -168,7 +187,16 @@
    */
   let forceOpen = false;
 
-  const allFunctions = getFormulaFunctions();
+  $: allFunctions = getFormulaCatalog(semantics).map(definition => definition.name);
+  const reservedFunctions = new Set(getFormulaCatalog("unified-v1").map(definition => definition.name));
+  function bareField(name: string): boolean {
+    return /^[\p{L}_][\p{L}\p{N}_]*$/u.test(name) && !["TRUE", "FALSE", "NULL"].includes(name.toUpperCase())
+      && (semantics === "unified-v1" || !reservedFunctions.has(name.toUpperCase()));
+  }
+  $: suggestibleFields = semantics === "legacy-filter" ? fields.filter(bareField) : fields;
+  const EMPTY_NAMES: readonly string[] = [];
+  $: contextFields = columnContext ? semantics === "legacy-filter" ? EMPTY_NAMES
+    : fields.filter(name => /^[\p{L}_][\p{L}\p{N}_]*$/u.test(name)) : suggestibleFields;
 
   // Snippets shown when forceOpen and value is empty; otherwise hidden.
   $: snippetsMode = forceOpen && value.trim() === "" && snippets.length > 0;
@@ -180,11 +208,15 @@
   // i2-data (D20): 700 ms, not 150 — «paid +» is a formula being typed, not
   // an error; the message waits until the person stops.
   const validation = debounceLatest((expr: string) => {
-    errors = expr.trim() ? validate(expr, fields) : [];
+    errors = expr.trim() ? (validate ? validate(expr, fields) : validateExpression(expr, fields, semantics)) : [];
+    dispatch("validation", { errors, pending: false, value: expr });
   }, 700);
   onDestroy(() => validation.cancel());
   $: {
     void fields;
+    void semantics;
+    void validate;
+    dispatch("validation", { errors: [], pending: true, value });
     validation.call(value);
   }
   /** Answers a commit on the expression as it is now, not as it was 150 ms ago. */
@@ -193,15 +225,24 @@
     validation.flush();
   }
 
+  /** Buttons and keyboard shortcuts commit the same currently visible native draft. */
+  export function commitCurrent(): void {
+    if (disabled || composing) return;
+    validateNow();
+    if (errors.length === 0 && value.trim()) dispatch("commit");
+  }
+
   const suggestCache = suggestIndexCache();
-  $: suggestIndex = suggestCache.get(allFunctions, fields);
+  $: suggestIndex = suggestCache.get(columnContext ? EMPTY_NAMES : allFunctions, contextFields);
 
   $: {
     const word = cursorWord.toUpperCase();
     if (word.length > 0) {
-      filteredSuggestions = suggestIndex.suggest(word, 12);
+      filteredSuggestions = suggestIndex.suggestEntries(word, 12);
     } else if (forceOpen && value.trim() !== "") {
-      filteredSuggestions = allFunctions.slice(0, 12);
+      filteredSuggestions = columnContext
+        ? contextFields.slice(0, 12).map(label => ({ label, kind: "field" }))
+        : allFunctions.slice(0, 12).map(label => ({ label, kind: "function" }));
     } else {
       filteredSuggestions = [];
     }
@@ -216,11 +257,11 @@
     let meta: FormulaMetadata | undefined;
     if (showSuggestions && selectedSuggestionIndex >= 0) {
       const candidate = filteredSuggestions[selectedSuggestionIndex];
-      if (candidate) meta = getFormulaMetadata(candidate);
+      if (candidate?.kind === "function") meta = getFormulaMetadata(candidate.label, semantics);
     }
     if (!meta) {
-      const enclosing = findEnclosingCall(value, cursorPosition);
-      if (enclosing) meta = getFormulaMetadata(enclosing);
+      const enclosing = findEnclosingCall(value, cursorPosition, semantics);
+      if (enclosing) meta = getFormulaMetadata(enclosing, semantics);
     }
     activeSignature = meta ?? null;
   }
@@ -242,8 +283,9 @@
     const pos = el.selectionStart ?? 0;
     cursorPosition = pos;
     const before = value.substring(0, pos);
-    const match = before.match(/[A-Za-z_][A-Za-z0-9_]*$/);
+    const match = before.match(/[\p{L}_][\p{L}\p{N}_]*$/u);
     cursorWord = match ? match[0] : "";
+    columnContext = before[pos - cursorWord.length - 1] === "@";
     // Typing a word past force-open mode returns control to normal cursor-driven flow.
     if (cursorWord.length > 0) forceOpen = false;
     showSuggestions =
@@ -251,17 +293,20 @@
       (forceOpen && (filteredSuggestions.length > 0 || snippetsMode));
   }
 
-  function insertSuggestion(suggestion: string) {
+  function insertSuggestion(suggestion: FormulaSuggestionEntry) {
     const textarea = textareaEl;
     if (!textarea) return;
 
     const pos = textarea.selectionStart ?? 0;
     const before = value.substring(0, pos);
     const after = value.substring(pos);
-    const match = before.match(/[A-Za-z_][A-Za-z0-9_]*$/);
+    const match = before.match(/[\p{L}_][\p{L}\p{N}_]*$/u);
     const replaceFrom = match ? pos - match[0].length : pos;
     // Functions get opening paren appended so cursor lands inside the call.
-    const insert = allFunctions.includes(suggestion) ? suggestion + "(" : suggestion;
+    const name = suggestion.label;
+    const quoted = name.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
+    const insert = suggestion.kind === "function" ? name + "("
+      : columnContext || bareField(name) ? name : `PROP("${quoted}")`;
 
     value = value.substring(0, replaceFrom) + insert + after;
     dispatch("change", value);
@@ -350,7 +395,7 @@
         if (snippetsMode) {
           insertSnippet(snippets[selectedSuggestionIndex] as FormulaSnippet);
         } else {
-          insertSuggestion(filteredSuggestions[selectedSuggestionIndex] as string);
+          insertSuggestion(filteredSuggestions[selectedSuggestionIndex]!);
         }
         return;
       }
@@ -360,15 +405,14 @@
         if (snippetsMode) {
           insertSnippet(snippets[idx] as FormulaSnippet);
         } else {
-          insertSuggestion(filteredSuggestions[idx] as string);
+          insertSuggestion(filteredSuggestions[idx]!);
         }
         return;
       }
     }
 
     if (e.key === "Enter" && e.ctrlKey) {
-      validateNow();
-      if (errors.length === 0 && value.trim()) dispatch("commit");
+      commitCurrent();
     }
   }
 </script>
@@ -392,6 +436,7 @@
         {rows}
         {disabled}
         {placeholder}
+        aria-label={ariaLabel || $i18n.t("views.dashboard.formula.title")}
         on:input={(e) => { handleInput(e); syncScroll(); }}
         on:click={handleCursorMove}
         on:keyup={handleCursorMove}
@@ -411,7 +456,7 @@
           <span>{$i18n.t("views.dashboard.formula.signature-returns")}: <strong>{activeSignature.returnType}</strong></span>
           <span>{$i18n.t(`views.dashboard.formula.help-category.${activeSignature.category}`)}</span>
         </span>
-        <p class="ppp-fc-signature-doc">{localizedFormulaDoc(activeSignature.name, activeSignature.doc, (key, options) => $i18n.t(key, options))}</p>
+        <p class="ppp-fc-signature-doc">{localizedFormulaDoc(activeSignature.name, activeSignature.doc, (key, options) => $i18n.t(key, options), semantics)}</p>
       </div>
     {/if}
 
@@ -455,13 +500,13 @@
           {#each filteredSuggestions as suggestion, i}
             <button
               class="ppp-fc-suggestion"
-              class:ppp-fc-suggestion--fn={allFunctions.includes(suggestion)}
+              class:ppp-fc-suggestion--fn={suggestion.kind === "function"}
               class:ppp-fc-suggestion--selected={i === selectedSuggestionIndex}
               role="option"
               aria-selected={i === selectedSuggestionIndex}
               on:click|stopPropagation={() => insertSuggestion(suggestion)}
             >
-              {suggestion}
+              {suggestion.label}{suggestion.kind === "function" ? "(" : ""}
             </button>
           {/each}
         </div>
@@ -565,6 +610,16 @@
     background: transparent;
     color: transparent;
     caret-color: var(--text-normal);
+  }
+
+  /* On touch and high-contrast surfaces the native textarea paints both text
+     and caret. Independent overlay font metrics cannot separate them. */
+  @media (pointer: coarse), (forced-colors: active) {
+    .ppp-fc-highlight { display: none; }
+    .ppp-fc-textarea--highlight {
+      color: var(--text-normal);
+      background: var(--background-secondary);
+    }
   }
 
   .ppp-fc-input-stack--disabled .ppp-fc-highlight {

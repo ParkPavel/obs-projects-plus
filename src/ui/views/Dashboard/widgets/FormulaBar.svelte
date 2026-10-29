@@ -9,10 +9,8 @@
   // The visual node-editor approach was rejected — code mode is the only mode.
 
   import { createEventDispatcher, onDestroy } from "svelte";
-  import {
-    evaluateFormulaWithError,
-    validateFormulaExpression,
-  } from "src/lib/dashboard-engine/formulaEngine";
+  import { evaluateVersionedFormula, validateVersionedFormula, formulaEditorSemantics } from "src/lib/formula/version";
+  import FormulaMode from "src/ui/components/FormulaEditor/FormulaMode.svelte";
   import type { DataFrame, DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
   import type { FormulaFieldDef } from "../types";
   import { previewFormulaField, formulaWouldCycle } from "./formulaPreview";
@@ -29,11 +27,15 @@
   export let formulaFields: readonly FormulaFieldDef[] = [];
 
   const dispatch = createEventDispatcher<{
-    apply: { name: string; expression: string };
+    apply: { name: string; expression: string; draft?: { formulaVersion?: string } };
     cancel: void;
   }>();
 
   let fieldName = "";
+  let editingName: string | undefined;
+  let draftVersion: string | undefined;
+  $: draft = draftVersion === undefined ? {} : { formulaVersion: draftVersion };
+  $: semantics = formulaEditorSemantics(draftVersion, "legacy-computed");
   let inputValue = expression;
   let adopted = expression;
   let barEl: HTMLElement | null = null;
@@ -54,7 +56,7 @@
       return;
     }
     const active = barEl?.ownerDocument.activeElement;
-    if (active instanceof HTMLTextAreaElement && barEl?.contains(active)) {
+    if (active?.tagName === "TEXTAREA" && barEl?.contains(active)) {
       deferred = next;
       return;
     }
@@ -72,7 +74,8 @@
    */
   function adoptDeferred(e: FocusEvent): void {
     if (deferred === null) return;
-    if (e.relatedTarget instanceof Node && barEl?.contains(e.relatedTarget)) return;
+    const target = e.relatedTarget as Node | null;
+    if (target && typeof target.nodeType === "number" && barEl?.contains(target)) return;
     const next = deferred;
     deferred = null;
     if (inputValue !== adopted) return;
@@ -85,24 +88,24 @@
   let runtimeError: string | null = null;
   let debugDismissed = false;
   let cursorPosition = 0;
-  $: previewCyclic = formulaWouldCycle(formulaFields, fieldName.trim(), inputValue);
-  $: nameTaken = fields.includes(fieldName.trim()) && !formulaFields.some(definition => definition.name === fieldName.trim());
-  $: canApply = !!fieldName.trim() && !!inputValue.trim() && !nameTaken && !previewCyclic && validateFormulaExpression(inputValue, fields).length === 0;
+  $: previewCyclic = formulaWouldCycle(formulaFields, fieldName.trim(), inputValue, draft);
+  $: nameTaken = fields.includes(fieldName.trim()) && fieldName.trim() !== editingName;
+  $: canApply = !!fieldName.trim() && !!inputValue.trim() && !nameTaken && !previewCyclic && validateVersionedFormula(inputValue, fields, draftVersion).length === 0;
 
   // DG-9 / B5: preview waits for a 150 ms pause in typing; hints do not wait
   let previewTimer: ReturnType<typeof setTimeout> | undefined;
 
-  function schedulePreview(expr: string, name: string, source: DataFrame | undefined, definitions: readonly FormulaFieldDef[]) {
+  function schedulePreview(expr: string, name: string, source: DataFrame | undefined, definitions: readonly FormulaFieldDef[], version: string | undefined, fieldNames: string[], sample: DataRecord | undefined) {
     clearTimeout(previewTimer);
     previewTimer = setTimeout(() => {
       const hasContent = expr.trim().length > 0;
-      const isValid = validateFormulaExpression(expr, fields).length === 0;
+      const isValid = validateVersionedFormula(expr, fieldNames, version).length === 0;
       if (hasContent && isValid && source) {
-        const result = previewFormulaField(source, definitions, name.trim(), expr);
+        const result = previewFormulaField(source, definitions, name.trim(), expr, version === undefined ? {} : { formulaVersion: version });
         previewValue = result.value;
         runtimeError = result.error;
-      } else if (hasContent && isValid && previewRecord) {
-        const result = evaluateFormulaWithError(expr, previewRecord);
+      } else if (hasContent && isValid && sample) {
+        const result = evaluateVersionedFormula(expr, version, { record: sample });
         previewValue = result.value;
         runtimeError = result.error ?? null;
       } else {
@@ -112,7 +115,7 @@
     }, 150);
   }
 
-  $: schedulePreview(inputValue, fieldName, previewFrame, formulaFields);
+  $: schedulePreview(inputValue, fieldName, previewFrame, formulaFields, draftVersion, fields, previewRecord);
 
   onDestroy(() => clearTimeout(previewTimer));
 
@@ -129,9 +132,9 @@
 
   function handleApply() {
     const name = fieldName.trim();
-    const taken = fields.includes(name) && !formulaFields.some(definition => definition.name === name);
-    if (!name || !inputValue.trim() || taken || formulaWouldCycle(formulaFields, name, inputValue) || validateFormulaExpression(inputValue, fields).length > 0) return;
-    dispatch("apply", { name: fieldName.trim(), expression: inputValue.trim() });
+    const taken = fields.includes(name) && name !== editingName;
+    if (!name || !inputValue.trim() || taken || formulaWouldCycle(formulaFields, name, inputValue, draft) || validateVersionedFormula(inputValue, fields, draftVersion).length > 0) return;
+    dispatch("apply", { name: fieldName.trim(), expression: inputValue.trim(), draft });
   }
 </script>
 
@@ -145,7 +148,7 @@
   {#if formulaFields.length > 0}
     <div class="ppp-formula-saved" aria-label={$i18n.t("views.dashboard.formula.saved")}>
       {#each formulaFields as definition (definition.name)}
-        <button type="button" on:click={() => { fieldName = definition.name; inputValue = definition.expression; }}>
+        <button type="button" on:click={() => { fieldName = definition.name; editingName = definition.name; draftVersion = definition.formulaVersion; inputValue = definition.expression; }}>
           ƒ {definition.name}
         </button>
       {/each}
@@ -168,7 +171,10 @@
   {#if nameTaken}<p role="alert">{$i18n.t("modals.field.create.existing-name-error")}</p>{/if}
   {#if previewCyclic}<p role="alert">{$i18n.t("views.dashboard.formula.cycle")}</p>{/if}
 
+  <FormulaMode version={draftVersion} on:change={(event) => { draftVersion = event.detail.formulaVersion; }} />
+  {#if semantics}
   <FormulaConstructor
+    {semantics}
     bind:value={inputValue}
     {fields}
     highlight
@@ -177,6 +183,9 @@
     on:change={(e) => { inputValue = e.detail; }}
     on:commit={handleApply}
   />
+  {:else}
+    <textarea value={inputValue} readonly aria-label={$i18n.t("views.dashboard.formula.title")}></textarea>
+  {/if}
 
   {#if runtimeError && !debugDismissed}
     <FormulaDebugPanel

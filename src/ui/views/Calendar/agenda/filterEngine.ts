@@ -17,6 +17,25 @@ import { matchesCondition, matchesFilterConditions, type FilterOpts } from 'src/
 import { stripToDisplay } from 'src/lib/engine/wikilink';
 import { calendarLogger } from '../logger';
 import { agendaOperator, agendaValueText } from 'src/lib/filters/agendaFilterModel';
+import { formulaEditorSemantics } from 'src/lib/formula/version';
+import { humanFormulaError } from 'src/lib/formula/formulaErrors';
+
+/** Both the editor and versioned list evaluate exactly this subset and reference date. */
+export function evaluateAgendaFormula(records: DataRecord[], expression: string, version: unknown,
+  baseDate: Dayjs, fields: DataField[]): { records: DataRecord[]; error: string | null } {
+  const semantics = formulaEditorSemantics(version, "legacy-filter");
+  if (!semantics) return { records: [], error: humanFormulaError("Unsupported formula version") };
+  const frame = { records, fields };
+  const referenceDate = baseDate.toDate();
+  const pass = createFormulaPass(frame, semantics, referenceDate);
+  let error: string | null = null;
+  const matched = records.filter(record => {
+    const result = evaluateVersionedFormula(expression, version, { record, frame, referenceDate, pass }, "legacy-filter");
+    if (result.error && !error) error = result.error;
+    return !result.error && Boolean(result.value);
+  });
+  return { records: matched, error };
+}
 
 const CAL_OPTS: FilterOpts = { upcomingInclusive: false };
 
@@ -85,14 +104,7 @@ export function filterRecordsForList(
 ): DataRecord[] {
   if (list.filterMode === 'advanced' && list.filterFormula) {
     if (list.formulaVersion !== undefined) {
-      const frame = { records, fields };
-      const referenceDate = baseDate.toDate();
-      const pass = createFormulaPass(frame, "unified-v1", referenceDate);
-      return records.filter(record => {
-        const result = evaluateVersionedFormula(list.filterFormula!, list.formulaVersion,
-          { record, frame, referenceDate, pass }, "legacy-filter");
-        return !result.error && Boolean(result.value);
-      });
+      return evaluateAgendaFormula(records, list.filterFormula, list.formulaVersion, baseDate, fields).records;
     }
     try {
       const ast = parseFormula(list.filterFormula);

@@ -11,7 +11,7 @@
     TextInput,
   } from "obsidian-svelte";
   import MultiTextInput from "src/ui/components/MultiTextInput/MultiTextInput.svelte";
-  import FormulaEditor from "src/ui/components/FormulaEditor/FormulaEditor.svelte";
+  import FormulaEditor from "src/ui/components/FormulaEditor/VersionedFormulaEditor.svelte";
   import { DataFieldType, type DataField } from "src/lib/dataframe/dataframe";
   import type {
     RelationFieldConfig,
@@ -183,6 +183,11 @@
   // ── Formula sub-panel (#077) ─────────────────────────────
   $: formulaExpression = (field.typeConfig?.formula ?? "") as string;
   $: formulaFieldNames = existingFields.map((f) => f.name);
+
+  function handleFormulaModeChange(event: CustomEvent<import("src/lib/formula/version").VersionedFormula>) {
+    const { formulaVersion: _previousVersion, ...config } = field.typeConfig ?? {};
+    field = { ...field, typeConfig: { ...config, ...(event.detail.formulaVersion !== undefined ? { formulaVersion: event.detail.formulaVersion } : {}) } };
+  }
 
   function handleFormulaChange(ev: CustomEvent<string>) {
     const expr = ev.detail;
@@ -909,6 +914,8 @@
         vertical
       >
         <FormulaEditor
+          version={field.typeConfig?.formulaVersion}
+          on:modechange={handleFormulaModeChange}
           expression={formulaExpression}
           fields={formulaFieldNames}
           placeholder={$i18n.t("modals.field.configure.formula.placeholder", {

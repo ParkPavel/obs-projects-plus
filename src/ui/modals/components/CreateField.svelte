@@ -11,7 +11,7 @@
     Switch,
     Icon,
   } from "obsidian-svelte";
-  import FormulaEditor from "src/ui/components/FormulaEditor/FormulaEditor.svelte";
+  import FormulaEditor from "src/ui/components/FormulaEditor/VersionedFormulaEditor.svelte";
   import { isEmptyFieldValue } from "src/lib/relations/declaredFieldTypes";
   import { sourceCatalogue } from "src/lib/relations/baseRef";
   import {
@@ -236,6 +236,10 @@
 
   function selectType(to: DataFieldType) {
     const from = field.type;
+    if (to !== DataFieldType.Formula) {
+      const { formula: _expression, formulaVersion: _version, ...config } = field.typeConfig ?? {};
+      field = { ...field, typeConfig: config };
+    }
     if (to !== DataFieldType.Rollup) pendingRelation = null;
     if (to === DataFieldType.List) {
       field = {
@@ -654,6 +658,11 @@
   void typeCount;
 
   $: formulaFieldNames = existingFields.map((f) => f.name);
+  function handleFormulaModeChange(event: CustomEvent<import("src/lib/formula/version").VersionedFormula>) {
+    const { formulaVersion: _previousVersion, ...config } = field.typeConfig ?? {};
+    field = { ...field, typeConfig: { ...config, ...(event.detail.formulaVersion !== undefined ? { formulaVersion: event.detail.formulaVersion } : {}) } };
+  }
+
   function handleFormulaChange(ev: CustomEvent<string>) {
     const expr = ev.detail;
     const { formula: _f, ...rest } = (field.typeConfig ?? {}) as { formula?: string } & Record<string, unknown>;
@@ -727,6 +736,8 @@
         vertical
       >
         <FormulaEditor
+          version={field.typeConfig?.formulaVersion}
+          on:modechange={handleFormulaModeChange}
           expression={(field.typeConfig?.formula ?? "")}
           fields={formulaFieldNames}
           rows={3}

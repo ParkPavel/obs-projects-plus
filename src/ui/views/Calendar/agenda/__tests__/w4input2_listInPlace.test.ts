@@ -19,7 +19,7 @@ jest.mock("src/lib/stores/ui", () => {
 });
 jest.mock("src/lib/stores/i18n", () => {
   const { writable } = require("svelte/store");
-  return { i18n: writable({ t: (key: string) => key }) };
+  return { i18n: writable({ t: (key: string, options?: { count?: number; total?: number }) => key === "formula-mode.matches" ? `Matches:${options?.count}/${options?.total}` : key }) };
 });
 jest.mock("src/lib/contextMenu", () => ({ openContextMenu: jest.fn() }));
 jest.mock("../../gestures/GestureCoordinator", () => ({ pauseGestures: jest.fn(), resumeGestures: jest.fn() }));
@@ -76,6 +76,38 @@ describe("custom agenda lists intersect the selected day with their conditions",
     await view.component.$set({currentDate:dayjs("2026-10-27")});await settle();
     expect(shown()).toEqual([["Tomorrow","Spanning"],["Tomorrow","Spanning"]]);
   });
+});
+
+test("versioned list and real editor preview share the selected subset, date and case-insensitive schema", async () => {
+  jest.useFakeTimers();
+  try {
+    const expression = 'AND(SUM(@QTY) = 5, TODAY() = "2026-10-26")';
+    const saved: unknown[] = [];
+    const definition = { ...list("formula", "Formula", 0), filterMode: "advanced", filterFormula: expression, formulaVersion: "unified-v1" };
+    const records = [
+      { id: "a", values: { title: "First", startDate: "2026-10-26", qty: 2 } },
+      { id: "b", values: { title: "Second", startDate: "2026-10-26", qty: 3 } },
+      { id: "c", values: { title: "Tomorrow", startDate: "2026-10-27", qty: 100 } },
+    ];
+    const fields = [{ name: "qty", type: "number", repeated: false, derived: false, identifier: false }];
+    const view = render(Sidebar, { props: { project: { id: "p", name: "Project", agenda: { mode: "custom", custom: { lists: [definition] } } },
+      currentDate: dayjs("2026-10-26"), records, fields, titleField: "title", dateField: "startDate" } });
+    view.component.$on("saveList", (event: CustomEvent) => saved.push(event.detail.list));
+    await settle();
+    expect(Array.from(view.container.querySelectorAll(".item-title"), element => element.textContent)).toEqual(["First", "Second"]);
+    const { openContextMenu } = require("src/lib/contextMenu");
+    openContextMenu.mockImplementation((items: Array<{ title?: string; onClick?: () => void }>) => {
+      items.find(item => item.title === `${K}edit-list`)!.onClick!();
+    });
+    await fireEvent.contextMenu(view.container.querySelector(".list-header")!); await settle();
+    const overlay = document.querySelector(".ppp-list-editor-overlay")!;
+    jest.advanceTimersByTime(700); await settle();
+    expect(overlay.querySelector(".ppp-formula-agenda-preview")?.textContent).toBe("Matches:2/2");
+    await fireEvent.input(overlay.querySelector("#list-name")!, { target: { value: "Edited" } });
+    await fireEvent.click(overlay.querySelector(".header-save")!); await settle();
+    expect(saved).toEqual([expect.objectContaining({ name: "Edited", filterFormula: expression, formulaVersion: "unified-v1" })]);
+    view.unmount();
+  } finally { jest.useRealTimers(); }
 });
 
 async function type(input: HTMLInputElement, text: string) {

@@ -51,6 +51,19 @@ function widget(id: string, title = id): WidgetDefinition {
   return { id, type: "stats" as WidgetType, title, layout: { x: 0, y: 0, w: 1, h: 1 }, config: {} };
 }
 
+test("formula saves preserve an unspecified future flag and persist only explicit mode choices", () => {
+  let config = { ...makeConfig(), formulaFields: [{ name: "Answer", expression: "1", formulaVersion: "future-v9" }] } as DatabaseViewConfig;
+  const controller = createWidgetController({ getConfig: () => config, saveConfig: (next: DatabaseViewConfig) => { config = next; }, i18nStore: makeI18nStore() });
+  controller.applyFormulaField("Answer", "2");
+  expect(config.formulaFields?.[0]?.formulaVersion).toBe("future-v9");
+  controller.applyFormulaField("Answer", "3", { formulaVersion: "unified-v1" });
+  expect(config.formulaFields?.[0]).toEqual({ name: "Answer", expression: "3", formulaVersion: "unified-v1" });
+  controller.applyFormulaField("Answer", "4", {});
+  expect(config.formulaFields?.[0]).toEqual({ name: "Answer", expression: "4" });
+  controller.applyFormulaField("Copy", "5", { formulaVersion: "unified-v1" });
+  expect(config.formulaFields?.[1]).toEqual({ name: "Copy", expression: "5", formulaVersion: "unified-v1" });
+});
+
 // Minimal i18n store double: returns the key's defaultValue with `{{name}}`
 // filled from options, the way i18next interpolates in production.
 function makeI18nStore() {

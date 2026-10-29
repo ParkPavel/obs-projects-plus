@@ -19,6 +19,9 @@
     entries: ReadonlyArray<{ signature: string; doc?: string }>;
   };
 
+  export let semantics: import("src/lib/formula/catalog").FormulaSemantics = "legacy-computed";
+  export let disabled = false;
+  export let ariaLabel = "";
   export let value: string = "";
   export let fields: string[] = [];
   export let validate: ((expr: string, fields: string[]) => string[]) | undefined =
@@ -38,8 +41,9 @@
 
   // Error count for the validation badge. Reuses the PASSED validate so no
   // second validation engine is introduced (invariant #7).
-  $: errorCount =
-    validate && value.trim() ? validate(value, fields).length : 0;
+  let errorCount = 0;
+  let validationPending = true;
+  let constructor: FormulaConstructor;
 
   function handleChange(e: CustomEvent<string>) {
     value = e.detail;
@@ -47,11 +51,8 @@
   }
 
   function insertFromHelp(signature: string) {
-    // Append the signature at the end; FormulaConstructor owns the textarea so
-    // we route through value + change to stay the single source of truth.
-    const sep = value.trim() === "" ? "" : value.endsWith(" ") ? "" : " ";
-    value = `${value}${sep}${signature}`;
-    dispatch("change", value);
+    const call = /^([A-Z_][A-Z_0-9]*)\(/.exec(signature);
+    if (call) constructor.insertText(signature.startsWith(call[1] + "()") ? call[1] + "()" : call[1] + "(");
   }
 </script>
 
@@ -72,7 +73,9 @@
       </button>
     </div>
     <div class="ppp-fcf-hint">
-      {#if errorCount > 0}
+      {#if validationPending && value.trim()}
+        <span>{$i18n.t("formula-mode.checking")}</span>
+      {:else if errorCount > 0}
         <span class="ppp-fcf-hint-error">
           {$i18n.t("views.calendar.agenda.custom.advanced-filter.hint-error", { count: errorCount })}
         </span>
@@ -91,6 +94,7 @@
   {#if showHelp}
     <div class="ppp-fcf-help">
       <FormulaHelpPanel
+        {semantics}
         extraCategories={helpExtraCategories}
         onInsert={insertFromHelp}
       />
@@ -99,13 +103,18 @@
 
   <div class="ppp-fcf-body">
     <FormulaConstructor
+      bind:this={constructor}
       {value}
+      {semantics}
+      {disabled}
+      {ariaLabel}
       {fields}
       {...(validate ? { validate } : {})}
       {...(snippets ? { snippets } : {})}
       {placeholder}
       {rows}
       {highlight}
+      on:validation={(event) => { errorCount = event.detail.errors.length; validationPending = event.detail.pending; }}
       on:change={handleChange}
       on:commit={() => dispatch("commit")}
     />

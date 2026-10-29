@@ -19,6 +19,7 @@ export function humanFormulaError(raw: string, fields: readonly string[] = []): 
   if (/^Unknown string escape: [\s\S]+$/.test(raw)) return t("escape");
   if (/^Missing column name at position \d+$/.test(raw)) return t("column");
   if (raw === "Column reference requires a data frame") return t("frame");
+  if (raw === "Column references require new filter rules") return t("column-mode");
   if (/^Formula (?:work|evaluation|parsing|input|list|financial (?:work|range)) limit exceeded$/.test(raw)) return t("limit");
   if ((m = /^Unknown field: (.+)$/.exec(raw))) {
     const hint = closestField(m[1]!, fields);

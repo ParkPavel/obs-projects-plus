@@ -1,5 +1,6 @@
 // Display adapters retain the previous computed catalog until explicit UI opt-in.
 import { getFormulaDefinition, getFormulaCatalog } from "src/lib/formula/catalog";
+import type { FormulaSemantics } from "src/lib/formula/catalog";
 import type { FormulaMetadata } from "src/lib/formula/metadata";
 export type { FormulaMetadata, FormulaCategory } from "src/lib/formula/metadata";
 
@@ -8,9 +9,9 @@ export type { FormulaMetadata, FormulaCategory } from "src/lib/formula/metadata"
  * Look up metadata for a function by name (case-insensitive).
  * Returns undefined if the name is not a recognised formula function.
  */
-export function getFormulaMetadata(name: string): FormulaMetadata | undefined {
+export function getFormulaMetadata(name: string, semantics: FormulaSemantics = "legacy-computed"): FormulaMetadata | undefined {
   if (!name) return undefined;
-  return getFormulaDefinition(name, "legacy-computed")?.metadata;
+  return getFormulaDefinition(name, semantics)?.metadata;
 }
 
 /**
@@ -21,9 +22,13 @@ export function getFormulaMetadata(name: string): FormulaMetadata | undefined {
 export function localizedFormulaDoc(
   name: string,
   fallback: string,
-  t: (key: string, options: { defaultValue: string }) => string
+  t: (key: string, options: { defaultValue: string }) => string,
+  semantics: FormulaSemantics = "legacy-computed",
 ): string {
-  const key = `formula-docs.${name.toUpperCase()}`;
+  const functionName = name.toUpperCase();
+  const profileDoc = ["COUNT", "WORKDAYS", "TODAY", "NOW"].includes(functionName)
+    || (semantics === "legacy-filter" && ["AND", "OR"].includes(functionName));
+  const key = profileDoc ? `formula-profile-docs.${semantics}.${functionName}` : `formula-docs.${functionName}`;
   const text = t(key, { defaultValue: fallback });
   return text && text !== key ? text : fallback;
 }
@@ -31,8 +36,8 @@ export function localizedFormulaDoc(
 /**
  * All registered formula function metadata entries.
  */
-export function getAllFormulaMetadata(): readonly FormulaMetadata[] {
-  return getFormulaCatalog("legacy-computed").map(definition => definition.metadata);
+export function getAllFormulaMetadata(semantics: FormulaSemantics = "legacy-computed"): readonly FormulaMetadata[] {
+  return getFormulaCatalog(semantics).map(definition => definition.metadata);
 }
 
 /**
@@ -43,7 +48,8 @@ export function getAllFormulaMetadata(): readonly FormulaMetadata[] {
  * String-literal aware: skips parentheses that sit inside "..." / '...' spans,
  * respecting backslash escapes.
  */
-export function findEnclosingCall(source: string, cursor: number): string | null {
+export function findEnclosingCall(source: string, cursor: number, semantics: FormulaSemantics = "legacy-computed"): string | null {
+  if (semantics === "unified-v1") return strictEnclosingCall(source, cursor);
   const end = Math.min(cursor, source.length);
   // First pass (forward): compute which indices live inside a string literal.
   const inString = new Array<boolean>(end).fill(false);
@@ -81,5 +87,40 @@ export function findEnclosingCall(source: string, cursor: number): string | null
       depth--;
     }
   }
+  return null;
+}
+
+/** Incremental call hints tolerate incomplete text while honoring strict comments/strings. */
+function strictEnclosingCall(source: string, cursor: number): string | null {
+  const end = Math.min(cursor, source.length);
+  const stack: Array<string | null> = [];
+  const identifier = /[\p{L}_][\p{L}\p{N}_]*/uy;
+  let name: string | null = null;
+  for (let i = 0; i < end;) {
+    const character = source[i]!;
+    if (/\s/.test(character)) { i++; continue; }
+    if (character === "#") {
+      while (i < end && source[i] !== "\n") i++;
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      const quote = character;
+      i++;
+      while (i < end) {
+        if (source[i] === "\\") { i += 2; continue; }
+        if (source[i++] === quote) break;
+      }
+      name = null;
+      continue;
+    }
+    identifier.lastIndex = i;
+    const match = identifier.exec(source);
+    if (match) { name = match[0]; i = identifier.lastIndex; continue; }
+    if (character === "(") stack.push(name);
+    else if (character === ")") stack.pop();
+    name = null;
+    i++;
+  }
+  for (let i = stack.length - 1; i >= 0; i--) if (stack[i]) return stack[i]!;
   return null;
 }

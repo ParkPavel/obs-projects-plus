@@ -5,7 +5,7 @@
   import { openContextMenu } from 'src/lib/contextMenu';
   import dayjs, { Dayjs } from 'dayjs';
   import { i18n } from 'src/lib/stores/i18n';
-  import type { DataRecord } from 'src/lib/dataframe/dataframe';
+  import type { DataRecord, DataField } from 'src/lib/dataframe/dataframe';
   import type { AgendaCustomList } from 'src/settings/v3/settings';
   import { filterRecordsForList } from './filterEngine';
   import { agendaEmoji } from './agendaEmoji';
@@ -31,6 +31,7 @@
   
   export let list: AgendaCustomList;
   export let records: DataRecord[] = [];
+  export let fields: DataField[] = [];
   export let titleField: string | undefined;
   export let onRecordClick: ((id: string) => void) | undefined;
   export let selectedDate: Dayjs = dayjs(); // Reference date for formula evaluation
@@ -47,7 +48,7 @@
   
   // Filter records using the selected date as base for formulas
   // New unified API supports both visual and advanced modes
-  $: filteredRecords = filterRecordsForList(records, list, selectedDate, []);
+  $: filteredRecords = filterRecordsForList(records, list, selectedDate, fields);
   
   // ── Long-press coordinator (with drag-grip guard + scroll cancel) ──
   const longPress = createLongPressHandler((e: TouchEvent) => {

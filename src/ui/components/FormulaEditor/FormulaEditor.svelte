@@ -20,7 +20,8 @@
   export let highlight: boolean = true;
   /** Optional validator returning string[] error messages. */
   export let validate: ((expr: string) => string[]) | undefined = undefined;
-  export const ariaLabel: string = "";
+  export let ariaLabel: string = "";
+  export let semantics: import("src/lib/formula/catalog").FormulaSemantics = "legacy-computed";
   /** Field names forwarded to FormulaConstructor for autocomplete. */
   export let fields: string[] = [];
 
@@ -28,11 +29,14 @@
     change: string;
     commit: string;
     cancel: void;
+    validation: { errors: string[]; pending: boolean; value: string };
   }>();
 
   let inputValue: string = expression;
   let adopted: string = expression;
   let rootEl: HTMLElement | null = null;
+  let constructor: FormulaConstructor;
+  export function commitCurrent(): void { constructor?.commitCurrent(); }
 
   /**
    * Adopt `expression` from the parent only when it really changed and the
@@ -55,7 +59,7 @@
       return;
     }
     const active = rootEl?.ownerDocument.activeElement;
-    if (active instanceof HTMLTextAreaElement && rootEl?.contains(active)) {
+    if (active?.tagName === "TEXTAREA" && rootEl?.contains(active)) {
       deferred = next;
       return;
     }
@@ -73,7 +77,8 @@
    */
   function adoptDeferred(e: FocusEvent): void {
     if (deferred === null) return;
-    if (e.relatedTarget instanceof Node && rootEl?.contains(e.relatedTarget)) return;
+    const target = e.relatedTarget as Node | null;
+    if (target && typeof target.nodeType === "number" && rootEl?.contains(target)) return;
     const next = deferred;
     deferred = null;
     if (inputValue !== adopted) return;
@@ -94,8 +99,11 @@
   <slot name="header" />
 
   <FormulaConstructor
+    bind:this={constructor}
     bind:value={inputValue}
     {fields}
+    {semantics}
+    {ariaLabel}
     {highlight}
     {placeholder}
     {rows}
@@ -103,6 +111,7 @@
     {...(constructorValidate ? { validate: constructorValidate } : {})}
     on:change={(e) => { inputValue = e.detail; dispatch("change", e.detail); }}
     on:commit={() => dispatch("commit", inputValue)}
+    on:validation={(event) => dispatch("validation", event.detail)}
   />
 
   <slot name="help" />

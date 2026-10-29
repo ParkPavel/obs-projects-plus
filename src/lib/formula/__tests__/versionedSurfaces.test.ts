@@ -64,6 +64,11 @@ describe("persisted formula versions", () => {
     ]);
     expect(result.records.map(record => record.values["total"])).toEqual([10, 10]);
   });
+  it("orders new static PROP dependencies for names with spaces while preserving old ordering", () => {
+    const definitions = [{ name: "answer", expression: 'PROP("Total cost") + 1' }, { name: "Total cost", expression: "qty * 2" }];
+    expect(applyFormulaFields(frame(), definitions).records.map(record => record.values["answer"])).toEqual([1, 1]);
+    expect(applyFormulaFields(frame(), definitions.map(definition => ({ ...definition, ...modern }))).records.map(record => record.values["answer"])).toEqual([5, 7]);
+  });
   it("previews the saved mode, explicit draft mode and explicit return to compatibility", () => {
     const definitions = [{ name: "answer", expression: '"2" < "10"', ...modern }];
     expect(previewFormulaField(frame(), definitions, "answer", '"2" < "10"').value).toBe(false);

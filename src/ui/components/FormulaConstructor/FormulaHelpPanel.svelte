@@ -14,14 +14,15 @@
   }> = [];
   export let onInsert: ((signature: string) => void) | undefined = undefined;
 
-  const groups = groupFormulaMetadata();
+  export let semantics: import("src/lib/formula/catalog").FormulaSemantics = "legacy-computed";
+  $: groups = groupFormulaMetadata(semantics);
 
   $: categoryTitle = (category: string) =>
     $i18n.t(`views.dashboard.formula.help-category.${category}`);
   // i3-final: a function's doc in the reader's language when one is written.
   $: entryDoc = (entry: { name?: string; doc?: string }) =>
     entry.name && entry.doc
-      ? localizedFormulaDoc(entry.name, entry.doc, (key, options) => $i18n.t(key, options))
+      ? localizedFormulaDoc(entry.name, entry.doc, (key, options) => $i18n.t(key, options), semantics)
       : entry.doc;
 </script>
 

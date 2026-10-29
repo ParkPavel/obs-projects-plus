@@ -47,7 +47,7 @@ describe("FormulaBar — the typed formula", () => {
     expect(el.value).toBe("1 + 2");
 
     container.querySelector<HTMLButtonElement>(".ppp-btn--primary")?.click();
-    expect(applied).toEqual([{ name: "total", expression: "1 + 2" }]);
+    expect(applied).toEqual([{ name: "total", expression: "1 + 2", draft: {} }]);
   });
 });
 

@@ -134,13 +134,35 @@ carry `formulaVersion: "unified-v1"`. An absent flag retains that surface's old
 rules; ordinary reads and saves do not migrate it. Unsupported or malformed
 versions return no computed value (Agenda excludes the record) rather than
 falling back to compatibility. Preserve unknown flags when retaining definitions.
-The current data-layer integration does not expose a new-mode selector yet:
-editor validation, help and explicit user selection must be integrated together.
+Editors expose an explicit Compatibility / New rules choice. Suggestions, help,
+syntax policy and validation use the selected executable catalog. Unknown versions
+show read-only source until a supported choice is made explicitly. The selection
+is explicit; opening an editor does not add a flag. Returning to
+compatibility removes the flag. Field type changes remove expression and version
+together. Mode events carry an object (an empty object means compatibility), since
+DOM CustomEvent normalizes an undefined scalar detail to null.
 Preview accepts an optional versioned draft: omitting it retains the saved mode;
 an explicit empty draft selects compatibility. New computed columns see complete
 earlier columns and their schema. Legacy transform aggregates continue to read
 the original input frame, including in mixed-version steps. Agenda receives its
 record subset and reference date from its caller, not the whole vault or wall clock.
+The actual Agenda list and editor receive the same selected-day subset, schema and
+date; preview reports matches within that subset. FormulaBar retains a draft's mode
+when saving under a new name (a copy), and protects other fields from name collisions.
+The record-only preview fallback reports missing data for new @column expressions.
+Pipeline expressions use the same editor, with Ctrl+Enter or Apply to commit a draft.
+Pipeline mode choices apply like its other settings; property, Dashboard and Agenda
+editors persist choices when their enclosing form is applied. Typed suggestion
+entries distinguish fields from functions even when their labels collide. Non-bare
+property names are inserted as PROP strings in supporting profiles; new static PROP
+dependencies participate in column ordering. @column syntax currently requires a
+bare property name. Compatibility Agenda filters do not support column references;
+their editor explains that new rules must be chosen explicitly.
+Validation badges share the editor's debounced result. Help inserts a call opening
+at the native selection, leaving parameter declarations out of source. Touch and
+high-contrast surfaces paint text and caret in the native textarea; desktop may use
+the synchronized highlight underlay. These implementation checks do not establish
+real Obsidian theme, iPhone, viewport or IME rendering acceptance.
 
 Before enabling new rules, update all devices and back up settings. Older plugin
 binaries do not understand this flag and cannot fail closed on it. A rollback

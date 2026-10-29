@@ -44,7 +44,7 @@ export interface WidgetController {
   /** CustomEvent handler: primary DataTable config changed. */
   handleTableConfigChange(e: CustomEvent<unknown>): void;
   /** FormulaBar apply: upsert a view-level formula field by name. */
-  applyFormulaField(name: string, expression: string): void;
+  applyFormulaField(name: string, expression: string, draft?: import("src/lib/formula/version").VersionedFormula): void;
 }
 
 export function createWidgetController({
@@ -125,13 +125,18 @@ export function createWidgetController({
     saveConfig({ ...config, table: e.detail as DatabaseViewConfig["table"] });
   }
 
-  function applyFormulaField(name: string, expression: string): void {
+  function applyFormulaField(name: string, expression: string, draft?: import("src/lib/formula/version").VersionedFormula): void {
     const config = cfg();
     if (!config) return;
     const existing = config.formulaFields ?? [];
+    const applyDraft = (definition: import("./types").FormulaFieldDef) => {
+      if (!draft) return { ...definition, expression };
+      const { formulaVersion: _oldVersion, ...rest } = definition;
+      return { ...rest, expression, ...(draft.formulaVersion !== undefined ? { formulaVersion: draft.formulaVersion } : {}) };
+    };
     const updated = existing.some((f) => f.name === name)
-      ? existing.map((f) => (f.name === name ? { ...f, expression } : f))
-      : [...existing, { name, expression }];
+      ? existing.map((f) => (f.name === name ? applyDraft(f) : f))
+      : [...existing, applyDraft({ name, expression })];
     saveConfig({ ...config, formulaFields: updated });
   }
 

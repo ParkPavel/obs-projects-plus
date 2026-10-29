@@ -1,6 +1,35 @@
 ﻿{
     "translation": {
+        "formula-mode": {
+            "label": "Formula rules",
+            "legacy": "Compatibility",
+            "modern": "New rules",
+            "checking": "Checking…",
+            "warning": "Before choosing new rules, update Projects Plus on every device and back up settings. Older versions ignore this choice; rolling back requires restoring settings or converting formulas after comparing results.",
+            "matches": "Matches: {{count}} of {{total}} records on the selected day."
+        },
+        "formula-profile-docs": {
+            "legacy-computed": {
+                "COUNT": "Count every list position, including blanks. Scalar nulls are skipped; compatibility @columns contain numeric values only.",
+                "WORKDAYS": "Count weekdays using the original local-date rules. Reversed ranges return zero.",
+                "TODAY": "Current date of this device, as YYYY-MM-DD.",
+                "NOW": "Current time of this device as an ISO timestamp."
+            },
+            "legacy-filter": {
+                "TODAY": "The selected reference day, as YYYY-MM-DD.",
+                "NOW": "The fixed reference instant of this evaluation.",
+                "AND": "True only if every argument is the boolean true.",
+                "OR": "True if any argument is the boolean true."
+            },
+            "unified-v1": {
+                "COUNT": "Count non-null values and list items. Skip null and absent items; false, zero and empty text count.",
+                "WORKDAYS": "Signed weekday distance in (earlier day, later day]. Reversing the dates reverses the sign; the same day is zero.",
+                "TODAY": "The selected reference day, as YYYY-MM-DD.",
+                "NOW": "The fixed reference instant of this evaluation."
+            }
+        },
         "formula-errors": {
+            "column-mode": "Column references in Agenda require New rules. Choose that mode explicitly or use a condition on this record.",
     "version": "This formula uses an unsupported version. Update Projects Plus before evaluating or changing it.",
             "number": "Invalid number. Check its sign, decimal point and exponent.",
             "string": "Close the text with a matching quote.",
@@ -22,6 +51,23 @@
             "invalid": "The formula cannot be read: {{detail}}"
         },
         "formula-docs": {
+            "IS_EMPTY": "True for a missing value, empty text or empty list; zero and false are filled values.",
+            "IS_NOT_EMPTY": "True when a value is present and is not empty text or an empty list.",
+            "NOT_CONTAINS": "Case-insensitive negation of CONTAINS.",
+            "TOMORROW": "The day after the reference date, as YYYY-MM-DD.",
+            "YESTERDAY": "The day before the reference date, as YYYY-MM-DD.",
+            "IS_TODAY": "True when the date is on the reference day.",
+            "IS_THIS_WEEK": "True when the date is in the reference week, using the active date locale.",
+            "IS_THIS_MONTH": "True when the date is in the reference month.",
+            "IS_BEFORE": "True when the date is before the other calendar day.",
+            "IS_AFTER": "True when the date is after the other calendar day.",
+            "IS_ON_AND_BEFORE": "True when the date is on or before the other calendar day.",
+            "IS_ON_AND_AFTER": "True when the date is on or after the other calendar day.",
+            "IS_OVERDUE": "True for a valid date strictly before the reference day.",
+            "IS_UPCOMING": "True for a valid date strictly after the reference day.",
+            "HAS_ANY_OF": "True if the two lists share an item, using strict equality.",
+            "HAS_ALL_OF": "True if the list includes every item from the second list, using strict equality.",
+            "HAS_NONE_OF": "True if the two lists share no items, using strict equality.",
             "SUMIF": "Sum of the cells (or of the third column on the same rows) that meet the condition: 5, \">10\", \"done\", \"<>x\", \"a*\".",
             "COUNTIF": "How many cells meet the condition: 5, \">10\", \"done\", \"<>x\", \"a*\", \"\" for blanks.",
             "AVERAGEIF": "Average of the cells (or of the third column) that meet the condition. Empty if nothing matches.",
