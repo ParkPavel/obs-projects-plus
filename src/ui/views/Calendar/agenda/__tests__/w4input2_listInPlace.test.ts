@@ -83,13 +83,15 @@ test("versioned list and real editor preview share the selected subset, date and
   try {
     const expression = 'AND(SUM(@QTY) = 5, TODAY() = "2026-10-26")';
     const saved: unknown[] = [];
-    const definition = { ...list("formula", "Formula", 0), filterMode: "advanced", filterFormula: expression, formulaVersion: "unified-v1" };
+    const definition = { ...list("formula", "Formula", 0), filterMode: "advanced", filterFormula: expression, formulaVersion: "unified-v1",
+      filterGroup: { id: "group", conjunction: "AND", groups: [], filters: [{ id: "status", field: "status", operator: "is", value: "Alpha", enabled: true }] } };
     const records = [
-      { id: "a", values: { title: "First", startDate: "2026-10-26", qty: 2 } },
-      { id: "b", values: { title: "Second", startDate: "2026-10-26", qty: 3 } },
-      { id: "c", values: { title: "Tomorrow", startDate: "2026-10-27", qty: 100 } },
+      { id: "a", values: { title: "First", startDate: "2026-10-26", qty: 2, status: "Alpha" } },
+      { id: "b", values: { title: "Second", startDate: "2026-10-26", qty: 3, status: "Alpha" } },
+      { id: "c", values: { title: "Tomorrow", startDate: "2026-10-27", qty: 100, status: "Tomorrow only" } },
     ];
-    const fields = [{ name: "qty", type: "number", repeated: false, derived: false, identifier: false }];
+    const fields = [{ name: "qty", type: "number", repeated: false, derived: false, identifier: false },
+      { name: "status", type: "string", repeated: false, derived: false, identifier: false }];
     const view = render(Sidebar, { props: { project: { id: "p", name: "Project", agenda: { mode: "custom", custom: { lists: [definition] } } },
       currentDate: dayjs("2026-10-26"), records, fields, titleField: "title", dateField: "startDate" } });
     view.component.$on("saveList", (event: CustomEvent) => saved.push(event.detail.list));
@@ -103,6 +105,11 @@ test("versioned list and real editor preview share the selected subset, date and
     const overlay = document.querySelector(".ppp-list-editor-overlay")!;
     jest.advanceTimersByTime(700); await settle();
     expect(overlay.querySelector(".ppp-formula-agenda-preview")?.textContent).toBe("Matches:2/2");
+    await fireEvent.click(overlay.querySelectorAll(".filter-mode-toggle button")[0]!); await settle();
+    const { comboInputs, enter, optionLabels } = require("src/ui/components/fields/__tests__/support/comboKit");
+    await enter(comboInputs(overlay).at(-1)!);
+    expect(optionLabels()).toContain("Tomorrow only");
+    await fireEvent.click(overlay.querySelectorAll(".filter-mode-toggle button")[1]!); await settle();
     await fireEvent.input(overlay.querySelector("#list-name")!, { target: { value: "Edited" } });
     await fireEvent.click(overlay.querySelector(".header-save")!); await settle();
     expect(saved).toEqual([expect.objectContaining({ name: "Edited", filterFormula: expression, formulaVersion: "unified-v1" })]);

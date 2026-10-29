@@ -146,8 +146,10 @@ an explicit empty draft selects compatibility. New computed columns see complete
 earlier columns and their schema. Legacy transform aggregates continue to read
 the original input frame, including in mixed-version steps. Agenda receives its
 record subset and reference date from its caller, not the whole vault or wall clock.
-The actual Agenda list and editor receive the same selected-day subset, schema and
-date; preview reports matches within that subset. FormulaBar retains a draft's mode
+The actual Agenda list and formula preview receive the same selected-day subset,
+schema and date; preview reports matches within that subset. Visual value suggestions
+retain all project records, so a condition can also target values present on another day.
+FormulaBar retains a draft's mode
 when saving under a new name (a copy), and protects other fields from name collisions.
 The record-only preview fallback reports missing data for new @column expressions.
 Pipeline expressions use the same editor, with Ctrl+Enter or Apply to commit a draft.

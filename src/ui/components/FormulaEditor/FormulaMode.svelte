@@ -18,6 +18,7 @@
     </button>
   </div>
   {#if !supported}<p role="alert">{$i18n.t("formula-errors.version")}</p>{/if}
+  {#if supported && version === undefined}<p class="ppp-formula-mode-warning">{$i18n.t("formula-mode.prepare")}</p>{/if}
   {#if version === "unified-v1" || !supported}<p class="ppp-formula-mode-warning">{$i18n.t("formula-mode.warning")}</p>{/if}
 </div>
 

@@ -28,6 +28,8 @@
   export let list: AgendaCustomList | null = null;
   export let fields: DataField[] = [];
   export let records: DataRecord[] = [];
+  /** Formula preview uses the selected day; visual value suggestions retain all project records. */
+  export let previewRecords: DataRecord[] | undefined = undefined;
   export let referenceDate: dayjs.Dayjs = dayjs();
   let formulaVersion = list?.formulaVersion;
   export let existingLists: AgendaCustomList[] = [];
@@ -329,7 +331,7 @@
       {:else}
         <AdvancedFilterEditor
           {fields}
-          {records}
+          records={previewRecords ?? records}
           {referenceDate}
           version={formulaVersion}
           on:modechange={(event) => { formulaVersion = event.detail.formulaVersion; }}

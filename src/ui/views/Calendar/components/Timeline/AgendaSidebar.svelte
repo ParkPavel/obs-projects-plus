@@ -838,7 +838,8 @@
               <AgendaListEditor
                 list={editingList}
                 {fields}
-                records={customRecords}
+                {records}
+                previewRecords={customRecords}
                 referenceDate={selectedDate}
                 existingLists={customLists}
                 initialName={editorName}

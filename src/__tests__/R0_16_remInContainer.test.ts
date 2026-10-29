@@ -141,7 +141,8 @@ const WINDOW_ANCHORED = [
 // → 691 (3.7.2 i3): month bars and multi-day strips lost their labels and per-width text sizes.
 // → 690 (3.7.2 i3-final): the database-call block's «not implemented» placeholder left for an EmptyState.
 // → 686 (w4-p10a): the block filter's pill row became one button in the views' row.
-const REM_IN_CONTAINER_BUDGET = 686;
+// → 683 (formula editor): obsolete compute input styles replaced by the shared editor.
+const REM_IN_CONTAINER_BUDGET = 683;
 
 /** A length in `rem`. `0.5rem`, `.5rem` and `1.5rem` all count once. */
 const REM_LENGTH = /\b\d*\.?\d+rem\b/g;

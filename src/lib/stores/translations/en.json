@@ -1,6 +1,7 @@
 ﻿{
     "translation": {
         "formula-mode": {
+            "prepare": "Before using new rules, update all devices and back up settings.",
             "label": "Formula rules",
             "legacy": "Compatibility",
             "modern": "New rules",

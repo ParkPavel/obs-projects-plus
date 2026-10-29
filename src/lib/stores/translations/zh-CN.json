@@ -1,6 +1,7 @@
 ﻿{
     "translation": {
         "formula-mode": {
+            "prepare": "使用新规则前，请更新所有设备并备份设置。",
             "label": "公式规则",
             "legacy": "兼容模式",
             "modern": "新规则",
