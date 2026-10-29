@@ -986,7 +986,7 @@ export const COMPUTED_FUNCTIONS: Record<string, FormulaFn> = {
     let count = 0;
     const limit = Math.abs(end.diff(start, "day")) + 1;
     if (limit > 36600) return null;
-    if (end.isBefore(start)) return -0;
+    if (end.isBefore(start)) return -count;
     // Keep the old day-by-day semantics across skipped local calendar dates.
     (chargeWork ?? chargeStandaloneFinancialWork)(limit);
     let current = start.add(1, "day");

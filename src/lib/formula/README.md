@@ -43,6 +43,8 @@ whole weeks plus at most six residual weekdays. The compatibility implementation
 keeps its day-by-day local-date behavior, including historically skipped dates
 and negative zero, with a shared work cap for excessive compositions. Both keep
 the previous accepted interval range. Profile-specific help describes the new rule.
+Inputs first use local date parsing; a nonexistent local date used as an endpoint
+is normalized by the date parser before the nominal calendar calculation.
 
 ## Context and passes
 
