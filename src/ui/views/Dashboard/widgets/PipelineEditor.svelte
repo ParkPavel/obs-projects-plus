@@ -367,7 +367,7 @@
   function updateComputeColumn(stepIndex: number, colIndex: number, name: string, expression: string) {
     const step = steps[stepIndex] as ComputeStep;
     const cols = [...step.columns];
-    cols[colIndex] = { name, expression };
+    cols[colIndex] = { ...cols[colIndex], name, expression };
     updateStep(stepIndex, { ...step, columns: cols });
   }
 
