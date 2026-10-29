@@ -13,6 +13,7 @@ export function humanFormulaError(raw: string, fields: readonly string[] = []): 
     return text === `formula-errors.${key}` ? raw : text; // no translations loaded: keep the raw words
   };
   let m: RegExpExecArray | null;
+  if (/^Formula (?:work|evaluation|parsing|input|list|financial (?:work|range)) limit exceeded$/.test(raw)) return t("limit");
   if ((m = /^Unknown field: (.+)$/.exec(raw))) {
     const hint = closestField(m[1]!, fields);
     return hint ? t("unknown-field-hint", { name: m[1]!, hint }) : t("unknown-field", { name: m[1]! });

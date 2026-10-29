@@ -14,12 +14,17 @@ jest.mock("src/lib/stores/i18n", () => {
     "formula-errors.missing-argument": "В функции не хватает значения",
     "formula-errors.unknown-operator": "Непонятный знак «{{op}}»",
     "formula-errors.invalid": "Формулу не удаётся прочитать: {{detail}}",
+    "formula-errors.limit": "Формула превысила предел вычислений. Упростите выражение или сократите число значений.",
   };
   const t = (k: string, o: Record<string, string> = {}) => (ru[k] ?? k).replace(/{{(\w+)}}/g, (_: string, n: string) => o[n] ?? "");
   return { i18n: writable({ t }) };
 });
 import { evaluateFormulaValue, evaluateFormulaWithError, validateFormulaExpression } from "src/lib/formula/extendedEvaluator";
 import { humanFormulaError } from "src/lib/formula/formulaErrors";
+
+it.each(["work", "evaluation", "parsing", "input", "list", "financial range", "financial work"])("%s limit is an actionable localized message", category => {
+  expect(humanFormulaError(`Formula ${category} limit exceeded`)).toBe("Формула превысила предел вычислений. Упростите выражение или сократите число значений.");
+});
 
 // i3-final: every parser message reaches the person in their language.
 it("each parser message has a sentence; an unknown one is framed, not bare English", () => {

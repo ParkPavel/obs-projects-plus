@@ -1,6 +1,7 @@
 ﻿{
     "translation": {
         "formula-errors": {
+            "limit": "Формула превысила предел вычислений. Упростите выражение или сократите число значений.",
             "unknown-field": "Нет свойства «{{name}}»",
             "unknown-field-hint": "Нет свойства «{{name}}». Может быть, «{{hint}}»?",
             "unknown-function": "Нет функции «{{name}}»",

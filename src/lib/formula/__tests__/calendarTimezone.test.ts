@@ -7,7 +7,7 @@ const worker = String.raw`
 const esbuild = require("esbuild"), vm = require("node:vm");
 const built = esbuild.buildSync({
   absWorkingDir: process.cwd(),
-  stdin: { contents: 'export {evaluateFormulaWithError} from "src/lib/formula/extendedEvaluator";', resolveDir: process.cwd(), loader: "ts" },
+  stdin: { contents: 'export {evaluateFormulaWithError,evaluateExpression} from "src/lib/formula/extendedEvaluator";', resolveDir: process.cwd(), loader: "ts" },
   bundle: true, platform: "node", format: "cjs", write: false,
   external: ["src/lib/stores/i18n"], logLevel: "silent"
 });
@@ -31,21 +31,32 @@ const results = sources.map(source => {
   const result = moduleBox.exports.evaluateFormulaWithError(source, record);
   return { ...result, negativeZero: Object.is(result.value, -0) };
 });
-process.stdout.write(JSON.stringify(results));
+const unifiedSources = [
+  'WORKDAYS("2018-11-04","2018-11-05")',
+  'WORKDAYS("2018-11-05","2018-11-04")',
+  'WORKDAYS("2026-09-06","2026-09-07")',
+  'WORKDAYS("2026-09-06","2026-09-14")',
+  'WORKDAYS("2011-12-29","2011-12-31")',
+  'WORKDAYS("2011-12-31","2011-12-29")'
+];
+const unified = unifiedSources.map(source => moduleBox.exports.evaluateExpression(source, {record, semantics: "unified-v1"}));
+process.stdout.write(JSON.stringify({legacy: results, unified}));
 `;
 
 test.each([
   ["Asia/Irkutsk", 1, 4],
   ["America/New_York", 1, 4],
   ["Pacific/Apia", 0, 3],
+  ["America/Santiago", 1, 4],
+  ["America/Sao_Paulo", 1, 4],
 ] as const)("compatibility calendar retains its actual local-date behavior in %s", (zone, first, second) => {
   const results: unknown = JSON.parse(execFileSync(process.execPath, ["-e", worker], {
     cwd: resolve(__dirname, "../../../.."), env: { ...process.env, TZ: zone },
     encoding: "utf8", timeout: 15_000,
   }));
-  expect(results).toEqual([
+  expect(results).toEqual({ legacy: [
     { value: first, negativeZero: false }, { value: second, negativeZero: false },
     { value: 0, negativeZero: true }, { value: 1, negativeZero: false },
     { value: 1, negativeZero: false },
-  ]);
+  ], unified: [{value: 1}, {value: -1}, {value: 1}, {value: 6}, {value: 1}, {value: -1}] });
 });

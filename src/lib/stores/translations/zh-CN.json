@@ -1,6 +1,7 @@
 ﻿{
     "translation": {
         "formula-errors": {
+            "limit": "公式超出计算限制。请简化表达式或减少处理的值。",
             "unknown-field": "没有属性“{{name}}”",
             "unknown-field-hint": "没有属性“{{name}}”。是否是“{{hint}}”？",
             "unknown-function": "没有函数“{{name}}”",

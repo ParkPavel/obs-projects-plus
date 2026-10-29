@@ -1,6 +1,7 @@
 ﻿{
     "translation": {
         "formula-errors": {
+            "limit": "The formula exceeded the calculation limit. Simplify the expression or reduce the number of values.",
             "unknown-field": "There is no property '{{name}}'",
             "unknown-field-hint": "There is no property '{{name}}'. Did you mean '{{hint}}'?",
             "unknown-function": "There is no function '{{name}}'",
