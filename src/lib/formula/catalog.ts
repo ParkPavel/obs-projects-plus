@@ -13,6 +13,7 @@ export function isFormulaSemantics(value: unknown): value is FormulaSemantics {
 export interface FormulaFunctionContext {
   readonly semantics: FormulaSemantics;
   readonly referenceTime: number;
+  /** Trusted evaluator accounting hook; never supplied by formula source/data. */
   readonly chargeWork?: (steps: number) => void;
 }
 

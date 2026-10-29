@@ -68,6 +68,11 @@ The financial fallback cap lives in the handlers themselves, so a direct catalog
 or handler call cannot disable it by supplying a different profile label. A managed
 evaluation shares its financial budget across nested calls. Large compositions
 can therefore hit the same cap even when each individual financial call is small.
+`chargeWork` is a trusted internal evaluator hook: callers providing it own work
+accounting and must not derive it from formula source or record data. Omitting it
+uses the standalone cap; supplying a no-op intentionally opts out of that cap.
+The old computed profile charges financial periods only; the new profile also
+charges evaluated AST nodes against that same budget.
 The structural depth limit also includes long left-associated operator chains;
 `SUM` avoids that shape until the separate expression-shape integration is complete.
 

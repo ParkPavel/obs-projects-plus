@@ -80,7 +80,7 @@ test("a direct cumulative handler also has a fallback work cap", () => {
   if (ast.type !== "function") throw new Error("Expected a cumulative call");
   const pow = jest.spyOn(Math, "pow").mockImplementation(() => { throw new Error("Test harness stopped the financial loop"); });
   try {
-    expect(() => COMPUTED_FUNCTIONS.CUMIPMT!(ast.args, node => node.type === "literal" ? node.value : null, () => null)).toThrow("limit");
+    expect(() => COMPUTED_FUNCTIONS["CUMIPMT"]!(ast.args, node => node.type === "literal" ? node.value : null, () => null)).toThrow("limit");
     expect(pow).not.toHaveBeenCalled();
   } finally { pow.mockRestore(); }
 });
