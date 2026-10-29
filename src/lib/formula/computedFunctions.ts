@@ -1,0 +1,1027 @@
+// Computed compatibility implementations. The catalog selects the profile;
+// the shared runtime owns AST traversal, scope and frame caches.
+
+import type { DataValue, Optional } from "src/lib/dataframe/dataframe";
+import type { FormulaNode } from "./syntax";
+import { isUnsafePattern, MAX_REGEX_INPUT_LENGTH, MAX_REGEX_PATTERN_LENGTH } from "src/lib/helpers/regexSafety";
+import { aggregate, type RollupFunction } from "src/lib/engine/aggregate";
+import { isNumeric, toNumber, toNumbers } from "src/lib/engine/numeric";
+import { compileCriterion, matchingRows, numbersPerCell, type CriterionPair } from "./criteria";
+import dayjs from "dayjs";
+
+// ── Numeric coercion (#180a) ─────────────────────────────────
+
+/**
+ * Argument coercion for the functions in `EXTENDED_FUNCTIONS`.
+ *
+ * `toNumber` is the project's rule; `?? NaN` preserves the shape every function
+ * here already had — coerce, then guard with `isNaN(...)` and return null.
+ *
+ * Routing every argument wholesale is correct rather than approximate, and the
+ * reason is in the lexer: `formulaParser.ts` turns a numeric LITERAL into a JS
+ * number before evaluation, so `toNumber` is the identity on it. Only values
+ * that came from a field are actually re-judged. What changes is that `""`, a
+ * missing field, `true` and a Date stop being silently 0 or 1, and `"0x10"`
+ * stops being 16.
+ */
+function argNumber(value: Optional<DataValue>): number {
+  return toNumber(value) ?? NaN;
+}
+
+/**
+ * Coercion for the comparison and arithmetic OPERATORS (`>`, `<`, `-`, `*`,
+ * `/`, and the numeric half of `+`).
+ *
+ * The project's rule plus exactly one deliberate divergence: to an operator, a
+ * boolean is 0/1. `toNumber` says a boolean is not a number because Excel
+ * ignores logical values inside AVERAGE — that is a statement about
+ * aggregating a column, not about `done > 0` in a formula someone wrote by
+ * hand. This is the only place the divergence lives; data questions call
+ * `toNumber` directly (#180a).
+ */
+export function operandNumber(value: unknown): number | null {
+  if (typeof value === "boolean") return value ? 1 : 0;
+  return toNumber(value);
+}
+
+/**
+ * An operand that carries no value: absent, or a string with nothing in it.
+ * `lib/engine/emptiness.ts` is deliberately not reused — its `isEmpty` keeps a
+ * whitespace-only string NON-empty to preserve the filter `is-empty` contract,
+ * while `toNumber` drops `"  "` like any other non-number. Arithmetic follows
+ * the coercion rule, not the filter one (#180a).
+ */
+export function isAbsentOperand(value: unknown): boolean {
+  return value == null || (typeof value === "string" && value.trim() === "");
+}
+
+// ── Styled value support ─────────────────────────────────────
+
+export interface StyledValue {
+  __styled: true;
+  text: string;
+  cssClass: string;
+}
+
+export function isStyledValue(v: unknown): v is StyledValue {
+  return v != null && typeof v === "object" && (v as StyledValue).__styled === true;
+}
+
+const STYLE_COLORS: Record<string, string> = {
+  red: "ppp-formula-red",
+  orange: "ppp-formula-orange",
+  yellow: "ppp-formula-yellow",
+  green: "ppp-formula-green",
+  blue: "ppp-formula-blue",
+  purple: "ppp-formula-purple",
+  pink: "ppp-formula-pink",
+  gray: "ppp-formula-gray",
+  grey: "ppp-formula-gray",
+};
+const STYLE_WEIGHTS: Record<string, string> = {
+  b: "ppp-formula-bold",
+  bold: "ppp-formula-bold",
+  i: "ppp-formula-italic",
+  italic: "ppp-formula-italic",
+  s: "ppp-formula-strikethrough",
+  strikethrough: "ppp-formula-strikethrough",
+  u: "ppp-formula-underline",
+  underline: "ppp-formula-underline",
+};
+
+export function buildSafeClass(color?: string, weight?: string): string {
+  const parts: string[] = [];
+  if (color) {
+    const cls = STYLE_COLORS[color.toLowerCase()];
+    if (cls) parts.push(cls);
+  }
+  if (weight) {
+    const cls = STYLE_WEIGHTS[weight.toLowerCase()];
+    if (cls) parts.push(cls);
+  }
+  return parts.join(" ");
+}
+
+// ── Formula result with error tracking ───────────────────────
+
+export interface FormulaResult {
+  value: Optional<DataValue>;
+  error?: string;
+}
+
+// ── Extended function registry ───────────────────────────────
+
+/**
+ * i3-final: `range` reads an argument as a RANGE — a `@column` gives every cell
+ * of that column in row order (blanks and text kept, so ranges stay aligned),
+ * a list value gives its items, and a single value gives null.
+ */
+type RangeOf = (node: FormulaNode) => readonly unknown[] | null;
+
+export type FormulaFn = (
+  args: FormulaNode[],
+  evaluate: (node: FormulaNode) => Optional<DataValue>,
+  range: RangeOf
+) => Optional<DataValue>;
+
+// ── Conditional aggregation (i3-final) ───────────────────────
+
+type ConditionalKind = "sum" | "count" | "avg" | "min" | "max";
+
+/**
+ * The numbers in the chosen rows of `values`; text, blanks and logical values
+ * are ignored as in Excel. Arithmetic only — the cells were read as numbers
+ * once per range (`numbersPerCell`).
+ */
+function reduceRows(kind: ConditionalKind, values: readonly unknown[], rows: readonly number[]): number | null {
+  if (kind === "count") return rows.length;
+  const view = numbersPerCell(values);
+  let sum = 0, n = 0, min = Infinity, max = -Infinity;
+  for (const i of rows) {
+    for (const v of view[i] ?? []) {
+      sum += v;
+      n++;
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+  }
+  if (kind === "sum") return sum;
+  if (kind === "avg") return n ? sum / n : null;
+  // MINIFS / MAXIFS answer 0 when nothing matches, as Excel and Sheets do.
+  if (n === 0) return 0;
+  return kind === "min" ? min : max;
+}
+
+/**
+ * SUMIF / COUNTIF / AVERAGEIF. Excel form `F(range, criteria, [values])` when
+ * the first argument is a range; otherwise the older variadic form
+ * `F(v1, v2, …, criteria)` that existing formulas were written in.
+ */
+function singleCriterion(kind: ConditionalKind): FormulaFn {
+  return (args, evaluate, range) => {
+    if (args.length < 2) return null;
+    const first = args.length <= 3 ? range(args[0] as FormulaNode) : null;
+    if (first) {
+      const criteria = evaluate(args[1] as FormulaNode);
+      const values = args[2] ? (range(args[2]) ?? [evaluate(args[2])]) : first;
+      const rows = matchingRows([{ range: first, criteria, test: compileCriterion(criteria) }]);
+      return reduceRows(kind, values, rows);
+    }
+    const test = compileCriterion(evaluate(args[args.length - 1] as FormulaNode));
+    const cells: unknown[] = [];
+    for (const a of args.slice(0, -1)) {
+      const v = evaluate(a);
+      for (const c of Array.isArray(v) ? v : [v]) if (test(c)) cells.push(c);
+    }
+    return reduceRows(kind, cells, cells.map((_, i) => i));
+  };
+}
+
+/**
+ * SUMIFS / AVERAGEIFS / MINIFS / MAXIFS `(values, range1, criteria1, …)` and
+ * COUNTIFS `(range1, criteria1, …)`: a row counts when every pair matches.
+ */
+function multiCriteria(kind: ConditionalKind): FormulaFn {
+  return (args, evaluate, range) => {
+    const offset = kind === "count" ? 0 : 1;
+    const pairCount = (args.length - offset) / 2;
+    if (pairCount < 1 || !Number.isInteger(pairCount)) return null;
+    const pairs: CriterionPair[] = [];
+    for (let p = 0; p < pairCount; p++) {
+      const node = args[offset + p * 2] as FormulaNode;
+      const criteria = evaluate(args[offset + p * 2 + 1] as FormulaNode);
+      pairs.push({ range: range(node) ?? [evaluate(node)], criteria, test: compileCriterion(criteria) });
+    }
+    const rows = matchingRows(pairs);
+    if (kind === "count") return rows.length;
+    const target = args[0] as FormulaNode;
+    return reduceRows(kind, range(target) ?? [evaluate(target)], rows);
+  };
+}
+
+// ── Financial helpers ────────────────────────────────────────
+
+function pmtCore(rate: number, nper: number, pv: number, fv: number, type: number): number {
+  if (rate === 0) return -(pv + fv) / nper;
+  const pvif = Math.pow(1 + rate, nper);
+  return -(rate * (pv * pvif + fv)) / (pvif - 1) / (1 + rate * type);
+}
+
+function fvBeforePeriod(rate: number, per: number, pv: number, pmt: number, type: number): number {
+  if (rate === 0) return -(pv + pmt * (per - 1));
+  return -(pv * Math.pow(1 + rate, per - 1) + pmt * (1 + rate * type) * ((Math.pow(1 + rate, per - 1) - 1) / rate));
+}
+
+function ipmtForPeriod(rate: number, per: number, pv: number, pmt: number, type: number): number {
+  const fvBefore = fvBeforePeriod(rate, per, pv, pmt, type);
+  if (type === 1 && per === 1) return 0;
+  if (type === 1) return (fvBefore - pmt) * rate;
+  return fvBefore * rate;
+}
+
+// REFACTOR-103: funnels formula args through canonical aggregate() kernel.
+function kernelAggregate(
+  args: FormulaNode[],
+  evaluate: (node: FormulaNode) => Optional<DataValue>,
+  fn: Extract<RollupFunction, "sum" | "avg" | "min" | "max" | "median">
+): number | null {
+  const flat: DataValue[] = [];
+  for (const a of args) {
+    const val = evaluate(a);
+    if (Array.isArray(val)) {
+      for (const v of val) if (v != null) flat.push(v);
+    } else if (val != null) {
+      flat.push(val);
+    }
+  }
+  if (flat.length === 0 && fn !== "sum") return null;
+  if (fn !== "sum") {
+    if (!flat.some(isNumeric)) return null;
+  }
+  const result = aggregate(flat, { relationField: "", targetField: "", function: fn });
+  return typeof result.value === "number" ? result.value : null;
+}
+
+export const COMPUTED_FUNCTIONS: Record<string, FormulaFn> = {
+  IF: (args, evaluate) => {
+    if (args.length < 2) return null;
+    const cond = evaluate(args[0] as FormulaNode);
+    return cond ? evaluate(args[1] as FormulaNode) : (args[2] ? evaluate(args[2]) : null);
+  },
+
+  IFS: (args, evaluate) => {
+    for (let i = 0; i + 1 < args.length; i += 2) {
+      if (evaluate(args[i] as FormulaNode)) {
+        return evaluate(args[i + 1] as FormulaNode);
+      }
+    }
+    return null;
+  },
+
+  SWITCH: (args, evaluate) => {
+    if (args.length < 3) return null;
+    const expr = evaluate(args[0] as FormulaNode);
+    for (let i = 1; i + 1 < args.length; i += 2) {
+      if (String(evaluate(args[i] as FormulaNode)) === String(expr)) {
+        return evaluate(args[i + 1] as FormulaNode);
+      }
+    }
+    if (args.length % 2 === 0) {
+      return evaluate(args[args.length - 1] as FormulaNode);
+    }
+    return null;
+  },
+
+  AND: (args, evaluate) => args.every((a) => Boolean(evaluate(a))),
+  OR: (args, evaluate) => args.some((a) => Boolean(evaluate(a))),
+  NOT: (args, evaluate) => !evaluate(args[0] as FormulaNode),
+
+  EMPTY: (args, evaluate) => {
+    const val = evaluate(args[0] as FormulaNode);
+    return val == null || val === "" || (Array.isArray(val) && val.length === 0);
+  },
+
+  // ── Math ───────────────────────────────────────────────────
+  ROUND: (args, evaluate) => {
+    const val = argNumber(evaluate(args[0] as FormulaNode));
+    const decimals = args[1] ? argNumber(evaluate(args[1])) : 0;
+    if (isNaN(val)) return null;
+    const factor = Math.pow(10, decimals);
+    return Math.round(val * factor) / factor;
+  },
+
+  CEIL: (args, evaluate) => {
+    const val = argNumber(evaluate(args[0] as FormulaNode));
+    return isNaN(val) ? null : Math.ceil(val);
+  },
+
+  FLOOR: (args, evaluate) => {
+    const val = argNumber(evaluate(args[0] as FormulaNode));
+    return isNaN(val) ? null : Math.floor(val);
+  },
+
+  ABS: (args, evaluate) => {
+    const val = argNumber(evaluate(args[0] as FormulaNode));
+    return isNaN(val) ? null : Math.abs(val);
+  },
+
+  SQRT: (args, evaluate) => {
+    const val = argNumber(evaluate(args[0] as FormulaNode));
+    return isNaN(val) || val < 0 ? null : Math.sqrt(val);
+  },
+
+  POWER: (args, evaluate) => {
+    const base = argNumber(evaluate(args[0] as FormulaNode));
+    const exp = argNumber(evaluate(args[1] as FormulaNode));
+    if (isNaN(base) || isNaN(exp)) return null;
+    const result = Math.pow(base, exp);
+    return isFinite(result) ? result : null;
+  },
+
+  LOG: (args, evaluate) => {
+    const val = argNumber(evaluate(args[0] as FormulaNode));
+    if (isNaN(val) || val <= 0) return null;
+    const base = args[1] ? argNumber(evaluate(args[1])) : Math.E;
+    if (base <= 0 || base === 1) return null;
+    return base === Math.E ? Math.log(val) : Math.log(val) / Math.log(base);
+  },
+
+  SIGN: (args, evaluate) => {
+    const val = argNumber(evaluate(args[0] as FormulaNode));
+    return isNaN(val) ? null : Math.sign(val);
+  },
+
+  // ── String ─────────────────────────────────────────────────
+  TRIM: (args, evaluate) => {
+    const val = evaluate(args[0] as FormulaNode);
+    return val != null ? String(val).trim() : null;
+  },
+
+  LOWER: (args, evaluate) => {
+    const val = evaluate(args[0] as FormulaNode);
+    return val != null ? String(val).toLowerCase() : null;
+  },
+
+  UPPER: (args, evaluate) => {
+    const val = evaluate(args[0] as FormulaNode);
+    return val != null ? String(val).toUpperCase() : null;
+  },
+
+  LENGTH: (args, evaluate) => {
+    const val = evaluate(args[0] as FormulaNode);
+    return val != null ? String(val).length : 0;
+  },
+
+  SUBSTRING: (args, evaluate) => {
+    const str = String(evaluate(args[0] as FormulaNode) ?? "");
+    const start = argNumber(evaluate(args[1] as FormulaNode));
+    const end = args[2] ? argNumber(evaluate(args[2])) : undefined;
+    return str.substring(start, end);
+  },
+
+  REPLACE: (args, evaluate) => {
+    const str = String(evaluate(args[0] as FormulaNode) ?? "");
+    const search = String(evaluate(args[1] as FormulaNode) ?? "");
+    const replacement = String(evaluate(args[2] as FormulaNode) ?? "");
+    return str.split(search).join(replacement);
+  },
+
+  CONTAINS: (args, evaluate) => {
+    const str = String(evaluate(args[0] as FormulaNode) ?? "").toLowerCase();
+    const sub = String(evaluate(args[1] as FormulaNode) ?? "").toLowerCase();
+    return str.includes(sub);
+  },
+
+  STARTS_WITH: (args, evaluate) => {
+    const str = String(evaluate(args[0] as FormulaNode) ?? "");
+    const prefix = String(evaluate(args[1] as FormulaNode) ?? "");
+    return str.startsWith(prefix);
+  },
+
+  ENDS_WITH: (args, evaluate) => {
+    const str = String(evaluate(args[0] as FormulaNode) ?? "");
+    const suffix = String(evaluate(args[1] as FormulaNode) ?? "");
+    return str.endsWith(suffix);
+  },
+
+  SPLIT: (args, evaluate) => {
+    const str = String(evaluate(args[0] as FormulaNode) ?? "");
+    const delim = String(evaluate(args[1] as FormulaNode) ?? ",");
+    return str.split(delim);
+  },
+
+  FORMAT: (args, evaluate) => {
+    const val = evaluate(args[0] as FormulaNode);
+    if (val == null) return "";
+    return String(val);
+  },
+
+  // ── Date ───────────────────────────────────────────────────
+  TODAY: () => dayjs().format("YYYY-MM-DD"),
+  NOW: () => dayjs().toISOString(),
+
+  DATE_ADD: (args, evaluate) => {
+    const date = dayjs(String(evaluate(args[0] as FormulaNode)));
+    const amount = argNumber(evaluate(args[1] as FormulaNode));
+    const unit = String(evaluate(args[2] as FormulaNode)) as dayjs.ManipulateType;
+    if (!date.isValid() || isNaN(amount)) return null;
+    return date.add(amount, unit).format("YYYY-MM-DD");
+  },
+
+  DATE_SUB: (args, evaluate) => {
+    const date = dayjs(String(evaluate(args[0] as FormulaNode)));
+    const amount = argNumber(evaluate(args[1] as FormulaNode));
+    const unit = String(evaluate(args[2] as FormulaNode)) as dayjs.ManipulateType;
+    if (!date.isValid() || isNaN(amount)) return null;
+    return date.subtract(amount, unit).format("YYYY-MM-DD");
+  },
+
+  DATE_BETWEEN: (args, evaluate) => {
+    const d1 = dayjs(String(evaluate(args[0] as FormulaNode)));
+    const d2 = dayjs(String(evaluate(args[1] as FormulaNode)));
+    const unit = (args[2] ? String(evaluate(args[2])) : "day") as dayjs.QUnitType;
+    if (!d1.isValid() || !d2.isValid()) return null;
+    return d2.diff(d1, unit);
+  },
+
+  FORMAT_DATE: (args, evaluate) => {
+    const date = dayjs(String(evaluate(args[0] as FormulaNode)));
+    const fmt = String(evaluate(args[1] as FormulaNode) ?? "YYYY-MM-DD");
+    return date.isValid() ? date.format(fmt) : null;
+  },
+
+  PARSE_DATE: (args, evaluate) => {
+    const str = String(evaluate(args[0] as FormulaNode) ?? "");
+    const d = dayjs(str);
+    return d.isValid() ? d.format("YYYY-MM-DD") : null;
+  },
+
+  YEAR: (args, evaluate) => {
+    const d = dayjs(String(evaluate(args[0] as FormulaNode)));
+    return d.isValid() ? d.year() : null;
+  },
+
+  MONTH: (args, evaluate) => {
+    const d = dayjs(String(evaluate(args[0] as FormulaNode)));
+    return d.isValid() ? d.month() + 1 : null;
+  },
+
+  DAY: (args, evaluate) => {
+    const d = dayjs(String(evaluate(args[0] as FormulaNode)));
+    return d.isValid() ? d.date() : null;
+  },
+
+  HOUR: (args, evaluate) => {
+    const d = dayjs(String(evaluate(args[0] as FormulaNode)));
+    return d.isValid() ? d.hour() : null;
+  },
+
+  MINUTE: (args, evaluate) => {
+    const d = dayjs(String(evaluate(args[0] as FormulaNode)));
+    return d.isValid() ? d.minute() : null;
+  },
+
+  WEEK: (args, evaluate) => {
+    const d = dayjs(String(evaluate(args[0] as FormulaNode)));
+    if (!d.isValid()) return null;
+    const date = d.toDate();
+    const thu = new Date(date.getTime());
+    thu.setDate(thu.getDate() + 3 - ((thu.getDay() + 6) % 7));
+    const jan4 = new Date(thu.getFullYear(), 0, 4);
+    return 1 + Math.round(((thu.getTime() - jan4.getTime()) / 86400000 - 3 + ((jan4.getDay() + 6) % 7)) / 7);
+  },
+
+  // ── Type conversion ────────────────────────────────────────
+  TO_NUMBER: (args, evaluate) => {
+    // The rule, named. TO_NUMBER is the user asking the question this module
+    // answers, so it must give the same answer as everything else (#180a).
+    return toNumber(evaluate(args[0] as FormulaNode));
+  },
+
+  TO_TEXT: (args, evaluate) => {
+    const val = evaluate(args[0] as FormulaNode);
+    return val != null ? String(val) : "";
+  },
+
+  TO_DATE: (args, evaluate) => {
+    const val = evaluate(args[0] as FormulaNode);
+    if (val == null) return null;
+    const d = dayjs(String(val));
+    return d.isValid() ? d.format("YYYY-MM-DD") : null;
+  },
+
+  // ── Financial ──────────────────────────────────────────────
+  PMT: (args, evaluate) => {
+    const rate = argNumber(evaluate(args[0] as FormulaNode));
+    const nper = argNumber(evaluate(args[1] as FormulaNode));
+    const pv = argNumber(evaluate(args[2] as FormulaNode));
+    const fv = args[3] ? argNumber(evaluate(args[3])) : 0;
+    const type = args[4] ? argNumber(evaluate(args[4])) : 0;
+    if (isNaN(rate) || isNaN(nper) || isNaN(pv) || nper === 0) return null;
+    return pmtCore(rate, nper, pv, fv, type);
+  },
+
+  FV: (args, evaluate) => {
+    const rate = argNumber(evaluate(args[0] as FormulaNode));
+    const nper = argNumber(evaluate(args[1] as FormulaNode));
+    const pmt = argNumber(evaluate(args[2] as FormulaNode));
+    const pv = args[3] ? argNumber(evaluate(args[3])) : 0;
+    const type = args[4] ? argNumber(evaluate(args[4])) : 0;
+    if (isNaN(rate) || isNaN(nper) || isNaN(pmt)) return null;
+    if (rate === 0) return -(pv + pmt * nper);
+    const pvif = Math.pow(1 + rate, nper);
+    return -(pv * pvif + pmt * (1 + rate * type) * ((pvif - 1) / rate));
+  },
+
+  PV: (args, evaluate) => {
+    const rate = argNumber(evaluate(args[0] as FormulaNode));
+    const nper = argNumber(evaluate(args[1] as FormulaNode));
+    const pmt = argNumber(evaluate(args[2] as FormulaNode));
+    const fv = args[3] ? argNumber(evaluate(args[3])) : 0;
+    const type = args[4] ? argNumber(evaluate(args[4])) : 0;
+    if (isNaN(rate) || isNaN(nper) || isNaN(pmt)) return null;
+    if (rate === 0) return -(fv + pmt * nper);
+    const pvif = Math.pow(1 + rate, nper);
+    return -(pmt * (1 + rate * type) * ((pvif - 1) / rate) + fv) / pvif;
+  },
+
+  NPV: (args, evaluate) => {
+    const rate = argNumber(evaluate(args[0] as FormulaNode));
+    if (isNaN(rate) || rate === -1) return null;
+    let npv = 0;
+    for (let i = 1; i < args.length; i++) {
+      const cf = argNumber(evaluate(args[i] as FormulaNode));
+      if (isNaN(cf)) return null;
+      npv += cf / Math.pow(1 + rate, i);
+    }
+    return npv;
+  },
+
+  IRR: (args, evaluate) => {
+    const cfs: number[] = [];
+    let guess = 0.1;
+    for (let i = 0; i < args.length; i++) {
+      const val = argNumber(evaluate(args[i] as FormulaNode));
+      if (isNaN(val)) return null;
+      cfs.push(val);
+    }
+    if (cfs.length >= 3) {
+      const last = cfs[cfs.length - 1]!;
+      if (Math.abs(last) < 1) {
+        const remaining = cfs.slice(0, -1);
+        const hasPos = remaining.some(v => v > 0);
+        const hasNeg = remaining.some(v => v < 0);
+        if (hasPos && hasNeg) {
+          guess = last;
+          cfs.pop();
+        }
+      }
+    }
+
+    let rate = guess;
+    for (let iter = 0; iter < 100; iter++) {
+      let npv = 0, dnpv = 0;
+      for (let i = 0; i < cfs.length; i++) {
+        const pow = Math.pow(1 + rate, i);
+        npv += cfs[i]! / pow;
+        dnpv -= i * cfs[i]! / (pow * (1 + rate));
+      }
+      if (Math.abs(npv) < 1e-7) return rate;
+      if (dnpv === 0) return null;
+      rate -= npv / dnpv;
+      if (!isFinite(rate)) return null;
+    }
+    return null;
+  },
+
+  RATE: (args, evaluate) => {
+    const nper = argNumber(evaluate(args[0] as FormulaNode));
+    const pmt = argNumber(evaluate(args[1] as FormulaNode));
+    const pv = argNumber(evaluate(args[2] as FormulaNode));
+    const fv = args[3] ? argNumber(evaluate(args[3])) : 0;
+    const type = args[4] ? argNumber(evaluate(args[4])) : 0;
+    let rate = args[5] ? argNumber(evaluate(args[5])) : 0.1;
+    if (isNaN(nper) || isNaN(pmt) || isNaN(pv) || nper <= 0) return null;
+
+    for (let iter = 0; iter < 100; iter++) {
+      if (rate === 0) {
+        const f = pv + pmt * nper + fv;
+        if (Math.abs(f) < 1e-7) return 0;
+        rate = 0.001;
+        continue;
+      }
+      const pvif = Math.pow(1 + rate, nper);
+      const y = pv * pvif + pmt * (1 + rate * type) * ((pvif - 1) / rate) + fv;
+      const dy = nper * pv * Math.pow(1 + rate, nper - 1)
+        + pmt * type * ((pvif - 1) / rate)
+        + pmt * (1 + rate * type) * (nper * Math.pow(1 + rate, nper - 1) / rate - (pvif - 1) / (rate * rate));
+      if (Math.abs(y) < 1e-7) return rate;
+      if (dy === 0) return null;
+      rate -= y / dy;
+      if (!isFinite(rate)) return null;
+    }
+    return null;
+  },
+
+  IPMT: (args, evaluate) => {
+    const rate = argNumber(evaluate(args[0] as FormulaNode));
+    const per = argNumber(evaluate(args[1] as FormulaNode));
+    const nper = argNumber(evaluate(args[2] as FormulaNode));
+    const pv = argNumber(evaluate(args[3] as FormulaNode));
+    const fv = args[4] ? argNumber(evaluate(args[4])) : 0;
+    const type = args[5] ? argNumber(evaluate(args[5])) : 0;
+    if (isNaN(rate) || isNaN(per) || isNaN(nper) || per < 1 || per > nper) return null;
+    const pmt = pmtCore(rate, nper, pv, fv, type);
+    return ipmtForPeriod(rate, per, pv, pmt, type);
+  },
+
+  PPMT: (args, evaluate) => {
+    const rate = argNumber(evaluate(args[0] as FormulaNode));
+    const per = argNumber(evaluate(args[1] as FormulaNode));
+    const nper = argNumber(evaluate(args[2] as FormulaNode));
+    const pv = argNumber(evaluate(args[3] as FormulaNode));
+    const fv = args[4] ? argNumber(evaluate(args[4])) : 0;
+    const type = args[5] ? argNumber(evaluate(args[5])) : 0;
+    if (isNaN(rate) || isNaN(per) || isNaN(nper) || per < 1 || per > nper) return null;
+    const pmt = pmtCore(rate, nper, pv, fv, type);
+    return pmt - ipmtForPeriod(rate, per, pv, pmt, type);
+  },
+
+  NPER: (args, evaluate) => {
+    const rate = argNumber(evaluate(args[0] as FormulaNode));
+    const pmt = argNumber(evaluate(args[1] as FormulaNode));
+    const pv = argNumber(evaluate(args[2] as FormulaNode));
+    const fv = args[3] ? argNumber(evaluate(args[3])) : 0;
+    const type = args[4] ? argNumber(evaluate(args[4])) : 0;
+    if (isNaN(rate) || isNaN(pmt) || isNaN(pv)) return null;
+    if (rate === 0) {
+      if (pmt === 0) return null;
+      return -(pv + fv) / pmt;
+    }
+    const z = pmt * (1 + rate * type);
+    const num = z - fv * rate;
+    const den = pv * rate + z;
+    if (num <= 0 || den <= 0 || num / den <= 0) return null;
+    return Math.log(num / den) / Math.log(1 + rate);
+  },
+
+  CUMPRINC: (args, evaluate) => {
+    const rate = argNumber(evaluate(args[0] as FormulaNode));
+    const nper = argNumber(evaluate(args[1] as FormulaNode));
+    const pv = argNumber(evaluate(args[2] as FormulaNode));
+    const start = argNumber(evaluate(args[3] as FormulaNode));
+    const end = argNumber(evaluate(args[4] as FormulaNode));
+    const type = argNumber(evaluate(args[5] as FormulaNode));
+    if (isNaN(rate) || isNaN(nper) || isNaN(pv) || rate <= 0 || nper <= 0 || pv <= 0) return null;
+    if (start < 1 || end < start || end > nper) return null;
+    const pmt = pmtCore(rate, nper, pv, 0, type);
+    let cum = 0;
+    for (let per = start; per <= end; per++) {
+      cum += pmt - ipmtForPeriod(rate, per, pv, pmt, type);
+    }
+    return cum;
+  },
+
+  CUMIPMT: (args, evaluate) => {
+    const rate = argNumber(evaluate(args[0] as FormulaNode));
+    const nper = argNumber(evaluate(args[1] as FormulaNode));
+    const pv = argNumber(evaluate(args[2] as FormulaNode));
+    const start = argNumber(evaluate(args[3] as FormulaNode));
+    const end = argNumber(evaluate(args[4] as FormulaNode));
+    const type = argNumber(evaluate(args[5] as FormulaNode));
+    if (isNaN(rate) || isNaN(nper) || isNaN(pv) || rate <= 0 || nper <= 0 || pv <= 0) return null;
+    if (start < 1 || end < start || end > nper) return null;
+    const pmt = pmtCore(rate, nper, pv, 0, type);
+    let cum = 0;
+    for (let per = start; per <= end; per++) {
+      cum += ipmtForPeriod(rate, per, pv, pmt, type);
+    }
+    return cum;
+  },
+
+  // ── Statistical ────────────────────────────────────────────
+  VARIANCE: (args, evaluate) => {
+    const nums = args.map(a => argNumber(evaluate(a))).filter(n => !isNaN(n));
+    if (nums.length === 0) return null;
+    const mean = nums.reduce((s, v) => s + v, 0) / nums.length;
+    return nums.reduce((s, v) => s + (v - mean) ** 2, 0) / nums.length;
+  },
+
+  VARIANCE_S: (args, evaluate) => {
+    const nums = args.map(a => argNumber(evaluate(a))).filter(n => !isNaN(n));
+    if (nums.length < 2) return null;
+    const mean = nums.reduce((s, v) => s + v, 0) / nums.length;
+    return nums.reduce((s, v) => s + (v - mean) ** 2, 0) / (nums.length - 1);
+  },
+
+  PERCENTILE: (args, evaluate) => {
+    if (args.length < 2) return null;
+    const arr = args.slice(0, -1).map(a => argNumber(evaluate(a))).filter(n => !isNaN(n)).sort((a, b) => a - b);
+    const k = argNumber(evaluate(args[args.length - 1] as FormulaNode));
+    if (arr.length === 0 || isNaN(k) || k < 0 || k > 1) return null;
+    if (arr.length === 1) return arr[0]!;
+    const idx = k * (arr.length - 1);
+    const lo = Math.floor(idx), hi = Math.ceil(idx);
+    return arr[lo]! + (arr[hi]! - arr[lo]!) * (idx - lo);
+  },
+
+  QUARTILE: (args, evaluate) => {
+    if (args.length < 2) return null;
+    const arr = args.slice(0, -1).map(a => argNumber(evaluate(a))).filter(n => !isNaN(n)).sort((a, b) => a - b);
+    const q = argNumber(evaluate(args[args.length - 1] as FormulaNode));
+    if (arr.length === 0 || isNaN(q) || q < 0 || q > 4) return null;
+    const k = q / 4;
+    if (arr.length === 1) return arr[0]!;
+    const idx = k * (arr.length - 1);
+    const lo = Math.floor(idx), hi = Math.ceil(idx);
+    return arr[lo]! + (arr[hi]! - arr[lo]!) * (idx - lo);
+  },
+
+  CORREL: (args, evaluate) => {
+    if (args.length < 4 || args.length % 2 !== 0) return null;
+    const xs: number[] = [], ys: number[] = [];
+    for (let i = 0; i < args.length; i += 2) {
+      const x = argNumber(evaluate(args[i] as FormulaNode));
+      const y = argNumber(evaluate(args[i + 1] as FormulaNode));
+      if (!isNaN(x) && !isNaN(y)) { xs.push(x); ys.push(y); }
+    }
+    if (xs.length < 2) return null;
+    const n = xs.length;
+    const mx = xs.reduce((s, v) => s + v, 0) / n;
+    const my = ys.reduce((s, v) => s + v, 0) / n;
+    let sxy = 0, sxx = 0, syy = 0;
+    for (let i = 0; i < n; i++) {
+      const dx = xs[i]! - mx, dy = ys[i]! - my;
+      sxy += dx * dy; sxx += dx * dx; syy += dy * dy;
+    }
+    const denom = Math.sqrt(sxx * syy);
+    return denom === 0 ? null : sxy / denom;
+  },
+
+  MODE: (args, evaluate) => {
+    const nums = args.map(a => argNumber(evaluate(a))).filter(n => !isNaN(n));
+    if (nums.length === 0) return null;
+    const freq = new Map<number, number>();
+    for (const n of nums) freq.set(n, (freq.get(n) ?? 0) + 1);
+    let maxFreq = 0, mode: number | null = null;
+    for (const [val, count] of freq) {
+      if (count > maxFreq) { maxFreq = count; mode = val; }
+    }
+    return maxFreq > 1 ? mode : null;
+  },
+
+  RANK: (args, evaluate) => {
+    if (args.length < 2) return null;
+    const value = argNumber(evaluate(args[0] as FormulaNode));
+    if (isNaN(value)) return null;
+    const allVals = args.slice(1).map(a => argNumber(evaluate(a))).filter(n => !isNaN(n));
+    const sorted = [...allVals].sort((a, b) => b - a);
+    const idx = sorted.indexOf(value);
+    return idx === -1 ? null : idx + 1;
+  },
+
+  STD_DEV_S: (args, evaluate) => {
+    const nums = args.map(a => argNumber(evaluate(a))).filter(n => !isNaN(n));
+    if (nums.length < 2) return null;
+    const mean = nums.reduce((s, v) => s + v, 0) / nums.length;
+    return Math.sqrt(nums.reduce((s, v) => s + (v - mean) ** 2, 0) / (nums.length - 1));
+  },
+
+  // ── Enhanced Math ──────────────────────────────────────────
+  // REFACTOR-103: MEDIAN delegates to lib/engine/aggregate.ts
+  MEDIAN: (args, evaluate) => kernelAggregate(args, evaluate, "median"),
+
+  PRODUCT: (args, evaluate) => {
+    const nums = args.map(a => argNumber(evaluate(a))).filter(n => !isNaN(n));
+    if (nums.length === 0) return null;
+    return nums.reduce((p, v) => p * v, 1);
+  },
+
+  MOD: (args, evaluate) => {
+    const a = argNumber(evaluate(args[0] as FormulaNode));
+    const b = argNumber(evaluate(args[1] as FormulaNode));
+    if (isNaN(a) || isNaN(b) || b === 0) return null;
+    return a % b;
+  },
+
+  EVEN: (args, evaluate) => {
+    const val = argNumber(evaluate(args[0] as FormulaNode));
+    if (isNaN(val)) return null;
+    const c = Math.ceil(Math.abs(val));
+    const even = c % 2 === 0 ? c : c + 1;
+    return val >= 0 ? even : -even;
+  },
+
+  ODD: (args, evaluate) => {
+    const val = argNumber(evaluate(args[0] as FormulaNode));
+    if (isNaN(val)) return null;
+    const c = Math.ceil(Math.abs(val));
+    const odd = c % 2 === 1 ? c : c + 1;
+    return val >= 0 ? odd : -odd;
+  },
+
+  PI: () => Math.PI,
+
+  RANDOM_INT: (args, evaluate) => {
+    const min = argNumber(evaluate(args[0] as FormulaNode));
+    const max = argNumber(evaluate(args[1] as FormulaNode));
+    if (isNaN(min) || isNaN(max)) return null;
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  },
+
+  // ── Enhanced String ────────────────────────────────────────
+  LEFT: (args, evaluate) => {
+    const str = String(evaluate(args[0] as FormulaNode) ?? "");
+    const n = args[1] ? argNumber(evaluate(args[1])) : 1;
+    return str.substring(0, n);
+  },
+
+  RIGHT: (args, evaluate) => {
+    const str = String(evaluate(args[0] as FormulaNode) ?? "");
+    const n = args[1] ? argNumber(evaluate(args[1])) : 1;
+    return str.substring(Math.max(0, str.length - n));
+  },
+
+  MID: (args, evaluate) => {
+    const str = String(evaluate(args[0] as FormulaNode) ?? "");
+    const start = argNumber(evaluate(args[1] as FormulaNode));
+    const len = argNumber(evaluate(args[2] as FormulaNode));
+    if (isNaN(start) || isNaN(len)) return null;
+    return str.substring(start, start + len);
+  },
+
+  REGEX_MATCH: (args, evaluate) => {
+    const str = String(evaluate(args[0] as FormulaNode) ?? "");
+    const pattern = String(evaluate(args[1] as FormulaNode) ?? "");
+    if (!pattern || pattern.length > MAX_REGEX_PATTERN_LENGTH || isUnsafePattern(pattern)) return false;
+    if (str.length > MAX_REGEX_INPUT_LENGTH) return false;
+    try { return new RegExp(pattern).test(str); } catch { return false; }
+  },
+
+  REGEX_REPLACE: (args, evaluate) => {
+    const str = String(evaluate(args[0] as FormulaNode) ?? "");
+    const pattern = String(evaluate(args[1] as FormulaNode) ?? "");
+    const replacement = String(evaluate(args[2] as FormulaNode) ?? "");
+    if (!pattern || pattern.length > MAX_REGEX_PATTERN_LENGTH || isUnsafePattern(pattern)) return str;
+    if (str.length > MAX_REGEX_INPUT_LENGTH) return str;
+    try { return str.replace(new RegExp(pattern, "g"), replacement); } catch { return str; }
+  },
+
+  JOIN: (args, evaluate) => {
+    if (args.length < 2) return null;
+    const delim = String(evaluate(args[0] as FormulaNode) ?? "");
+    const parts = args.slice(1).map(a => String(evaluate(a) ?? ""));
+    return parts.join(delim);
+  },
+
+  REPEAT: (args, evaluate) => {
+    const str = String(evaluate(args[0] as FormulaNode) ?? "");
+    const n = argNumber(evaluate(args[1] as FormulaNode));
+    if (isNaN(n) || n < 0 || n > 1000) return null;
+    return str.repeat(n);
+  },
+
+  ENCODE_URL: (args, evaluate) => {
+    const str = String(evaluate(args[0] as FormulaNode) ?? "");
+    return encodeURIComponent(str);
+  },
+
+  // ── Conversion (enhanced) ──────────────────────────────────
+  TO_CURRENCY: (args, evaluate) => {
+    const val = argNumber(evaluate(args[0] as FormulaNode));
+    const code = args[1] ? String(evaluate(args[1])) : "USD";
+    if (isNaN(val)) return null;
+    try {
+      return new Intl.NumberFormat("en-US", { style: "currency", currency: code }).format(val);
+    } catch { return val.toFixed(2); }
+  },
+
+  TO_PERCENT: (args, evaluate) => {
+    const val = argNumber(evaluate(args[0] as FormulaNode));
+    if (isNaN(val)) return null;
+    return `${(val * 100).toFixed(2)}%`;
+  },
+
+  // ── Logic (enhanced) ───────────────────────────────────────
+  // LET, STYLE, MAP, FILTER, REDUCE are handled specially in evaluateNode
+  LET: (_args, _evaluate) => null,
+  LETS: (_args, _evaluate) => null,
+  PROP: (_args, _evaluate) => null,
+  ID: (_args, _evaluate) => null,
+  STYLE: (_args, _evaluate) => null,
+  MAP: (_args, _evaluate) => null,
+  FILTER: (_args, _evaluate) => null,
+  REDUCE: (_args, _evaluate) => null,
+
+  // ── List utilities ─────────────────────────────────────────
+  ZIP: (args, evaluate) => {
+    if (args.length === 0) return [];
+    const lists = args.map(a => {
+      const v = evaluate(a);
+      return Array.isArray(v) ? v : (v != null ? [v] : []);
+    });
+    const len = Math.min(...lists.map(l => l.length));
+    const result: unknown[][] = [];
+    for (let i = 0; i < len; i++) result.push(lists.map(l => l[i]));
+    return result as unknown as DataValue;
+  },
+
+  EXTRACT: (args, evaluate) => {
+    if (args.length < 2) return null;
+    const listVal = evaluate(args[0] as FormulaNode);
+    const list = Array.isArray(listVal) ? listVal : (listVal != null ? [listVal] : []);
+    const idx = argNumber(evaluate(args[1] as FormulaNode));
+    if (isNaN(idx)) return null;
+    const i = idx < 0 ? list.length + Math.trunc(idx) : Math.trunc(idx);
+    return (list[i] ?? null);
+  },
+
+  IFBLANK: (args, evaluate) => {
+    const val = evaluate(args[0] as FormulaNode);
+    if (val == null || val === "" || (typeof val === "number" && isNaN(val))) {
+      return args[1] ? evaluate(args[1]) : null;
+    }
+    return val;
+  },
+
+  // ── Date (enhanced) ────────────────────────────────────────
+  END_OF_MONTH: (args, evaluate) => {
+    const d = dayjs(String(evaluate(args[0] as FormulaNode)));
+    if (!d.isValid()) return null;
+    return d.endOf("month").format("YYYY-MM-DD");
+  },
+
+  WEEKDAY_NAME: (args, evaluate) => {
+    const d = dayjs(String(evaluate(args[0] as FormulaNode)));
+    if (!d.isValid()) return null;
+    return d.format("dddd");
+  },
+
+  ISO_WEEK: (args, evaluate) => {
+    const d = dayjs(String(evaluate(args[0] as FormulaNode)));
+    if (!d.isValid()) return null;
+    return d.isoWeek();
+  },
+
+  // ── Duration ───────────────────────────────────────────────
+  DAYS: (args, evaluate) => {
+    const n = argNumber(evaluate(args[0] as FormulaNode));
+    return isNaN(n) ? null : n;
+  },
+
+  HOURS: (args, evaluate) => {
+    const n = argNumber(evaluate(args[0] as FormulaNode));
+    return isNaN(n) ? null : n / 24;
+  },
+
+  MINUTES: (args, evaluate) => {
+    const n = argNumber(evaluate(args[0] as FormulaNode));
+    return isNaN(n) ? null : n / 1440;
+  },
+
+  TO_DAYS: (args, evaluate) => {
+    const val = argNumber(evaluate(args[0] as FormulaNode));
+    return isNaN(val) ? null : val;
+  },
+
+  TO_HOURS: (args, evaluate) => {
+    const val = argNumber(evaluate(args[0] as FormulaNode));
+    return isNaN(val) ? null : val * 24;
+  },
+
+  WORKDAYS: (args, evaluate) => {
+    const startStr = String(evaluate(args[0] as FormulaNode));
+    const endStr = String(evaluate(args[1] as FormulaNode));
+    const start = dayjs(startStr), end = dayjs(endStr);
+    if (!start.isValid() || !end.isValid()) return null;
+    let count = 0;
+    let current = start.add(1, "day");
+    const limit = Math.abs(end.diff(start, "day")) + 1;
+    if (limit > 36600) return null;
+    while (current.isBefore(end, "day") || current.isSame(end, "day")) {
+      const dow = current.day();
+      if (dow !== 0 && dow !== 6) count++;
+      current = current.add(1, "day");
+    }
+    return end.isBefore(start) ? -count : count;
+  },
+
+  // ── Conditional Aggregation ────────────────────────────────
+  // i3-final: Excel criteria (">10", "done", "a*", "<>x") over @columns.
+  SUMIF: singleCriterion("sum"),
+  COUNTIF: singleCriterion("count"),
+  AVERAGEIF: singleCriterion("avg"),
+  SUMIFS: multiCriteria("sum"),
+  COUNTIFS: multiCriteria("count"),
+  AVERAGEIFS: multiCriteria("avg"),
+  MINIFS: multiCriteria("min"),
+  MAXIFS: multiCriteria("max"),
+
+  // ── Aggregate-aware functions (REFACTOR-103: delegate to aggregate kernel) ──
+  SUM: (args, evaluate) => kernelAggregate(args, evaluate, "sum"),
+  AVG: (args, evaluate) => kernelAggregate(args, evaluate, "avg"),
+
+  COUNT: (args, evaluate) => {
+    let count = 0;
+    for (const a of args) {
+      const val = evaluate(a);
+      if (Array.isArray(val)) count += val.length;
+      else if (val != null) count++;
+    }
+    return count;
+  },
+
+  MIN: (args, evaluate) => kernelAggregate(args, evaluate, "min"),
+  MAX: (args, evaluate) => kernelAggregate(args, evaluate, "max"),
+
+  STD_DEV: (args, evaluate) => {
+    const nums: number[] = [];
+    for (const a of args) {
+      const val = evaluate(a);
+      nums.push(...toNumbers(Array.isArray(val) ? val : [val]));
+    }
+    if (nums.length === 0) return null;
+    const mean = nums.reduce((s, v) => s + v, 0) / nums.length;
+    return Math.sqrt(nums.reduce((s, v) => s + (v - mean) ** 2, 0) / nums.length);
+  },
+};
