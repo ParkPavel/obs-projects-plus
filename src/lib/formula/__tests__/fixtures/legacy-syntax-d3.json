@@ -1,0 +1,1408 @@
+{
+  "head": "d3b5fe377613068fdb87d86e1f6d0b2d0f6d2cdf",
+  "scope": "Actual default legacy tokenizer/parser/validator/evaluator before strict syntax; synthetic records; only i18n text boundary substituted.",
+  "records": [
+    {
+      "id": "one.md",
+      "values": {
+        "amount": "1",
+        "status": "Open",
+        "left": 2,
+        "right": 3,
+        "due": "2026-10-01"
+      }
+    },
+    {
+      "id": "two.md",
+      "values": {
+        "amount": 2,
+        "status": "Closed",
+        "left": 3,
+        "right": 5,
+        "due": "2026-10-02"
+      }
+    },
+    {
+      "id": "blank.md",
+      "values": {
+        "amount": null,
+        "status": null
+      }
+    },
+    {
+      "id": "absent.md",
+      "values": {}
+    }
+  ],
+  "rows": [
+    {
+      "expression": "1.2.3",
+      "tokens": {
+        "result": [
+          {
+            "type": "NUMBER",
+            "value": 1.2,
+            "start": 0,
+            "end": 5
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 5,
+            "end": 5
+          }
+        ]
+      },
+      "ast": {
+        "result": {
+          "type": "literal",
+          "value": 1.2
+        }
+      },
+      "validation": [],
+      "computed": {
+        "value": 1.2
+      }
+    },
+    {
+      "expression": "1-2",
+      "tokens": {
+        "result": [
+          {
+            "type": "NUMBER",
+            "value": 1,
+            "start": 0,
+            "end": 1
+          },
+          {
+            "type": "NUMBER",
+            "value": -2,
+            "start": 1,
+            "end": 3
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 3,
+            "end": 3
+          }
+        ]
+      },
+      "ast": {
+        "thrown": "Expected EOF but got NUMBER"
+      },
+      "validation": [
+        "Expected EOF but got NUMBER"
+      ],
+      "computed": {
+        "value": null,
+        "error": "Expected EOF but got NUMBER"
+      }
+    },
+    {
+      "expression": "1 -2",
+      "tokens": {
+        "result": [
+          {
+            "type": "NUMBER",
+            "value": 1,
+            "start": 0,
+            "end": 1
+          },
+          {
+            "type": "NUMBER",
+            "value": -2,
+            "start": 2,
+            "end": 4
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 4,
+            "end": 4
+          }
+        ]
+      },
+      "ast": {
+        "thrown": "Expected EOF but got NUMBER"
+      },
+      "validation": [
+        "Expected EOF but got NUMBER"
+      ],
+      "computed": {
+        "value": null,
+        "error": "Expected EOF but got NUMBER"
+      }
+    },
+    {
+      "expression": "1 - 2",
+      "tokens": {
+        "result": [
+          {
+            "type": "NUMBER",
+            "value": 1,
+            "start": 0,
+            "end": 1
+          },
+          {
+            "type": "OPERATOR",
+            "value": "-",
+            "start": 2,
+            "end": 3
+          },
+          {
+            "type": "NUMBER",
+            "value": 2,
+            "start": 4,
+            "end": 5
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 5,
+            "end": 5
+          }
+        ]
+      },
+      "ast": {
+        "result": {
+          "type": "operator",
+          "operator": "-",
+          "left": {
+            "type": "literal",
+            "value": 1
+          },
+          "right": {
+            "type": "literal",
+            "value": 2
+          }
+        }
+      },
+      "validation": [],
+      "computed": {
+        "value": -1
+      }
+    },
+    {
+      "expression": "-2+3",
+      "tokens": {
+        "result": [
+          {
+            "type": "NUMBER",
+            "value": -2,
+            "start": 0,
+            "end": 2
+          },
+          {
+            "type": "OPERATOR",
+            "value": "+",
+            "start": 2,
+            "end": 3
+          },
+          {
+            "type": "NUMBER",
+            "value": 3,
+            "start": 3,
+            "end": 4
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 4,
+            "end": 4
+          }
+        ]
+      },
+      "ast": {
+        "result": {
+          "type": "operator",
+          "operator": "+",
+          "left": {
+            "type": "literal",
+            "value": -2
+          },
+          "right": {
+            "type": "literal",
+            "value": 3
+          }
+        }
+      },
+      "validation": [],
+      "computed": {
+        "value": 1
+      }
+    },
+    {
+      "expression": ".5",
+      "tokens": {
+        "thrown": "Unexpected character at position 0: ."
+      },
+      "ast": {
+        "thrown": "Unexpected character at position 0: ."
+      },
+      "validation": [
+        "Unexpected character at position 0: ."
+      ],
+      "computed": {
+        "value": null,
+        "error": "Unexpected character at position 0: ."
+      }
+    },
+    {
+      "expression": "0.5",
+      "tokens": {
+        "result": [
+          {
+            "type": "NUMBER",
+            "value": 0.5,
+            "start": 0,
+            "end": 3
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 3,
+            "end": 3
+          }
+        ]
+      },
+      "ast": {
+        "result": {
+          "type": "literal",
+          "value": 0.5
+        }
+      },
+      "validation": [],
+      "computed": {
+        "value": 0.5
+      }
+    },
+    {
+      "expression": "1e3",
+      "tokens": {
+        "result": [
+          {
+            "type": "NUMBER",
+            "value": 1,
+            "start": 0,
+            "end": 1
+          },
+          {
+            "type": "FIELD",
+            "value": "e3",
+            "start": 1,
+            "end": 3
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 3,
+            "end": 3
+          }
+        ]
+      },
+      "ast": {
+        "thrown": "Expected EOF but got FIELD"
+      },
+      "validation": [
+        "Expected EOF but got FIELD"
+      ],
+      "computed": {
+        "value": null,
+        "error": "Expected EOF but got FIELD"
+      }
+    },
+    {
+      "expression": "1e-3",
+      "tokens": {
+        "result": [
+          {
+            "type": "NUMBER",
+            "value": 1,
+            "start": 0,
+            "end": 1
+          },
+          {
+            "type": "FIELD",
+            "value": "e",
+            "start": 1,
+            "end": 2
+          },
+          {
+            "type": "NUMBER",
+            "value": -3,
+            "start": 2,
+            "end": 4
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 4,
+            "end": 4
+          }
+        ]
+      },
+      "ast": {
+        "thrown": "Expected EOF but got FIELD"
+      },
+      "validation": [
+        "Expected EOF but got FIELD"
+      ],
+      "computed": {
+        "value": null,
+        "error": "Expected EOF but got FIELD"
+      }
+    },
+    {
+      "expression": "-0",
+      "tokens": {
+        "result": [
+          {
+            "type": "NUMBER",
+            "value": {
+              "negativeZero": true
+            },
+            "start": 0,
+            "end": 2
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 2,
+            "end": 2
+          }
+        ]
+      },
+      "ast": {
+        "result": {
+          "type": "literal",
+          "value": {
+            "negativeZero": true
+          }
+        }
+      },
+      "validation": [],
+      "computed": {
+        "value": {
+          "negativeZero": true
+        }
+      }
+    },
+    {
+      "expression": "+1",
+      "tokens": {
+        "result": [
+          {
+            "type": "OPERATOR",
+            "value": "+",
+            "start": 0,
+            "end": 1
+          },
+          {
+            "type": "NUMBER",
+            "value": 1,
+            "start": 1,
+            "end": 2
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 2,
+            "end": 2
+          }
+        ]
+      },
+      "ast": {
+        "thrown": "Unexpected token: OPERATOR"
+      },
+      "validation": [
+        "Unexpected token: OPERATOR"
+      ],
+      "computed": {
+        "value": null,
+        "error": "Unexpected token: OPERATOR"
+      }
+    },
+    {
+      "expression": "1--2",
+      "tokens": {
+        "result": [
+          {
+            "type": "NUMBER",
+            "value": 1,
+            "start": 0,
+            "end": 1
+          },
+          {
+            "type": "OPERATOR",
+            "value": "-",
+            "start": 1,
+            "end": 2
+          },
+          {
+            "type": "NUMBER",
+            "value": -2,
+            "start": 2,
+            "end": 4
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 4,
+            "end": 4
+          }
+        ]
+      },
+      "ast": {
+        "result": {
+          "type": "operator",
+          "operator": "-",
+          "left": {
+            "type": "literal",
+            "value": 1
+          },
+          "right": {
+            "type": "literal",
+            "value": -2
+          }
+        }
+      },
+      "validation": [],
+      "computed": {
+        "value": 3
+      }
+    },
+    {
+      "expression": "-(amount + 1)",
+      "tokens": {
+        "result": [
+          {
+            "type": "OPERATOR",
+            "value": "-",
+            "start": 0,
+            "end": 1
+          },
+          {
+            "type": "LPAREN",
+            "value": "(",
+            "start": 1,
+            "end": 2
+          },
+          {
+            "type": "FIELD",
+            "value": "amount",
+            "start": 2,
+            "end": 8
+          },
+          {
+            "type": "OPERATOR",
+            "value": "+",
+            "start": 9,
+            "end": 10
+          },
+          {
+            "type": "NUMBER",
+            "value": 1,
+            "start": 11,
+            "end": 12
+          },
+          {
+            "type": "RPAREN",
+            "value": ")",
+            "start": 12,
+            "end": 13
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 13,
+            "end": 13
+          }
+        ]
+      },
+      "ast": {
+        "thrown": "Unexpected token: OPERATOR"
+      },
+      "validation": [
+        "Unexpected token: OPERATOR"
+      ],
+      "computed": {
+        "value": null,
+        "error": "Unexpected token: OPERATOR"
+      }
+    },
+    {
+      "expression": "\"unfinished",
+      "tokens": {
+        "result": [
+          {
+            "type": "STRING",
+            "value": "unfinished",
+            "start": 0,
+            "end": 12
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 12,
+            "end": 12
+          }
+        ]
+      },
+      "ast": {
+        "result": {
+          "type": "literal",
+          "value": "unfinished"
+        }
+      },
+      "validation": [],
+      "computed": {
+        "value": "unfinished"
+      }
+    },
+    {
+      "expression": "'unfinished",
+      "tokens": {
+        "result": [
+          {
+            "type": "STRING",
+            "value": "unfinished",
+            "start": 0,
+            "end": 12
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 12,
+            "end": 12
+          }
+        ]
+      },
+      "ast": {
+        "result": {
+          "type": "literal",
+          "value": "unfinished"
+        }
+      },
+      "validation": [],
+      "computed": {
+        "value": "unfinished"
+      }
+    },
+    {
+      "expression": "\"a\\q\"",
+      "tokens": {
+        "result": [
+          {
+            "type": "STRING",
+            "value": "aq",
+            "start": 0,
+            "end": 5
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 5,
+            "end": 5
+          }
+        ]
+      },
+      "ast": {
+        "result": {
+          "type": "literal",
+          "value": "aq"
+        }
+      },
+      "validation": [],
+      "computed": {
+        "value": "aq"
+      }
+    },
+    {
+      "expression": "\"a\\n\\t\\\\b\"",
+      "tokens": {
+        "result": [
+          {
+            "type": "STRING",
+            "value": "a\n\t\\b",
+            "start": 0,
+            "end": 10
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 10,
+            "end": 10
+          }
+        ]
+      },
+      "ast": {
+        "result": {
+          "type": "literal",
+          "value": "a\n\t\\b"
+        }
+      },
+      "validation": [],
+      "computed": {
+        "value": "a\n\t\\b"
+      }
+    },
+    {
+      "expression": "\"a\\\"b\"",
+      "tokens": {
+        "result": [
+          {
+            "type": "STRING",
+            "value": "a\"b",
+            "start": 0,
+            "end": 6
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 6,
+            "end": 6
+          }
+        ]
+      },
+      "ast": {
+        "result": {
+          "type": "literal",
+          "value": "a\"b"
+        }
+      },
+      "validation": [],
+      "computed": {
+        "value": "a\"b"
+      }
+    },
+    {
+      "expression": "1 # comment\n + 2",
+      "tokens": {
+        "result": [
+          {
+            "type": "NUMBER",
+            "value": 1,
+            "start": 0,
+            "end": 1
+          },
+          {
+            "type": "OPERATOR",
+            "value": "+",
+            "start": 13,
+            "end": 14
+          },
+          {
+            "type": "NUMBER",
+            "value": 2,
+            "start": 15,
+            "end": 16
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 16,
+            "end": 16
+          }
+        ]
+      },
+      "ast": {
+        "result": {
+          "type": "operator",
+          "operator": "+",
+          "left": {
+            "type": "literal",
+            "value": 1
+          },
+          "right": {
+            "type": "literal",
+            "value": 2
+          }
+        }
+      },
+      "validation": [],
+      "computed": {
+        "value": 3
+      }
+    },
+    {
+      "expression": "SUM",
+      "tokens": {
+        "result": [
+          {
+            "type": "FUNCTION",
+            "value": "SUM",
+            "start": 0,
+            "end": 3
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 3,
+            "end": 3
+          }
+        ]
+      },
+      "ast": {
+        "thrown": "Expected LPAREN but got EOF"
+      },
+      "validation": [
+        "Expected LPAREN but got EOF"
+      ],
+      "computed": {
+        "value": null,
+        "error": "Expected LPAREN but got EOF"
+      }
+    },
+    {
+      "expression": "left + right",
+      "tokens": {
+        "result": [
+          {
+            "type": "FUNCTION",
+            "value": "LEFT",
+            "start": 0,
+            "end": 4
+          },
+          {
+            "type": "OPERATOR",
+            "value": "+",
+            "start": 5,
+            "end": 6
+          },
+          {
+            "type": "FUNCTION",
+            "value": "RIGHT",
+            "start": 7,
+            "end": 12
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 12,
+            "end": 12
+          }
+        ]
+      },
+      "ast": {
+        "thrown": "Expected LPAREN but got OPERATOR"
+      },
+      "validation": [
+        "Expected LPAREN but got OPERATOR"
+      ],
+      "computed": {
+        "value": null,
+        "error": "Expected LPAREN but got OPERATOR"
+      }
+    },
+    {
+      "expression": "PROP(\"left\") + PROP(\"right\")",
+      "tokens": {
+        "result": [
+          {
+            "type": "FUNCTION",
+            "value": "PROP",
+            "start": 0,
+            "end": 4
+          },
+          {
+            "type": "LPAREN",
+            "value": "(",
+            "start": 4,
+            "end": 5
+          },
+          {
+            "type": "STRING",
+            "value": "left",
+            "start": 5,
+            "end": 11
+          },
+          {
+            "type": "RPAREN",
+            "value": ")",
+            "start": 11,
+            "end": 12
+          },
+          {
+            "type": "OPERATOR",
+            "value": "+",
+            "start": 13,
+            "end": 14
+          },
+          {
+            "type": "FUNCTION",
+            "value": "PROP",
+            "start": 15,
+            "end": 19
+          },
+          {
+            "type": "LPAREN",
+            "value": "(",
+            "start": 19,
+            "end": 20
+          },
+          {
+            "type": "STRING",
+            "value": "right",
+            "start": 20,
+            "end": 27
+          },
+          {
+            "type": "RPAREN",
+            "value": ")",
+            "start": 27,
+            "end": 28
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 28,
+            "end": 28
+          }
+        ]
+      },
+      "ast": {
+        "result": {
+          "type": "operator",
+          "operator": "+",
+          "left": {
+            "type": "function",
+            "name": "PROP",
+            "args": [
+              {
+                "type": "literal",
+                "value": "left"
+              }
+            ]
+          },
+          "right": {
+            "type": "function",
+            "name": "PROP",
+            "args": [
+              {
+                "type": "literal",
+                "value": "right"
+              }
+            ]
+          }
+        }
+      },
+      "validation": [],
+      "computed": {
+        "value": 5
+      }
+    },
+    {
+      "expression": "MYSTERY(1)",
+      "tokens": {
+        "result": [
+          {
+            "type": "FIELD",
+            "value": "MYSTERY",
+            "start": 0,
+            "end": 7
+          },
+          {
+            "type": "LPAREN",
+            "value": "(",
+            "start": 7,
+            "end": 8
+          },
+          {
+            "type": "NUMBER",
+            "value": 1,
+            "start": 8,
+            "end": 9
+          },
+          {
+            "type": "RPAREN",
+            "value": ")",
+            "start": 9,
+            "end": 10
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 10,
+            "end": 10
+          }
+        ]
+      },
+      "ast": {
+        "thrown": "Expected EOF but got LPAREN"
+      },
+      "validation": [
+        "Expected EOF but got LPAREN"
+      ],
+      "computed": {
+        "value": null,
+        "error": "Expected EOF but got LPAREN"
+      }
+    },
+    {
+      "expression": "SUM(@amount)",
+      "tokens": {
+        "result": [
+          {
+            "type": "FUNCTION",
+            "value": "SUM",
+            "start": 0,
+            "end": 3
+          },
+          {
+            "type": "LPAREN",
+            "value": "(",
+            "start": 3,
+            "end": 4
+          },
+          {
+            "type": "FIELD",
+            "value": "@amount",
+            "start": 4,
+            "end": 11
+          },
+          {
+            "type": "RPAREN",
+            "value": ")",
+            "start": 11,
+            "end": 12
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 12,
+            "end": 12
+          }
+        ]
+      },
+      "ast": {
+        "result": {
+          "type": "function",
+          "name": "SUM",
+          "args": [
+            {
+              "type": "column_ref",
+              "name": "amount"
+            }
+          ]
+        }
+      },
+      "validation": [],
+      "computed": {
+        "value": 3
+      }
+    },
+    {
+      "expression": "@amount",
+      "tokens": {
+        "result": [
+          {
+            "type": "FIELD",
+            "value": "@amount",
+            "start": 0,
+            "end": 7
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 7,
+            "end": 7
+          }
+        ]
+      },
+      "ast": {
+        "result": {
+          "type": "column_ref",
+          "name": "amount"
+        }
+      },
+      "validation": [],
+      "computed": {
+        "value": [
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "expression": "@status",
+      "tokens": {
+        "result": [
+          {
+            "type": "FIELD",
+            "value": "@status",
+            "start": 0,
+            "end": 7
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 7,
+            "end": 7
+          }
+        ]
+      },
+      "ast": {
+        "result": {
+          "type": "column_ref",
+          "name": "status"
+        }
+      },
+      "validation": [],
+      "computed": {
+        "value": []
+      }
+    },
+    {
+      "expression": "@due",
+      "tokens": {
+        "result": [
+          {
+            "type": "FIELD",
+            "value": "@due",
+            "start": 0,
+            "end": 4
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 4,
+            "end": 4
+          }
+        ]
+      },
+      "ast": {
+        "result": {
+          "type": "column_ref",
+          "name": "due"
+        }
+      },
+      "validation": [],
+      "computed": {
+        "value": []
+      }
+    },
+    {
+      "expression": "MAP(@status,\"item\",item)",
+      "tokens": {
+        "result": [
+          {
+            "type": "FUNCTION",
+            "value": "MAP",
+            "start": 0,
+            "end": 3
+          },
+          {
+            "type": "LPAREN",
+            "value": "(",
+            "start": 3,
+            "end": 4
+          },
+          {
+            "type": "FIELD",
+            "value": "@status",
+            "start": 4,
+            "end": 11
+          },
+          {
+            "type": "COMMA",
+            "value": ",",
+            "start": 11,
+            "end": 12
+          },
+          {
+            "type": "STRING",
+            "value": "item",
+            "start": 12,
+            "end": 18
+          },
+          {
+            "type": "COMMA",
+            "value": ",",
+            "start": 18,
+            "end": 19
+          },
+          {
+            "type": "FIELD",
+            "value": "item",
+            "start": 19,
+            "end": 23
+          },
+          {
+            "type": "RPAREN",
+            "value": ")",
+            "start": 23,
+            "end": 24
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 24,
+            "end": 24
+          }
+        ]
+      },
+      "ast": {
+        "result": {
+          "type": "function",
+          "name": "MAP",
+          "args": [
+            {
+              "type": "column_ref",
+              "name": "status"
+            },
+            {
+              "type": "literal",
+              "value": "item"
+            },
+            {
+              "type": "field",
+              "name": "item"
+            }
+          ]
+        }
+      },
+      "validation": [
+        "Unknown field: item"
+      ],
+      "computed": {
+        "value": []
+      }
+    },
+    {
+      "expression": "COUNT(@status)",
+      "tokens": {
+        "result": [
+          {
+            "type": "FUNCTION",
+            "value": "COUNT",
+            "start": 0,
+            "end": 5
+          },
+          {
+            "type": "LPAREN",
+            "value": "(",
+            "start": 5,
+            "end": 6
+          },
+          {
+            "type": "FIELD",
+            "value": "@status",
+            "start": 6,
+            "end": 13
+          },
+          {
+            "type": "RPAREN",
+            "value": ")",
+            "start": 13,
+            "end": 14
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 14,
+            "end": 14
+          }
+        ]
+      },
+      "ast": {
+        "result": {
+          "type": "function",
+          "name": "COUNT",
+          "args": [
+            {
+              "type": "column_ref",
+              "name": "status"
+            }
+          ]
+        }
+      },
+      "validation": [],
+      "computed": {
+        "value": 0
+      }
+    },
+    {
+      "expression": "@",
+      "tokens": {
+        "result": [
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 1,
+            "end": 1
+          }
+        ]
+      },
+      "ast": {
+        "thrown": "Unexpected token: EOF"
+      },
+      "validation": [
+        "Unexpected token: EOF"
+      ],
+      "computed": {
+        "value": null,
+        "error": "Unexpected token: EOF"
+      }
+    },
+    {
+      "expression": "1 + @",
+      "tokens": {
+        "result": [
+          {
+            "type": "NUMBER",
+            "value": 1,
+            "start": 0,
+            "end": 1
+          },
+          {
+            "type": "OPERATOR",
+            "value": "+",
+            "start": 2,
+            "end": 3
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 5,
+            "end": 5
+          }
+        ]
+      },
+      "ast": {
+        "thrown": "Unexpected token: EOF"
+      },
+      "validation": [
+        "Unexpected token: EOF"
+      ],
+      "computed": {
+        "value": null,
+        "error": "Unexpected token: EOF"
+      }
+    },
+    {
+      "expression": "LET(\"sum\",2,sum)",
+      "tokens": {
+        "result": [
+          {
+            "type": "FUNCTION",
+            "value": "LET",
+            "start": 0,
+            "end": 3
+          },
+          {
+            "type": "LPAREN",
+            "value": "(",
+            "start": 3,
+            "end": 4
+          },
+          {
+            "type": "STRING",
+            "value": "sum",
+            "start": 4,
+            "end": 9
+          },
+          {
+            "type": "COMMA",
+            "value": ",",
+            "start": 9,
+            "end": 10
+          },
+          {
+            "type": "NUMBER",
+            "value": 2,
+            "start": 10,
+            "end": 11
+          },
+          {
+            "type": "COMMA",
+            "value": ",",
+            "start": 11,
+            "end": 12
+          },
+          {
+            "type": "FUNCTION",
+            "value": "SUM",
+            "start": 12,
+            "end": 15
+          },
+          {
+            "type": "RPAREN",
+            "value": ")",
+            "start": 15,
+            "end": 16
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 16,
+            "end": 16
+          }
+        ]
+      },
+      "ast": {
+        "thrown": "Expected LPAREN but got RPAREN"
+      },
+      "validation": [
+        "Expected LPAREN but got RPAREN"
+      ],
+      "computed": {
+        "value": null,
+        "error": "Expected LPAREN but got RPAREN"
+      }
+    },
+    {
+      "expression": "SUM # call\n (@amount)",
+      "tokens": {
+        "result": [
+          {
+            "type": "FUNCTION",
+            "value": "SUM",
+            "start": 0,
+            "end": 3
+          },
+          {
+            "type": "LPAREN",
+            "value": "(",
+            "start": 12,
+            "end": 13
+          },
+          {
+            "type": "FIELD",
+            "value": "@amount",
+            "start": 13,
+            "end": 20
+          },
+          {
+            "type": "RPAREN",
+            "value": ")",
+            "start": 20,
+            "end": 21
+          },
+          {
+            "type": "EOF",
+            "value": "",
+            "start": 21,
+            "end": 21
+          }
+        ]
+      },
+      "ast": {
+        "result": {
+          "type": "function",
+          "name": "SUM",
+          "args": [
+            {
+              "type": "column_ref",
+              "name": "amount"
+            }
+          ]
+        }
+      },
+      "validation": [],
+      "computed": {
+        "value": 3
+      }
+    }
+  ]
+}
