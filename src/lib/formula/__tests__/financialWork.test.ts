@@ -27,7 +27,8 @@ test.each(["CUMPRINC", "CUMIPMT"])("%s refuses enormous actual work before enter
 });
 
 test("a floating-point period counter that cannot advance is rejected", () => {
-  const probe = boundedProbe("CUMIPMT(0.01, 18014398509481984, 1000, 18014398509481984, 18014398509481984, 0)");
+  const unsafePeriod = 2 ** 54;
+  const probe = boundedProbe(`CUMIPMT(0.01, ${unsafePeriod}, 1000, ${unsafePeriod}, ${unsafePeriod}, 0)`);
   expect(probe.result.value).toBeNull();
   expect(probe.result.error).toContain("limit");
   expect(probe.calls()).toBe(0);
