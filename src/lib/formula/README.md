@@ -45,7 +45,7 @@ In `unified-v1` the pass fixes `TODAY`/`NOW` and calendar predicates to its refe
 explicit `referenceDate` overrides it. Frame, profile or reference-time mismatch
 creates a separate pass, so cached frame-wide expressions cannot cross owners.
 An explicit common-profile pass without a reference time is not reused. Only
-private parser-owned ASTs are frozen and keep a reusable structural-check proof;
+private parser-owned ASTs are frozen in both modes; bounded roots keep a reusable structural-check proof;
 externally supplied mutable ASTs are checked on each call.
 Their shape and result are not memoized by node identity, so editing one cannot
 replay a result computed for its previous contents.
@@ -64,6 +64,10 @@ work limits also apply to the computed compatibility profile: ordinary results
 stay unchanged, while excessive or non-advancing loops return an error. Other
 compatibility bounds remain unchanged, including computed-list truncation. These are cooperative
 work limits, rather than a wall-clock timeout for native operations such as regex.
+The financial fallback cap lives in the handlers themselves, so a direct catalog
+or handler call cannot disable it by supplying a different profile label. A managed
+evaluation shares its financial budget across nested calls. Large compositions
+can therefore hit the same cap even when each individual financial call is small.
 The structural depth limit also includes long left-associated operator chains;
 `SUM` avoids that shape until the separate expression-shape integration is complete.
 

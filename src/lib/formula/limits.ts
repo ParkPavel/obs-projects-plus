@@ -1,5 +1,4 @@
 import type { FormulaNode } from "./syntax";
-import type { FormulaSemantics } from "./catalog";
 
 // New-profile limits are explicit; compatibility parsing remains unchanged.
 export const MAX_FORMULA_DEPTH = 64;
@@ -8,13 +7,14 @@ export const MAX_FORMULA_AST_NODES = 100_000;
 export const MAX_FORMULA_LIST_ITEMS = 10_000;
 export const MAX_FORMULA_EVALUATION_STEPS = 100_000;
 
-export function financialGuardEnabled(semantics: FormulaSemantics): boolean {
-  return semantics !== "legacy-filter";
-}
-
 export function consumeFinancialWork(remaining: number, steps: number): number {
   if (!Number.isFinite(steps) || steps < 0 || steps > remaining) throw new Error("Formula financial work limit exceeded");
   return remaining - steps;
+}
+
+/** Low-level handlers remain bounded even without an evaluator-owned budget. */
+export function chargeStandaloneFinancialWork(steps: number): void {
+  consumeFinancialWork(MAX_FORMULA_EVALUATION_STEPS, steps);
 }
 
 /** Upper bound for a validated cumulative financial loop, including fractional endpoints. */

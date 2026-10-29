@@ -7,7 +7,7 @@ import { getFormulaDefinition, formulaFunctionNames, isFormulaSemantics, type Fo
 import { legacyEquals, legacyCompare } from "./legacyFunctions";
 import { sharedEquals, sharedCompare } from "./sharedSemantics";
 import { toNumbers } from "src/lib/engine/numeric";
-import { MAX_FORMULA_DEPTH as MAX_EVAL_DEPTH, MAX_FORMULA_INPUT_LENGTH, MAX_FORMULA_EVALUATION_STEPS, MAX_FORMULA_LIST_ITEMS as MAX_LIST_ITEMS, assertFormulaLimits, freezeParsedFormula, financialGuardEnabled, consumeFinancialWork } from "./limits";
+import { MAX_FORMULA_DEPTH as MAX_EVAL_DEPTH, MAX_FORMULA_INPUT_LENGTH, MAX_FORMULA_EVALUATION_STEPS, MAX_FORMULA_LIST_ITEMS as MAX_LIST_ITEMS, assertFormulaLimits, freezeParsedFormula, consumeFinancialWork } from "./limits";
 import { validateFormulaRaw } from "./validation";
 export { isStyledValue } from "./computedFunctions";
 export type { StyledValue, FormulaResult } from "./computedFunctions";
@@ -26,16 +26,19 @@ const parserOwnedRoots = new WeakSet<FormulaNode>();
 const checkedParsedRoots = new WeakSet<FormulaNode>();
 function parsedFormula(expression: string, bounded = false): FormulaNode {
   if (bounded && expression.length > MAX_FORMULA_INPUT_LENGTH) throw new Error("Formula input limit exceeded");
-  const key = bounded ? "\u0000unified:" + expression : expression;
+  // Prefix BOTH profiles: arbitrary source cannot impersonate the other key space.
+  const key = (bounded ? "unified:" : "legacy:") + expression;
   let entry = astCache.get(key);
   if (entry === undefined) {
     try {
       entry = parseFormula(expression, bounded ? MAX_EVAL_DEPTH : undefined);
       if (bounded) {
         assertFormulaLimits(entry);
-        freezeParsedFormula(entry);
-        checkedParsedRoots.add(entry);
       }
+      // Legacy roots can also escape through public pass keys; do not let
+      // mutation poison the shared parse/shape caches for future callers.
+      freezeParsedFormula(entry);
+      if (bounded) checkedParsedRoots.add(entry);
       parserOwnedRoots.add(entry);
     } catch (e) { entry = e instanceof Error ? e : new Error(String(e)); }
     if (astCache.size >= AST_CACHE_LIMIT) astCache.delete(astCache.keys().next().value as string);
@@ -477,7 +480,7 @@ function evaluateNode(
       return acc;
     }
 
-    if (financialGuardEnabled(pass.semantics) && (n.name === "CUMPRINC" || n.name === "CUMIPMT")) {
+    if (n.name === "CUMPRINC" || n.name === "CUMIPMT") {
       return definition.invoke(n.args, evaluate, rangeOf, {
         semantics: pass.semantics,
         referenceTime: pass.referenceTime,

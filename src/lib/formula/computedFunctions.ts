@@ -8,7 +8,7 @@ import { aggregate, type RollupFunction } from "src/lib/engine/aggregate";
 import { isNumeric, toNumber, toNumbers } from "src/lib/engine/numeric";
 import { compileCriterion, matchingRows, numbersPerCell, type CriterionPair } from "./criteria";
 import dayjs from "dayjs";
-import { cumulativePeriodWork } from "./limits";
+import { cumulativePeriodWork, chargeStandaloneFinancialWork } from "./limits";
 
 // ── Numeric coercion (#180a) ─────────────────────────────────
 
@@ -656,7 +656,7 @@ export const COMPUTED_FUNCTIONS: Record<string, FormulaFn> = {
     const type = argNumber(evaluate(args[5] as FormulaNode));
     if (isNaN(rate) || isNaN(nper) || isNaN(pv) || rate <= 0 || nper <= 0 || pv <= 0) return null;
     if (start < 1 || end < start || end > nper) return null;
-    if (chargeWork) chargeWork(cumulativePeriodWork(start, end));
+    (chargeWork ?? chargeStandaloneFinancialWork)(cumulativePeriodWork(start, end));
     const pmt = pmtCore(rate, nper, pv, 0, type);
     let cum = 0;
     for (let per = start; per <= end; per++) {
@@ -674,7 +674,7 @@ export const COMPUTED_FUNCTIONS: Record<string, FormulaFn> = {
     const type = argNumber(evaluate(args[5] as FormulaNode));
     if (isNaN(rate) || isNaN(nper) || isNaN(pv) || rate <= 0 || nper <= 0 || pv <= 0) return null;
     if (start < 1 || end < start || end > nper) return null;
-    if (chargeWork) chargeWork(cumulativePeriodWork(start, end));
+    (chargeWork ?? chargeStandaloneFinancialWork)(cumulativePeriodWork(start, end));
     const pmt = pmtCore(rate, nper, pv, 0, type);
     let cum = 0;
     for (let per = start; per <= end; per++) {

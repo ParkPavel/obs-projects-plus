@@ -23,6 +23,27 @@ const context = (overrides: Partial<FormulaEvaluationContext> = {}): FormulaEval
 beforeEach(() => { jest.useFakeTimers(); jest.setSystemTime(new Date(reference)); });
 afterEach(() => { jest.useRealTimers(); });
 
+test("an invalid compatibility expression cannot poison the unified AST cache", () => {
+  expect(evaluateFormulaWithError("\u0000unified:23 + 19", record).error).toBeDefined();
+  expect(evaluateExpression("23 + 19", context())).toEqual({ value: 42 });
+});
+
+test("a cached unified expression cannot turn invalid compatibility source into a value", () => {
+  expect(evaluateExpression("21 + 9", context())).toEqual({ value: 30 });
+  expect(evaluateFormulaWithError("\u0000unified:21 + 9", record).error).toBeDefined();
+});
+
+test("compatibility parser roots exposed through pass keys are immutable too", () => {
+  const pass = createFormulaPass(frame);
+  expect(evaluateFormulaWithError("SUM(@amount)", record, frame, pass)).toEqual({ value: 15 });
+  const root = [...pass.frameValues.keys()][0];
+  expect(root?.type).toBe("function");
+  expect(Object.isFrozen(root)).toBe(true);
+  if (root?.type !== "function") throw new Error("Expected a cached function");
+  expect(() => root.args.push({ type: "literal", value: 100 })).toThrow();
+  expect(evaluateFormulaWithError("SUM(@amount)", record, frame, createFormulaPass(frame))).toEqual({ value: 15 });
+});
+
 const cases: Array<[string, unknown]> = [
   ["amount = 12", true], ["amount + 2 = 14", true], ["AND(1, true)", true],
   ['"2026-10-28" < "2026-10-29"', true], ["IS_OVERDUE(due)", true],
