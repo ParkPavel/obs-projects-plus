@@ -45,6 +45,7 @@
   import { keepInView } from "src/ui/components/fields/keepInView";
   import { releaseOnOutsideTap } from "src/ui/components/fields/releaseOnOutsideTap";
   import { tokenize, type Token } from "src/lib/helpers/formulaParser";
+  import { MAX_FORMULA_INPUT_LENGTH } from "src/lib/formula/limits";
 
   // ── Snippets catalog (default) ──────────────────────────────
   // Small built-in catalog for empty-state Ctrl+Space discovery. Each surface
@@ -145,6 +146,8 @@
   // Split `expr` into colored token segments + uncolored gaps (whitespace,
   // comments). Falls back to a single plain segment if the tokenizer throws.
   function buildHighlightSegments(expr: string, profile: FormulaSemantics): HighlightSegment[] {
+    // Keep pasted source intact without building an unbounded token/DOM tree.
+    if (expr.length > MAX_FORMULA_INPUT_LENGTH) return [{ text: expr, cls: "" }];
     if (expr === "") return [];
     try {
       const tokens = tokenize(expr, profile === "unified-v1" ? "strict" : "legacy");

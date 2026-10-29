@@ -5,6 +5,7 @@ import FormulaConstructorFull from "../FormulaConstructorFull.svelte";
 import FormulaEditor from "src/ui/components/FormulaEditor/FormulaEditor.svelte";
 import { getAllFormulaMetadata, getFormulaMetadata, findEnclosingCall } from "src/lib/dashboard-engine/formulaMetadata";
 import { evaluateVersionedFormula } from "src/lib/formula/version";
+import { MAX_FORMULA_INPUT_LENGTH } from "src/lib/formula/limits";
 
 describe("profile-aware shared formula editor", () => {
   beforeEach(() => jest.useFakeTimers());
@@ -42,6 +43,15 @@ describe("profile-aware shared formula editor", () => {
   it("forwards the supplied accessible name through FormulaEditor", () => {
     const view = render(FormulaEditor, { props: { ariaLabel: "Revenue formula" } });
     expect(view.container.querySelector("textarea")?.getAttribute("aria-label")).toBe("Revenue formula");
+  });
+  it("keeps oversized pasted source intact without a token-sized DOM tree", () => {
+    const source = "1+".repeat(MAX_FORMULA_INPUT_LENGTH) + "1";
+    const view = render(FormulaConstructor, { props: { value: source, highlight: true } });
+    expect(view.container.querySelector("textarea")?.value).toBe(source);
+    const underlay = view.container.querySelector(".ppp-fc-highlight")!;
+    expect(underlay.textContent).toBe(source);
+    expect(underlay.childElementCount).toBe(1);
+    expect(findEnclosingCall(source, source.length, "unified-v1")).toBeNull();
   });
   it.each([
     ["SUM", "SU", "SUM", 7],

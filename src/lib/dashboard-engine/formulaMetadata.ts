@@ -1,6 +1,7 @@
 // Display adapters retain the previous computed catalog until explicit UI opt-in.
 import { getFormulaDefinition, getFormulaCatalog } from "src/lib/formula/catalog";
 import type { FormulaSemantics } from "src/lib/formula/catalog";
+import { MAX_FORMULA_INPUT_LENGTH } from "src/lib/formula/limits";
 import type { FormulaMetadata } from "src/lib/formula/metadata";
 export type { FormulaMetadata, FormulaCategory } from "src/lib/formula/metadata";
 
@@ -49,6 +50,7 @@ export function getAllFormulaMetadata(semantics: FormulaSemantics = "legacy-comp
  * respecting backslash escapes.
  */
 export function findEnclosingCall(source: string, cursor: number, semantics: FormulaSemantics = "legacy-computed"): string | null {
+  if (source.length > MAX_FORMULA_INPUT_LENGTH) return null;
   if (semantics === "unified-v1") return strictEnclosingCall(source, cursor);
   const end = Math.min(cursor, source.length);
   // First pass (forward): compute which indices live inside a string literal.
