@@ -8,13 +8,20 @@ export const MAX_FORMULA_LIST_ITEMS = 10_000;
 export const MAX_FORMULA_EVALUATION_STEPS = 100_000;
 
 export function consumeFinancialWork(remaining: number, steps: number): number {
-  if (!Number.isFinite(steps) || steps < 0 || steps > remaining) throw new Error("Formula financial work limit exceeded");
+  if (!Number.isFinite(steps) || steps < 0 || steps > remaining) throw new Error("Formula work limit exceeded");
   return remaining - steps;
 }
 
 /** Low-level handlers remain bounded even without an evaluator-owned budget. */
 export function chargeStandaloneFinancialWork(steps: number): void {
   consumeFinancialWork(MAX_FORMULA_EVALUATION_STEPS, steps);
+}
+
+/** One invocation's fallback budget, shared by all of its solver iterations. */
+export function createStandaloneFinancialBudget(maximum = MAX_FORMULA_EVALUATION_STEPS): (steps: number) => void {
+  if (!Number.isFinite(maximum) || maximum < 0) throw new Error("Formula work limit exceeded");
+  let remaining = maximum;
+  return steps => { remaining = consumeFinancialWork(remaining, steps); };
 }
 
 /** Upper bound for a validated cumulative financial loop, including fractional endpoints. */

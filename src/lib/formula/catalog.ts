@@ -1,6 +1,7 @@
 import type { FormulaNode } from "./syntax";
 import { COMPUTED_FUNCTIONS, type FormulaFn } from "./computedFunctions";
 import { LEGACY_FUNCTIONS } from "./legacyFunctions";
+import { UNIFIED_FUNCTIONS } from "./unifiedFunctions";
 import { FORMULA_METADATA, type FormulaMetadata } from "./metadata";
 import dayjs from "dayjs";
 
@@ -61,6 +62,8 @@ for (const [name, info] of Object.entries(metadata)) {
   definitions.set(name, {
     name, metadata: info, profiles,
     invoke(args, evaluate, range, context) {
+      const unified = context.semantics === "unified-v1" ? UNIFIED_FUNCTIONS[name] : undefined;
+      if (unified) return unified(args, evaluate, range, context.chargeWork);
       // A shared clock is explicit in the new profile; compatibility APIs
       // retain their previous implementation of every overlapping function.
       if (legacy && (context.semantics === "legacy-filter" || !computed ||
@@ -74,6 +77,9 @@ for (const [name, info] of Object.entries(metadata)) {
 for (const name of new Set([...Object.keys(COMPUTED_FUNCTIONS), ...Object.keys(LEGACY_FUNCTIONS)])) {
   if (!definitions.has(name)) throw new Error(`Formula implementation without metadata: ${name}`);
 }
+for (const name of Object.keys(UNIFIED_FUNCTIONS)) {
+  if (!definitions.has(name)) throw new Error(`Unified formula implementation without metadata: ${name}`);
+}
 
 const profileDocs: Partial<Record<FormulaSemantics, Record<string, string>>> = {
   "legacy-filter": {
@@ -81,6 +87,7 @@ const profileDocs: Partial<Record<FormulaSemantics, Record<string, string>>> = {
     OR: "True if any argument is the boolean true; other truthy values do not match.",
   },
   "unified-v1": {
+    WORKDAYS: "Signed weekday distance in (earlier day, later day]; reversing dates reverses the sign. Same calendar day is zero.",
     TODAY: "The context's reference day, as YYYY-MM-DD.",
     NOW: "The fixed reference instant of this evaluation context.",
   },

@@ -8,7 +8,7 @@ import { aggregate, type RollupFunction } from "src/lib/engine/aggregate";
 import { isNumeric, toNumber, toNumbers } from "src/lib/engine/numeric";
 import { compileCriterion, matchingRows, numbersPerCell, type CriterionPair } from "./criteria";
 import dayjs from "dayjs";
-import { cumulativePeriodWork, chargeStandaloneFinancialWork } from "./limits";
+import { cumulativePeriodWork, chargeStandaloneFinancialWork, createStandaloneFinancialBudget } from "./limits";
 
 // ── Numeric coercion (#180a) ─────────────────────────────────
 
@@ -527,9 +527,10 @@ export const COMPUTED_FUNCTIONS: Record<string, FormulaFn> = {
     return -(pmt * (1 + rate * type) * ((pvif - 1) / rate) + fv) / pvif;
   },
 
-  NPV: (args, evaluate) => {
+  NPV: (args, evaluate, _range, chargeWork) => {
     const rate = argNumber(evaluate(args[0] as FormulaNode));
     if (isNaN(rate) || rate === -1) return null;
+    (chargeWork ?? chargeStandaloneFinancialWork)(Math.max(0, args.length - 1));
     let npv = 0;
     for (let i = 1; i < args.length; i++) {
       const cf = argNumber(evaluate(args[i] as FormulaNode));
@@ -539,7 +540,7 @@ export const COMPUTED_FUNCTIONS: Record<string, FormulaFn> = {
     return npv;
   },
 
-  IRR: (args, evaluate) => {
+  IRR: (args, evaluate, _range, chargeWork) => {
     const cfs: number[] = [];
     let guess = 0.1;
     for (let i = 0; i < args.length; i++) {
@@ -561,7 +562,9 @@ export const COMPUTED_FUNCTIONS: Record<string, FormulaFn> = {
     }
 
     let rate = guess;
+    const charge = chargeWork ?? createStandaloneFinancialBudget();
     for (let iter = 0; iter < 100; iter++) {
+      charge(cfs.length);
       let npv = 0, dnpv = 0;
       for (let i = 0; i < cfs.length; i++) {
         const pow = Math.pow(1 + rate, i);
@@ -576,7 +579,7 @@ export const COMPUTED_FUNCTIONS: Record<string, FormulaFn> = {
     return null;
   },
 
-  RATE: (args, evaluate) => {
+  RATE: (args, evaluate, _range, chargeWork) => {
     const nper = argNumber(evaluate(args[0] as FormulaNode));
     const pmt = argNumber(evaluate(args[1] as FormulaNode));
     const pv = argNumber(evaluate(args[2] as FormulaNode));
@@ -585,7 +588,9 @@ export const COMPUTED_FUNCTIONS: Record<string, FormulaFn> = {
     let rate = args[5] ? argNumber(evaluate(args[5])) : 0.1;
     if (isNaN(nper) || isNaN(pmt) || isNaN(pv) || nper <= 0) return null;
 
+    const charge = chargeWork ?? createStandaloneFinancialBudget();
     for (let iter = 0; iter < 100; iter++) {
+      charge(3);
       if (rate === 0) {
         const f = pv + pmt * nper + fv;
         if (Math.abs(f) < 1e-7) return 0;
@@ -973,21 +978,24 @@ export const COMPUTED_FUNCTIONS: Record<string, FormulaFn> = {
     return isNaN(val) ? null : val * 24;
   },
 
-  WORKDAYS: (args, evaluate) => {
+  WORKDAYS: (args, evaluate, _range, chargeWork) => {
     const startStr = String(evaluate(args[0] as FormulaNode));
     const endStr = String(evaluate(args[1] as FormulaNode));
     const start = dayjs(startStr), end = dayjs(endStr);
     if (!start.isValid() || !end.isValid()) return null;
     let count = 0;
-    let current = start.add(1, "day");
     const limit = Math.abs(end.diff(start, "day")) + 1;
     if (limit > 36600) return null;
+    if (end.isBefore(start)) return -0;
+    // Keep the old day-by-day semantics across skipped local calendar dates.
+    (chargeWork ?? chargeStandaloneFinancialWork)(limit);
+    let current = start.add(1, "day");
     while (current.isBefore(end, "day") || current.isSame(end, "day")) {
       const dow = current.day();
       if (dow !== 0 && dow !== 6) count++;
       current = current.add(1, "day");
     }
-    return end.isBefore(start) ? -count : count;
+    return count;
   },
 
   // ── Conditional Aggregation ────────────────────────────────

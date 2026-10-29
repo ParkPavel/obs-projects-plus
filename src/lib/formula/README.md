@@ -19,9 +19,12 @@ must travel together in the next integration layer; preview must use the same
 profile as the saved computation.
 
 The shared profile combines the computed functions with calendar/list predicates.
-It uses the computed arithmetic and truthy logic; number/string and text equality
-follow the filter's comparison rules, with boolean text restricted to `true` and
-`false`. ISO dates and native Dates compare by instant, including equality;
+It uses the computed arithmetic and truthy logic. Equality and order share the
+same scalar operands. With a number present, numeric strings use the common
+numeric coercion; invalid/non-finite numeric operands have no order and are not
+equal. With a boolean present, values use 0/1, including numeric strings and
+explicit `true`/`false` text. Two text operands compare trimmed lowercase text,
+using deterministic lexicographic UTF-16 order rather than locale collation. ISO dates and native Dates compare by instant, including equality;
 calendar predicates explicitly compare days/weeks/months. Missing values have no
 relational order. Boolean ordering uses the same 0/1 operand rule as arithmetic.
 `PROP` follows the same scope, spelling and wikilink-display
@@ -31,6 +34,15 @@ Compatibility profiles retain their differences, including old unknown-function
 results, strict-true filter AND/OR, JavaScript filter arithmetic and old validator
 diagnostics. The pre-change fixture records 46 expressions on three records through
 both old APIs. Its 276 evaluations and validator results must remain unchanged.
+Another 80 pre-change mathematical vectors cover old WORKDAYS, IRR, RATE and NPV,
+including the old descending negative-zero result.
+
+New-profile WORKDAYS counts weekdays in (earlier calendar day, later calendar day]
+and applies the interval's direction; the same calendar day is zero. It uses
+whole weeks plus at most six residual weekdays. The compatibility implementation
+keeps its day-by-day local-date behavior, including historically skipped dates
+and negative zero, with a shared work cap for excessive compositions. Both keep
+the previous accepted interval range. Profile-specific help describes the new rule.
 
 ## Context and passes
 
@@ -56,10 +68,13 @@ passing a new-profile pass to an old API does not change that API's rules.
 
 New-profile parsing/evaluation is bounded: 50,000 input characters, nesting/AST
 depth 64, 100,000 AST nodes, 100,000 work units per call and 10,000 items per
-iterated list. Each evaluated AST node costs a work unit; cumulative financial
-calls also charge their period count before entering the loop. Nested calls share
+iterated list. Each evaluated AST node costs a work unit. Cumulative financial
+calls also charge their period count; IRR charges cashflows per Newton iteration,
+RATE three units per iteration, and NPV its cashflow count. Compatibility WORKDAYS
+charges its day-loop upper bound, while new WORKDAYS charges at most six residual
+days. Nested calls share
 the budget, and unsafe period counters that cannot advance are rejected.
-Exceeding a limit returns an error with no partial value. Cumulative financial
+Exceeding a limit returns an error with no partial value. These internal-loop
 work limits also apply to the computed compatibility profile: ordinary results
 stay unchanged, while excessive or non-advancing loops return an error. Other
 compatibility bounds remain unchanged, including computed-list truncation. These are cooperative
@@ -71,7 +86,8 @@ can therefore hit the same cap even when each individual financial call is small
 `chargeWork` is a trusted internal evaluator hook: callers providing it own work
 accounting and must not derive it from formula source or record data. Omitting it
 uses the standalone cap; supplying a no-op intentionally opts out of that cap.
-The old computed profile charges financial periods only; the new profile also
+Direct iterative financial solvers keep one fallback budget for all iterations.
+The old computed profile charges internal-loop work only; the new profile also
 charges evaluated AST nodes against that same budget.
 The structural depth limit also includes long left-associated operator chains;
 `SUM` avoids that shape until the separate expression-shape integration is complete.

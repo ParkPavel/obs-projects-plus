@@ -163,6 +163,7 @@ interface EvaluationBudget { remaining: number; readonly cacheAst: boolean }
 
 /** Calls whose value can differ between records even when no field is named. */
 const RECORD_BOUND = new Set(["ID", "PROP", "RANDOM_INT", "LET", "LETS", "MAP", "FILTER", "REDUCE"]);
+const INTERNAL_WORK_FUNCTIONS = new Set(["CUMPRINC", "CUMIPMT", "IRR", "RATE", "NPV", "WORKDAYS"]);
 
 type NodeShape = { readonly constant: boolean; readonly readsColumn: boolean };
 const shapeMemo = new WeakMap<FormulaNode, NodeShape>();
@@ -480,7 +481,7 @@ function evaluateNode(
       return acc;
     }
 
-    if (n.name === "CUMPRINC" || n.name === "CUMIPMT") {
+    if (INTERNAL_WORK_FUNCTIONS.has(n.name)) {
       return definition.invoke(n.args, evaluate, rangeOf, {
         semantics: pass.semantics,
         referenceTime: pass.referenceTime,
