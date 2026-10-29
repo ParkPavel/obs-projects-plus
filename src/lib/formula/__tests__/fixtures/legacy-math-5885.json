@@ -1,0 +1,528 @@
+{
+  "head": "5885ada489aca659e99bb248774fb77f9a499284",
+  "scope": "Actual pre-change legacy public API; synthetic math vectors; negativezero preserved explicitly; no dangerous loops.",
+  "rows": [
+    {
+      "expression": "WORKDAYS(\"2026-10-01\",\"2026-10-01\")",
+      "result": {
+        "value": 0
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-01\",\"2026-10-02\")",
+      "result": {
+        "value": 1
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-01\",\"2026-10-03\")",
+      "result": {
+        "value": 1
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-01\",\"2026-10-04\")",
+      "result": {
+        "value": 1
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-01\",\"2026-10-05\")",
+      "result": {
+        "value": 2
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-01\",\"2026-10-05T23:59:00\")",
+      "result": {
+        "value": 2
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-01\",\"2026-10-06T00:01:00\")",
+      "result": {
+        "value": 3
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-01\",\"invalid\")",
+      "result": {
+        "value": null
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-02\",\"2026-10-01\")",
+      "result": {
+        "value": {
+          "negativeZero": true
+        }
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-02\",\"2026-10-02\")",
+      "result": {
+        "value": 0
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-02\",\"2026-10-03\")",
+      "result": {
+        "value": 0
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-02\",\"2026-10-04\")",
+      "result": {
+        "value": 0
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-02\",\"2026-10-05\")",
+      "result": {
+        "value": 1
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-02\",\"2026-10-05T23:59:00\")",
+      "result": {
+        "value": 1
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-02\",\"2026-10-06T00:01:00\")",
+      "result": {
+        "value": 2
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-02\",\"invalid\")",
+      "result": {
+        "value": null
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-03\",\"2026-10-01\")",
+      "result": {
+        "value": {
+          "negativeZero": true
+        }
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-03\",\"2026-10-02\")",
+      "result": {
+        "value": {
+          "negativeZero": true
+        }
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-03\",\"2026-10-03\")",
+      "result": {
+        "value": 0
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-03\",\"2026-10-04\")",
+      "result": {
+        "value": 0
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-03\",\"2026-10-05\")",
+      "result": {
+        "value": 1
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-03\",\"2026-10-05T23:59:00\")",
+      "result": {
+        "value": 1
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-03\",\"2026-10-06T00:01:00\")",
+      "result": {
+        "value": 2
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-03\",\"invalid\")",
+      "result": {
+        "value": null
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-04\",\"2026-10-01\")",
+      "result": {
+        "value": {
+          "negativeZero": true
+        }
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-04\",\"2026-10-02\")",
+      "result": {
+        "value": {
+          "negativeZero": true
+        }
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-04\",\"2026-10-03\")",
+      "result": {
+        "value": {
+          "negativeZero": true
+        }
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-04\",\"2026-10-04\")",
+      "result": {
+        "value": 0
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-04\",\"2026-10-05\")",
+      "result": {
+        "value": 1
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-04\",\"2026-10-05T23:59:00\")",
+      "result": {
+        "value": 1
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-04\",\"2026-10-06T00:01:00\")",
+      "result": {
+        "value": 2
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-04\",\"invalid\")",
+      "result": {
+        "value": null
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-05\",\"2026-10-01\")",
+      "result": {
+        "value": {
+          "negativeZero": true
+        }
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-05\",\"2026-10-02\")",
+      "result": {
+        "value": {
+          "negativeZero": true
+        }
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-05\",\"2026-10-03\")",
+      "result": {
+        "value": {
+          "negativeZero": true
+        }
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-05\",\"2026-10-04\")",
+      "result": {
+        "value": {
+          "negativeZero": true
+        }
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-05\",\"2026-10-05\")",
+      "result": {
+        "value": 0
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-05\",\"2026-10-05T23:59:00\")",
+      "result": {
+        "value": 0
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-05\",\"2026-10-06T00:01:00\")",
+      "result": {
+        "value": 1
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-05\",\"invalid\")",
+      "result": {
+        "value": null
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-05T23:59:00\",\"2026-10-01\")",
+      "result": {
+        "value": {
+          "negativeZero": true
+        }
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-05T23:59:00\",\"2026-10-02\")",
+      "result": {
+        "value": {
+          "negativeZero": true
+        }
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-05T23:59:00\",\"2026-10-03\")",
+      "result": {
+        "value": {
+          "negativeZero": true
+        }
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-05T23:59:00\",\"2026-10-04\")",
+      "result": {
+        "value": {
+          "negativeZero": true
+        }
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-05T23:59:00\",\"2026-10-05\")",
+      "result": {
+        "value": {
+          "negativeZero": true
+        }
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-05T23:59:00\",\"2026-10-05T23:59:00\")",
+      "result": {
+        "value": 0
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-05T23:59:00\",\"2026-10-06T00:01:00\")",
+      "result": {
+        "value": 1
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-05T23:59:00\",\"invalid\")",
+      "result": {
+        "value": null
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-06T00:01:00\",\"2026-10-01\")",
+      "result": {
+        "value": {
+          "negativeZero": true
+        }
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-06T00:01:00\",\"2026-10-02\")",
+      "result": {
+        "value": {
+          "negativeZero": true
+        }
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-06T00:01:00\",\"2026-10-03\")",
+      "result": {
+        "value": {
+          "negativeZero": true
+        }
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-06T00:01:00\",\"2026-10-04\")",
+      "result": {
+        "value": {
+          "negativeZero": true
+        }
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-06T00:01:00\",\"2026-10-05\")",
+      "result": {
+        "value": {
+          "negativeZero": true
+        }
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-06T00:01:00\",\"2026-10-05T23:59:00\")",
+      "result": {
+        "value": {
+          "negativeZero": true
+        }
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-06T00:01:00\",\"2026-10-06T00:01:00\")",
+      "result": {
+        "value": 0
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-10-06T00:01:00\",\"invalid\")",
+      "result": {
+        "value": null
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"invalid\",\"2026-10-01\")",
+      "result": {
+        "value": null
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"invalid\",\"2026-10-02\")",
+      "result": {
+        "value": null
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"invalid\",\"2026-10-03\")",
+      "result": {
+        "value": null
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"invalid\",\"2026-10-04\")",
+      "result": {
+        "value": null
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"invalid\",\"2026-10-05\")",
+      "result": {
+        "value": null
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"invalid\",\"2026-10-05T23:59:00\")",
+      "result": {
+        "value": null
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"invalid\",\"2026-10-06T00:01:00\")",
+      "result": {
+        "value": null
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"invalid\",\"invalid\")",
+      "result": {
+        "value": null
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"2026-01-01\",\"2027-01-01\")",
+      "result": {
+        "value": 261
+      }
+    },
+    {
+      "expression": "WORKDAYS(\"1900-01-01\",\"2100-01-01\")",
+      "result": {
+        "value": null
+      }
+    },
+    {
+      "expression": "IRR(-100,60,60)",
+      "result": {
+        "value": 0.13066238628954435
+      }
+    },
+    {
+      "expression": "IRR(-1000,300,400,500)",
+      "result": {
+        "value": 0.08896339469334472
+      }
+    },
+    {
+      "expression": "IRR(-100,10,10)",
+      "result": {
+        "value": null
+      }
+    },
+    {
+      "expression": "IRR(-100,60,60,0.2)",
+      "result": {
+        "value": 0.13066238629180738
+      }
+    },
+    {
+      "expression": "IRR(0)",
+      "result": {
+        "value": 0.1
+      }
+    },
+    {
+      "expression": "IRR(100,100)",
+      "result": {
+        "value": null
+      }
+    },
+    {
+      "expression": "RATE(12,-100,1000)",
+      "result": {
+        "value": 0.029228540769158224
+      }
+    },
+    {
+      "expression": "RATE(360,-600,100000)",
+      "result": {
+        "value": 0.005005825006762471
+      }
+    },
+    {
+      "expression": "RATE(12,-100,1000,0,1)",
+      "result": {
+        "value": 0.03503153036228312
+      }
+    },
+    {
+      "expression": "RATE(12,-100,1000,0,0,0)",
+      "result": {
+        "value": 0.029228540775439703
+      }
+    },
+    {
+      "expression": "NPV(0.1,100,200,300)",
+      "result": {
+        "value": 481.59278737791124
+      }
+    },
+    {
+      "expression": "NPV(0,100,200,300)",
+      "result": {
+        "value": 600
+      }
+    },
+    {
+      "expression": "NPV(0.1)",
+      "result": {
+        "value": 0
+      }
+    },
+    {
+      "expression": "NPV(-1,100,200)",
+      "result": {
+        "value": null
+      }
+    }
+  ]
+}
