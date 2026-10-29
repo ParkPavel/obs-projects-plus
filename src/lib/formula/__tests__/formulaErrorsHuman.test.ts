@@ -15,12 +15,27 @@ jest.mock("src/lib/stores/i18n", () => {
     "formula-errors.unknown-operator": "Непонятный знак «{{op}}»",
     "formula-errors.invalid": "Формулу не удаётся прочитать: {{detail}}",
     "formula-errors.limit": "Формула превысила предел вычислений. Упростите выражение или сократите число значений.",
+    "formula-errors.number": "Проверьте запись числа",
+    "formula-errors.string": "Закройте текст кавычкой того же типа",
+    "formula-errors.escape": "Неподдерживаемый символ после обратной косой черты",
+    "formula-errors.column": "После @ укажите имя столбца",
+    "formula-errors.frame": "Нет данных для вычисления столбца",
   };
   const t = (k: string, o: Record<string, string> = {}) => (ru[k] ?? k).replace(/{{(\w+)}}/g, (_: string, n: string) => o[n] ?? "");
   return { i18n: writable({ t }) };
 });
 import { evaluateFormulaValue, evaluateFormulaWithError, validateFormulaExpression } from "src/lib/formula/extendedEvaluator";
 import { humanFormulaError } from "src/lib/formula/formulaErrors";
+
+it.each([
+  ["Invalid numeric literal at position 3", "Проверьте запись числа"],
+  ["Unterminated string literal", "Закройте текст кавычкой того же типа"],
+  ["Unknown string escape: q", "Неподдерживаемый символ после обратной косой черты"],
+  ["Missing column name at position 0", "После @ укажите имя столбца"],
+  ["Column reference requires a data frame", "Нет данных для вычисления столбца"],
+])("strict syntax error %s has an actionable localized message", (raw, expected) => {
+  expect(humanFormulaError(raw)).toBe(expected);
+});
 
 it.each(["work", "evaluation", "parsing", "input", "list", "financial range", "financial work"])("%s limit is an actionable localized message", category => {
   expect(humanFormulaError(`Formula ${category} limit exceeded`)).toBe("Формула превысила предел вычислений. Упростите выражение или сократите число значений.");

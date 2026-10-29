@@ -13,6 +13,11 @@ export function humanFormulaError(raw: string, fields: readonly string[] = []): 
     return text === `formula-errors.${key}` ? raw : text; // no translations loaded: keep the raw words
   };
   let m: RegExpExecArray | null;
+  if (/^Invalid numeric literal at position \d+$/.test(raw)) return t("number");
+  if (raw === "Unterminated string literal") return t("string");
+  if (/^Unknown string escape: [\s\S]+$/.test(raw)) return t("escape");
+  if (/^Missing column name at position \d+$/.test(raw)) return t("column");
+  if (raw === "Column reference requires a data frame") return t("frame");
   if (/^Formula (?:work|evaluation|parsing|input|list|financial (?:work|range)) limit exceeded$/.test(raw)) return t("limit");
   if ((m = /^Unknown field: (.+)$/.exec(raw))) {
     const hint = closestField(m[1]!, fields);
@@ -21,7 +26,7 @@ export function humanFormulaError(raw: string, fields: readonly string[] = []): 
   if ((m = /^Unknown function: (.+)$/.exec(raw))) return t("unknown-function", { name: m[1]! });
   if (/Unexpected end of input|Unexpected token: EOF/.test(raw)) return t("unfinished");
   if (/Unexpected token: OPERATOR/.test(raw)) return t("operator");
-  if ((m = /^Unexpected character at position \d+: (.)$/.exec(raw))) return t("character", { char: m[1]! });
+  if ((m = /^Unexpected character at position \d+: (.)$/u.exec(raw))) return t("character", { char: m[1]! });
   if (/^Expected \w+ but got \w+/.test(raw)) return t("bracket");
   // i3-final: «DATE_ADD expects 3 arguments (date, amount, unit)» is the same sentence.
   if ((m = /^(\w+) expects (\d+) arguments?(?: \(.*\))?$/.exec(raw))) return t("arguments", { name: m[1]!, count: m[2]! });

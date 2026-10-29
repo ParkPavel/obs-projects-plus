@@ -179,11 +179,12 @@ test("invalid profile and date fail instead of silently using current defaults",
 });
 
 test("the new profile bounds ordinary operators, parser nesting and data lists", () => {
-  for (const expression of [Array(100).fill("1").join("+"), "NOT(".repeat(100) + "false" + ")".repeat(100), " ".repeat(50_001)]) {
+  for (const expression of ["NOT(".repeat(100) + "false" + ")".repeat(100), " ".repeat(50_001)]) {
     const result = evaluateExpression(expression, context());
     expect(result.value).toBeNull(); expect(result.error).toContain("limit");
     expect(validateExpression(expression, fields, "unified-v1").some(error => error.includes("limit"))).toBe(true);
   }
+  expect(evaluateExpression(Array(100).fill("1").join("+"), context())).toEqual({ value: 100 });
   expect(evaluateFormulaWithError(Array(100).fill("1").join("+"), record)).toEqual({ value: 100 });
   const large: DataRecord = { id: "large.md", values: { items: Array(10_001).fill(1) } };
   expect(evaluateExpression('MAP(items, "item", item)', context({ record: large })).error).toContain("limit");

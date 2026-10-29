@@ -31,7 +31,7 @@ function parsedFormula(expression: string, bounded = false): FormulaNode {
   let entry = astCache.get(key);
   if (entry === undefined) {
     try {
-      entry = parseFormula(expression, bounded ? MAX_EVAL_DEPTH : undefined);
+      entry = parseFormula(expression, bounded ? MAX_EVAL_DEPTH : undefined, bounded ? "strict" : "legacy");
       if (bounded) {
         assertFormulaLimits(entry);
       }
@@ -163,7 +163,7 @@ interface EvaluationBudget { remaining: number; readonly cacheAst: boolean }
 
 /** Calls whose value can differ between records even when no field is named. */
 const RECORD_BOUND = new Set(["ID", "PROP", "RANDOM_INT", "LET", "LETS", "MAP", "FILTER", "REDUCE"]);
-const INTERNAL_WORK_FUNCTIONS = new Set(["CUMPRINC", "CUMIPMT", "IRR", "RATE", "NPV", "WORKDAYS"]);
+const INTERNAL_WORK_FUNCTIONS = new Set(["CUMPRINC", "CUMIPMT", "IRR", "RATE", "NPV", "WORKDAYS", "COUNT"]);
 
 type NodeShape = { readonly constant: boolean; readonly readsColumn: boolean };
 const shapeMemo = new WeakMap<FormulaNode, NodeShape>();
@@ -175,24 +175,29 @@ const shapeMemo = new WeakMap<FormulaNode, NodeShape>();
  * that uses one is record-bound by construction.
  */
 function shapeOf(n: FormulaNode): NodeShape {
-  const memo = shapeMemo.get(n);
-  if (memo) return memo;
-  let shape: NodeShape;
-  switch (n.type) {
-    case "literal": shape = { constant: true, readsColumn: false }; break;
-    case "column_ref": shape = { constant: true, readsColumn: true }; break;
-    case "field": shape = { constant: false, readsColumn: false }; break;
-    default: {
-      const kids = n.type === "operator" ? [n.left, n.right] : n.type === "array" ? n.items : n.args;
-      const shapes = kids.map(shapeOf);
-      shape = {
-        constant: shapes.every((s) => s.constant) && !(n.type === "function" && RECORD_BOUND.has(n.name)),
-        readsColumn: shapes.some((s) => s.readsColumn),
-      };
+  const pending: Array<{ node: FormulaNode; finish: boolean }> = [{ node: n, finish: false }];
+  while (pending.length) {
+    const { node, finish } = pending.pop()!;
+    if (shapeMemo.has(node)) continue;
+    if (node.type === "literal" || node.type === "column_ref" || node.type === "field") {
+      shapeMemo.set(node, { constant: node.type !== "field", readsColumn: node.type === "column_ref" });
+      continue;
     }
+    const children = node.type === "operator" ? [node.left, node.right] : node.type === "array" ? node.items : node.args;
+    if (!finish) {
+      pending.push({ node, finish: true });
+      for (let index = children.length - 1; index >= 0; index--) pending.push({ node: children[index]!, finish: false });
+      continue;
+    }
+    let constant = !(node.type === "function" && RECORD_BOUND.has(node.name)), readsColumn = false;
+    for (const child of children) {
+      const shape = shapeMemo.get(child)!;
+      constant = constant && shape.constant;
+      readsColumn = readsColumn || shape.readsColumn;
+    }
+    shapeMemo.set(node, { constant, readsColumn });
   }
-  shapeMemo.set(n, shape);
-  return shape;
+  return shapeMemo.get(n)!;
 }
 
 function evaluateNode(
@@ -208,12 +213,13 @@ function evaluateNode(
 
   // i3-final: a column is read once per pass, in the frame's own key spelling.
   function rawColumn(name: string): readonly unknown[] {
+    if (!dataFrame && pass.semantics === "unified-v1") throw new Error("Column reference requires a data frame");
     let col = pass.rawColumns.get(name);
     if (!col) {
       if (!dataFrame) return [];
       const key = resolveFieldName(name, dataFrame.fields.map((f) => f.name)) ?? name;
       // Frozen: the pass's own snapshot, which lets criteria remember scans.
-      col = Object.freeze(dataFrame.records.map((r) => r.values[key]));
+      col = Object.freeze(dataFrame.records.map((r) => pass.semantics === "unified-v1" && !Object.prototype.hasOwnProperty.call(r.values, key) ? undefined : r.values[key]));
       pass.rawColumns.set(name, col);
     }
     return col;
@@ -264,78 +270,15 @@ function evaluateNode(
 
       case "column_ref":
         if (pass.semantics === "legacy-filter") throw new Error('Unknown node type: "column_ref"');
+        if (pass.semantics === "unified-v1") return rawColumn(n.name).slice() as Array<Optional<DataValue>>;
         return resolveColumn(n.name);
 
       case "array":
         return n.items.map((item) => evaluate(item));
 
       case "operator": {
-        const left = evaluate(n.left);
-        const right = evaluate(n.right);
-        if (pass.semantics === "legacy-filter") {
-          switch (n.operator) {
-            case "=": return legacyEquals(left, right);
-            case "!=": return !legacyEquals(left, right);
-            case ">": return legacyCompare(left, right) > 0;
-            case "<": return legacyCompare(left, right) < 0;
-            case ">=": return legacyCompare(left, right) >= 0;
-            case "<=": return legacyCompare(left, right) <= 0;
-            // Saved filter formulas retain their original JS arithmetic.
-            case "+": return (left as number) + (right as number);
-            case "-": return (left as number) - (right as number);
-            case "*": return (left as number) * (right as number);
-            case "/": return (left as number) / (right as number);
-            default: throw new Error(`Unknown operator: ${n.operator}`);
-          }
-        }
-        if (pass.semantics === "unified-v1") {
-          if (n.operator === "=") return sharedEquals(left, right);
-          if (n.operator === "!=") return !sharedEquals(left, right);
-          if ([">", "<", ">=", "<="].includes(n.operator)) {
-            const comparison = sharedCompare(left, right);
-            if (comparison === null) return false;
-            if (n.operator === ">") return comparison > 0;
-            if (n.operator === "<") return comparison < 0;
-            if (n.operator === ">=") return comparison >= 0;
-            return comparison <= 0;
-          }
-        }
-        switch (n.operator) {
-          case "=": return smartEq(left, right);
-          case "!=": return !smartEq(left, right);
-          case ">": return toNum(left) > toNum(right);
-          case "<": return toNum(left) < toNum(right);
-          case ">=": return toNum(left) >= toNum(right);
-          case "<=": return toNum(left) <= toNum(right);
-          case "+": {
-            // `+` is numeric as soon as ONE side is a number; an absent operand
-            // contributes 0. Only when neither side is a number does it
-            // concatenate, so two absent fields give "" rather than a silent 0.
-            //
-            // Before #180a this operator disagreed with itself about an absent
-            // field: `null` arrived as 0 through `Number(null)` while
-            // `undefined` arrived as NaN and concatenated. Making both
-            // concatenate would have removed that disagreement and created a
-            // larger one — `-`, `*` and `/` read an absent operand as 0 through
-            // `toNum`, so `a - 1` would be -1 while `a + 1` was the string "1".
-            // Excel and Airtable read a blank cell as 0 in arithmetic while
-            // ignoring it inside AVERAGE; those are different questions and
-            // SPEC_MATH_SPREADSHEET_2026-09-02 §2.2 answers the second one.
-            // A PRESENT non-numeric value ("abc") still concatenates.
-            const ln = operandNumber(left), rn = operandNumber(right);
-            if (ln !== null && rn !== null) return ln + rn;
-            if (ln !== null && isAbsentOperand(right)) return ln;
-            if (rn !== null && isAbsentOperand(left)) return rn;
-            return String(left ?? "") + String(right ?? "");
-          }
-          case "-": return toNum(left) - toNum(right);
-          case "*": return toNum(left) * toNum(right);
-          case "/": {
-            const d = toNum(right);
-            return d === 0 ? null : toNum(left) / d;
-          }
-          default: return null;
-        }
+        if (pass.semantics === "unified-v1") return evaluateOperators(n);
+        return applyOperator(n.operator, evaluate(n.left), evaluate(n.right));
       }
 
       case "function": {
@@ -354,6 +297,92 @@ function evaluateNode(
         if (pass.semantics === "legacy-filter") throw new Error(`Unknown node type: ${JSON.stringify((n as { type?: unknown }).type)}`);
         return null;
     }
+  }
+
+  function applyOperator(operator: string, left: Optional<DataValue>, right: Optional<DataValue>): Optional<DataValue> {
+    if (pass.semantics === "legacy-filter") {
+      switch (operator) {
+        case "=": return legacyEquals(left, right);
+        case "!=": return !legacyEquals(left, right);
+        case ">": return legacyCompare(left, right) > 0;
+        case "<": return legacyCompare(left, right) < 0;
+        case ">=": return legacyCompare(left, right) >= 0;
+        case "<=": return legacyCompare(left, right) <= 0;
+        // Saved filter formulas retain their original JS arithmetic.
+        case "+": return (left as number) + (right as number);
+        case "-": return (left as number) - (right as number);
+        case "*": return (left as number) * (right as number);
+        case "/": return (left as number) / (right as number);
+        default: throw new Error(`Unknown operator: ${operator}`);
+      }
+    }
+    if (pass.semantics === "unified-v1") {
+      if (operator === "=") return sharedEquals(left, right);
+      if (operator === "!=") return !sharedEquals(left, right);
+      if ([">", "<", ">=", "<="].includes(operator)) {
+        const comparison = sharedCompare(left, right);
+        if (comparison === null) return false;
+        if (operator === ">") return comparison > 0;
+        if (operator === "<") return comparison < 0;
+        if (operator === ">=") return comparison >= 0;
+        return comparison <= 0;
+      }
+    }
+    switch (operator) {
+      case "=": return smartEq(left, right);
+      case "!=": return !smartEq(left, right);
+      case ">": return toNum(left) > toNum(right);
+      case "<": return toNum(left) < toNum(right);
+      case ">=": return toNum(left) >= toNum(right);
+      case "<=": return toNum(left) <= toNum(right);
+      case "+": {
+        // `+` is numeric as soon as ONE side is a number; an absent operand
+        // contributes 0. Only when neither side is a number does it
+        // concatenate, so two absent fields give "" rather than a silent 0.
+        //
+        // Before #180a this operator disagreed with itself about an absent
+        // field: `null` arrived as 0 through `Number(null)` while
+        // `undefined` arrived as NaN and concatenated. Making both
+        // concatenate would have removed that disagreement and created a
+        // larger one — `-`, `*` and `/` read an absent operand as 0 through
+        // `toNum`, so `a - 1` would be -1 while `a + 1` was the string "1".
+        // Excel and Airtable read a blank cell as 0 in arithmetic while
+        // ignoring it inside AVERAGE; those are different questions and
+        // SPEC_MATH_SPREADSHEET_2026-09-02 §2.2 answers the second one.
+        // A PRESENT non-numeric value ("abc") still concatenates.
+        const ln = operandNumber(left), rn = operandNumber(right);
+        if (ln !== null && rn !== null) return ln + rn;
+        if (ln !== null && isAbsentOperand(right)) return ln;
+        if (rn !== null && isAbsentOperand(left)) return rn;
+        return String(left ?? "") + String(right ?? "");
+      }
+      case "-": return toNum(left) - toNum(right);
+      case "*": return toNum(left) * toNum(right);
+      case "/": {
+        const d = toNum(right);
+        return d === 0 ? null : toNum(left) / d;
+      }
+      default: return null;
+    }
+  }
+
+  function evaluateOperators(root: Extract<FormulaNode, { type: "operator" }>): Optional<DataValue> {
+    const pending: Array<{ node: FormulaNode; finish: boolean }> = [{ node: root, finish: false }];
+    const values: Array<Optional<DataValue>> = [];
+    while (pending.length) {
+      const { node, finish } = pending.pop()!;
+      if (node.type !== "operator") { values.push(evaluate(node)); continue; }
+      if (finish) {
+        const right = values.pop(), left = values.pop();
+        values.push(applyOperator(node.operator, left, right));
+      } else {
+        // evaluate() already charged the root. Every other operator is charged
+        // once on entry; leaf/function evaluation uses the ordinary callback.
+        if (node !== root && --budget.remaining < 0) throw new Error("Formula evaluation limit exceeded");
+        pending.push({ node, finish: true }, { node: node.right, finish: false }, { node: node.left, finish: false });
+      }
+    }
+    return values[0];
   }
 
   function iterationList(value: Optional<DataValue>): unknown[] {

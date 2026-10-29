@@ -48,6 +48,7 @@ export type {
 export { getFormulaCatalog, getFormulaDefinition } from "./catalog";
 export type { FormulaSemantics, FormulaDefinition } from "./catalog";
 export { validateExpression } from "./validation";
+export type { FormulaSyntaxPolicy } from "./syntax";
 // i3-final: the criteria language of SUMIF / COUNTIF / the *IFS family
 export { compileCriterion, matchingRows } from "./criteria";
 

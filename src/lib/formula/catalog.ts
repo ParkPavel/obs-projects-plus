@@ -82,11 +82,15 @@ for (const name of Object.keys(UNIFIED_FUNCTIONS)) {
 }
 
 const profileDocs: Partial<Record<FormulaSemantics, Record<string, string>>> = {
+  "legacy-computed": {
+    COUNT: "Count every position in list arguments, including blanks. Scalar nulls are skipped; compatibility @columns contain numeric values only.",
+  },
   "legacy-filter": {
     AND: "True if every argument is the boolean true; other truthy values do not match.",
     OR: "True if any argument is the boolean true; other truthy values do not match.",
   },
   "unified-v1": {
+    COUNT: "Count non-null values and list items. Null and absent items are skipped; false, zero and empty text count.",
     WORKDAYS: "Signed weekday distance in (earlier day, later day]; reversing dates reverses the sign. Same calendar day is zero.",
     TODAY: "The context's reference day, as YYYY-MM-DD.",
     NOW: "The fixed reference instant of this evaluation context.",

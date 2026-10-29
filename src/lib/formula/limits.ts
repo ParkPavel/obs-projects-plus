@@ -44,7 +44,9 @@ export function assertFormulaLimits(root: FormulaNode): void {
     const children = node.type === "function" ? node.args : node.type === "array" ? node.items :
       node.type === "operator" ? [node.left, node.right] : [];
     if (node.type === "array" && children.length > MAX_FORMULA_LIST_ITEMS) throw new Error("Formula list limit exceeded");
-    for (const child of children) pending.push({ node: child, depth: depth + 1 });
+    // Operators are evaluated iteratively; only function/list nesting consumes
+    // recursive depth. Node count still bounds operator cycles and DAG expansion.
+    for (const child of children) pending.push({ node: child, depth: depth + (node.type === "operator" && child.type === "operator" ? 0 : 1) });
   }
 }
 

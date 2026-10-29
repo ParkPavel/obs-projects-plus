@@ -1,6 +1,11 @@
 ﻿{
     "translation": {
         "formula-errors": {
+            "number": "数字格式不正确。请检查正负号、小数点和指数。",
+            "string": "请使用相同类型的引号结束文本。",
+            "escape": "反斜杠后的字符不受支持。请检查转义序列。",
+            "column": "请在 @ 后输入列名。",
+            "frame": "没有可用于计算此列的数据。请打开项目后重试。",
             "limit": "公式超出计算限制。请简化表达式或减少处理的值。",
             "unknown-field": "没有属性“{{name}}”",
             "unknown-field-hint": "没有属性“{{name}}”。是否是“{{hint}}”？",

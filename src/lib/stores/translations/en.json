@@ -1,6 +1,11 @@
 ﻿{
     "translation": {
         "formula-errors": {
+            "number": "Invalid number. Check its sign, decimal point and exponent.",
+            "string": "Close the text with a matching quote.",
+            "escape": "Unsupported character after a backslash. Check the escape sequence.",
+            "column": "Enter a column name after @.",
+            "frame": "There is no data to calculate the column. Open the project and try again.",
             "limit": "The formula exceeded the calculation limit. Simplify the expression or reduce the number of values.",
             "unknown-field": "There is no property '{{name}}'",
             "unknown-field-hint": "There is no property '{{name}}'. Did you mean '{{hint}}'?",
