@@ -3,6 +3,11 @@ import { COMPUTED_FUNCTIONS, type FormulaFn } from "./computedFunctions";
 import { LEGACY_FUNCTIONS } from "./legacyFunctions";
 import { FORMULA_METADATA, type FormulaMetadata } from "./metadata";
 import dayjs from "dayjs";
+import { financialGuardEnabled, consumeFinancialWork, MAX_FORMULA_EVALUATION_STEPS } from "./limits";
+
+function standaloneWorkGuard(steps: number): void {
+  consumeFinancialWork(MAX_FORMULA_EVALUATION_STEPS, steps);
+}
 
 const SEMANTICS = ["legacy-filter", "legacy-computed", "unified-v1"] as const;
 export type FormulaSemantics = typeof SEMANTICS[number];
@@ -13,6 +18,7 @@ export function isFormulaSemantics(value: unknown): value is FormulaSemantics {
 export interface FormulaFunctionContext {
   readonly semantics: FormulaSemantics;
   readonly referenceTime: number;
+  readonly chargeWork?: (steps: number) => void;
 }
 
 export interface FormulaDefinition {
@@ -65,7 +71,8 @@ for (const [name, info] of Object.entries(metadata)) {
         (context.semantics === "unified-v1" && (name === "TODAY" || name === "NOW")))) {
         return legacy(args, evaluate, dayjs(context.referenceTime));
       }
-      return computed ? computed(args, evaluate, range) : null;
+      const charge = context.chargeWork ?? (financialGuardEnabled(context.semantics) ? standaloneWorkGuard : undefined);
+      return computed ? computed(args, evaluate, range, charge) : null;
     },
   });
 }

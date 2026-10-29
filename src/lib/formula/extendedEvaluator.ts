@@ -7,7 +7,7 @@ import { getFormulaDefinition, formulaFunctionNames, isFormulaSemantics, type Fo
 import { legacyEquals, legacyCompare } from "./legacyFunctions";
 import { sharedEquals, sharedCompare } from "./sharedSemantics";
 import { toNumbers } from "src/lib/engine/numeric";
-import { MAX_FORMULA_DEPTH as MAX_EVAL_DEPTH, MAX_FORMULA_INPUT_LENGTH, MAX_FORMULA_EVALUATION_STEPS, MAX_FORMULA_LIST_ITEMS as MAX_LIST_ITEMS, assertFormulaLimits } from "./limits";
+import { MAX_FORMULA_DEPTH as MAX_EVAL_DEPTH, MAX_FORMULA_INPUT_LENGTH, MAX_FORMULA_EVALUATION_STEPS, MAX_FORMULA_LIST_ITEMS as MAX_LIST_ITEMS, assertFormulaLimits, freezeParsedFormula, financialGuardEnabled, consumeFinancialWork } from "./limits";
 import { validateFormulaRaw } from "./validation";
 export { isStyledValue } from "./computedFunctions";
 export type { StyledValue, FormulaResult } from "./computedFunctions";
@@ -22,12 +22,22 @@ export type { StyledValue, FormulaResult } from "./computedFunctions";
  */
 const AST_CACHE_LIMIT = 256;
 const astCache = new Map<string, FormulaNode | Error>();
+const parserOwnedRoots = new WeakSet<FormulaNode>();
+const checkedParsedRoots = new WeakSet<FormulaNode>();
 function parsedFormula(expression: string, bounded = false): FormulaNode {
   if (bounded && expression.length > MAX_FORMULA_INPUT_LENGTH) throw new Error("Formula input limit exceeded");
   const key = bounded ? "\u0000unified:" + expression : expression;
   let entry = astCache.get(key);
   if (entry === undefined) {
-    try { entry = parseFormula(expression, bounded ? MAX_EVAL_DEPTH : undefined); } catch (e) { entry = e instanceof Error ? e : new Error(String(e)); }
+    try {
+      entry = parseFormula(expression, bounded ? MAX_EVAL_DEPTH : undefined);
+      if (bounded) {
+        assertFormulaLimits(entry);
+        freezeParsedFormula(entry);
+        checkedParsedRoots.add(entry);
+      }
+      parserOwnedRoots.add(entry);
+    } catch (e) { entry = e instanceof Error ? e : new Error(String(e)); }
     if (astCache.size >= AST_CACHE_LIMIT) astCache.delete(astCache.keys().next().value as string);
     astCache.set(key, entry);
   }
@@ -79,7 +89,7 @@ function passFor(context: FormulaEvaluationContext): RuntimePass {
   const matches = pass && pass.frame === frame && (pass.semantics ?? "legacy-computed") === semantics;
   const referenceTime = context.referenceDate?.getTime() ?? (matches ? pass.referenceTime ?? Date.now() : Date.now());
   if (semantics === "unified-v1" && !Number.isFinite(referenceTime)) throw new Error("Invalid formula reference date");
-  if (matches && (pass.referenceTime === undefined || pass.referenceTime === referenceTime)) return { ...pass, semantics, referenceTime };
+  if (matches && (pass.referenceTime === referenceTime || (pass.referenceTime === undefined && semantics === "legacy-computed"))) return { ...pass, semantics, referenceTime };
   return createFormulaPass(frame, semantics, new Date(referenceTime));
 }
 
@@ -95,8 +105,11 @@ export function evaluateExpression(expression: string, context: FormulaEvaluatio
 /** AST entry also serves the old boolean wrapper; it preserves its thrown errors. */
 export function evaluateFormulaNode(node: FormulaNode, context: FormulaEvaluationContext): Optional<DataValue> {
   const pass = passFor(context);
-  if (pass.semantics === "unified-v1") assertFormulaLimits(node);
-  return evaluateNode(node, context.record, context.frame, undefined, 0, pass, { remaining: MAX_FORMULA_EVALUATION_STEPS });
+  if (pass.semantics === "unified-v1" && !checkedParsedRoots.has(node)) assertFormulaLimits(node);
+  return evaluateNode(node, context.record, context.frame, undefined, 0, pass, {
+    remaining: MAX_FORMULA_EVALUATION_STEPS,
+    cacheAst: pass.semantics === "unified-v1" ? checkedParsedRoots.has(node) : parserOwnedRoots.has(node),
+  });
 }
 
 export function evaluateFormulaValue(
@@ -119,7 +132,7 @@ export function evaluateFormulaWithError(
     // A pass built for another frame would answer for the wrong rows.
     const own: RuntimePass = pass && pass.frame === dataFrame && (pass.semantics ?? "legacy-computed") === "legacy-computed"
       ? { ...pass, semantics: "legacy-computed", referenceTime: pass.referenceTime ?? Date.now() } : createFormulaPass(dataFrame);
-    const value = evaluateNode(ast, record, dataFrame, undefined, 0, own, { remaining: MAX_FORMULA_EVALUATION_STEPS });
+    const value = evaluateNode(ast, record, dataFrame, undefined, 0, own, { remaining: MAX_FORMULA_EVALUATION_STEPS, cacheAst: true });
     return { value };
   } catch (e) {
     // i3-final: the preview's error is shown to the person — in their language.
@@ -143,7 +156,7 @@ export function getFormulaFunctions(): string[] {
 
 // ── Internal ─────────────────────────────────────────────────
 
-interface EvaluationBudget { remaining: number }
+interface EvaluationBudget { remaining: number; readonly cacheAst: boolean }
 
 /** Calls whose value can differ between records even when no field is named. */
 const RECORD_BOUND = new Set(["ID", "PROP", "RANDOM_INT", "LET", "LETS", "MAP", "FILTER", "REDUCE"]);
@@ -322,7 +335,7 @@ function evaluateNode(
       }
 
       case "function": {
-        if (pass.semantics === "legacy-filter") return callFunction(n);
+        if (pass.semantics === "legacy-filter" || !budget.cacheAst) return callFunction(n);
         const shape = shapeOf(n);
         if (!shape.constant || !shape.readsColumn) return callFunction(n);
         // i3-final: once per pass. Only a plain value is kept — a list would
@@ -464,6 +477,15 @@ function evaluateNode(
       return acc;
     }
 
+    if (financialGuardEnabled(pass.semantics) && (n.name === "CUMPRINC" || n.name === "CUMIPMT")) {
+      return definition.invoke(n.args, evaluate, rangeOf, {
+        semantics: pass.semantics,
+        referenceTime: pass.referenceTime,
+        chargeWork(steps) {
+          budget.remaining = consumeFinancialWork(budget.remaining, steps);
+        },
+      });
+    }
     return definition.invoke(n.args, evaluate, rangeOf, pass);
   }
 

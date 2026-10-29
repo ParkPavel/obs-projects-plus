@@ -44,17 +44,28 @@ const result = evaluateExpression(source, {
 In `unified-v1` the pass fixes `TODAY`/`NOW` and calendar predicates to its reference time. An
 explicit `referenceDate` overrides it. Frame, profile or reference-time mismatch
 creates a separate pass, so cached frame-wide expressions cannot cross owners.
+An explicit common-profile pass without a reference time is not reused. Only
+private parser-owned ASTs are frozen and keep a reusable structural-check proof;
+externally supplied mutable ASTs are checked on each call.
+Their shape and result are not memoized by node identity, so editing one cannot
+replay a result computed for its previous contents.
 Callers must create a new pass when data changes, as before. Neither API writes
 notes or settings. A filter caller converts the resulting value to a predicate.
 The computed compatibility profile retains its old system-clock behavior;
 passing a new-profile pass to an old API does not change that API's rules.
 
 New-profile parsing/evaluation is bounded: 50,000 input characters, nesting/AST
-depth 64, 100,000 AST nodes, 100,000 evaluated nodes per call and 10,000 items
-per iterated list. The dynamic budget is shared by nested list loops; exceeding
-a limit returns an error with no partial value. Compatibility profiles retain
-their old bounds, including computed-list truncation. Regex and financial/date
-function safeguards remain in the existing implementations.
+depth 64, 100,000 AST nodes, 100,000 work units per call and 10,000 items per
+iterated list. Each evaluated AST node costs a work unit; cumulative financial
+calls also charge their period count before entering the loop. Nested calls share
+the budget, and unsafe period counters that cannot advance are rejected.
+Exceeding a limit returns an error with no partial value. Cumulative financial
+work limits also apply to the computed compatibility profile: ordinary results
+stay unchanged, while excessive or non-advancing loops return an error. Other
+compatibility bounds remain unchanged, including computed-list truncation. These are cooperative
+work limits, rather than a wall-clock timeout for native operations such as regex.
+The structural depth limit also includes long left-associated operator chains;
+`SUM` avoids that shape until the separate expression-shape integration is complete.
 
 The date shorthand used by visual filters (`today+1w`) remains a separate syntax
 for date values. Fixed rollup aggregation operations do not execute custom formula

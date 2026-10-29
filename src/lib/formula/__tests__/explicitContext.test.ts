@@ -95,6 +95,43 @@ test("a pass for another frame cannot answer aggregate queries", () => {
   expect(evaluateExpression("SUM(@amount)", context({ pass }))).toEqual({ value: 15 });
 });
 
+test("a timestamp-less unified pass cannot reuse a cached reference-day result", () => {
+  const pass: FormulaPass = { frame, semantics: "unified-v1", rawColumns: new Map(), numericColumns: new Map(), frameValues: new Map() };
+  const expression = 'IF(TODAY() = "2026-10-28", SUM(@amount), 0)';
+  expect(evaluateExpression(expression, context({ pass }))).toEqual({ value: 15 });
+  expect(evaluateExpression(expression, context({ pass, referenceDate: new Date("2026-10-29T04:00:00.000Z") }))).toEqual({ value: 0 });
+  expect(pass.frameValues.size).toBe(0);
+});
+
+test("cached common ASTs are immutable before their structural check is reused", () => {
+  const pass = createFormulaPass(frame, "unified-v1", new Date(reference));
+  const expression = 'IF(TODAY() = "2026-10-28", SUM(@amount), 0)';
+  expect(evaluateExpression(expression, context({ pass }))).toEqual({ value: 15 });
+  const root = Array.from(pass.frameValues.keys()).find(node => node.type === "function" && node.name === "IF");
+  if (!root || root.type !== "function") throw new Error("Expected cached IF root");
+  expect(Object.isFrozen(root)).toBe(true);
+  expect(Object.isFrozen(root.args)).toBe(true);
+  expect(Object.isFrozen(root.args[0])).toBe(true);
+  expect(() => root.args.push({ type: "literal", value: 123 })).toThrow();
+});
+
+test("external mutable ASTs are rechecked after mutation", () => {
+  const root: FormulaNode = { type: "operator", operator: "+", left: { type: "literal", value: 1 }, right: { type: "literal", value: 2 } };
+  expect(evaluateFormulaNode(root, context())).toBe(3);
+  root.left = root;
+  expect(() => evaluateFormulaNode(root, context())).toThrow("limit");
+});
+
+test("external AST edits cannot reuse their old shape or frame result", () => {
+  const pass = createFormulaPass(frame, "unified-v1", new Date(reference));
+  const root: FormulaNode = { type: "function", name: "SUM", args: [{ type: "column_ref", name: "amount" }] };
+  expect(evaluateFormulaNode(root, context({ pass }))).toBe(15);
+  root.name = "IF";
+  root.args = [{ type: "field", name: "flag" }, { type: "literal", value: 11 }, { type: "literal", value: 22 }];
+  expect(evaluateFormulaNode(root, context({ pass }))).toBe(22);
+  expect(pass.frameValues.size).toBe(0);
+});
+
 test("common NOW inherits a pass's fixed clock; the old default API keeps its old clock", () => {
   const pass = createFormulaPass(frame, "unified-v1", new Date(reference));
   const implicit: FormulaEvaluationContext = { record, frame, semantics: "unified-v1", pass };

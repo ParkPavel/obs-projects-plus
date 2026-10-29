@@ -8,6 +8,7 @@ import { aggregate, type RollupFunction } from "src/lib/engine/aggregate";
 import { isNumeric, toNumber, toNumbers } from "src/lib/engine/numeric";
 import { compileCriterion, matchingRows, numbersPerCell, type CriterionPair } from "./criteria";
 import dayjs from "dayjs";
+import { cumulativePeriodWork } from "./limits";
 
 // ── Numeric coercion (#180a) ─────────────────────────────────
 
@@ -121,7 +122,8 @@ type RangeOf = (node: FormulaNode) => readonly unknown[] | null;
 export type FormulaFn = (
   args: FormulaNode[],
   evaluate: (node: FormulaNode) => Optional<DataValue>,
-  range: RangeOf
+  range: RangeOf,
+  chargeWork?: (steps: number) => void
 ) => Optional<DataValue>;
 
 // ── Conditional aggregation (i3-final) ───────────────────────
@@ -645,7 +647,7 @@ export const COMPUTED_FUNCTIONS: Record<string, FormulaFn> = {
     return Math.log(num / den) / Math.log(1 + rate);
   },
 
-  CUMPRINC: (args, evaluate) => {
+  CUMPRINC: (args, evaluate, _range, chargeWork) => {
     const rate = argNumber(evaluate(args[0] as FormulaNode));
     const nper = argNumber(evaluate(args[1] as FormulaNode));
     const pv = argNumber(evaluate(args[2] as FormulaNode));
@@ -654,6 +656,7 @@ export const COMPUTED_FUNCTIONS: Record<string, FormulaFn> = {
     const type = argNumber(evaluate(args[5] as FormulaNode));
     if (isNaN(rate) || isNaN(nper) || isNaN(pv) || rate <= 0 || nper <= 0 || pv <= 0) return null;
     if (start < 1 || end < start || end > nper) return null;
+    if (chargeWork) chargeWork(cumulativePeriodWork(start, end));
     const pmt = pmtCore(rate, nper, pv, 0, type);
     let cum = 0;
     for (let per = start; per <= end; per++) {
@@ -662,7 +665,7 @@ export const COMPUTED_FUNCTIONS: Record<string, FormulaFn> = {
     return cum;
   },
 
-  CUMIPMT: (args, evaluate) => {
+  CUMIPMT: (args, evaluate, _range, chargeWork) => {
     const rate = argNumber(evaluate(args[0] as FormulaNode));
     const nper = argNumber(evaluate(args[1] as FormulaNode));
     const pv = argNumber(evaluate(args[2] as FormulaNode));
@@ -671,6 +674,7 @@ export const COMPUTED_FUNCTIONS: Record<string, FormulaFn> = {
     const type = argNumber(evaluate(args[5] as FormulaNode));
     if (isNaN(rate) || isNaN(nper) || isNaN(pv) || rate <= 0 || nper <= 0 || pv <= 0) return null;
     if (start < 1 || end < start || end > nper) return null;
+    if (chargeWork) chargeWork(cumulativePeriodWork(start, end));
     const pmt = pmtCore(rate, nper, pv, 0, type);
     let cum = 0;
     for (let per = start; per <= end; per++) {
