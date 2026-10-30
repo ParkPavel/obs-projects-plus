@@ -39,6 +39,7 @@
   let inputValue = expression;
   let adopted = expression;
   let barEl: HTMLElement | null = null;
+  let editor: FormulaConstructor;
   // Keep inputValue in sync when the parent changes the formula (e.g. a field
   // switch) — only on a real change, and not while the user types in it. The
   // assignment lives in a function the `$:` calls: `inputValue` is bound, and
@@ -88,18 +89,38 @@
   let runtimeError: string | null = null;
   let debugDismissed = false;
   let cursorPosition = 0;
-  $: previewCyclic = formulaWouldCycle(formulaFields, fieldName.trim(), inputValue, draft);
+  let validationPending = true;
+  let validationErrors: string[] = [];
+  let validatedSource = "";
+  let validatedVersion: string | undefined;
+  let validatedFields: string[] | undefined;
+  function trackValidation(event: CustomEvent<{ pending: boolean; errors: string[]; value: string }>): void {
+    validationPending = event.detail.pending;
+    validationErrors = event.detail.errors;
+    validatedSource = event.detail.value;
+    validatedVersion = draftVersion;
+    validatedFields = fields;
+  }
+  let cycleCheck: { expression: string; name: string; version: string | undefined; definitions: readonly FormulaFieldDef[]; cyclic: boolean } | undefined;
+  $: cycleCurrent = cycleCheck?.expression === inputValue && cycleCheck?.name === fieldName.trim()
+    && cycleCheck?.version === draftVersion && cycleCheck?.definitions === formulaFields;
+  $: previewCyclic = cycleCurrent && !!cycleCheck?.cyclic;
   $: nameTaken = fields.includes(fieldName.trim()) && fieldName.trim() !== editingName;
-  $: canApply = !!fieldName.trim() && !!inputValue.trim() && !nameTaken && !previewCyclic && validateVersionedFormula(inputValue, fields, draftVersion).length === 0;
+  $: canApply = !!semantics && !!fieldName.trim() && !!inputValue.trim() && !nameTaken && cycleCurrent && !previewCyclic
+    && !validationPending && !validationErrors.length && validatedSource === inputValue && validatedVersion === draftVersion && validatedFields === fields;
 
   // DG-9 / B5: preview waits for a 150 ms pause in typing; hints do not wait
   let previewTimer: ReturnType<typeof setTimeout> | undefined;
 
   function schedulePreview(expr: string, name: string, source: DataFrame | undefined, definitions: readonly FormulaFieldDef[], version: string | undefined, fieldNames: string[], sample: DataRecord | undefined) {
     clearTimeout(previewTimer);
+    cycleCheck = undefined;
+    previewValue = null;
     previewTimer = setTimeout(() => {
       const hasContent = expr.trim().length > 0;
       const isValid = validateVersionedFormula(expr, fieldNames, version).length === 0;
+      cycleCheck = { expression: expr, name: name.trim(), version, definitions,
+        cyclic: hasContent && isValid && formulaWouldCycle(definitions, name.trim(), expr, version === undefined ? {} : { formulaVersion: version }) };
       if (hasContent && isValid && source) {
         const result = previewFormulaField(source, definitions, name.trim(), expr, version === undefined ? {} : { formulaVersion: version });
         previewValue = result.value;
@@ -132,9 +153,13 @@
 
   function handleApply() {
     const name = fieldName.trim();
+    // commitCurrent just validated the native editor's current draft. Read that
+    // event state directly: Svelte derived statements may not have flushed yet.
+    const expr = validatedSource;
     const taken = fields.includes(name) && name !== editingName;
-    if (!name || !inputValue.trim() || taken || formulaWouldCycle(formulaFields, name, inputValue, draft) || validateVersionedFormula(inputValue, fields, draftVersion).length > 0) return;
-    dispatch("apply", { name: fieldName.trim(), expression: inputValue.trim(), draft });
+    if (!semantics || validationPending || validationErrors.length || validatedVersion !== draftVersion || validatedFields !== fields
+      || !name || !expr.trim() || taken || formulaWouldCycle(formulaFields, name, expr, draft)) return;
+    dispatch("apply", { name, expression: expr.trim(), draft });
   }
 </script>
 
@@ -174,6 +199,7 @@
   <FormulaMode version={draftVersion} on:change={(event) => { draftVersion = event.detail.formulaVersion; }} />
   {#if semantics}
   <FormulaConstructor
+    bind:this={editor}
     {semantics}
     bind:value={inputValue}
     {fields}
@@ -181,6 +207,7 @@
     placeholder={$i18n.t("views.dashboard.formula.expression-placeholder")}
     rows={3}
     on:change={(e) => { inputValue = e.detail; }}
+    on:validation={trackValidation}
     on:commit={handleApply}
   />
   {:else}
@@ -210,7 +237,7 @@
     <button
       class="ppp-btn ppp-btn--primary"
       disabled={!canApply}
-      on:click={handleApply}
+      on:click={() => editor?.commitCurrent()}
     >
       {$i18n.t("views.dashboard.formula.apply")}
     </button>

@@ -30,9 +30,11 @@
   $: fieldNames = fields.map((f) => f.name);
 
   // The selected executable profile owns validation as well as help.
-  function calendarValidate(expr: string, availableFields: string[]): string[] {
-    return validateVersionedFormula(expr, availableFields, version, 'legacy-filter');
+  function validatorFor(savedVersion: string | undefined) {
+    return (expr: string, availableFields: string[]): string[] =>
+      validateVersionedFormula(expr, availableFields, savedVersion, 'legacy-filter');
   }
+  $: calendarValidate = validatorFor(version);
 
   // Snippet catalog tailored for Calendar agenda. Labels are localised via
   // i18n keys; insert strings are language-independent formula source.

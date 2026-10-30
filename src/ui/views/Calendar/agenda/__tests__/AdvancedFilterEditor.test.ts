@@ -48,6 +48,25 @@ async function settleValidation() {
 describe("AdvancedFilterEditor (Calendar agenda)", () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
+
+  test("mode changes invalidate the validation badge while keeping the same source", async () => {
+    const { container } = render(AdvancedFilterEditor, { props: {
+      formula: "SUM(@amount) > 0", fields: [makeField("amount", DataFieldType.Number)],
+    } });
+    await settleValidation();
+    expect(container.querySelector(".ppp-fcf-hint-error")).not.toBeNull();
+    await fireEvent.click(container.querySelectorAll(".ppp-formula-mode button")[1]!);
+    expect(container.querySelector(".ppp-fcf-hint-valid")).toBeNull();
+    jest.advanceTimersByTime(699); await tick();
+    expect(container.querySelector(".ppp-fcf-hint-valid")).toBeNull();
+    jest.advanceTimersByTime(1); await tick();
+    expect(container.querySelector(".ppp-fcf-hint-valid")).not.toBeNull();
+    await fireEvent.click(container.querySelectorAll(".ppp-formula-mode button")[0]!);
+    expect(container.querySelector(".ppp-fcf-hint-valid")).toBeNull();
+    await settleValidation();
+    expect(container.querySelector(".ppp-fcf-hint-error")).not.toBeNull();
+    expect(container.querySelector("textarea")?.value).toBe("SUM(@amount) > 0");
+  });
 	describe("validation contract", () => {
 		test("Calendar-specific IS_OVERDUE is NOT flagged as unknown", async () => {
 			// The executable legacy-filter profile must include Calendar functions.
