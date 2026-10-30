@@ -29,25 +29,35 @@ async function typeInto(el: HTMLTextAreaElement | HTMLInputElement, text: string
 
 describe("FormulaBar — the typed formula", () => {
   it("survives a flush and is what Apply sends", async () => {
-    const { container, component } = render(FormulaBar, { props: { expression: "1", fields: [] } });
-    const applied: Array<{ name: string; expression: string }> = [];
-    component.$on("apply", (e: CustomEvent<{ name: string; expression: string }>) => applied.push(e.detail));
+    jest.useFakeTimers();
+    try {
+      const { container, component } = render(FormulaBar, { props: { expression: "1", fields: [] } });
+      const applied: Array<{ name: string; expression: string; draft?: { formulaVersion?: string } }> = [];
+      component.$on("apply", (e: CustomEvent<{ name: string; expression: string; draft?: { formulaVersion?: string } }>) => applied.push(e.detail));
 
-    const el = textarea(container);
-    expect(el.value).toBe("1");
-    el.focus();
-    await typeInto(el, "1 + 2");
-    await tick();
-    expect(el.value).toBe("1 + 2");
+      const el = textarea(container);
+      expect(el.value).toBe("1");
+      el.focus();
+      await typeInto(el, "1 + 2");
+      await tick();
+      expect(el.value).toBe("1 + 2");
 
-    const name = container.querySelector<HTMLInputElement>("#formula-name");
-    if (!name) throw new Error("no field-name input rendered");
-    await typeInto(name, "total");
-    await tick();
-    expect(el.value).toBe("1 + 2");
+      const name = container.querySelector<HTMLInputElement>("#formula-name");
+      if (!name) throw new Error("no field-name input rendered");
+      await typeInto(name, "total");
+      await tick();
+      expect(el.value).toBe("1 + 2");
 
-    container.querySelector<HTMLButtonElement>(".ppp-btn--primary")?.click();
-    expect(applied).toEqual([{ name: "total", expression: "1 + 2", draft: {} }]);
+      const apply = container.querySelector<HTMLButtonElement>(".ppp-btn--primary");
+      expect(apply).toBeDisabled();
+      jest.advanceTimersByTime(700);
+      await tick();
+      expect(apply).toBeEnabled();
+      apply?.click();
+      expect(applied).toEqual([{ name: "total", expression: "1 + 2", draft: {} }]);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
 
