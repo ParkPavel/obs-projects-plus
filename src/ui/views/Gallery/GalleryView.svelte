@@ -10,7 +10,7 @@
   import { Notice } from "obsidian";
   import type { ViewApi } from "src/lib/viewApi";
   import CenterBox from "src/ui/modals/components/CenterBox.svelte";
-  import { CreateNoteModal } from "src/ui/modals/createNoteModal";
+  import GalleryNoteDraft from "./GalleryNoteDraft.svelte";
 
   import {
     CARD_FRAME_OVERRIDE_CAP,
@@ -101,6 +101,7 @@
     ? options.groupByField
     : undefined;
   $: grouped = groupField !== undefined;
+  $: canCreate = !readonly && !dataReadOnly;
   $: groups = groupGalleryRecords(records, groupField);
   // Folded sections are saved with the view; without a config writer (a
   // read-only embed) they fold for this session only.
@@ -139,15 +140,23 @@
     void openRecord({ id: record.id, readonly: dataReadOnly }, "peek", { app: $app });
   }
 
-  function addRecord() {
-    new CreateNoteModal($app, project, (name, templatePath, project) => {
-      const filterValues = getFilterValuesFromConditions(filterConditions);
-      return api.addRecord(
-        createDataRecord(name, project, Object.keys(filterValues).length > 0 ? filterValues : undefined),
-        fields,
-        templatePath
-      );
-    }).open();
+  function beginAddRecord() {
+    if (canCreate) addingRecord = true;
+  }
+
+  let addingRecord = false;
+  function cancelAddRecord() {
+    addingRecord = false;
+  }
+
+  async function saveNewRecord(name: string, templatePath: string, noteProject: ProjectDefinition) {
+    const filterValues = getFilterValuesFromConditions(filterConditions);
+    await api.addRecord(
+      createDataRecord(name, noteProject, Object.keys(filterValues).length > 0 ? filterValues : undefined),
+      fields,
+      templatePath
+    );
+    addingRecord = false;
   }
 
   // B9 — the gallery's own «Card» panel (cover, size, layout, properties).
@@ -274,12 +283,17 @@
             />
           {/each}
           {#if groupIndex === lastOpen && hiddenCount === 0}
-          {#if !readonly}
-          <IconButton
-            icon="plus"
-            size="lg"
-            onClick={addRecord}
-          />
+          {#if canCreate}
+            {#if addingRecord}
+              <GalleryNoteDraft {project} onSave={saveNewRecord} onCancel={cancelAddRecord} />
+            {:else}
+              <IconButton
+                icon="plus"
+                size="lg"
+                tooltip={$i18n.t("modals.note.create.create")}
+                onClick={beginAddRecord}
+              />
+            {/if}
           {/if}
           {/if}
         </Grid>
@@ -293,10 +307,21 @@
         </button>
       </div>
     {/if}
-    {#if !readonly && addOutsideGrid}
-      <div class="ppp-gallery-add">
-        <IconButton icon="plus" size="lg" onClick={addRecord} />
-      </div>
+    {#if canCreate && addOutsideGrid}
+      {#if addingRecord}
+        <div class="ppp-gallery-add">
+          <GalleryNoteDraft {project} onSave={saveNewRecord} onCancel={cancelAddRecord} />
+        </div>
+      {:else}
+        <div class="ppp-gallery-add">
+          <IconButton
+            icon="plus"
+            size="lg"
+            tooltip={$i18n.t("modals.note.create.create")}
+            onClick={beginAddRecord}
+          />
+        </div>
+      {/if}
     {/if}
     <!-- ios-s1: end space under the last row of cards; see `.ppp-gallery-end`. -->
     <div class="ppp-gallery-end" aria-hidden="true"></div>
@@ -306,6 +331,18 @@
         <Icon name="image" size="lg" />
         <Typography variant="h5">{$i18n.t("views.gallery.empty")}</Typography>
         <span class="ppp-gallery-empty-hint">{$i18n.t("views.gallery.empty-hint", { defaultValue: "Create a note to get started" })}</span>
+        {#if canCreate}
+          {#if addingRecord}
+            <GalleryNoteDraft {project} onSave={saveNewRecord} onCancel={cancelAddRecord} />
+          {:else}
+            <IconButton
+              icon="plus"
+              size="lg"
+              tooltip={$i18n.t("modals.note.create.create")}
+              onClick={beginAddRecord}
+            />
+          {/if}
+        {/if}
       </div>
     </CenterBox>
   {/if}
@@ -384,6 +421,11 @@
     padding: 0.75em;
   }
 
+  .ppp-gallery-add :global(.ppp-gallery-note-draft),
+  .ppp-gallery-empty :global(.ppp-gallery-note-draft) {
+    max-width: 28rem;
+  }
+
   .ppp-gallery-more-button {
     min-height: var(--ppp-touch-target-min, 2rem);
     font-size: var(--font-ui-small);
@@ -426,6 +468,7 @@
     flex-direction: column;
     align-items: center;
     gap: 0.5rem;
+    width: min(100%, 28rem);
     color: var(--text-muted);
   }
 

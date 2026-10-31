@@ -25,6 +25,7 @@ jest.mock("src/lib/record/openRecord", () => ({
   openRecord: jest.fn(() => Promise.resolve()),
 }));
 jest.mock("src/ui/modals/createNoteModal", () => ({
+  ...jest.requireActual("src/ui/modals/createNoteModal"),
   CreateNoteModal: jest.fn().mockImplementation(() => ({ open: jest.fn() })),
 }));
 jest.mock("src/ui/views/helpers", () => ({
@@ -41,6 +42,12 @@ type Mounted = { $destroy(): void; $set(props: Record<string, unknown>): void };
 type ComponentClass = new (options: { target: HTMLElement; props: Record<string, unknown> }) => Mounted;
 
 const { app } = require("src/lib/stores/obsidian") as { app: { set(value: unknown): void } };
+const { TFile } = require("obsidian");
+const { CreateNoteModal } = require("src/ui/modals/createNoteModal") as { CreateNoteModal: jest.Mock };
+const { i18n } = require("src/lib/stores/i18n");
+const { get } = require("svelte/store");
+const translationState = get(i18n) as { t: (key: string, options?: Record<string, unknown>) => string };
+const defaultTranslate = translationState.t;
 const GalleryView = require("../GalleryView.svelte").default as ComponentClass;
 
 // ── a small vault ────────────────────────────────────────────────
@@ -72,7 +79,7 @@ function makeApp(embeds: Record<string, { link: string }[]> = {}, contents: Reco
     },
     vault: {
       getResourcePath: (file: FakeFile) => `app://${file.path}`,
-      getAbstractFileByPath: (path: string) => (path in contents ? { path, extension: "md" } : null),
+      getAbstractFileByPath: (path: string) => (path in contents ? new TFile(path) : null),
       cachedRead: (file: FakeFile) => Promise.resolve(contents[file.path] ?? ""),
     },
   };
@@ -268,30 +275,183 @@ function mount(config: Record<string, unknown> = {}, props: Record<string, unkno
   const target = document.createElement("div");
   document.body.appendChild(target);
   const onConfigChange = jest.fn();
+  const api = (props["api"] as { updateRecord: jest.Mock; addRecord: jest.Mock } | undefined) ?? {
+    updateRecord: jest.fn(),
+    addRecord: jest.fn(),
+  };
   const component = new GalleryView({
     target,
     props: {
       project: { autosave: true },
       frame: { fields: [status, owner, coverField, scores], records: BASE },
       config: { coverField: "cover", includeFields: ["status", "owner"], ...config },
-      api: { updateRecord: jest.fn(), addRecord: jest.fn() },
+      api,
       getRecordColor: () => null,
       onConfigChange,
       ...props,
     },
   });
   const cards = () => Array.from(target.querySelectorAll<HTMLElement>("article.projects--gallery--card"));
-  return { target, component, cards, onConfigChange };
+  return { target, component, cards, onConfigChange, api };
 }
+
+const NOTE_PROJECT = {
+  id: "project",
+  name: "Project",
+  autosave: true,
+  defaultName: "Untitled",
+  newNotesFolder: "notes",
+  templates: ["templates/First.md", "templates/Second.md"],
+  dataSource: { kind: "folder", config: { path: "notes", recursive: false } },
+};
 
 const click = () => new MouseEvent("click", { bubbles: true, cancelable: true });
 
 beforeEach(() => {
   app.set(makeApp());
+  CreateNoteModal.mockClear();
 });
 
 afterEach(() => {
+  translationState.t = defaultTranslate;
   document.body.innerHTML = "";
+});
+
+describe("i3-gallery — inline note draft", () => {
+  const addButton = (target: HTMLElement) =>
+    target.querySelector<HTMLElement>('div[role="button"][aria-label]');
+
+  const fillName = async (target: HTMLElement, value: string) => {
+    const input = target.querySelector<HTMLInputElement>("[data-gallery-note-name]") as HTMLInputElement;
+    input.value = value;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    await tick();
+    return input;
+  };
+
+  it("creates in the gallery with the selected template and filter values, without opening a modal", async () => {
+    const api = { updateRecord: jest.fn(), addRecord: jest.fn().mockResolvedValue(undefined) };
+    const m = mount({}, {
+      project: NOTE_PROJECT,
+      api,
+      filterConditions: [{ field: "status", operator: "is", value: "Todo" }],
+    });
+
+    addButton(m.target)?.dispatchEvent(click());
+    await tick();
+    expect(m.target.querySelector("[data-gallery-note-draft]")).not.toBeNull();
+    expect(m.target.querySelector("[data-gallery-note-name]")).toHaveValue("Untitled");
+    expect(CreateNoteModal).not.toHaveBeenCalled();
+
+    const template = m.target.querySelector<HTMLSelectElement>("[data-gallery-note-template]") as HTMLSelectElement;
+    template.value = "templates/Second.md";
+    template.dispatchEvent(new Event("change", { bubbles: true }));
+    await tick();
+    await fillName(m.target, "Planned");
+    m.target.querySelector<HTMLButtonElement>("[data-gallery-note-save]")?.click();
+    await Promise.resolve();
+    await tick();
+
+    expect(api.addRecord).toHaveBeenCalledWith(
+      { id: "notes/Planned.md", values: { status: "Todo" } },
+      [status, owner, coverField, scores],
+      "templates/Second.md"
+    );
+    expect(m.target.querySelector("[data-gallery-note-draft]")).toBeNull();
+    m.component.$destroy();
+  });
+
+  it("shows a name validation error, blocks the write, and supports explicit cancel", async () => {
+    const api = { updateRecord: jest.fn(), addRecord: jest.fn() };
+    const m = mount({}, { project: NOTE_PROJECT, api });
+    app.set(makeApp({}, { "notes/Used.md": "# Existing" }));
+
+    addButton(m.target)?.dispatchEvent(click());
+    await tick();
+    await fillName(m.target, "Used");
+    expect(m.target.querySelector('[data-gallery-note-save]')).toBeDisabled();
+    expect(m.target.querySelector("[data-gallery-note-name]")).toHaveAttribute("aria-invalid", "true");
+    expect(m.target.querySelector('[role="alert"]')).not.toBeNull();
+    m.target.querySelector<HTMLButtonElement>("[data-gallery-note-save]")?.click();
+    expect(api.addRecord).not.toHaveBeenCalled();
+
+    m.target.querySelector<HTMLButtonElement>("[data-gallery-note-cancel]")?.click();
+    await tick();
+    expect(m.target.querySelector("[data-gallery-note-draft]")).toBeNull();
+    m.component.$destroy();
+  });
+
+  it("Escape cancels the draft without writing", async () => {
+    const api = { updateRecord: jest.fn(), addRecord: jest.fn() };
+    const m = mount({}, { project: NOTE_PROJECT, api });
+    addButton(m.target)?.dispatchEvent(click());
+    await tick();
+
+    const input = await fillName(m.target, "Temporary");
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    await tick();
+
+    expect(m.target.querySelector("[data-gallery-note-draft]")).toBeNull();
+    expect(api.addRecord).not.toHaveBeenCalled();
+    m.component.$destroy();
+  });
+
+  it("keeps a failed write visible for retry and closes only after success", async () => {
+    translationState.t = (key, options) =>
+      key === "modals.note.create.save-error"
+        ? `${key}: ${String(options?.["message"] ?? "")}`
+        : defaultTranslate(key, options);
+    const api = {
+      updateRecord: jest.fn(),
+      addRecord: jest.fn().mockRejectedValueOnce(new Error("vault refused")).mockResolvedValue(undefined),
+    };
+    const m = mount({}, { project: NOTE_PROJECT, api });
+    addButton(m.target)?.dispatchEvent(click());
+    await tick();
+    const input = await fillName(m.target, "Retry");
+    const pressEnter = () => input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+
+    pressEnter();
+    await Promise.resolve();
+    await tick();
+    expect(m.target.querySelector("[data-gallery-note-draft]")).not.toBeNull();
+    expect(m.target.querySelector('[role="alert"]')?.textContent).toContain("vault refused");
+    expect(input).toHaveValue("Retry");
+
+    pressEnter();
+    await Promise.resolve();
+    await tick();
+    expect(api.addRecord).toHaveBeenCalledTimes(2);
+    expect(m.target.querySelector("[data-gallery-note-draft]")).toBeNull();
+    m.component.$destroy();
+  });
+
+  it("keeps creation available outside the grid when every group is folded", async () => {
+    const m = mount({ groupByField: "status", collapsedGroups: ["Doing", "Done"] }, { project: NOTE_PROJECT });
+    addButton(m.target)?.dispatchEvent(click());
+    await tick();
+    expect(m.target.querySelector("[data-gallery-note-draft]")).not.toBeNull();
+    m.component.$destroy();
+  });
+
+  it("offers creation in an empty gallery but hides it for readonly data", async () => {
+    const empty = mount({}, {
+      project: NOTE_PROJECT,
+      frame: { fields: [status], records: [] },
+    });
+    addButton(empty.target)?.dispatchEvent(click());
+    await tick();
+    expect(empty.target.querySelector("[data-gallery-note-draft]")).not.toBeNull();
+    empty.component.$destroy();
+
+    const readonly = mount({}, { readonly: true });
+    expect(addButton(readonly.target)).toBeNull();
+    readonly.component.$destroy();
+
+    const dataReadOnly = mount({}, { dataReadOnly: true });
+    expect(addButton(dataReadOnly.target)).toBeNull();
+    dataReadOnly.component.$destroy();
+  });
 });
 
 describe("i3-gallery — sections in the view", () => {
