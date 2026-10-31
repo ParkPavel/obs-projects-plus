@@ -48,17 +48,17 @@
 </script>
 
 <div
-  class="ppp-gallery-note-draft"
-  data-gallery-note-draft
+  class="ppp-note-draft"
+  data-note-draft
   role="group"
   aria-label={$i18n.t("modals.note.create.title")}
 >
-  <span class="ppp-gallery-note-draft-title">{$i18n.t("modals.note.create.title")}</span>
-  <div class="ppp-gallery-note-field">
+  <span class="ppp-note-draft-title">{$i18n.t("modals.note.create.title")}</span>
+  <div class="ppp-note-draft-field">
     <span>{$i18n.t("modals.note.create.name.name")}</span>
     <TextField
       bind:this={field}
-      data-gallery-note-name
+      data-note-name
       value={name}
       ariaLabel={$i18n.t("modals.note.create.name.name")}
       validate={validName}
@@ -75,10 +75,10 @@
     />
   </div>
   {#if project.templates.length}
-    <div class="ppp-gallery-note-field">
+    <div class="ppp-note-draft-field">
       <span>{$i18n.t("modals.note.create.templatePath.name")}</span>
       <select
-        data-gallery-note-template
+        data-note-template
         aria-label={$i18n.t("modals.note.create.templatePath.name")}
         bind:value={templatePath}
         disabled={saving}
@@ -92,12 +92,12 @@
     </div>
   {/if}
   {#if nameProblem || saveError}
-    <span class="ppp-gallery-note-draft-error" role="alert">{saveError || nameProblem}</span>
+    <span class="ppp-note-draft-error" role="alert">{saveError || nameProblem}</span>
   {/if}
-  <div class="ppp-gallery-note-draft-actions">
+  <div class="ppp-note-draft-actions">
     <button
       type="button"
-      data-gallery-note-cancel
+      data-note-cancel
       disabled={saving}
       on:pointerdown|preventDefault
       on:mousedown|preventDefault
@@ -107,7 +107,7 @@
     </button>
     <button
       type="button"
-      data-gallery-note-save
+      data-note-save
       disabled={saving || !!nameProblem}
       on:pointerdown|preventDefault
       on:mousedown|preventDefault
@@ -119,7 +119,7 @@
 </div>
 
 <style>
-  .ppp-gallery-note-draft {
+  .ppp-note-draft {
     display: grid;
     gap: 0.5rem;
     min-width: 0;
@@ -132,11 +132,11 @@
     background: var(--background-secondary);
   }
 
-  .ppp-gallery-note-draft-title {
+  .ppp-note-draft-title {
     font-weight: var(--font-semibold);
   }
 
-  .ppp-gallery-note-field {
+  .ppp-note-draft-field {
     display: grid;
     gap: 0.25rem;
     min-width: 0;
@@ -144,26 +144,26 @@
     font-size: var(--font-ui-small);
   }
 
-  .ppp-gallery-note-field :global(input),
-  .ppp-gallery-note-field select {
+  .ppp-note-draft-field :global(input),
+  .ppp-note-draft-field select {
     box-sizing: border-box;
     width: 100%;
     min-width: 0;
     min-height: var(--ppp-touch-target-min, 2rem);
   }
 
-  .ppp-gallery-note-draft-error {
+  .ppp-note-draft-error {
     color: var(--text-error);
     font-size: var(--font-ui-small);
   }
 
-  .ppp-gallery-note-draft-actions {
+  .ppp-note-draft-actions {
     display: flex;
     justify-content: flex-end;
     gap: 0.5rem;
   }
 
-  .ppp-gallery-note-draft-actions button {
+  .ppp-note-draft-actions button {
     min-height: var(--ppp-touch-target-min, 2rem);
   }
 </style>

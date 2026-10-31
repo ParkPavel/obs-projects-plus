@@ -10,7 +10,7 @@
   import { Notice } from "obsidian";
   import type { ViewApi } from "src/lib/viewApi";
   import CenterBox from "src/ui/modals/components/CenterBox.svelte";
-  import GalleryNoteDraft from "./GalleryNoteDraft.svelte";
+  import NoteDraft from "src/ui/components/NoteDraft.svelte";
 
   import {
     CARD_FRAME_OVERRIDE_CAP,
@@ -285,7 +285,7 @@
           {#if groupIndex === lastOpen && hiddenCount === 0}
           {#if canCreate}
             {#if addingRecord}
-              <GalleryNoteDraft {project} onSave={saveNewRecord} onCancel={cancelAddRecord} />
+              <NoteDraft {project} onSave={saveNewRecord} onCancel={cancelAddRecord} />
             {:else}
               <IconButton
                 icon="plus"
@@ -310,7 +310,7 @@
     {#if canCreate && addOutsideGrid}
       {#if addingRecord}
         <div class="ppp-gallery-add">
-          <GalleryNoteDraft {project} onSave={saveNewRecord} onCancel={cancelAddRecord} />
+          <NoteDraft {project} onSave={saveNewRecord} onCancel={cancelAddRecord} />
         </div>
       {:else}
         <div class="ppp-gallery-add">
@@ -333,7 +333,7 @@
         <span class="ppp-gallery-empty-hint">{$i18n.t("views.gallery.empty-hint", { defaultValue: "Create a note to get started" })}</span>
         {#if canCreate}
           {#if addingRecord}
-            <GalleryNoteDraft {project} onSave={saveNewRecord} onCancel={cancelAddRecord} />
+            <NoteDraft {project} onSave={saveNewRecord} onCancel={cancelAddRecord} />
           {:else}
             <IconButton
               icon="plus"
@@ -421,8 +421,8 @@
     padding: 0.75em;
   }
 
-  .ppp-gallery-add :global(.ppp-gallery-note-draft),
-  .ppp-gallery-empty :global(.ppp-gallery-note-draft) {
+  .ppp-gallery-add :global(.ppp-note-draft),
+  .ppp-gallery-empty :global(.ppp-note-draft) {
     max-width: 28rem;
   }
 

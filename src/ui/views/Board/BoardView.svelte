@@ -14,7 +14,6 @@
   import { Notice } from "obsidian";
   import type { ViewApi } from "src/lib/viewApi";
   import type { ProjectDefinition } from "src/settings/settings";
-  import { CreateNoteModal } from "src/ui/modals/createNoteModal";
   import {
     getRecordColorContext,
     sortRecordsContext,
@@ -251,29 +250,28 @@
 
   const handleRecordAdd =
     (field: DataField | undefined): OnRecordAdd =>
-    (column: string) => {
-      new CreateNoteModal($app, project, (name, templatePath) => {
-        const filterValues = getFilterValuesFromConditions(filterConditions, field?.name);
-        return api.addRecord(
-          createDataRecord(
-            name,
-            project,
-            {
-              ...filterValues,
-              ...(field
-                ? {
-                    [field.name]:
-                      column !== $i18n.t("views.board.no-status")
-                        ? column
-                        : undefined,
-                  }
-                : {}),
-            }
-          ),
-          fields,
-          templatePath
-        );
-      }).open();
+    (column, name, templatePath, noteProject) => {
+      if (readonly || dataReadOnly) return;
+      const filterValues = getFilterValuesFromConditions(filterConditions, field?.name);
+      return api.addRecord(
+        createDataRecord(
+          name,
+          noteProject,
+          {
+            ...filterValues,
+            ...(field
+              ? {
+                  [field.name]:
+                    column !== $i18n.t("views.board.no-status")
+                      ? column
+                      : undefined,
+                }
+              : {})
+          }
+        ),
+        fields,
+        templatePath
+      );
     };
 
   const handleSortColumns =
@@ -510,6 +508,7 @@
   let:coverField
 >
   <Board
+    {project}
     columns={getColumns(
       records,
       config?.columns ?? {},

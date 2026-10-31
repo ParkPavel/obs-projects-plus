@@ -45,8 +45,10 @@
   } from "./types";
   import type { BoardThumbnailLayout } from "../../types";
   import type { CardFrame, NormalizedCardFrames } from "src/ui/components/SharedCard/cardFrames";
+  import type { ProjectDefinition } from "src/settings/settings";
 
   export let columns: Column[];
+  export let project: ProjectDefinition;
 
   export let readonly: boolean;
   /** #C4 — see BoardView.svelte for what this covers and why it is separate from `readonly`. */
@@ -482,7 +484,9 @@
               {onRecordEdit}
               {checkField}
               {onRecordCheck}
-              onRecordAdd={() => onRecordAdd(column.id)}
+              {project}
+              onRecordAdd={(name, templatePath, noteProject) =>
+                onRecordAdd(column.id, name, templatePath, noteProject)}
               onDrop={(record, records, trigger) => {
                 if (trigger === "droppedIntoAnother") return;
                 onRecordUpdate(record, { ...column, records }, "addToColumn");
@@ -582,7 +586,9 @@
               {onRecordEdit}
               {checkField}
               {onRecordCheck}
-              onRecordAdd={() => onRecordAdd(column.id)}
+              {project}
+              onRecordAdd={(name, templatePath, noteProject) =>
+                onRecordAdd(column.id, name, templatePath, noteProject)}
               onDrop={(record, records, trigger) => {
                 switch (trigger) {
                   case "droppedIntoZone":

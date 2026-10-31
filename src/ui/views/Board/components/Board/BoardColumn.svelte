@@ -12,6 +12,8 @@
   } from "./types";
   import type { BoardThumbnailLayout } from "../../types";
   import type { CardFrame, NormalizedCardFrames } from "src/ui/components/SharedCard/cardFrames";
+  import NoteDraft from "src/ui/components/NoteDraft.svelte";
+  import type { ProjectDefinition } from "src/settings/settings";
   import { openContextMenu } from "src/lib/contextMenu";
   import { toRem } from "src/ui/utils/cssLength";
 
@@ -21,6 +23,7 @@
 
   export let name: string;
   export let records: DataRecord[];
+  export let project: ProjectDefinition;
   export let readonly: boolean;
   /** #C4 — see BoardView.svelte for what this covers and why it is separate from `readonly`. */
   export let dataReadOnly: boolean = false;
@@ -48,7 +51,11 @@
   export let onRecordClick: OnRecordClick;
   export let onRecordEdit: OnRecordClick | undefined = undefined;
   export let onRecordCheck: OnRecordCheck;
-  export let onRecordAdd: () => void;
+  export let onRecordAdd: (
+    name: string,
+    templatePath: string,
+    project: ProjectDefinition
+  ) => void | Promise<unknown>;
   export let onColumnPin: (name: string) => void;
   export let onColumnPersist: (name: string) => void;
   export let onColumnCollapse: OnColumnCollapse;
@@ -61,6 +68,16 @@
   export let canMoveRight: boolean = false;
 
   let editing: boolean = false;
+  let addingRecord = false;
+
+  async function saveNewRecord(
+    noteName: string,
+    templatePath: string,
+    noteProject: ProjectDefinition
+  ) {
+    await onRecordAdd(noteName, templatePath, noteProject);
+    addingRecord = false;
+  }
 
   export let boardEditing: boolean = false;
   export let onEdit: (editing: boolean) => void;
@@ -192,13 +209,26 @@
         {/if}
       </span>
     </div>
-    {#if !readonly}
-      <span>
-        <Button variant="plain" on:click={() => onRecordAdd()}>
-          <Icon name="plus" />
-          {$i18n.t("views.board.note.add")}
-        </Button>
-      </span>
+    {#if !readonly && !dataReadOnly}
+      {#if addingRecord}
+        <div class="ppp-board-note-draft">
+          <NoteDraft
+            {project}
+            onSave={saveNewRecord}
+            onCancel={() => (addingRecord = false)}
+          />
+        </div>
+      {:else}
+        <span data-board-add-note>
+          <Button
+            variant="plain"
+            on:click={() => (addingRecord = true)}
+          >
+            <Icon name="plus" />
+            {$i18n.t("views.board.note.add")}
+          </Button>
+        </span>
+      {/if}
     {/if}
   {/if}
 </section>

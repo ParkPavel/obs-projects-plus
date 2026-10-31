@@ -322,7 +322,7 @@ describe("i3-gallery — inline note draft", () => {
     target.querySelector<HTMLElement>('div[role="button"][aria-label]');
 
   const fillName = async (target: HTMLElement, value: string) => {
-    const input = target.querySelector<HTMLInputElement>("[data-gallery-note-name]") as HTMLInputElement;
+    const input = target.querySelector<HTMLInputElement>("[data-note-name]") as HTMLInputElement;
     input.value = value;
     input.dispatchEvent(new Event("input", { bubbles: true }));
     await tick();
@@ -339,16 +339,16 @@ describe("i3-gallery — inline note draft", () => {
 
     addButton(m.target)?.dispatchEvent(click());
     await tick();
-    expect(m.target.querySelector("[data-gallery-note-draft]")).not.toBeNull();
-    expect(m.target.querySelector("[data-gallery-note-name]")).toHaveValue("Untitled");
+    expect(m.target.querySelector("[data-note-draft]")).not.toBeNull();
+    expect(m.target.querySelector("[data-note-name]")).toHaveValue("Untitled");
     expect(CreateNoteModal).not.toHaveBeenCalled();
 
-    const template = m.target.querySelector<HTMLSelectElement>("[data-gallery-note-template]") as HTMLSelectElement;
+    const template = m.target.querySelector<HTMLSelectElement>("[data-note-template]") as HTMLSelectElement;
     template.value = "templates/Second.md";
     template.dispatchEvent(new Event("change", { bubbles: true }));
     await tick();
     await fillName(m.target, "Planned");
-    m.target.querySelector<HTMLButtonElement>("[data-gallery-note-save]")?.click();
+    m.target.querySelector<HTMLButtonElement>("[data-note-save]")?.click();
     await Promise.resolve();
     await tick();
 
@@ -357,7 +357,7 @@ describe("i3-gallery — inline note draft", () => {
       [status, owner, coverField, scores],
       "templates/Second.md"
     );
-    expect(m.target.querySelector("[data-gallery-note-draft]")).toBeNull();
+    expect(m.target.querySelector("[data-note-draft]")).toBeNull();
     m.component.$destroy();
   });
 
@@ -369,15 +369,15 @@ describe("i3-gallery — inline note draft", () => {
     addButton(m.target)?.dispatchEvent(click());
     await tick();
     await fillName(m.target, "Used");
-    expect(m.target.querySelector('[data-gallery-note-save]')).toBeDisabled();
-    expect(m.target.querySelector("[data-gallery-note-name]")).toHaveAttribute("aria-invalid", "true");
+    expect(m.target.querySelector('[data-note-save]')).toBeDisabled();
+    expect(m.target.querySelector("[data-note-name]")).toHaveAttribute("aria-invalid", "true");
     expect(m.target.querySelector('[role="alert"]')).not.toBeNull();
-    m.target.querySelector<HTMLButtonElement>("[data-gallery-note-save]")?.click();
+    m.target.querySelector<HTMLButtonElement>("[data-note-save]")?.click();
     expect(api.addRecord).not.toHaveBeenCalled();
 
-    m.target.querySelector<HTMLButtonElement>("[data-gallery-note-cancel]")?.click();
+    m.target.querySelector<HTMLButtonElement>("[data-note-cancel]")?.click();
     await tick();
-    expect(m.target.querySelector("[data-gallery-note-draft]")).toBeNull();
+    expect(m.target.querySelector("[data-note-draft]")).toBeNull();
     m.component.$destroy();
   });
 
@@ -391,7 +391,7 @@ describe("i3-gallery — inline note draft", () => {
     input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
     await tick();
 
-    expect(m.target.querySelector("[data-gallery-note-draft]")).toBeNull();
+    expect(m.target.querySelector("[data-note-draft]")).toBeNull();
     expect(api.addRecord).not.toHaveBeenCalled();
     m.component.$destroy();
   });
@@ -414,7 +414,7 @@ describe("i3-gallery — inline note draft", () => {
     pressEnter();
     await Promise.resolve();
     await tick();
-    expect(m.target.querySelector("[data-gallery-note-draft]")).not.toBeNull();
+    expect(m.target.querySelector("[data-note-draft]")).not.toBeNull();
     expect(m.target.querySelector('[role="alert"]')?.textContent).toContain("vault refused");
     expect(input).toHaveValue("Retry");
 
@@ -422,7 +422,7 @@ describe("i3-gallery — inline note draft", () => {
     await Promise.resolve();
     await tick();
     expect(api.addRecord).toHaveBeenCalledTimes(2);
-    expect(m.target.querySelector("[data-gallery-note-draft]")).toBeNull();
+    expect(m.target.querySelector("[data-note-draft]")).toBeNull();
     m.component.$destroy();
   });
 
@@ -430,7 +430,7 @@ describe("i3-gallery — inline note draft", () => {
     const m = mount({ groupByField: "status", collapsedGroups: ["Doing", "Done"] }, { project: NOTE_PROJECT });
     addButton(m.target)?.dispatchEvent(click());
     await tick();
-    expect(m.target.querySelector("[data-gallery-note-draft]")).not.toBeNull();
+    expect(m.target.querySelector("[data-note-draft]")).not.toBeNull();
     m.component.$destroy();
   });
 
@@ -441,7 +441,7 @@ describe("i3-gallery — inline note draft", () => {
     });
     addButton(empty.target)?.dispatchEvent(click());
     await tick();
-    expect(empty.target.querySelector("[data-gallery-note-draft]")).not.toBeNull();
+    expect(empty.target.querySelector("[data-note-draft]")).not.toBeNull();
     empty.component.$destroy();
 
     const readonly = mount({}, { readonly: true });
