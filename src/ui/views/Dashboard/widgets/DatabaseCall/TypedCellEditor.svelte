@@ -2,13 +2,11 @@
   import { createEventDispatcher, tick } from "svelte";
   import { DataFieldType } from "src/lib/dataframe/dataframe";
   import type { DataField, DataValue, Optional } from "src/lib/dataframe/dataframe";
-  import { dateInputValue } from "src/lib/helpers/dateShape";
-  import { toNumber } from "src/lib/engine/numeric";
   import { isImeKey, recordImeCompositionEnd } from "src/ui/components/fields/draftController";
   import { keepInView } from "src/ui/components/fields/keepInView";
   import { i18n } from "src/lib/stores/i18n";
-  import { editedCellValue } from "./editedCellValue";
-  import { dayFromTyped, typedFromDay } from "src/lib/helpers/typedDate";
+  import { cellDraftText, parseCellDraft } from "./typedCellDraft";
+  import { onCellRetry } from "./tableEditing";
 
   type DateFormatConfig = import("src/settings/v3/settings").DateFormatConfig;
   export let field: DataField;
@@ -19,17 +17,12 @@
 
   const dispatch = createEventDispatcher<{ commit: Optional<DataValue>; cancel: void; invalid: boolean }>();
   // Mounted only during editing: seed once, never reset the draft on a flush.
-  let draft = field.type === DataFieldType.Date ? typedFromDay(dateInputValue(value, dateFormat?.writeFormat)) : value == null ? "" : String(value);
+  let draft = cellDraftText(field, value, dateFormat);
   let inputEl: HTMLInputElement | null = null;
   let committed = false;
   let composing = false;
   let invalid = false;
-  let lastRetry = 0;
-  function retry(version: number): void {
-    if (version === lastRetry) return;
-    lastRetry = version;
-    committed = false;
-  }
+  const retry = onCellRetry(() => { committed = false; });
   $: retry(retryVersion);
   void tick().then(() => inputEl?.focus());
 
@@ -44,13 +37,11 @@
 
   function commitDraft(): void {
     if (committed || composing || saving) return;
-    // Empty deliberately clears; a date the parser refuses keeps the stored value.
-    const day = field.type === DataFieldType.Date ? dayFromTyped(draft) : draft;
-    setInvalid((field.type === DataFieldType.Number && draft.trim() !== "" && toNumber(draft) === null) ||
-      (field.type === DataFieldType.Date && day === null));
-    if (invalid || day === null) return;
+    const parsed = parseCellDraft(field, value, draft, dateFormat);
+    setInvalid(!parsed.ok);
+    if (!parsed.ok) return;
     committed = true;
-    dispatch("commit", editedCellValue(field, value, day, dateFormat));
+    dispatch("commit", parsed.value);
   }
 
   function handleKeydown(e: KeyboardEvent): void {

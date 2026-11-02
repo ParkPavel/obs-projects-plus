@@ -34,8 +34,7 @@
   export let highlight: ParsedSearch | null = null;
 
   const dispatch = createEventDispatcher<{
-    // #189: the originating event travels with the record, or the modifier the
-    // peek now lives on cannot be read by the one place allowed to read it.
+    // The originating event carries the modifier used to open the note.
     openRecord: { record: DataRecord; event: MouseEvent };
     rowMenu: { record: DataRecord; event: MouseEvent };
     startEdit: { recordId: string; field: string };
@@ -73,10 +72,7 @@
           aria-label={$i18n.t("views.dashboard.table-v2.open", { defaultValue: "Open note" })}
           title={$i18n.t("views.dashboard.table-v2.open", { defaultValue: "Open note" })}
         ><Icon name="arrow-up-right" size="sm" /></button>
-        <!-- #189 follow-up: shown on a READ-ONLY row too. The menu is where
-             "Show fields" is discoverable, and a borrowed source is exactly
-             where reading fields matters most. `buildRowMenuEntries` drops the
-             writing entries; hiding the whole button hid the reading ones. -->
+        <!-- Read-only rows still expose "Show fields"; the menu omits writes. -->
         <button
           class="ppp-t2-rowbtn clickable-icon"
           on:click|stopPropagation={(e) => dispatch("rowMenu", { record, event: e })}

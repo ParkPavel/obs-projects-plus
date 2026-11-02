@@ -1,13 +1,10 @@
 <script lang="ts">
   /**
    * RelationPickerPopover — #081 (W1, NOTION_GRADE_PIPELINE). The Relation
-   * cell editor: search + (multi)select over the records of the target
-   * project (`RelationFieldConfig.targetProjectId` via
-   * `api.resolveExternalFrame`), falling back to wikilink targets already
-   * present in this column. Single-select commits on click; multi-select
-   * accumulates and commits on Done. Esc cancels. stab-forms: the search is the
-   * shared SearchField; ArrowDown/Up move the active option and Enter takes it
-   * (the top match until the user moves); IME composition suppresses the keys.
+   * Searches the target project, falling back to links in the current column.
+   * A single pick commits; multiple picks commit on Done. Escape cancels.
+   * SearchField owns the query; arrow keys and Enter navigate candidates.
+   * IME composition suppresses navigation and commit.
    */
   import { createEventDispatcher, onMount } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
@@ -54,7 +51,6 @@
 
   $: listId = optionDomId("ppp-rel-list", field.name);
   $: filtered = filterOptions(candidates.map((label) => ({ label })), query).map((o) => o.label);
-  // The option Enter takes: the top match until the user moves; clamped when the list shrinks.
   $: activeIdx = clampActive(active, filtered.length);
 
   function setQuery(next: string) {

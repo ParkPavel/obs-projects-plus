@@ -80,15 +80,16 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   // F2 (#074) — TABLE_V2_CANON §5 budgets
   // 3.7.1 feedback: search/windowing and typed editing gained guards. Their
   // mechanisms are extracted, not paid for by raising component limits.
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/DataTableContent.svelte", maxLines: 277 },
+  // November input fixes: persistence and typed drafts live outside renderers.
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/DataTableContent.svelte", maxLines: 274 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TableControlBar.svelte", maxLines: 200 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TableHeader.svelte", maxLines: 200 },
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/TableRow.svelte", maxLines: 200 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/TableRow.svelte", maxLines: 198 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TableFooter.svelte", maxLines: 120 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/tableCanon.ts", maxLines: 248 },
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/EditableCell.svelte", maxLines: 221 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/EditableCell.svelte", maxLines: 219 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TypedCellEditor.svelte", maxLines: 91 },
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/ListCellEditor.svelte", maxLines: 96 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/ListCellEditor.svelte", maxLines: 92 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/tableSearch.ts", maxLines: 68 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/tableSearchMatch.ts", maxLines: 13 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/tableInteractions.ts", maxLines: 51 },

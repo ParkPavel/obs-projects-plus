@@ -55,20 +55,12 @@
   let reasonOpen = false; const reasonClose = timedDismiss(() => { reasonOpen = false; }, 2500, () => cellEl?.ownerDocument ?? null); onDestroy(() => reasonClose(false)); // D16
   $: reasonClose(reasonOpen);
   $: isChoice = field.type === DataFieldType.Select || field.type === DataFieldType.Status;
-  let draft = "", committed = false, wasEditing = false, invalid = false;
-  let lastRetry = 0;
-  function retry(version: number): void {
-    if (version === lastRetry) return;
-    lastRetry = version;
-    committed = false;
-  }
-  $: retry(retryVersion);
+  let draft = "", wasEditing = false, invalid = false;
 
   // Seeded on the turn INTO editing, inside a function: `draft` is bound, and a `$:` that assigns it re-seeds per keystroke (R0.34).
   function onEditing(on: boolean) {
     if (on && !wasEditing) {
       draft = value == null ? "" : String(value);
-      committed = false;
       invalid = false;
     }
     wasEditing = on;
@@ -88,8 +80,7 @@
   }
 
   function commitDraft(raw: string) {
-    if (committed || saving) return;
-    committed = true;
+    if (saving) return;
     dispatch("commit", editedCellValue(field, value, raw, dateFormat));
   }
 
@@ -110,15 +101,14 @@
     <span class="ppp-t2-text">{cell.kind === "text" ? cell.text : ""}</span>
     <RelationPickerPopover {field} {value} {api} {frame} triggerEl={cellEl}
       {saving}
-      on:commit={(e) => { committed = true; dispatch("commit", e.detail); }}
-      on:cancel={() => { committed = true; dispatch("cancel"); }}
-      on:setupRelation={() => { committed = true; dispatch("setupRelation", field); }} />
+      on:commit on:cancel
+      on:setupRelation={() => dispatch("setupRelation", field)} />
   {:else if editing && (field.type === DataFieldType.List || (field.type === DataFieldType.String && (field.repeated || Array.isArray(value))))}
     <ListCellEditor {field} {value} {options} {saving} {retryVersion} on:commit on:cancel />
   {:else if editing && (isChoice || (field.type === DataFieldType.String && options.length > 0))}
     <CellChoiceDropdown bind:draft {options} {saving} {retryVersion}
       on:commit={(e) => commitDraft(e.detail)}
-      on:cancel={() => { committed = true; dispatch("cancel"); }} />
+      on:cancel />
   {:else if editing}
     <TypedCellEditor {field} {value} {dateFormat} {saving} {retryVersion}
       on:commit on:cancel on:invalid={(e) => { invalid = e.detail; }} />

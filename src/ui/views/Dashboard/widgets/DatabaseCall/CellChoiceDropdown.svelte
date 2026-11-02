@@ -11,18 +11,14 @@
    */
   import { createEventDispatcher } from "svelte";
   import ComboField from "src/ui/components/fields/ComboField.svelte";
+  import { onCellRetry } from "./tableEditing";
 
   export let draft: string;
   export let options: string[] = [];
   export let saving = false;
   export let retryVersion = 0;
   let input: ComboField | undefined;
-  let lastRetry = 0;
-  function retry(version: number): void {
-    if (version === lastRetry) return;
-    lastRetry = version;
-    input?.retryCommit();
-  }
+  const retry = onCellRetry(() => input?.retryCommit());
   $: retry(retryVersion);
 
   const dispatch = createEventDispatcher<{
