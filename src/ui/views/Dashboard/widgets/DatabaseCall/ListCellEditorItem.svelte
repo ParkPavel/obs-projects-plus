@@ -10,6 +10,7 @@
   export let index: number;
   export let fieldName: string;
   export let options: ComboOption[] = [];
+  export let saving = false;
 
   const dispatch = createEventDispatcher<{
     change: Optional<DataValue>;
@@ -25,6 +26,7 @@
         value={item.value}
         {options}
         allowCustom
+        readOnly={saving}
         ariaLabel={`${fieldName}: ${index + 1}`}
         inputClass="ppp-t2-list-input"
         on:draftChange={(event) => dispatch("change", event.detail)}
@@ -34,6 +36,7 @@
     {:else}
       <TextField
         value={item.value}
+        readOnly={saving}
         ariaLabel={`${fieldName}: ${index + 1}`}
         on:input={(event) => dispatch("change", event.detail)}
       />
@@ -41,7 +44,7 @@
   {:else}
     <span>{item.value == null ? "∅" : String(item.value)}</span>
   {/if}
-  <button type="button" on:click={() => dispatch("remove")}>
+  <button type="button" disabled={saving} on:click={() => dispatch("remove")}>
     {$i18n.t("views.dashboard.table-v2.list-remove", { defaultValue: `Remove item ${index + 1}`, index: index + 1 })}
   </button>
 </div>

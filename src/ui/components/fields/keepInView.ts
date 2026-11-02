@@ -24,8 +24,13 @@ import { onKeyboardChange, visibleViewport } from "src/ui/utils/visibleViewport"
 import { offerKeyboardDismiss } from "./keyboardDismiss";
 
 export type ViewportBounds = ReturnType<typeof visibleViewport>;
+export interface KeepInViewOptions {
+  readonly boundsOf?: (view: Window) => ViewportBounds;
+  readonly confirm?: () => void;
+}
 
-export function keepInView(node: HTMLElement, boundsOf: (view: Window) => ViewportBounds = visibleViewport) {
+export function keepInView(node: HTMLElement, options: KeepInViewOptions | ((view: Window) => ViewportBounds) = {}) {
+  const boundsOf = typeof options === "function" ? options : options.boundsOf ?? visibleViewport;
   const view = node.ownerDocument.defaultView ?? window;
   let listening = false;
   let frame = 0;
@@ -69,7 +74,11 @@ export function keepInView(node: HTMLElement, boundsOf: (view: Window) => Viewpo
     moved = false;
     // A tag test, not instanceof: the field may live in a popout window.
     if (node.tagName === "INPUT" || node.tagName === "TEXTAREA") {
-      dismiss = offerKeyboardDismiss(node as HTMLInputElement, { label: () => get(i18n).t("common.hide-keyboard") });
+      const confirm = typeof options === "function" ? undefined : options.confirm;
+      dismiss = offerKeyboardDismiss(node as HTMLInputElement, {
+        label: () => get(i18n).t("common.hide-keyboard"),
+        confirm: confirm ? { label: () => get(i18n).t("common.apply"), run: confirm } : undefined,
+      });
     }
     view.visualViewport?.addEventListener("resize", schedule);
     view.addEventListener("resize", schedule);

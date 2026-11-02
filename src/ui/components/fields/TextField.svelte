@@ -25,6 +25,7 @@
   export let error = false;
   /** Report a blur that changed nothing (a cell editor that must leave edit mode). */
   export let commitUnchanged = false;
+  export let readOnly = false;
 
   /** A consumer whose persistence failed can keep the draft and permit retry. */
   export function retryCommit(): void { ctl.arm(); }
@@ -75,6 +76,7 @@
   }
 
   function emit(reason: "enter" | "blur" | "tab"): void {
+    if (readOnly || disabled) return;
     const verdict = accepts(ctl.getState().draft);
     const result = reason === "blur" ? ctl.blur({ accept: verdict, unchanged: commitUnchanged }) : ctl.commit(reason, { accept: verdict, unchanged: commitUnchanged });
     pull();
@@ -86,6 +88,9 @@
   function onFocus(): void {
     ctl.focus(draft);
   }
+  function confirm(): void {
+    if (!readOnly && !disabled && !ctl.isComposing()) emit("enter");
+  }
   function onInput(e: Event): void {
     ctl.input((e.currentTarget as HTMLInputElement).value);
     pull();
@@ -93,7 +98,7 @@
     dispatch("input", draft);
   }
   function onKeydown(e: KeyboardEvent): void {
-    if (ctl.isComposing(e) || isImeKey(e)) return;
+    if (readOnly || disabled || ctl.isComposing(e) || isImeKey(e)) return;
     if (e.key === "Enter") {
       e.preventDefault();
       emit("enter");
@@ -111,18 +116,20 @@
 
 <input
   bind:this={inputEl}
-  use:keepInView
+  use:keepInView={{ confirm }}
   use:releaseOnOutsideTap
   {id}
   class="ppp-text-field {inputClass}"
   class:ppp-text-field--invalid={invalid || error}
   type="text"
   inputmode={inputMode}
+  enterkeyhint="done"
   autocapitalize="off"
   autocorrect="off"
   value={draft}
   {placeholder}
   {disabled}
+  readonly={readOnly}
   aria-label={ariaLabel}
   aria-invalid={invalid || error ? "true" : undefined}
   on:focus={onFocus}

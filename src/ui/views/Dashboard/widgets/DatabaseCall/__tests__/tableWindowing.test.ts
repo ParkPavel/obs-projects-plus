@@ -62,6 +62,32 @@ function setup() {
   return { ...view, body: target.querySelector<HTMLElement>(".ppp-t2-scroll") as HTMLElement, target };
 }
 
+it("keeps one original dirty editor mounted when the page scrolls far away and the source refreshes", async () => {
+  const { body, target, component, unmount } = setup();
+  const editable = { ...field, name: "note", identifier: false };
+  const editableFrame = { fields: [field, editable], records: frame.records.map(record => ({ ...record, values: { ...record.values, note: "old" } })) };
+  component.$set({ frame: editableFrame, fields: editableFrame.fields, readonly: false });
+  await tick(); await tick();
+  target.querySelector<HTMLElement>(".ppp-t2-cell--editable")!.click();
+  await tick(); await tick();
+  const input = target.querySelector<HTMLInputElement>("input.ppp-t2-choice-input")!;
+  input.value = "unsaved draft";
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  await tick();
+  input.setSelectionRange(3, 7);
+  const rowPx = ROW_REM * rootFontPx(document);
+  await scrollPage(body, ROWS * rowPx / 2, ROWS * rowPx);
+  component.$set({ frame: { ...editableFrame, records: [...editableFrame.records].reverse() } });
+  await tick(); await tick();
+  expect(input.isConnected).toBe(true);
+  expect(target.querySelector("input.ppp-t2-choice-input")).toBe(input);
+  expect(input).toHaveValue("unsaved draft");
+  expect([input.selectionStart, input.selectionEnd]).toEqual([3, 7]);
+  expect(rows(target).length).toBeLessThan(50);
+  expect(spacers(target).reduce((sum, height) => sum + height, 0) + rows(target).length * ROW_REM).toBe(ROWS * ROW_REM);
+  unmount();
+});
+
 /** The page scrolled by `pageTop` px: layout would put the body at -pageTop. */
 async function scrollPage(body: HTMLElement, pageTop: number, bodyHeightPx: number) {
   scroller.getBoundingClientRect = () => box(0, VIEW_PX);

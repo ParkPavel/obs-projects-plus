@@ -26,6 +26,7 @@
   export let api: ViewApi;
   export let frame: DataFrame;
   export let triggerEl: HTMLElement | null = null;
+  export let saving = false;
 
   const dispatch = createEventDispatcher<{
     commit: Optional<DataValue>;
@@ -62,11 +63,13 @@
   }
 
   function commitSelection(labels: string[]) {
+    if (saving) return;
     const links = labels.map((l) => `[[${l}]]`);
     dispatch("commit", multi ? links : links[0] ?? "");
   }
 
   function choose(label: string) {
+    if (saving) return;
     if (!multi) {
       commitSelection([label]);
       return;
@@ -90,11 +93,12 @@
   }
 
   function handlePopupClose(): void {
+    if (saving) return;
     dispatch("cancel");
   }
 </script>
 
-<FloatingPopup {triggerEl} bind:open={popupOpen} placement="bottom-start" role="dialog"
+<FloatingPopup {triggerEl} bind:open={popupOpen} dismissible={!saving} placement="bottom-start" role="dialog"
   ariaLabel={field.name} autoFocus={false} on:close={handlePopupClose}>
 <div class="ppp-rel-picker">
   <SearchField

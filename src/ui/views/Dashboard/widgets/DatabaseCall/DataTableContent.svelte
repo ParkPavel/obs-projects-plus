@@ -14,6 +14,8 @@
   import type { DataTableConfig, FieldPreset } from "../../types";
   import type { ProjectDefinition } from "src/settings/settings";
   import { createEventDispatcher, getContext, onDestroy } from "svelte";
+  import { Notice } from "obsidian";
+  import { noticeFor } from "src/lib/errors/errorText";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
   import { templateFoldersOf } from "src/lib/suggestions/valueSuggestions";
@@ -30,6 +32,7 @@
   import { emitCommand } from "src/lib/stores/commandBus";
   import { rootFontPx, toRem } from "src/ui/utils/cssLength";
   import { rowWindow, type TableViewport } from "./tableWindow";
+  import { editWindow } from "./tableEditWindow";
   import { createTableSearch } from "./tableSearch";
   import { parseSearchQuery } from "./tableSearchQuery";
   import TableScrollFrame from "./TableScrollFrame.svelte";
@@ -104,7 +107,10 @@
   $: search.update(sorted, searchQuery, bodyEl?.ownerDocument.defaultView ?? window, fieldNames);
   $: highlight = searching ? null : parseSearchQuery(searchQuery, fieldNames);
   // F2.5: grouping flattens into the render list (group headers + records).
-  $: renderRows = buildRenderRows(visibleRecords, config);
+  // A dirty editor owns its row until commit/cancel. Background sort/search
+  // and optimistic refresh must not replace the input carrying that draft.
+  let editingRows: ReturnType<typeof buildRenderRows> | null = null;
+  $: renderRows = editingRows ?? buildRenderRows(visibleRecords, config);
   $: rowHeightRem = config?.rowHeight === "compact" ? 1.75 : config?.rowHeight === "expanded" ? 3 : 2.25;
   $: optionsByField = optionPools(fields, frame.records, { templateFolders: templateFoldersOf($app) });
   $: frozen = !!config?.freezeUpTo && columns.some((c) => c.field.name === config?.freezeUpTo); // i3-table: pinned only on request
@@ -117,16 +123,40 @@
   // Visible part: measured against the scrolling ancestors (in a tile, the page), see tableWindow.
   $: rowPx = rowHeightRem * rootFontPx(bodyEl?.ownerDocument);
   $: ({ start, end } = rowWindow(renderRows.length, rowPx, viewport));
-  $: windowed = renderRows.slice(start, end);
+  $: windowed = editWindow(renderRows, start, end, editingCell?.recordId);
 
   // ── Editing (F2.2): one in-place editor per table ────────────
   let editingCell: { recordId: string; field: string } | null = null;
+  let savingCell = false;
+  let editRetry = 0;
+  function finishEditing(): void { editingCell = null; editingRows = null; }
+  function startEditing(cell: { recordId: string; field: string }): void {
+    if (savingCell || editingCell) return;
+    editingRows = renderRows;
+    editingCell = cell;
+  }
 
-  function handleCommitEdit(e: CustomEvent<{ record: DataRecord; field: string; value: Optional<DataValue> }>) {
+  async function handleCommitEdit(e: CustomEvent<{ record: DataRecord; field: string; value: Optional<DataValue> }>) {
+    if (savingCell) return;
     const { record, field, value } = e.detail;
-    editingCell = null;
-    if (record.values[field] === value) return;
-    api.updateRecord(updateRecordValues(record, { [field]: value }), fields);
+    const session = editingCell;
+    if (record.values[field] === value) { finishEditing(); return; }
+    savingCell = true;
+    try {
+      const written = await api.updateRecord(updateRecordValues(record, { [field]: value }), fields);
+      if (editingCell === session) {
+        if (written) finishEditing();
+        else editRetry += 1;
+      }
+    } catch (error) {
+      // ViewApi normally reports a failed write as false; custom providers
+      // can also reject. Neither path may consume the editor's retry.
+      if (editingCell === session) editRetry += 1;
+      new Notice(noticeFor("PPP-201", { path: record.id }));
+      console.error("[Projects+] table cell write failed", error);
+    } finally {
+      savingCell = false;
+    }
   }
 
   // ── Row operations (F2.3) ────────────────────────────────────
@@ -203,9 +233,10 @@
           {$i18n.t("views.dashboard.database-call.no-matches", { defaultValue: "No matches" })}
         </div>
       {/if}
-      {#if start > 0}<div style:height={toRem(start * rowPx)} aria-hidden="true" />{/if}
-      {#each windowed as row (row.kind === "record" ? row.record.id : `g:${row.key}`)}
-        {#if row.kind === "group"}
+      {#each windowed as row (row.kind === "record" ? row.record.id : row.kind === "spacer" ? row.key : `g:${row.key}`)}
+        {#if row.kind === "spacer"}
+          <div style:height={toRem(row.count * rowPx)} aria-hidden="true" />
+        {:else if row.kind === "group"}
           <TableGroupSection
             groupKey={row.key}
             count={row.count}
@@ -222,18 +253,19 @@
             dateFormat={(sourceProjectId ? $settingsStore.projects.find(p => p.id === sourceProjectId) : project)?.dateFormat}
             driving={widgetId ? isRowDriving(selection, widgetId, row.record) : false}
             editingField={editingCell?.recordId === row.record.id ? editingCell.field : null}
+            saving={savingCell}
+            retryVersion={editRetry}
             {optionsByField}
             {highlight}
             on:openRecord={handleOpenRecord}
             on:rowMenu={handleRowMenu}
-            on:startEdit={(e) => (editingCell = e.detail)}
+            on:startEdit={(e) => startEditing(e.detail)}
             on:commitEdit={handleCommitEdit}
-            on:cancelEdit={() => (editingCell = null)}
+            on:cancelEdit={() => { if (!savingCell) finishEditing(); }}
             on:setupRelation={(e) => handleSetupRelation(e.detail)}
           />
         {/if}
       {/each}
-      {#if end < renderRows.length}<div style:height={toRem((renderRows.length - end) * rowPx)} aria-hidden="true" />{/if}
       {#if !readonly && project}
         <TableNewRow openSignal={newRowSignal} on:create={(e) => { if (project) createNamedRecord(e.detail, project, fields, api); }} />
       {/if}

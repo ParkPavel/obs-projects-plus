@@ -14,6 +14,16 @@
 
   export let draft: string;
   export let options: string[] = [];
+  export let saving = false;
+  export let retryVersion = 0;
+  let input: ComboField | undefined;
+  let lastRetry = 0;
+  function retry(version: number): void {
+    if (version === lastRetry) return;
+    lastRetry = version;
+    input?.retryCommit();
+  }
+  $: retry(retryVersion);
 
   const dispatch = createEventDispatcher<{
     commit: string;
@@ -29,6 +39,8 @@
 
 <div class="ppp-t2-choice">
   <ComboField
+    bind:this={input}
+    readOnly={saving}
     value={initial}
     options={choices}
     allowCustom

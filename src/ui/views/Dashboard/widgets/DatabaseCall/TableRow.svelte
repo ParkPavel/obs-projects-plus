@@ -27,6 +27,8 @@
   export let driving = false;
   /** Field name currently edited in THIS record (single editor per table). */
   export let editingField: string | null = null;
+  export let saving = false;
+  export let retryVersion = 0;
   /** Unique value lists for Select/Status dropdowns, keyed by field name. */
   export let optionsByField: ReadonlyMap<string, string[]> = new Map();
   export let highlight: ParsedSearch | null = null;
@@ -91,6 +93,7 @@
         {frame}
         {dateFormat}
         editing={editingField === col.field.name}
+        {saving} {retryVersion}
         options={optionsByField.get(col.field.name) ?? []} {highlight}
         on:startEdit={() => dispatch("startEdit", { recordId: record.id, field: col.field.name })}
         on:commit={(e) => dispatch("commitEdit", { record, field: col.field.name, value: e.detail })}

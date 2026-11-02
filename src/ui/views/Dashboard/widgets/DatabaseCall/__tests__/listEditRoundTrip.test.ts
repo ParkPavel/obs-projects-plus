@@ -42,7 +42,11 @@ async function mount(type: FieldType, initial: Array<string | number | null> = [
   expect(frame.records[0]?.values["tags"]).toEqual(initial);
   const writer = new DataApi(fs);
   const writes: Promise<boolean>[] = [];
-  const updateRecord = jest.fn((record, fields) => { writes.push(writer.updateRecord(fields, record)); });
+  const updateRecord = jest.fn((record, fields) => {
+    const write = writer.updateRecord(fields, record);
+    writes.push(write);
+    return write;
+  });
   const view = render(DataTableContent, { props: {
     frame, fields: [nameField, field], api: { updateRecord } as never, readonly: false,
     config: undefined, getRecordColor: () => null, project,
@@ -203,6 +207,31 @@ it.each(["Apply", "Cancel"])("%s restores keyboard focus to the list cell", asyn
   await tick();
   await tick();
   expect(document.activeElement).toBe(container.querySelector(".ppp-t2-cell--editable"));
+});
+
+it("retains a list draft during a pending write and can apply it again after failure", async () => {
+  const { updateRecord, files, field, source, writes } = await mount(DataFieldType.List, ["old"]);
+  let resolve!: (value: boolean) => void;
+  updateRecord.mockImplementationOnce(() => new Promise<boolean>(done => { resolve = done; }));
+  const input = document.querySelector<HTMLInputElement>(".ppp-t2-list-editor input")!;
+  input.value = "draft";
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  await tick();
+  button("Apply").click();
+  await tick();
+  document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  await tick();
+  expect(document.querySelector(".ppp-t2-list-editor input")).toBe(input);
+  expect(input).toHaveValue("draft");
+  resolve(false);
+  await tick(); await tick();
+  expect(input).not.toHaveAttribute("readonly");
+  button("Apply").click();
+  await tick(); await tick();
+  expect(updateRecord).toHaveBeenCalledTimes(2);
+  await writes[0];
+  expect((await source.queryFiles(files, [field])).records[0]?.values["tags"]).toEqual(["draft"]);
 });
 
 it("portals the mobile sheet out of the containing dashboard tile", async () => {

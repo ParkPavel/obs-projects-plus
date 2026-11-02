@@ -22,6 +22,8 @@ import { KEYBOARD_BAR_CLASS, KEYBOARD_BAR_EVENT, keyboardHeight, onKeyboardChang
 export interface KeyboardDismissOptions {
   /** The button's accessible name, read when the button is made. */
   readonly label: () => string;
+  /** Explicit confirmation belongs to the field's typed draft controller. */
+  readonly confirm?: { readonly label: () => string; readonly run: () => void } | undefined;
 }
 
 /** Shows the keyboard button for `field` while it has focus; returns the cleanup. */
@@ -34,7 +36,7 @@ export function offerKeyboardDismiss(field: HTMLInputElement | HTMLTextAreaEleme
   const bar = doc.body.createDiv({ cls: KEYBOARD_BAR_CLASS });
   const pill = bar.createDiv({ cls: "mobile-toolbar-floating-options mod-raised" });
   const option = pill.createDiv({
-    cls: "mobile-toolbar-option",
+    cls: "mobile-toolbar-option ppp-keyboard-hide",
     attr: { role: "button", "aria-label": label, title: label },
   });
   setIcon(option, "keyboard-toggle");
@@ -45,7 +47,7 @@ export function offerKeyboardDismiss(field: HTMLInputElement | HTMLTextAreaEleme
     const hidden = keyboardHeight(view) <= 0;
     if (bar.hidden === hidden) return;
     bar.hidden = hidden;
-    view.dispatchEvent(new Event(KEYBOARD_BAR_EVENT));
+    view.dispatchEvent(new view.Event(KEYBOARD_BAR_EVENT));
   };
   // As in Obsidian's toolbar: the press must not move the focus by itself.
   const hold = (e: Event) => e.preventDefault();
@@ -53,18 +55,46 @@ export function offerKeyboardDismiss(field: HTMLInputElement | HTMLTextAreaEleme
     e.preventDefault();
     field.blur();
   };
-  option.addEventListener("mousedown", hold);
-  option.addEventListener("click", hide);
+  const cleanups: Array<() => void> = [];
+  function bindButton(button: HTMLElement, action: (event: Event) => void): void {
+    button.tabIndex = 0;
+    const key = (event: KeyboardEvent) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      action(event);
+    };
+    button.addEventListener("pointerdown", hold);
+    button.addEventListener("mousedown", hold);
+    button.addEventListener("click", action);
+    button.addEventListener("keydown", key);
+    cleanups.push(() => {
+      button.removeEventListener("pointerdown", hold);
+      button.removeEventListener("mousedown", hold);
+      button.removeEventListener("click", action);
+      button.removeEventListener("keydown", key);
+    });
+  }
+  if (options.confirm) {
+    const label = options.confirm.label();
+    const confirm = pill.createDiv({
+      cls: "mobile-toolbar-option ppp-keyboard-confirm",
+      attr: { role: "button", "aria-label": label, title: label },
+    });
+    // Before keyboard-toggle, matching the existing right-hand control.
+    pill.insertBefore(confirm, option);
+    setIcon(confirm, "check");
+    bindButton(confirm, (event) => { event.preventDefault(); options.confirm?.run(); });
+  }
+  bindButton(option, hide);
   bar.hidden = true;
   const stopWatching = onKeyboardChange(view, sync);
   sync();
 
   return () => {
     stopWatching();
-    option.removeEventListener("mousedown", hold);
-    option.removeEventListener("click", hide);
+    for (const cleanup of cleanups) cleanup();
     const shown = !bar.hidden;
     bar.remove();
-    if (shown) view.dispatchEvent(new Event(KEYBOARD_BAR_EVENT));
+    if (shown) view.dispatchEvent(new view.Event(KEYBOARD_BAR_EVENT));
   };
 }

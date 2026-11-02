@@ -133,6 +133,56 @@ describe("the visible area ends at Obsidian's keyboard", () => {
 });
 
 describe("the keyboard button is Obsidian's", () => {
+  test("confirm uses the original field once, keeps focus, and ignores unfinished IME composition", async () => {
+    document.body.classList.add("is-mobile");
+    keyboard(300);
+    const view = render(TextField, { props: { value: "old" } });
+    const commits: string[] = [];
+    view.component.$on("commit", (event: CustomEvent<{ value: string }>) => commits.push(event.detail.value));
+    const input = view.container.querySelector<HTMLInputElement>("input")!;
+    input.focus();
+    input.value = "новое";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    await settle();
+    const confirm = document.querySelector<HTMLElement>(".ppp-keyboard-confirm")!;
+    expect(confirm).not.toBeNull();
+    input.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+    confirm.click();
+    expect(commits).toEqual([]);
+    input.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true }));
+    const press = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+    confirm.dispatchEvent(press);
+    expect(press.defaultPrevented).toBe(true);
+    confirm.click();
+    confirm.click();
+    await settle();
+    expect(commits).toEqual(["новое"]);
+    expect(document.activeElement).toBe(input);
+    expect(view.container.querySelectorAll("input")).toHaveLength(1);
+    view.unmount();
+    expect(document.querySelector(".ppp-keyboard-bar")).toBeNull();
+  });
+
+  test("confirm leaves an invalid draft available for correction", async () => {
+    document.body.classList.add("is-mobile");
+    keyboard(300);
+    const view = render(TextField, { props: { value: "12", validate: (value: string) => /^\d+$/.test(value) } });
+    const commit = jest.fn();
+    view.component.$on("commit", commit);
+    const input = view.container.querySelector<HTMLInputElement>("input")!;
+    input.focus();
+    input.value = "12x";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    await settle();
+    document.querySelector<HTMLElement>(".ppp-keyboard-confirm")?.click();
+    await settle();
+    expect(input).toHaveValue("12x");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(document.activeElement).toBe(input);
+    expect(commit).not.toHaveBeenCalled();
+    view.unmount();
+  });
+
   const focusField = async () => {
     const view = render(TextField, { props: { value: "x" } });
     const input = view.container.querySelector<HTMLInputElement>("input")!;
@@ -146,7 +196,7 @@ describe("the keyboard button is Obsidian's", () => {
     keyboard(300);
     const obsidian = require("obsidian");
     const { view, input } = await focusField();
-    const option = document.querySelector<HTMLElement>(".ppp-keyboard-bar .mobile-toolbar-floating-options .mobile-toolbar-option")!;
+    const option = document.querySelector<HTMLElement>(".ppp-keyboard-bar .ppp-keyboard-hide")!;
     expect(option).not.toBeNull();
     expect(option.closest<HTMLElement>(".ppp-keyboard-bar")!.hidden).toBe(false);
     expect(obsidian.setIcon).toHaveBeenCalledWith(option, "keyboard-toggle");

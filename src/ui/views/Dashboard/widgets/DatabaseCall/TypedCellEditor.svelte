@@ -14,6 +14,8 @@
   export let field: DataField;
   export let value: Optional<DataValue>;
   export let dateFormat: DateFormatConfig | undefined = undefined;
+  export let saving = false;
+  export let retryVersion = 0;
 
   const dispatch = createEventDispatcher<{ commit: Optional<DataValue>; cancel: void; invalid: boolean }>();
   // Mounted only during editing: seed once, never reset the draft on a flush.
@@ -22,6 +24,13 @@
   let committed = false;
   let composing = false;
   let invalid = false;
+  let lastRetry = 0;
+  function retry(version: number): void {
+    if (version === lastRetry) return;
+    lastRetry = version;
+    committed = false;
+  }
+  $: retry(retryVersion);
   void tick().then(() => inputEl?.focus());
 
   $: inputError = field.type === DataFieldType.Date
@@ -34,7 +43,7 @@
   }
 
   function commitDraft(): void {
-    if (committed || composing) return;
+    if (committed || composing || saving) return;
     // Empty deliberately clears; a date the parser refuses keeps the stored value.
     const day = field.type === DataFieldType.Date ? dayFromTyped(draft) : draft;
     setInvalid((field.type === DataFieldType.Number && draft.trim() !== "" && toNumber(draft) === null) ||
@@ -45,7 +54,7 @@
   }
 
   function handleKeydown(e: KeyboardEvent): void {
-    if (composing || isImeKey(e)) return;
+    if (saving || composing || isImeKey(e)) return;
     if (e.key === "Enter") {
       e.preventDefault();
       commitDraft();
@@ -58,9 +67,11 @@
 </script>
 
 <!-- 3.7.2 B1: a date is typed too (14.10.2026, 1.11, «завтра»); the day goes on as YYYY-MM-DD. -->
-<input use:keepInView bind:this={inputEl} class="ppp-t2-editor" type="text" bind:value={draft}
+<input use:keepInView={{ confirm: commitDraft }} bind:this={inputEl} class="ppp-t2-editor" type="text" bind:value={draft}
   class:ppp-t2-editor--number={field.type === DataFieldType.Number} class:ppp-t2-editor--date={field.type === DataFieldType.Date}
   inputmode={field.type === DataFieldType.Number ? "decimal" : undefined}
+  enterkeyhint="done"
+  readonly={saving} aria-busy={saving}
   placeholder={field.type === DataFieldType.Date ? $i18n.t("common.date-typed-placeholder") : undefined}
   aria-label={invalid ? `${field.name}: ${inputError}` : field.name}
   title={invalid ? inputError : undefined} aria-invalid={invalid ? "true" : undefined}

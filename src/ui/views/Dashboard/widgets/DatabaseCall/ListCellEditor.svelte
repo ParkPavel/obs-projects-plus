@@ -9,6 +9,8 @@
   export let field: DataField;
   export let value: Optional<DataValue>;
   export let options: string[] = [];
+  export let saving = false;
+  export let retryVersion = 0;
   const dispatch = createEventDispatcher<{ commit: Optional<DataValue>; cancel: void }>();
   const initial = Array.isArray(value) ? value : value == null ? [] : [value];
   // Independent draft + stable item identity; never mutate the datasource.
@@ -17,10 +19,17 @@
   let triggerEl: HTMLSpanElement | null = null;
   let listEl: HTMLDivElement | null = null;
   let finished = false;
+  let lastRetry = 0;
+  function retry(version: number): void {
+    if (version === lastRetry) return;
+    lastRetry = version;
+    finished = false;
+  }
+  $: retry(retryVersion);
   $: suggestionOptions = namesToOptions(options);
 
   function finish(apply: boolean): void {
-    if (finished) return;
+    if (finished || saving) return;
     finished = true;
     const cell = triggerEl?.parentElement;
     if (apply) {
@@ -32,6 +41,7 @@
   }
 
   function add(): void {
+    if (saving) return;
     items = [...items, { id: nextId++, value: "" }];
     void tick().then(() => {
       const inputs = listEl?.querySelectorAll<HTMLInputElement>("input");
@@ -40,16 +50,18 @@
   }
 
   function updateItem(id: number, value: Optional<DataValue>): void {
+    if (saving) return;
     items = items.map((item) => item.id === id ? { ...item, value } : item);
   }
 
   function removeItem(id: number): void {
+    if (saving) return;
     items = items.filter((item) => item.id !== id);
   }
 </script>
 
 <span bind:this={triggerEl} aria-hidden="true" />
-<FloatingPopup open={true} triggerEl={triggerEl?.parentElement ?? null} ariaLabel={field.name} on:close={() => finish(false)}>
+<FloatingPopup open={true} dismissible={!saving} triggerEl={triggerEl?.parentElement ?? null} ariaLabel={field.name} on:close={() => finish(false)}>
   <div class="ppp-t2-list-editor" bind:this={listEl}>
     <span>{field.name}</span>
     {#each items as item, i (item.id)}
@@ -58,17 +70,18 @@
         index={i}
         fieldName={field.name}
         options={suggestionOptions}
+        {saving}
         on:change={(event) => updateItem(item.id, event.detail)}
         on:remove={() => removeItem(item.id)}
         on:cancel={() => finish(false)}
       />
     {/each}
-    <button type="button" on:click={add}>
+    <button type="button" disabled={saving} on:click={add}>
       {$i18n.t("views.dashboard.table-v2.list-add", { defaultValue: "Add item" })}
     </button>
     <div class="ppp-t2-list-actions">
-      <button type="button" on:click={() => finish(false)}>{$i18n.t("common.cancel", { defaultValue: "Cancel" })}</button>
-      <button type="button" on:click={() => finish(true)}>{$i18n.t("common.apply", { defaultValue: "Apply" })}</button>
+      <button type="button" disabled={saving} on:click={() => finish(false)}>{$i18n.t("common.cancel", { defaultValue: "Cancel" })}</button>
+      <button type="button" disabled={saving} on:click={() => finish(true)}>{$i18n.t("common.apply", { defaultValue: "Apply" })}</button>
     </div>
   </div>
 </FloatingPopup>

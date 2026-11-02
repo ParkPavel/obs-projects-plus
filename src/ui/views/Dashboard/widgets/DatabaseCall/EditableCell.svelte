@@ -30,6 +30,8 @@
   export let value: Optional<DataValue>;
   export let readonly: boolean;
   export let editing: boolean;
+  export let saving = false;
+  export let retryVersion = 0;
   /** Unique existing values for Select/Status dropdowns (parent-computed). */
   export let options: string[] = [];
   /** #081 — the Relation picker resolves the target project's records. */
@@ -54,6 +56,13 @@
   $: reasonClose(reasonOpen);
   $: isChoice = field.type === DataFieldType.Select || field.type === DataFieldType.Status;
   let draft = "", committed = false, wasEditing = false, invalid = false;
+  let lastRetry = 0;
+  function retry(version: number): void {
+    if (version === lastRetry) return;
+    lastRetry = version;
+    committed = false;
+  }
+  $: retry(retryVersion);
 
   // Seeded on the turn INTO editing, inside a function: `draft` is bound, and a `$:` that assigns it re-seeds per keystroke (R0.34).
   function onEditing(on: boolean) {
@@ -68,6 +77,7 @@
 
   // The cell's Enter handler takes only its own Enter: the editor's bubbles up after the browser flushed `editing = false`, reopening the cell.
   function handleCellClick() {
+    if (saving) return;
     if (!editable) reasonOpen = true;
     if (!editable || editing) return;
     if (field.type === DataFieldType.Boolean) {
@@ -78,7 +88,7 @@
   }
 
   function commitDraft(raw: string) {
-    if (committed) return;
+    if (committed || saving) return;
     committed = true;
     dispatch("commit", editedCellValue(field, value, raw, dateFormat));
   }
@@ -99,17 +109,18 @@
   {#if editing && field.type === DataFieldType.Relation}
     <span class="ppp-t2-text">{cell.kind === "text" ? cell.text : ""}</span>
     <RelationPickerPopover {field} {value} {api} {frame} triggerEl={cellEl}
+      {saving}
       on:commit={(e) => { committed = true; dispatch("commit", e.detail); }}
       on:cancel={() => { committed = true; dispatch("cancel"); }}
       on:setupRelation={() => { committed = true; dispatch("setupRelation", field); }} />
   {:else if editing && (field.type === DataFieldType.List || (field.type === DataFieldType.String && (field.repeated || Array.isArray(value))))}
-    <ListCellEditor {field} {value} {options} on:commit on:cancel />
+    <ListCellEditor {field} {value} {options} {saving} {retryVersion} on:commit on:cancel />
   {:else if editing && (isChoice || (field.type === DataFieldType.String && options.length > 0))}
-    <CellChoiceDropdown bind:draft {options}
+    <CellChoiceDropdown bind:draft {options} {saving} {retryVersion}
       on:commit={(e) => commitDraft(e.detail)}
       on:cancel={() => { committed = true; dispatch("cancel"); }} />
   {:else if editing}
-    <TypedCellEditor {field} {value} {dateFormat}
+    <TypedCellEditor {field} {value} {dateFormat} {saving} {retryVersion}
       on:commit on:cancel on:invalid={(e) => { invalid = e.detail; }} />
   {:else if field.type === DataFieldType.Rollup || field.typeConfig?.rollup}
     <!-- #045.4: shown by its mode (percent bar, show chips, plain count); read-only like every derived field.
@@ -118,7 +129,7 @@
   {:else if cell.kind === "empty"}
     <span class="ppp-t2-empty" aria-hidden="true">—</span>
   {:else if cell.kind === "check"}
-    <input type="checkbox" checked={cell.checked} disabled={!editable} class="ppp-t2-check"
+    <input type="checkbox" checked={cell.checked} disabled={!editable || saving} class="ppp-t2-check"
       on:click|stopPropagation={() => { if (editable) dispatch("commit", value !== true); }} />
   {:else if cell.kind === "pills"}
     <span class="ppp-t2-pills">

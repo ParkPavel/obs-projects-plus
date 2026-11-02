@@ -51,6 +51,8 @@
   export let selectedIds: string[] = [];
   export let placeholder = "";
   export let disabled = false;
+  /** A pending write keeps the same focused input and its draft. */
+  export let readOnly = false;
   export let id: string | undefined = undefined;
   export let ariaLabel: string | undefined = undefined;
   export let inputClass = "";
@@ -289,6 +291,7 @@
    * leaves the field where it is.
    */
   function finish(reason: "enter" | "tab" | "blur" | "change"): void {
+    if (readOnly || disabled) return;
     if (multi) {
       if (reason === "blur") {
         ctl.blur({ accept: false });
@@ -315,6 +318,7 @@
     dispatch("commit", { value: result.value, reason: result.reason });
   }
   function choose(opt: ComboOption): void {
+    if (readOnly || disabled) return;
     if (multi) {
       dispatch("select", opt);
       return;
@@ -351,7 +355,7 @@
   }
 
   function onKeydown(e: KeyboardEvent): void {
-    if (ctl.isComposing(e)) return;
+    if (readOnly || disabled || ctl.isComposing(e)) return;
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       const wasOpen = expandedNow();
@@ -366,16 +370,8 @@
       active = stepActive(active, e.key === "ArrowDown" ? 1 : -1, visible().length);
       void revealActive();
     } else if (e.key === "Enter") {
-      const pick = activeNow();
-      if (pick) {
-        e.preventDefault();
-        choose(pick);
-      } else if (!multi) {
-        e.preventDefault();
-        finish("enter");
-        // Text that cannot be committed as typed keeps the list open to pick from.
-        if (allowCustom || exactMatch(ctl.getState().draft) !== undefined) hide();
-      }
+      e.preventDefault();
+      confirm();
     } else if (e.key === "Escape") {
       if (expandedNow()) {
         // The first Escape only closes the list.
@@ -393,6 +389,16 @@
       dispatch("cancel");
     } else if (e.key === "Tab") {
       commitForNavigation();
+    }
+  }
+  function confirm(): void {
+    if (readOnly || disabled || ctl.isComposing()) return;
+    const pick = activeNow();
+    if (pick) choose(pick);
+    else if (!multi) {
+      finish("enter");
+      // Text that cannot be committed as typed keeps the list open to pick from.
+      if (allowCustom || exactMatch(ctl.getState().draft) !== undefined) hide();
     }
   }
   function onBlur(): void {
@@ -425,10 +431,11 @@
 <div class="ppp-combo" bind:this={rootEl}>
   <input
     bind:this={inputEl}
-    use:keepInView
+    use:keepInView={{ confirm }}
     {id}
     class="ppp-combo-input {inputClass}"
     type="text"
+    enterkeyhint="done"
     role="combobox"
     aria-autocomplete="list"
     aria-haspopup="listbox"
@@ -442,6 +449,7 @@
     value={draft}
     {placeholder}
     {disabled}
+    readonly={readOnly}
     on:focus={onFocus}
     on:blur={onBlur}
     on:input={onInput}

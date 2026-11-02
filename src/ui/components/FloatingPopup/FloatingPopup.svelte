@@ -55,6 +55,8 @@
 
   /** Close when a click lands inside the popup (action menus). */
   export let closeOnInnerClick: boolean = false;
+  /** Pending writes retain the open draft until their result is known. */
+  export let dismissible = true;
 
   /** ARIA role. */
   export let role: "menu" | "listbox" | "dialog" | "tooltip" | "presentation" = "dialog";
@@ -386,6 +388,7 @@
   }
 
   function requestClose(): void {
+    if (!dismissible) return;
     open = false;
     dispatch("close");
   }
