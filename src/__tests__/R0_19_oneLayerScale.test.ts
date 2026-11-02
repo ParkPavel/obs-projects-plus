@@ -55,7 +55,8 @@ import { collectStyled, SRC_ROOT } from "./support/cssScan";
 // 65 → 64 (3.7.2 B4): month cell +N no longer floats over the last card.
 // 64 → 63 (3.7.2 B10): DayPopup's private layer left for FloatingPopup.
 // 63 → 60 (3.7.2 i3): the duplicate window sits on Obsidian's modal layer; dashboard tiles use the scale.
-const RAW_Z_BUDGET = 60;
+// Shared field overlays and the removed private record palette use the layer scale.
+const RAW_Z_BUDGET = 58;
 
 const RAW_Z = /z-index:\s*-?\d+\s*;/g;
 const TOKEN_WITH_FALLBACK = /z-index:\s*var\(\s*(--[a-z0-9-]+)\s*,\s*([^)]*)\)/gi;

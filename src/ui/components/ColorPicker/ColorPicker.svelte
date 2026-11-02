@@ -405,7 +405,7 @@
             </button>
             <button
               class="remove-btn star-promote-btn"
-              on:click|stopPropagation={() => { selectColor(pc); favoritesStore.add(pc.toLowerCase()); }}
+              on:click|stopPropagation={() => favoritesStore.add(pc.toLowerCase())}
               type="button"
               disabled={saving}
               title={$i18n.t('components.color.add-to-favorites')}

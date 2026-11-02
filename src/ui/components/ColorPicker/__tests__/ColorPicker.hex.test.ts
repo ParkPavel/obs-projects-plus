@@ -12,6 +12,26 @@ function mount() {
   return { target, component, change, destroy() { component.$destroy(); target.remove(); } };
 }
 
+test("favorite management changes the palette without selecting or writing a record color", async () => {
+  const original = get(settings);
+  settings.set({ ...original, preferences: { ...original.preferences, colorFavorites: [] } });
+  const m = mount();
+  const saveColor = jest.fn().mockResolvedValue(true);
+  try {
+    m.component.$set({ projectPalette: ["#123456"], saveColor });
+    await tick(); await tick();
+    (m.target.querySelector(".star-promote-btn") as HTMLButtonElement).click();
+    await tick(); await tick();
+    expect(get(settings).preferences.colorFavorites?.map(color => color.color)).toEqual(["#123456"]);
+    expect(saveColor).not.toHaveBeenCalled();
+    expect(m.change).not.toHaveBeenCalled();
+    (m.target.querySelector(".remove-btn:not(.star-promote-btn)") as HTMLButtonElement).click();
+    await tick();
+    expect(get(settings).preferences.colorFavorites).toEqual([]);
+    expect(saveColor).not.toHaveBeenCalled();
+  } finally { m.destroy(); settings.set(original); }
+});
+
 test.each(["#1234", "12345", "#12345678", "#xyz", "#123456  invalid"])("invalid HEX %s cannot apply an old or truncated color", async (input) => {
   const m = mount();
   try {
