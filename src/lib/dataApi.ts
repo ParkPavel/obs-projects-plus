@@ -209,7 +209,8 @@ export class DataApi {
     record: DataRecord,
     fields: DataField[],
     templatePath: string,
-    body?: string
+    body?: string,
+    defaults?: Record<string, Optional<DataValue>>,
   ): Promise<void> {
     let content = body ?? "";
 
@@ -251,7 +252,7 @@ export class DataApi {
     // Prepare the complete note before crossing the filesystem boundary.
     // Creating a body first and writing properties afterwards could leave an
     // incomplete file when the second write failed, blocking a safe retry.
-    const prepared = doUpdateRecord(content, fields, record);
+    const prepared = doUpdateRecord(content, fields, record, undefined, defaults);
     if (E.isLeft(prepared)) throw prepared.left;
     await this.fileSystem.create(record.id, prepared.right);
   }
@@ -298,7 +299,8 @@ export function doUpdateRecord(
   data: string,
   fields: DataField[],
   record: DataRecord,
-  keys?: readonly string[]
+  keys?: readonly string[],
+  defaults?: Record<string, Optional<DataValue>>,
 ): E.Either<Error, string> {
   // encodeFrontMatter lays the given entries over the note's own, so a key list
   // can hand it just the changed entries. Untouched keys are then neither
@@ -313,7 +315,7 @@ export function doUpdateRecord(
     decodeFrontMatter,
     E.map((frontmatter) => {
       return Object.fromEntries(
-        Object.entries(keys ? written : { ...frontmatter, ...written })
+        Object.entries(keys ? written : { ...defaults, ...frontmatter, ...written })
           .map((entry) => {
             const value = entry[1];
             if (value instanceof Date) {

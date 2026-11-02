@@ -22,6 +22,7 @@
   import { i18n } from "src/lib/stores/i18n";
   import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
   import RecordItem from "./RecordItem.svelte";
+  import { DEFAULT_RECORD_COLOR, resolveRecordColor } from "src/lib/colors/recordColor";
 
   export let project: ProjectDefinition;
   export let date: dayjs.Dayjs;
@@ -31,8 +32,8 @@
   /** The tapped day: where the window anchors and where focus goes back to. */
   export let anchorEl: HTMLElement | null = null;
   export let getRecordColor: ((record: DataRecord) => string | null) | undefined = undefined;
-  // v4.0.3: eventColorField for direct color reading from record.values
   export let eventColorField: string | undefined = undefined;
+  export let saveRecordColor: ((record: DataRecord, color: string) => Promise<boolean>) | undefined = undefined;
   // v8.1.0: config for timezone and other calendar config
   export let config: import('../../types').CalendarConfig | undefined = undefined;
 
@@ -51,13 +52,12 @@
     createNote: dayjs.Dayjs;
   }>();
 
-  // v4.0.3: Get color from record.values (eventColorField) with fallbacks
   function getColorForRecord(record: DataRecord): string | null {
-    for (const key of [eventColorField, "eventColor", "color"]) {
-      const value = key ? record.values[key] : undefined;
-      if (typeof value === "string" && value) return value;
-    }
-    return getRecordColor?.(record) ?? null;
+    return resolveRecordColor(record, { eventColorField, getRecordColor, exactField: true, fallback: DEFAULT_RECORD_COLOR });
+  }
+  function colorWriter(record: DataRecord) {
+    const save = saveRecordColor;
+    return save ? (color: string) => save(record, color) : undefined;
   }
 
   $: formattedDate = formatDateForDisplay(date, project) ?? date.format('D MMMM YYYY');
@@ -117,7 +117,7 @@
             {record}
             {checkField}
             currentColor={getColorForRecord(record) ?? undefined}
-            onColorChange={(color) => dispatch('recordColorChange', { record, color })}
+            onColorChange={colorWriter(record)}
             on:openNote={() => dispatch('recordClick', record)}
             on:openInNewWindow={() => dispatch('recordOpenInNewWindow', record)}
             on:settings={() => dispatch('recordSettings', record)}

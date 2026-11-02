@@ -22,6 +22,7 @@
   import GalleryCardOptions from "src/ui/views/Gallery/components/CardPanel/GalleryCardOptions.svelte";
   import { BOARD_THUMBNAIL_LAYOUTS, normalizeThumbnailLayout } from "src/ui/views/Board/types";
   import type { CalendarConfig } from "src/ui/views/Calendar/types";
+  import { resolveCalendarColorField } from "src/ui/views/Calendar/colorField";
   import { CREATION_DURATIONS, DEFAULT_CREATION_DURATION, creationDurationOf } from "src/ui/views/Calendar/creationRange";
   import {
     normalizeCardFrames,
@@ -34,6 +35,7 @@
   type SettingsTabId = "viewConfig" | "projects" | "views" | "filters" | "colors" | "sort";
 
   export let view: ViewDefinition | undefined;
+  export let projectViews: readonly ViewDefinition[] = [];
   export let fields: Array<{ name: string; type: string; derived?: boolean }> = [];
 
   const dispatch = createEventDispatcher<{ update: Record<string, any>; navigateTab: SettingsTabId }>();
@@ -59,7 +61,7 @@
   $: endHour = (view?.config?.["endHour"] as number) ?? 24;
   $: showWeekends = (view?.config?.["showWeekends"] as boolean) ?? true;
   $: showAllDaySection = (view?.config?.["showAllDaySection"] as boolean) ?? true;
-  $: eventColorField = (view?.config?.["eventColorField"] as string) ?? "";
+  $: eventColorField = resolveCalendarColorField(view?.config as CalendarConfig | undefined, projectViews) ?? "";
   
   // Field mapping for Calendar (frontmatter field names)
   $: dateField = (view?.config?.["dateField"] as string) ?? "";

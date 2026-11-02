@@ -90,7 +90,7 @@ export class ViewApi {
    * `body` is the text under the frontmatter of the new note; a duplicate
    * passes the source's so the copy is not created empty.
    */
-  async addRecord(record: DataRecord, fields: DataField[], templatePath: string, body?: string): Promise<void> {
+  async addRecord(record: DataRecord, fields: DataField[], templatePath: string, body?: string, defaults?: Record<string, Optional<DataValue>>): Promise<void> {
     // w4-p02 (F19): the row is shown while the note is written and taken back
     // if the create is refused — before, a refused create left a phantom row.
     // Only this row: a record already in the frame under the same id is
@@ -103,7 +103,7 @@ export class ViewApi {
     // Rethrown, not swallowed: a caller that awaits (the create form, the
     // calendar duplicate) must see a failed create and keep what was typed.
     try {
-      await this.dataApi.createNote(record, fields ?? [], templatePath, body);
+      await this.dataApi.createNote(record, fields ?? [], templatePath, body, defaults);
     } catch (error) {
       if (shown) dataFrame.deleteRecord(record.id);
       throw error;

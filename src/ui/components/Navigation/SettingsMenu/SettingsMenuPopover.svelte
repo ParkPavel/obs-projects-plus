@@ -390,6 +390,7 @@
         {:else if activeTab === "viewConfig"}
           <ViewConfigTab
             view={activeView}
+            projectViews={views}
             fields={resolvedFields}
             on:update={(event) => dispatch("updateViewConfig", event.detail)}
             on:navigateTab={(event) => (activeTab = event.detail)}

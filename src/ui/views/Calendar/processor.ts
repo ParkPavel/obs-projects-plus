@@ -18,7 +18,7 @@ import {
   parseDateInTimezone,
   extractTimeWithPriority,
 } from "./calendar";
-import { resolveRecordColor } from "src/lib/colors/recordColor";
+import { DEFAULT_RECORD_COLOR, resolveRecordColor } from "src/lib/colors/recordColor";
 import {
   EventRenderType,
   type CalendarConfig,
@@ -380,13 +380,15 @@ export class CalendarDataProcessor {
 
   /**
    * Extract color via the single record-color contract (UT2026-C, #070):
-   * explicit per-record hex (eventColorField, then any color-named field,
-   * case-tolerant, #RGB/#RRGGBB normalized) → project color rule → null.
+   * Exact mapped hex → project rule → shared theme fallback. The same key
+   * and fallback are used by the popup and by calendar creation.
    */
   private extractColor(record: DataRecord): string | null {
     return resolveRecordColor(record, {
       eventColorField: this.config.eventColorField,
       getRecordColor: this.getRecordColor ?? undefined,
+      exactField: true,
+      fallback: DEFAULT_RECORD_COLOR,
     });
   }
 

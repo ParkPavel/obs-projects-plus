@@ -11,6 +11,8 @@
 import "@testing-library/jest-dom";
 import { tick } from "svelte";
 import dayjs from "dayjs";
+import { processCalendarData } from "../../processor";
+import { DEFAULT_RECORD_COLOR } from "src/lib/colors/recordColor";
 
 // The Svelte transform reads `dayjs.default`; the CommonJS build has none.
 jest.mock("dayjs", () => {
@@ -63,6 +65,64 @@ afterEach(() => {
 });
 
 describe("B10 — DayPopup on FloatingPopup", () => {
+  it.each(["day", "week", "month"] as const)("uses the same default color as the %s calendar without writing it into the note", async interval => {
+    const record = { id: "a.md", values: { starts: "2026-11-03" } };
+    const config = { interval, startDateField: "starts", eventColorField: "color" };
+    const processed = processCalendarData({ fields: [], records: [record] }, config, () => null);
+    const { component } = mount({ records: [record], config, eventColorField: "color" });
+    await flush();
+    const color = document.querySelector<HTMLElement>(".color-indicator")!.style.getPropertyValue("--indicator-color");
+    expect(color).toBe(DEFAULT_RECORD_COLOR);
+    expect(processed.index.get(record.id)?.color).toBe(color);
+    expect(record.values).toEqual({ starts: "2026-11-03" });
+    component.$destroy();
+  });
+
+  async function openColor() {
+    document.querySelector<HTMLElement>(".actions-toggle")!.click();
+    await flush();
+    document.querySelector<HTMLElement>(".color-action")!.click();
+    await flush();
+    return document.querySelector<HTMLElement>('.hsl-apply-button[aria-label="views.calendar.colors.apply"]')!;
+  }
+
+  it("one color selection produces one legacy event", async () => {
+    const { component } = mount();
+    const changed = jest.fn();
+    component.$on("recordColorChange", changed);
+    await flush();
+    const apply = await openColor();
+    apply.click();
+    await flush();
+    expect(changed).toHaveBeenCalledTimes(1);
+    component.$destroy();
+  });
+
+  it("waits for one color write, keeps the palette on failure, and allows retry", async () => {
+    let resolve!: (written: boolean) => void;
+    const saveRecordColor = jest.fn(() => new Promise<boolean>(done => { resolve = done; }));
+    const { component } = mount({ saveRecordColor });
+    const changed = jest.fn();
+    component.$on("recordColorChange", changed);
+    await flush();
+    const apply = await openColor();
+    apply.click(); apply.click();
+    await flush();
+    expect(saveRecordColor).toHaveBeenCalledTimes(1);
+    expect(document.querySelector(".color-palette")).not.toBeNull();
+    resolve(false);
+    await flush();
+    expect(document.querySelector(".color-palette")).not.toBeNull();
+    apply.click();
+    await flush();
+    expect(saveRecordColor).toHaveBeenCalledTimes(2);
+    resolve(true);
+    await flush();
+    expect(document.querySelector(".color-palette")).toBeNull();
+    expect(changed).not.toHaveBeenCalled();
+    component.$destroy();
+  });
+
   it("mounts as the engine's floating layer in the anchor's own document", async () => {
     const { anchor } = mount();
     await flush();

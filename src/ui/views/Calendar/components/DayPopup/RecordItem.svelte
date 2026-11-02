@@ -3,6 +3,8 @@
   import type { DataRecord } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
   import { Icon } from "obsidian-svelte";
+  import { Notice } from "obsidian";
+  import { noticeFor } from "src/lib/errors/errorText";
   import { getScrollBehavior } from 'src/lib/helpers/animation';
   import { hexToHsv, hsvToHex } from "src/lib/colors/math";
   import { useFavoritesStore } from "src/ui/paletteProject";
@@ -13,7 +15,8 @@
   /** Optional current color */
   export let currentColor: string | undefined = undefined;
   /** Callback when color changes */
-  export let onColorChange: ((color: string) => void) | undefined = undefined;
+  export let onColorChange: ((color: string) => Promise<boolean>) | undefined = undefined;
+  let savingColor = false;
 
   let optimisticColor: string | null = null;
 
@@ -30,6 +33,7 @@
 
   let showActions = false;
   let showColorPalette = false;
+  let paletteElement: HTMLFieldSetElement | null = null;
   let customHexInput = '';
   let hexInputError = false;
   let tapTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -456,6 +460,7 @@
   }
 
   function toggleActions() {
+    if (savingColor) return;
     showActions = !showActions;
     if (!showActions) {
       showColorPalette = false;
@@ -467,13 +472,13 @@
   }
   
   function toggleColorPalette() {
+    if (savingColor) return;
     showColorPalette = !showColorPalette;
     // v5.0.0: When palette opens, scroll the record into view for better UX
     if (showColorPalette) {
       tick().then(() => {
-        const palette = activeDocument.querySelector('.color-palette[data-color-palette="true"]');
-        if (palette) {
-          palette.scrollIntoView({ behavior: getScrollBehavior(), block: 'nearest' });
+        if (paletteElement?.isConnected) {
+          paletteElement.scrollIntoView?.({ behavior: getScrollBehavior(), block: 'nearest' });
         }
       });
     }
@@ -508,15 +513,22 @@
   }
   
   async function handleColorSelect(color: string) {
-    // v4.0.1: Force immediate UI update for mobile responsiveness
-    optimisticColor = color;
-    await tick(); // Force Svelte to update DOM immediately
-    
-    dispatch('colorChange', color);
-    onColorChange?.(color);
-    showColorPalette = false;
-    customHexInput = '';
-    hexInputError = false;
+    if (savingColor) return;
+    savingColor = true;
+    try {
+      // The async writer acknowledges persistence. Legacy event consumers get
+      // one event only; never invoke both paths for the same selection.
+      if (onColorChange) {
+        if (!await onColorChange(color)) return;
+      } else dispatch('colorChange', color);
+      optimisticColor = color;
+      showColorPalette = false;
+      customHexInput = '';
+      hexInputError = false;
+    } catch (error) {
+      console.error("[Projects+] popup color write failed", error);
+      new Notice(noticeFor("PPP-311"));
+    } finally { savingColor = false; }
   }
   
   /**
@@ -608,7 +620,8 @@
       {#if showColorPalette}
         <!-- svelte-ignore a11y-click-events-have-key-events -->
         <!-- svelte-ignore a11y-no-static-element-interactions -->
-        <div 
+        <fieldset disabled={savingColor}
+          bind:this={paletteElement}
           class="color-palette"
           data-color-palette="true"
           role="region"
@@ -753,7 +766,7 @@
               <span class="hex-error">{$i18n.t("views.calendar.colors.invalid") ?? "Invalid hex"}</span>
             {/if}
           </div>
-        </div>
+        </fieldset>
       {/if}
       
       <!-- Open note button - primary action -->
@@ -962,6 +975,8 @@
   
   /* Color Palette - Hierarchical Design System */
   .color-palette {
+    min-width: 0;
+    margin: 0;
     /* === Palette root variables === */
     --palette-base: 1rem;
     --palette-padding: calc(var(--palette-base) * 0.75);

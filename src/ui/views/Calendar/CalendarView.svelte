@@ -52,6 +52,7 @@
   import { DuplicatePopup } from "./components/DuplicatePopup";
   import type { CalendarConfig, ProcessedCalendarData, ProcessedRecord } from "./types";
   import { creationDurationOf } from "./creationRange";
+  import { resolveCalendarColorField, withColorField } from "./colorField";
   import type { CalendarInterval } from "./calendar";
   import { processCalendarData } from "./processor";
   import { calendarLogger } from "./logger";
@@ -247,8 +248,10 @@
   const draftCtl = createCalendarDraft();
   onDestroy(() => draftCtl.destroy());
   let draftSheet: CalendarDraftSheet | null = null;
+  $: colorField = resolveCalendarColorField(config, (agendaProject ?? project).views, fields);
+  $: colorConfig = withColorField(config, colorField);
   $: draftMap = draftMapping({
-    config,
+    config: colorConfig,
     fields,
     start: dateField?.name,
     end: endDateField?.name,
@@ -1218,12 +1221,12 @@
    * Saves to frontmatter using eventColorField
    */
   async function handleDayPopupRecordColorChange(record: DataRecord, color: string) {
-    if (dataReadOnly) return;
-    if (interceptDraft(record.id, draftCtl, () => draftCtl.edit({ color }))) return;
-    const colorFieldName = config?.eventColorField;
+    if (dataReadOnly) return false;
+    if (interceptDraft(record.id, draftCtl, () => draftCtl.edit({ color }))) return true;
+    const colorFieldName = colorField;
     if (!colorFieldName) {
       new Notice(noticeFor(COLOR_FIELD_REQUIRED));
-      return;
+      return false;
     }
     
     calendarLogger.debug('Color change requested', { 
@@ -1240,7 +1243,7 @@
       
       // #161 — only mirror what actually reached the file.
       const saved = await api.updateRecord(updatedRecord, fields);
-      if (!saved) return;
+      if (!saved) return false;
       
       // After successful save, update local state for immediate UI feedback
       // Use .map() to create new arrays (records are readonly)
@@ -1263,10 +1266,12 @@
       lastProcessedKey = '';
       
       calendarLogger.debug('Color change completed successfully', { component: 'CalendarView', action: 'colorChange' });
+      return true;
       
     } catch (error) {
       calendarLogger.error('Error updating record color', error, { component: 'CalendarView', action: 'colorChange' });
       new Notice(noticeFor(COLOR_FAILED));
+      return false;
     }
   }
   
@@ -1295,7 +1300,7 @@
   // Function body is NOT analyzed for $: dependencies — only the explicit arguments are tracked.
   // w4-calendar-draft: a draft is drawn even before the frame has a date field.
   $: processedStartField = dateField?.name ?? (shownDraft ? draftMap.start : undefined);
-  $: updateProcessedData(processedStartField, config, records, dataVersion, draftKey, displayFrame, getRecordColor, project.dateFormat?.writeFormat);
+  $: updateProcessedData(processedStartField, colorConfig, records, dataVersion, draftKey, displayFrame, getRecordColor, project.dateFormat?.writeFormat);
   function updateProcessedData(
     startField: string | undefined,
     cfg: typeof config,
@@ -1631,7 +1636,7 @@
   async function confirmDraft(): Promise<void> {
     if (dataReadOnly || readonly) return;
     const result = await draftCtl.confirm(
-      ({ name, templatePath, values }) => api.addRecord(createDataRecord(name, project, values), fields, templatePath),
+      ({ name, templatePath, values, defaults }) => api.addRecord(createDataRecord(name, project, values), fields, templatePath, undefined, defaults),
       dayjs(),
       get(i18n).t("modals.note.create.untitled")
     );
@@ -1977,7 +1982,7 @@
         titleField={titleField?.name}
         dateField={dateField?.name}
         timeField={config?.startTimeField}
-        colorField={config?.eventColorField}
+        {colorField}
         checkField={booleanField?.name}
         timezone={timezoneValue}
         onRecordClick={handleAgendaRecordClick}
@@ -2074,7 +2079,8 @@
     records={dayPopupRecords}
     checkField={booleanField?.name}
     {getRecordColor}
-    eventColorField={config?.eventColorField}
+    eventColorField={colorField}
+    saveRecordColor={handleDayPopupRecordColorChange}
     visible={showDayPopup}
     anchorEl={dayAnchor?.isConnected ? dayAnchor : calendarRootEl}
     on:close={() => showDayPopup = false}

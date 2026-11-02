@@ -235,6 +235,8 @@ export interface DraftPayload {
   readonly name: string;
   readonly templatePath: string;
   readonly values: Values;
+  /** Fill absent properties only; template and explicit edits take precedence. */
+  readonly defaults: Values;
 }
 
 /** The single-date time model can infer an overnight end, but not multiple days. */
@@ -264,8 +266,14 @@ export function draftPayload(draft: CalendarDraft, today: Dayjs, untitled: strin
   if (m.status && (draft.status || draft.edited.includes("status"))) values[m.status] = draft.status || null;
   if (m.color && (draft.color || draft.edited.includes("color"))) values[m.color] = draft.color || null;
   if (m.icon && (draft.icon.trim() || draft.edited.includes("icon"))) values[m.icon] = draft.icon.trim() || null;
+  const defaults: Values = {};
+  if (m.color) defaults[m.color] = null;
+  if (m.icon) defaults[m.icon] = null;
+  if (m.status) defaults[m.status] = null;
+  if (m.check) defaults[m.check] = false;
   for (const name of m.computed) delete values[name];
-  return { name: draftFileName(draft, untitled), templatePath: draft.templatePath, values };
+  for (const name of m.computed) delete defaults[name];
+  return { name: draftFileName(draft, untitled), templatePath: draft.templatePath, values, defaults };
 }
 
 export interface DraftBegin {

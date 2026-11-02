@@ -66,7 +66,7 @@ describe("calendar creation opens an in-view draft, not a modal", () => {
     const confirm = fnBody(view, /async function confirmDraft\(/);
     expect(confirm).toMatch(/if \(dataReadOnly \|\| readonly\) return;/);
     expect(confirm).toMatch(/draftCtl\.confirm\(/);
-    expect(confirm.match(/api\.addRecord\(createDataRecord\(name, project, values\), fields, templatePath\)/g)).toHaveLength(1);
+    expect(confirm.match(/api\.addRecord\(createDataRecord\(name, project, values\), fields, templatePath, undefined, defaults\)/g)).toHaveLength(1);
   });
 
   it("the form is mounted only for a draft, in the view's own layout", () => {
@@ -79,7 +79,7 @@ describe("calendar creation opens an in-view draft, not a modal", () => {
 describe("the calendar draws the draft beside the notes", () => {
   it("the processed frame is the frame plus the draft, never the draft alone", () => {
     expect(view).toMatch(/displayFrame = shownDraft \? \{ \.\.\.frame, records: \[\.\.\.frame\.records, shownDraft\] \} : frame/);
-    expect(view).toMatch(/updateProcessedData\(processedStartField, config, records, dataVersion, draftKey, displayFrame,/);
+    expect(view).toMatch(/updateProcessedData\(processedStartField, colorConfig, records, dataVersion, draftKey, displayFrame,/);
   });
 
   it("the cache key joins the data version and the draft revision as text, not as a sum", () => {
@@ -104,7 +104,7 @@ describe("every path that touches a note by id recognises the draft first", () =
     ["popup delete", /async function handleDayPopupRecordDelete\(/, /draftCtl\.cancel\(\)/],
   ])("%s: after the read-only guard, before any write", (_name, signature, branch) => {
     const body = fnBody(view, signature);
-    const guard = body.indexOf("if (dataReadOnly) return;");
+    const guard = body.search(/if \(dataReadOnly\) return(?: false)?;/);
     const draft = body.search(/interceptDraft\(record\??\.id/);
     const write = body.search(/\bapi\.|await |updateRecord\(/);
     expect(guard).toBeGreaterThanOrEqual(0);

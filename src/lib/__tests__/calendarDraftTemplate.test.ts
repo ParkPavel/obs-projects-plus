@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import { parse } from "yaml";
 import { DataApi } from "src/lib/dataApi";
+import { ViewApi } from "src/lib/viewApi";
 import { IFile } from "src/lib/filesystem/filesystem";
 import { createCalendarDraft, draftMapping } from "src/ui/views/Calendar/draft/calendarDraft";
 
@@ -14,6 +15,35 @@ class CreatedFile extends IFile {
   readTags(): Set<string> { return new Set(); }
   async process(): Promise<void> { throw new Error("unexpected second write"); }
 }
+
+it.each([
+  ["", null, null],
+  ["---\nother: 0\n---\nBody", null, null],
+  ['---\ncolor: ""\n---\nBody', "", null],
+  ['---\ncolor: "#aabbcc"\n---\nBody', "#aabbcc", null],
+  ['---\ncolor: "#aabbcc"\n---\nBody', "#112233", "#112233"],
+  ['---\nColor: "#123456"\n---\nBody', null, null],
+])("fills an absent mapped color without overwriting template or explicit values: %s", async (template, expected, edited) => {
+  const ctl = createCalendarDraft();
+  ctl.begin({ owner: "p", day: dayjs("2026-11-03"), durationMinutes: 60,
+    name: "new", templatePath: template ? "Template.md" : "", prefill: {},
+    mapping: draftMapping({ config: { eventColorField: "color", iconField: "icon", statusField: "stage", checkField: "done" }, fields: [] }) });
+  if (edited) ctl.edit({ color: edited });
+  const templateFile = new CreatedFile();
+  jest.spyOn(templateFile, "read").mockResolvedValue(template);
+  const create = jest.fn(async (_path: string, _content: string) => new CreatedFile());
+  const api = new ViewApi({ includes: () => false } as never,
+    new DataApi({ create, getFile: () => templateFile, getAllFiles: () => [] }));
+  await ctl.confirm(({ values, templatePath, defaults }) =>
+    api.addRecord({ id: "new.md", values }, [], templatePath, undefined, defaults), dayjs("2026-11-03"), "Untitled");
+  expect(create).toHaveBeenCalledTimes(1);
+  const content = create.mock.calls[0]![1];
+  const properties = parse(content.split("---")[1]!);
+  expect(properties).toMatchObject({ color: expected, icon: null, stage: null, done: false });
+  if (template.includes("Color:")) expect(properties.Color).toBe("#123456");
+  if (template.includes("Body")) expect(content).toContain("Body");
+  ctl.destroy();
+});
 
 it.each([false, true])("preserves untouched template values and clears only explicit edits (edited=%s)", async (edited) => {
   const ctl = createCalendarDraft();
@@ -37,7 +67,7 @@ it.each([false, true])("preserves untouched template values and clears only expl
   const read = jest.spyOn(templateFile, "read").mockResolvedValue(template);
   const getFile = jest.fn((path: string) => path === "Template.md" ? templateFile : null);
   const api = new DataApi({ create, getFile, getAllFiles: () => [] });
-  await ctl.confirm(({ values, templatePath }) => api.createNote({ id: "new.md", values }, [], templatePath), dayjs("2026-10-28"), "Untitled");
+  await ctl.confirm(({ values, templatePath, defaults }) => api.createNote({ id: "new.md", values }, [], templatePath, undefined, defaults), dayjs("2026-10-28"), "Untitled");
   expect(getFile).toHaveBeenCalledWith("Template.md");
   expect(read).toHaveBeenCalledTimes(1);
   expect(create).toHaveBeenCalledTimes(1);

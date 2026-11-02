@@ -75,6 +75,15 @@ describe("resolveRecordColor (C1 priority)", () => {
 
   beforeEach(() => rule.mockClear());
 
+  it("a mapped editor reads only its exact write target, preserving distinct YAML keys", () => {
+    expect(resolveRecordColor(record({ Color: "#112233", color: "#aabbcc" }), {
+      eventColorField: "Color", exactField: true,
+    })).toBe("#112233");
+    expect(resolveRecordColor(record({ Color: "#112233" }), {
+      eventColorField: "color", exactField: true, fallback: "theme",
+    })).toBe("theme");
+  });
+
   it("explicit per-record color beats the project rule", () => {
     const result = resolveRecordColor(record({ color: "#00ffb3" }), {
       getRecordColor: rule,
