@@ -95,25 +95,28 @@ describe("keyboard-visible viewport, not the covered layout viewport", () => {
 
   it("a combo list fits the visible area and follows its visualViewport events", async () => {
     const rect = jest.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
-      const root = this.classList.contains("ppp-combo");
+      const root = this.classList.contains("ppp-combo-input");
       return { left: root ? 250 : 0, top: root ? 220 : 0, right: root ? 450 : 200, bottom: root ? 248 : 80, width: 200, height: root ? 28 : 80, x: 0, y: 0, toJSON: () => ({}) };
     });
     try {
       const view = render(ComboField, { props: { value: "", options: [{ id: "a", label: "Alpha" }], allowCustom: true } });
-      view.container.querySelector<HTMLInputElement>("input")!.focus(); await settle();
+      const input = view.container.querySelector<HTMLInputElement>("input")!;
+      input.focus(); await settle();
       const popup = document.querySelector<HTMLElement>(".ppp-combo-popup")!;
       expect(parseFloat(popup.style.left) * 16).toBeLessThanOrEqual(92);
       expect(popup.style.maxHeight).not.toBe("");
       const before = popup.style.top;
-      // w4-p06: the list stands over its field while a few rows fit there;
-      // panned so the field is at the visible top, it moves under the field.
+      // PP-INPUT-004: lack of upper room hides the suggestions; it never flips.
       expect(parseFloat(popup.style.top) * 16).toBeLessThan(220);
       viewport.offsetTop = 200; viewport.dispatchEvent(new Event("scroll")); await settle();
       expect(popup.style.top).not.toBe(before);
+      expect(popup).toHaveAttribute("aria-hidden", "true");
       // A keyboard that covers the field itself closes the list instead of
       // pinning it to the visible edge, away from its field.
       viewport.offsetTop = 100; viewport.height = 100; viewport.dispatchEvent(new Event("resize")); await settle();
-      expect(document.querySelector(".ppp-combo-popup")).toBeNull();
+      expect(popup).toHaveAttribute("aria-hidden", "true");
+      expect(document.activeElement).toBe(input);
+      expect(view.container.querySelector("input")).toBe(input);
       view.unmount();
     } finally { rect.mockRestore(); }
   });

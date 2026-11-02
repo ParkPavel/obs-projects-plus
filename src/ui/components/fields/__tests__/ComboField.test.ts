@@ -63,7 +63,7 @@ const key = (el: HTMLElement, k: string, init: KeyboardEventInit & { keyCode?: n
 };
 const open = async (m: ReturnType<typeof mount>) => {
   m.input.focus();
-  await tick();
+  await tick(); await tick(); await tick();
 };
 
 afterEach(() => {
@@ -71,6 +71,61 @@ afterEach(() => {
 });
 
 describe("ComboField — ARIA and the portalled popup", () => {
+  const rect = (top: number, height: number) => ({ top, bottom: top + height, left: 20, right: 220, width: 200, height, x: 20, y: top, toJSON: () => ({}) });
+  const settlePlacement = async () => { await tick(); await tick(); await tick(); };
+
+  test("shrinks above the original field even when there is much more room below", async () => {
+    const measured = jest.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      return this.tagName === "INPUT" || this.classList.contains("ppp-combo") ? rect(80, 40) : rect(0, 160);
+    });
+    const m = mount();
+    try {
+      await open(m); await settlePlacement();
+      const popup = listbox()!;
+      const px = (value: string) => parseFloat(value) * 16;
+      expect(px(popup.style.top) + px(popup.style.maxHeight)).toBeLessThan(80);
+      expect(px(popup.style.maxHeight)).toBeGreaterThan(0);
+      expect(m.target.querySelector("input")).toBe(m.input);
+      expect(document.activeElement).toBe(m.input);
+    } finally { m.destroy(); measured.mockRestore(); }
+  });
+
+  test.each([1, 0.5])("scrolls the original field into available room at container scale %s", async scale => {
+    const m = mount();
+    const scroller = document.createElement("div");
+    m.target.before(scroller); scroller.append(m.target);
+    scroller.scrollTop = 50 / scale;
+    Object.defineProperty(scroller, "scrollHeight", { configurable: true, value: 1000 });
+    Object.defineProperty(scroller, "clientHeight", { configurable: true, value: 300 });
+    Object.defineProperty(scroller, "offsetHeight", { configurable: true, value: 160 / scale });
+    const measured = jest.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      return this.tagName === "INPUT" || this.classList.contains("ppp-combo") ? rect(60 - scroller.scrollTop * scale, 40) : rect(0, 160);
+    });
+    try {
+      await open(m); await settlePlacement();
+      expect(scroller.scrollTop).toBeLessThan(50 / scale);
+      expect(m.target.querySelector("input")).toBe(m.input);
+      expect(listbox()).not.toHaveAttribute("aria-hidden", "true");
+    } finally { m.destroy(); measured.mockRestore(); scroller.remove(); }
+  });
+
+  test("when no upper room can be made, hides suggestions and keeps the input, query and caret", async () => {
+    const measured = jest.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      return this.tagName === "INPUT" || this.classList.contains("ppp-combo") ? rect(10, 40) : rect(0, 160);
+    });
+    const m = mount();
+    try {
+      await open(m); type(m.input, "Do"); m.input.setSelectionRange(1, 2);
+      await settlePlacement();
+      expect(m.input).toHaveAttribute("aria-expanded", "false");
+      expect(listbox()).toHaveAttribute("aria-hidden", "true");
+      expect(document.activeElement).toBe(m.input);
+      expect(m.input).toHaveValue("Do");
+      expect([m.input.selectionStart, m.input.selectionEnd]).toEqual([1, 2]);
+      expect(m.commits).toEqual([]);
+    } finally { m.destroy(); measured.mockRestore(); }
+  });
+
   test("closed: a combobox that is not expanded and controls nothing", () => {
     const m = mount();
     expect(m.input).toHaveAttribute("role", "combobox");
@@ -140,12 +195,11 @@ describe("ComboField — ARIA and the portalled popup", () => {
       input.focus();
       await tick();
       await tick();
-      const root = input.parentElement!;
       const measureAnchor = jest.fn(() => ({
         top: 100, bottom: 130, left: 20, right: 220, width: 200, height: 30,
         x: 20, y: 100, toJSON: () => ({}),
       }));
-      root.getBoundingClientRect = measureAnchor;
+      input.getBoundingClientRect = measureAnchor;
       const popup = ownerDocument.querySelector<HTMLElement>('[role="listbox"]')!;
       for (let attempt = 0; attempt < 10 && !popup.style.top; attempt++) await tick();
       expect(popup.style.top).not.toBe("");

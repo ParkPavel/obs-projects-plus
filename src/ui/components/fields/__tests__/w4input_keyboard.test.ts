@@ -103,7 +103,7 @@ describe("the visible area ends at Obsidian's keyboard", () => {
   test("a suggestion list does not open under the keyboard: it stands over its field", async () => {
     keyboard(300);
     jest.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
-      return this.classList.contains("ppp-combo") ? box(420, 40) : box(0, 160);
+      return this.classList.contains("ppp-combo-input") ? box(420, 40) : box(0, 160);
     });
     jest.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockReturnValue(160);
     const view = render(ComboField, { props: { value: "", options: [{ id: "a", label: "Alpha" }, { id: "b", label: "Beta" }], allowCustom: true } });

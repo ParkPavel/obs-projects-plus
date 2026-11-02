@@ -237,12 +237,19 @@ describe("#C4 every write path is guarded, handler by handler", () => {
     const at = src.search(signature);
     if (at < 0) throw new Error(`handler not found: ${signature}`);
     const body = src.slice(at, at + 600);
-    const guard = body.search(/if \(dataReadOnly\) return;/);
+    const guard = body.search(/if \(dataReadOnly\) return(?: false)?;/);
     // Settings writes count too: a sort or rename can persist config before any
     // record is touched (recheck of 5f331b7).
     const write = body.search(/\bapi\.|await |updateRecord|\.process\(|updateFieldConfig|saveConfig|settings\./);
     return guard >= 0 && (write < 0 || guard < write);
   }
+
+  it("recognises a negative write acknowledgement while still rejecting late or inverted guards", () => {
+    const signature = /async function save\(/;
+    expect(opensWithGuard("async function save() { if (dataReadOnly) return false; await api.updateRecord(); }", signature)).toBe(true);
+    expect(opensWithGuard("async function save() { await api.updateRecord(); if (dataReadOnly) return false; }", signature)).toBe(false);
+    expect(opensWithGuard("async function save() { if (!dataReadOnly) return false; await api.updateRecord(); }", signature)).toBe(false);
+  });
 
   it.each([
     ["check", /const handleRecordCheck =/],

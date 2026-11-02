@@ -90,7 +90,7 @@ describe("w4-p06 — a popup stays against its anchor (N9, PC)", () => {
 describe("w4-p06 — a suggestion list stands over its field (the standard, PC too)", () => {
   test("on a fine pointer the list opens above the field when rows fit there", async () => {
     jest.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
-      return this.classList.contains("ppp-combo") ? box(400, 28) : box(0, 80);
+      return this.classList.contains("ppp-combo-input") ? box(400, 28) : box(0, 80);
     });
     const view = render(ComboField, { props: { value: "", options: [{ id: "a", label: "Alpha" }, { id: "b", label: "Beta" }], allowCustom: true } });
     view.container.querySelector<HTMLInputElement>("input")!.focus();

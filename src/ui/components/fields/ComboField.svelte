@@ -41,6 +41,8 @@
   import { createDraftController, recordImeCompositionEnd, type CommitReason } from "./draftController";
   import { filterOptions, optionDomId, stepActive, type ComboOption } from "./comboOptions";
   import { onKeyboardChange, visibleViewport } from "src/ui/utils/visibleViewport";
+  import { aboveFieldPlacement, makeRoomAbove } from "./aboveFieldPlacement";
+  import { fieldViewport } from "./fieldViewport";
 
   export let value = "";
   export let options: ComboOption[] = [];
@@ -89,7 +91,11 @@
   let rootEl: HTMLDivElement | null = null;
   let inputEl: HTMLInputElement | null = null;
   let popupEl: HTMLDivElement | null = null;
-  let popupStyle = "";
+  let insetEl: HTMLSpanElement | null = null;
+  let popupStyle = "visibility: hidden;";
+  let placementHidden = true;
+  let placementVersion = 0;
+  let roomAttempt = "";
   let watching: Window | null = null;
   let unwatchKeyboard: (() => void) | null = null;
 
@@ -111,7 +117,7 @@
   }
   $: shown = filterOptions(options, dirty ? draft : "");
   $: expanded = open && !disabled && (shown.length > 0 || loading);
-  $: activeOpt = expanded && active >= 0 && active < shown.length ? shown[active] : undefined;
+  $: activeOpt = expanded && !placementHidden && active >= 0 && active < shown.length ? shown[active] : undefined;
 
   /** Move focus into the input. */
   export function focus(): void {
@@ -132,38 +138,31 @@
   });
 
   // ── Popup placement ────────────────────────────────────────
+  function measureAnchor(): DOMRect | undefined {
+    return inputEl?.getBoundingClientRect();
+  }
   async function place(): Promise<void> {
+    const version = ++placementVersion;
     await tick();
-    if (!rootEl || !popupEl) return;
+    if (version !== placementVersion || !expanded || !rootEl || !popupEl || !inputEl) return;
     const doc = rootEl.ownerDocument;
     const view = doc.defaultView ?? window;
     const base = rootFontPx(doc);
-    const margin = 0.5 * base;
-    const gap = 0.25 * base;
-    const anchor = rootEl.getBoundingClientRect();
+    let anchor = measureAnchor()!;
     const box = popupEl.getBoundingClientRect();
-    const bounds = visibleViewport(view);
-    // i3-input: a field scrolled out of the visible area takes its list with
-    // it — the list closes instead of staying pinned to the edge, cut off from
-    // its field; a tap or a key on the field opens it again.
-    if (anchor.height > 0 && (anchor.bottom < bounds.top + margin || anchor.top > bounds.bottom - margin)) {
-      hide();
-      return;
+    const bounds = fieldViewport(view, insetEl ? view.getComputedStyle(insetEl) : undefined);
+    const natural = Math.min(Math.max(popupEl.scrollHeight, box.height), 12 * base);
+    let placement = aboveFieldPlacement(anchor, natural, box.width, bounds, base);
+    const area = `${bounds.width}|${bounds.height}`;
+    if (!placement.visible && placement.missing > 0 && roomAttempt !== area) {
+      roomAttempt = area;
+      makeRoomAbove(inputEl, placement.missing, bounds);
+      anchor = measureAnchor()!;
+      placement = aboveFieldPlacement(anchor, natural, box.width, bounds, base);
     }
-    const below = Math.max(0, bounds.bottom - margin - anchor.bottom - gap);
-    const above = Math.max(0, anchor.top - gap - bounds.top - margin);
-    // The list's own height, not the one the last placement capped it to:
-    // measured after a cap, it always "fitted" below and never flipped.
-    const natural = Math.min(popupEl.scrollHeight || box.height, 12 * base);
-    // The input standard (CONSOLIDATION §7, w4-p06): the list stands over its
-    // field whenever a few rows fit there — on a phone the keyboard is below,
-    // and a computer follows the same rule — else under it, capped to the room.
-    const goAbove = above >= Math.min(natural, 6 * base) || above > below;
-    const width = Math.max(0, bounds.width - 2 * margin);
-    const maxHeight = goAbove ? above : below;
-    const top = goAbove ? anchor.top - gap - Math.min(natural, above) : anchor.bottom + gap;
-    const left = Math.min(Math.max(anchor.left, bounds.left + margin), Math.max(bounds.left + margin, bounds.right - Math.min(Math.max(box.width, anchor.width), width) - margin));
-    popupStyle = `top: ${remAt(top, base)}; left: ${remAt(left, base)}; min-width: ${remAt(Math.min(anchor.width, width), base)}; max-width: ${remAt(width, base)}; max-height: ${remAt(Math.max(0, maxHeight), base)};`;
+    if (version !== placementVersion || !expanded) return;
+    placementHidden = !placement.visible;
+    popupStyle = `top: ${remAt(placement.top, base)}; left: ${remAt(placement.left, base)}; width: ${remAt(placement.width, base)}; max-height: ${remAt(placement.height, base)}; visibility: ${placementHidden ? "hidden" : "visible"};`;
   }
   $: if (expanded && popupEl && shown) void place();
 
@@ -191,7 +190,7 @@
     if (watching) unwatchKeyboard = onKeyboardChange(watching, () => onViewChange());
   }
   $: watch(expanded ? rootEl?.ownerDocument.defaultView ?? null : null);
-  onDestroy(() => watch(null));
+  onDestroy(() => { placementVersion++; watch(null); });
 
   // i3-input: the list follows its field. A sheet that fits itself to the
   // keyboard moves the field by layout alone — no scroll or resize event —
@@ -203,11 +202,11 @@
     anchorFrame = null;
     const view = rootEl?.ownerDocument.defaultView;
     if (!expanded || !rootEl || !view?.requestAnimationFrame) return;
-    const r = rootEl.getBoundingClientRect();
+    const r = measureAnchor()!;
     const area = visibleViewport(view);
     // A pan of the visual viewport (iOS) or the keyboard moves the visible
     // area, not the field.
-    const key = `${r.top}|${r.left}|${r.width}|${area.top}|${area.height}`;
+    const key = `${r.top}|${r.left}|${r.width}|${r.height}|${area.top}|${area.height}`;
     if (key !== lastAnchor) {
       lastAnchor = key;
       void place();
@@ -231,17 +230,20 @@
 
   // ── Lifecycle ──────────────────────────────────────────────
   function show(): void {
-    if (open || disabled) return;
+    if (open || disabled || readOnly) return;
     open = true;
+    roomAttempt = "";
     // A reopened list is a new interaction inside the same focus.
     ctl.arm();
     pickedByPointer = null;
   }
   function hide(): void {
+    placementVersion++;
     open = false;
+    placementHidden = true;
     active = -1;
     userNav = false;
-    popupStyle = "";
+    popupStyle = "visibility: hidden;";
   }
   /** The default active option: the top match when text cannot be committed as typed. */
   function resetActive(): void {
@@ -347,7 +349,7 @@
   // The derived `expanded` and `activeOpt` settle on the next flush; a key handler
   // runs between flushes (two keys in one task), so it reads the live state.
   function expandedNow(): boolean {
-    return open && !disabled && (visible().length > 0 || loading);
+    return open && !disabled && !placementHidden && (visible().length > 0 || loading);
   }
   function activeNow(): ComboOption | undefined {
     const list = visible();
@@ -439,7 +441,7 @@
     role="combobox"
     aria-autocomplete="list"
     aria-haspopup="listbox"
-    aria-expanded={expanded}
+    aria-expanded={expanded && !placementHidden}
     data-ppp-dirty={dirty ? "true" : undefined}
     aria-controls={expanded ? listId : undefined}
     aria-activedescendant={activeOpt ? optionDomId(listId, activeOpt.id) : undefined}
@@ -470,9 +472,11 @@
       data-settings-dropdown="combo"
       aria-multiselectable={multi ? "true" : undefined}
       aria-busy={loading ? "true" : undefined}
+      aria-hidden={placementHidden ? "true" : undefined}
       style={popupStyle}
       on:mousedown|preventDefault
     >
+      <span bind:this={insetEl} class="ppp-combo-insets" aria-hidden="true"></span>
       {#each shown as opt (opt.id)}
         <button
           type="button"
@@ -502,6 +506,14 @@
   .ppp-combo-input {
     flex: 1;
     min-width: 0;
+  }
+  .ppp-combo-insets {
+    position: fixed;
+    width: 0;
+    height: 0;
+    padding: env(safe-area-inset-top, 0rem) env(safe-area-inset-right, 0rem) env(safe-area-inset-bottom, 0rem) env(safe-area-inset-left, 0rem);
+    visibility: hidden;
+    pointer-events: none;
   }
   .ppp-combo-popup {
     position: fixed;

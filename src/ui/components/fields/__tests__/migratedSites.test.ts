@@ -108,7 +108,7 @@ describe("FieldComboInput", () => {
   test("an arrowed pick commits once", async () => {
     const m = mount("");
     m.input.focus();
-    await tick();
+    await settle();
     key(m.input, "ArrowDown");
     key(m.input, "ArrowDown");
     key(m.input, "Enter");
