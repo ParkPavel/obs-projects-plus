@@ -809,7 +809,7 @@
         />
       {/if}
     </SettingItem>
-    {#if !field.repeated && (field.type === DataFieldType.String || field.type === DataFieldType.Select || field.type === DataFieldType.Status)}
+    {#if !field.repeated && (field.type === DataFieldType.String || field.type === DataFieldType.List || field.type === DataFieldType.Select || field.type === DataFieldType.Status)}
       <SettingItem
         name={$i18n.t("modals.field.create.options.name")}
         description={$i18n.t("modals.field.create.options.description")}

@@ -61,9 +61,8 @@
   import type { NamedSourceView } from "src/lib/datasources/namedSource";
   import { namedSourceNotice } from "./namedSourceNotice";
   import EmptyState from "src/ui/components/EmptyState/EmptyState.svelte";
-  import { CreateNoteModal } from "src/ui/modals/createNoteModal";
+  import NoteDraft from "src/ui/components/NoteDraft.svelte";
   import { createDataRecord } from "src/lib/dataApi";
-  import { app } from "src/lib/stores/obsidian";
   import { settings } from "src/lib/stores/settings";
   import type { ViewDefinition } from "src/settings/base/settings";
   import { isRenderableTab, linkTab, resolveTabView, scopeTabFrame, sortTabRecords, unlinkTab } from "./linkedView";
@@ -320,6 +319,7 @@
   // on every collapse toggle, so a later expand cannot replay a spent one.
   let seenPrimarySignal = 0;
   let newRowSignal = 0;
+  let firstRecordDraftOpen = false;
   $: if (primaryActionSignal > seenPrimarySignal) {
     seenPrimarySignal = primaryActionSignal;
     runPrimaryAction();
@@ -328,21 +328,17 @@
   /**
    * Add a record through whichever creation path is actually on screen.
    *
-   * With rows present the table shows an inline «+ New» at the body end, and
-   * that is the one the user already reaches; with none, the block shows an
-   * empty state whose own button opens the create-note modal. Routing to the
-   * mounted one is what keeps this a shortcut to an existing interaction
-   * rather than a second way to make a record.
+   * With rows present the table shows an inline «+ New» at the body end. With
+   * none, the empty state opens the shared note draft in this view.
    *
    * A NON-TABLE tab with records is the case that must do nothing, and the
    * adversarial review of #169 is why it is written out rather than left to
    * fall through: Board, Calendar and Gallery each create a record with the
    * context of what you are looking at — the column's value, the day you
-   * clicked, the active filter. The generic modal below has none of it, so on
-   * a Calendar tab it would write a record with no date, which then does not
-   * appear in the calendar that made it. The header does not offer the action
-   * for those blocks at all (`primaryActionFor`), and this guard is the second
-   * lock on the same door.
+   * clicked, the active filter. The generic table draft has none of that
+   * view-specific context, so this guard must stop it on non-table tabs. The
+   * header does not offer the action for those blocks at all
+   * (`primaryActionFor`), and this guard is the second lock on the same door.
    */
   function runPrimaryAction() {
     if (readonly || sourceReadOnly || !project) return;
@@ -355,15 +351,20 @@
     if (namedSource.kind === "broken") return;
     if (activeTab && activeTab.viewType !== "table") return;
     if (effectiveFrame.records.length > 0) newRowSignal += 1;
-    else handleAddFirstRecord();
+    else openFirstRecordDraft();
   }
 
-  function handleAddFirstRecord() {
-    const p = project;
-    if (!p) return;
-    new CreateNoteModal($app, p, (name, templatePath) => {
-      return api.addRecord(createDataRecord(name, p), fields, templatePath);
-    }).open();
+  function openFirstRecordDraft(): void {
+    firstRecordDraftOpen = true;
+  }
+
+  async function saveFirstRecord(
+    name: string,
+    templatePath: string,
+    targetProject: ProjectDefinition
+  ): Promise<void> {
+    await api.addRecord(createDataRecord(name, targetProject), fields, templatePath);
+    firstRecordDraftOpen = false;
   }
 
   function handleClearCanvasFilter() {
@@ -701,6 +702,14 @@
                 </button>
               </svelte:fragment>
             </EmptyState>
+          {:else if effectiveFrame.records.length === 0 && firstRecordDraftOpen && project}
+            <div class="ppp-dbc-first-record-draft">
+              <NoteDraft
+                {project}
+                onSave={saveFirstRecord}
+                onCancel={() => (firstRecordDraftOpen = false)}
+              />
+            </div>
           {:else if effectiveFrame.records.length === 0}
             <EmptyState
               icon="database"
@@ -713,7 +722,7 @@
             >
               <svelte:fragment slot="actions">
                 {#if !readonly && !sourceReadOnly && project}
-                  <button on:click={handleAddFirstRecord}>
+                  <button on:click={openFirstRecordDraft}>
                     {$i18n.t("views.dashboard.database-call.add-first-record", {
                       defaultValue: "Add first record"
                     })}
@@ -830,6 +839,18 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+  }
+  .ppp-dbc-first-record-draft {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    overflow: auto;
+    padding: var(--size-4-3);
+  }
+  .ppp-dbc-first-record-draft :global(.ppp-note-draft) {
+    max-width: 32rem;
   }
   .ppp-database-call-content--visual {
     flex: 1 1 30em;

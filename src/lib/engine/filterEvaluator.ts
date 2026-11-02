@@ -73,9 +73,8 @@ import { isEmpty as kernelIsEmpty, isNotEmpty as kernelIsNotEmpty } from "src/li
 import { toNumber } from "src/lib/engine/numeric";
 import { asCheckbox } from "src/lib/engine/aggregate";
 import {
-  isUnsafePattern,
+  compileSafeRegex,
   MAX_REGEX_INPUT_LENGTH,
-  MAX_REGEX_PATTERN_LENGTH,
 } from "src/lib/helpers/regexSafety";
 
 // dayjs isoWeek + quarterOfYear plugins are extended globally in main.ts
@@ -340,13 +339,8 @@ export const baseFns: Record<
  * the one place a pattern meets every record in the vault.
  */
 function safeRegexTest(pattern: string, input: string): boolean {
-  if (pattern.length > MAX_REGEX_PATTERN_LENGTH) return false;
-  if (isUnsafePattern(pattern)) return false;
-  try {
-    return new RegExp(pattern, "i").test(input.slice(0, MAX_REGEX_INPUT_LENGTH));
-  } catch {
-    return false;
-  }
+  const result = compileSafeRegex(pattern, "i");
+  return result.ok && result.regex.test(input.slice(0, MAX_REGEX_INPUT_LENGTH));
 }
 
 /**

@@ -9,10 +9,16 @@ import { i18n } from "src/lib/stores/i18n";
  */
 export function humanFormulaError(raw: string, fields: readonly string[] = []): string {
   const t = (key: string, opts: Record<string, string> = {}): string => {
-    const text = get(i18n).t(`formula-errors.${key}`, opts);
-    return text === `formula-errors.${key}` ? raw : text; // no translations loaded: keep the raw words
+    const translationKey = key.startsWith("regex-errors.") ? key : `formula-errors.${key}`;
+    const text = get(i18n).t(translationKey, opts);
+    return text === translationKey ? raw : text; // no translations loaded: keep the raw words
   };
   if (raw === "Unsupported formula version") return t("version");
+  if (raw === "Regex input too long") return t("regex-errors.input-too-long");
+  let regexIssue: RegExpExecArray | null;
+  if ((regexIssue = /^Regex pattern (invalid|unsafe|too-long)$/.exec(raw))) {
+    return t(`regex-errors.${regexIssue[1]}`);
+  }
   let m: RegExpExecArray | null;
   if (/^Invalid numeric literal at position \d+$/.test(raw)) return t("number");
   if (raw === "Unterminated string literal") return t("string");

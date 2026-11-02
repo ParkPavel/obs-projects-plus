@@ -126,6 +126,24 @@ describe("text cell", () => {
   });
 });
 
+describe("typed cell viewport", () => {
+  it("scrolls a focused number editor into the visible area", async () => {
+    const result = mount(makeField(DataFieldType.Number), 12);
+    const el = editor(result.container);
+    const scrollIntoView = jest.fn();
+    el.scrollIntoView = scrollIntoView;
+    el.getBoundingClientRect = () => ({
+      x: 0, y: 900, top: 900, bottom: 924, left: 0, right: 180, width: 180, height: 24,
+      toJSON: () => ({}),
+    });
+
+    await tick();
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest", inline: "nearest", behavior: "auto" });
+    result.unmount();
+  });
+});
+
 describe("number cell", () => {
   it("keeps the typed number across a flush and commits it as a number", async () => {
     const { container, commits } = mount(makeField(DataFieldType.Number), 12);

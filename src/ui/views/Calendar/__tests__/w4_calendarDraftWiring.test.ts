@@ -12,6 +12,7 @@ import * as ts from "typescript";
 const CALENDAR = path.resolve(__dirname, "..");
 const read = (rel: string) => fs.readFileSync(path.join(CALENDAR, rel), "utf8");
 const view = read("CalendarView.svelte");
+const sheet = read("draft/CalendarDraftSheet.svelte");
 
 /** The body of `function name(` up to the next top-level function of the script. */
 function fnBody(code: string, signature: RegExp): string {
@@ -34,13 +35,25 @@ function hasIdentifier(code: string, name: string): boolean {
   return found;
 }
 
-describe("a time on the grid opens a draft, not a note", () => {
+describe("calendar creation opens an in-view draft, not a modal", () => {
   const add = fnBody(view, /function handleRecordAdd\(/);
 
-  it("handleRecordAdd hands a timed creation to the draft before the create window, on writable data only", () => {
-    const draft = add.search(/if \(startTime && !readonly && !dataReadOnly\) \{\s*beginDraft\(date, startTime, endTime\);\s*return;/);
-    expect(draft).toBeGreaterThanOrEqual(0);
-    expect(draft).toBeLessThan(add.indexOf("new CreateNoteModal("));
+  it("a timed grid gesture starts the draft only for writable data", () => {
+    expect(add).toMatch(/if \(startTime && !readonly && !dataReadOnly\) \{\s*beginDraft\(date, startTime, endTime\);\s*return;/);
+    expect(view).not.toContain("CreateNoteModal");
+  });
+
+  it("a date-only action checks the date mapping and write access before starting the same draft", () => {
+    const dateRequired = add.indexOf("if (!dateField)");
+    const readonly = add.indexOf("if (readonly || dataReadOnly)");
+    const begin = add.lastIndexOf("beginDraft(date, startTime, endTime);");
+    expect(dateRequired).toBeGreaterThanOrEqual(0);
+    expect(readonly).toBeGreaterThan(dateRequired);
+    expect(begin).toBeGreaterThan(readonly);
+  });
+
+  it("the date controls follow the draft mode instead of forcing time fields", () => {
+    expect(sheet).toMatch(/withTime=\{draft\.hasTime\}/);
   });
 
   it("beginning a draft writes nothing", () => {

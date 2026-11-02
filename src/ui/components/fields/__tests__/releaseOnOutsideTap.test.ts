@@ -64,6 +64,40 @@ it("a press in the field's own layers (suggestions, sheet, keyboard button) keep
   done();
 });
 
+it("a tap inside a focused field in a secondary document does not blur it", () => {
+  const iframe = document.createElement("iframe");
+  document.body.appendChild(iframe);
+  const doc = iframe.contentDocument!;
+  const view = iframe.contentWindow! as Window & typeof globalThis;
+  const input = doc.createElement("input");
+  const outside = doc.createElement("div");
+  doc.body.append(input, outside);
+  const action = releaseOnOutsideTap(input);
+  const blurs = jest.fn();
+  input.addEventListener("blur", blurs);
+  input.focus();
+
+  const dispatch = (target: EventTarget, type: string) => {
+    const e = new view.Event(type, { bubbles: true, cancelable: true });
+    Object.assign(e, { clientX: 10, clientY: 10, pointerId: 1 });
+    target.dispatchEvent(e);
+  };
+
+  try {
+    dispatch(input, "pointerdown");
+    dispatch(input, "pointerup");
+    expect(blurs).not.toHaveBeenCalled();
+    expect(doc.activeElement).toBe(input);
+    dispatch(outside, "pointerdown");
+    dispatch(outside, "pointerup");
+    expect(blurs).toHaveBeenCalledTimes(1);
+    expect(doc.activeElement).not.toBe(input);
+  } finally {
+    action.destroy();
+    iframe.remove();
+  }
+});
+
 it("TextField turns off iOS auto-capitalisation and autocorrect", () => {
   const src = require("fs").readFileSync(require("path").join(__dirname, "../TextField.svelte"), "utf8");
   expect(src).toMatch(/autocapitalize="off"/);

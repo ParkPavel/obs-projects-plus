@@ -26,7 +26,7 @@
     ViewContent,
     ViewLayout,
   } from "src/ui/components/Layout";
-  import { CreateNoteModal, initialNoteName, noteNameProblem } from "src/ui/modals/createNoteModal";
+  import { initialNoteName, noteNameProblem } from "src/ui/modals/createNoteModal";
   import {
     getRecordColorContext,
   } from "src/ui/views/helpers";
@@ -51,7 +51,7 @@
   import { DayPopup } from "./components/DayPopup";
   import { DuplicatePopup } from "./components/DuplicatePopup";
   import type { CalendarConfig, ProcessedCalendarData, ProcessedRecord } from "./types";
-  import { creationDurationOf, creationEnd } from "./creationRange";
+  import { creationDurationOf } from "./creationRange";
   import type { CalendarInterval } from "./calendar";
   import { processCalendarData } from "./processor";
   import { calendarLogger } from "./logger";
@@ -1590,9 +1590,7 @@
    * @param startTime - Optional start time (HH:mm format or dayjs with time)
    */
   function handleRecordAdd(date: dayjs.Dayjs, startTime?: string, endTime?: string) {
-    // w4-calendar-draft: a time picked on the grid (hold, drag, click, Enter)
-    // opens a draft; nothing is written until its ✓. A day without a time
-    // (the month, the agenda, the day window) still opens the create window.
+    // Timed gestures and date-only creation share the same in-view draft.
     if (startTime && !readonly && !dataReadOnly) {
       beginDraft(date, startTime, endTime);
       return;
@@ -1602,97 +1600,22 @@
       return;
     }
   
-    if (readonly) {
+    if (readonly || dataReadOnly) {
       new Notice(noticeFor(CREATE_READONLY));
       return;
     }
-  
-    try {
-      // Build context for template interpolation
-      const context: { date: dayjs.Dayjs; time?: string } = {
-        date: date,
-      };
-      // Only include time if provided (exactOptionalPropertyTypes compatibility)
-      if (startTime) {
-        context.time = startTime;
-      }
-      
-      new CreateNoteModal(get(app), project, (name, templatePath) => {
-        try {
-          if (dateField) {
-            // Build frontmatter values with auto-filled date/time
-            const frontmatterValues: Record<string, Date | string | number | boolean> = {
-              ...getFilterValuesFromConditions(filterConditions),
-            };
-            
-            // Determine the effective note name:
-            // If dateField is "name", incorporate the date into the filename
-            // instead of writing it as a frontmatter property
-            let effectiveName = name;
-            if (dateField.name === "name") {
-              const datePrefix = date.format("YYYY-MM-DD");
-              // If user already typed a name, prepend date; otherwise use date as name
-              if (name && name !== get(i18n).t("modals.note.create.untitled")) {
-                // Avoid double-prefixing if name already starts with the date
-                if (!name.startsWith(datePrefix)) {
-                  effectiveName = `${datePrefix} ${name}`;
-                }
-              } else {
-                effectiveName = datePrefix;
-              }
-            } else {
-              // Normal frontmatter field — write date as field value
-              frontmatterValues[dateField.name] = date.toDate();
-            }
-            
-            // Auto-fill creation date if configured (separate from event start date)
-            if (creationDateField && creationDateField.name !== dateField?.name && creationDateField.name !== "name") {
-              frontmatterValues[creationDateField.name] = date.toDate();
-            }
-            
-            // Auto-fill startTime if field is configured and time is provided
-            const timeFieldName = config?.startTimeField || 'startTime';
-            if (startTime) {
-              frontmatterValues[timeFieldName] = startTime;
-            }
-            
-            // w4-p07 (F08): the end chosen on the grid (a drag, a confirmed
-            // preview), otherwise the view's creation length — not always
-            // start + 1 hour, which made the note ignore the draft.
-            const endTimeFieldName = config?.endTimeField || 'endTime';
-            const end = creationEnd(startTime, endTime, config);
-            if (end && endTimeFieldName) {
-              frontmatterValues[endTimeFieldName] = end;
-            }
-            
-            return api.addRecord(
-              createDataRecord(effectiveName, project, frontmatterValues),
-              fields,
-              templatePath
-            );
-          }
-          return undefined;
-        } catch (error) {
-          // w4-p02: logged and handed on — the form shows it and keeps the
-          // name instead of closing as if the note had been created.
-          calendarLogger.error('Error adding new record', error, { component: 'CalendarView', action: 'addRecord' });
-          throw error;
-        }
-      }, context).open();
-    } catch (error) {
-      calendarLogger.error('Error opening create modal', error, { component: 'CalendarView', action: 'createModal' });
-    }
+    beginDraft(date, startTime, endTime);
   }
 
-  /** A held, dragged or clicked range becomes the draft (a second one moves it). */
-  function beginDraft(date: dayjs.Dayjs, startTime: string, endTime?: string): void {
+  /** A calendar date or range becomes the draft (a second one moves it). */
+  function beginDraft(date: dayjs.Dayjs, startTime?: string, endTime?: string): void {
     draftCtl.begin({
       owner: draftOwner,
       day: date,
       startTime,
       endTime,
       durationMinutes: creationDurationOf(config),
-      name: initialNoteName(project, { date, time: startTime }),
+      name: initialNoteName(project, startTime ? { date, time: startTime } : { date }),
       templatePath: project.templates.at(0) ?? "",
       prefill: getFilterValuesFromConditions(filterConditions),
       mapping: draftMap,

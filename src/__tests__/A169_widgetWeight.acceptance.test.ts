@@ -129,10 +129,11 @@ describeIfChrome("A169 — the block's own action outweighs its settings", () =>
 
 describeIfChrome("A169 — the filter bar yields to a narrow widget, in its units", () => {
   const barStyle = unscope(svelteStyle("ui/views/Dashboard/widgets/DatabaseCall/TableControlBar.svelte"));
+  const searchStyle = unscope(svelteStyle("ui/views/Dashboard/widgets/DatabaseCall/TableSearch.svelte"));
 
   const bar = (widthPx: number) =>
     renderProbe({
-      css: [THEME, shellStyle, barStyle, `.ppp-widget-host{width:${widthPx}px}`],
+      css: [THEME, shellStyle, barStyle, searchStyle, `.ppp-widget-host{width:${widthPx}px}`],
       html: [
         "<div class='ppp-widget-host'>",
         "  <div class='ppp-t2-controlbar'>",

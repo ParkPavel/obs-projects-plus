@@ -51,4 +51,17 @@ describe("w4-filters — the condition's value cell", () => {
     expect(formulaInputs(m.target)).toHaveLength(1);
     m.destroy();
   });
+
+  test("regex filters show a localized warning for unsafe patterns", () => {
+    const unsafe = { ...cond("title", "regex"), value: "^(a|a)+$" };
+    const value = { conjunction: "and", conditions: [unsafe], groups: [] };
+    const m = mountCollecting(FilterPanel, { value, fields, records }, "update");
+    expect(m.target.querySelector("[role='alert']")?.textContent).toBeTruthy();
+    m.destroy();
+
+    const safe = { conjunction: "and", conditions: [{ ...cond("title", "regex"), value: "^alpha$" }], groups: [] };
+    const safeMount = mountCollecting(FilterPanel, { value: safe, fields, records }, "update");
+    expect(safeMount.target.querySelector("[role='alert']")).toBeNull();
+    safeMount.destroy();
+  });
 });

@@ -10,7 +10,9 @@ import { processCalendarData } from "../../processor";
 import { EventRenderType, type CalendarConfig } from "../../types";
 import {
   createCalendarDraft,
+  conflictingDraftFields,
   draftMapping,
+  draftNeedsSeparateEnd,
   draftPayload,
   draftRecord,
   isDraftId,
@@ -132,6 +134,42 @@ describe("the draft lifecycle — begin, stretch, release, move, edit, confirm",
     expect(again.name).toBe("Typed");
     expect(again.start.format("HH:mm")).toBe("15:00");
   });
+
+  it("a date-only creation remains all-day and confirms only date values", async () => {
+    const ctl = createCalendarDraft();
+    ctl.begin(begin(mapping(), { startTime: undefined, endTime: undefined, templatePath: "", prefill: { project: "Work" } }));
+    const draft = ctl.getState().draft!;
+    expect(draft.hasTime).toBe(false);
+    const record = draftRecord(draft, UNTITLED);
+    expect(record.values).not.toHaveProperty("startTime");
+    expect(record.values).not.toHaveProperty("endTime");
+    expect(processCalendarData({ fields: [], records: [record] }, config).index.get(record.id)?.timeInfo).toBeNull();
+
+    const save = jest.fn((_payload: DraftPayload) => Promise.resolve());
+    expect(await ctl.confirm(save, TODAY, UNTITLED)).toBe("saved");
+    expect(save.mock.calls[0]![0].values).toMatchObject({
+      project: "Work",
+      startDate: "2026-10-26",
+      endDate: "2026-10-26",
+      created: "2026-10-26",
+    });
+    expect(save.mock.calls[0]![0].values).not.toHaveProperty("startTime");
+    expect(save.mock.calls[0]![0].values).not.toHaveProperty("endTime");
+  });
+
+  it("moves an all-day draft by date and can turn it into a timed draft on a time grid", () => {
+    const ctl = createCalendarDraft();
+    ctl.begin(begin(mapping(), { startTime: undefined, endTime: undefined }));
+    ctl.move(dayjs("2026-10-27"));
+    expect(ctl.getState().draft).toMatchObject({ hasTime: false });
+    expect(ctl.getState().draft?.start.format("YYYY-MM-DD")).toBe("2026-10-27");
+    expect(ctl.getState().draft?.end.format("YYYY-MM-DD")).toBe("2026-10-27");
+
+    ctl.move(dayjs("2026-10-28"), { startTime: "14:00", endTime: "15:30", endDate: dayjs("2026-10-28") });
+    expect(ctl.getState().draft).toMatchObject({ hasTime: true });
+    expect(ctl.getState().draft?.start.format("YYYY-MM-DD HH:mm")).toBe("2026-10-28 14:00");
+    expect(ctl.getState().draft?.end.format("YYYY-MM-DD HH:mm")).toBe("2026-10-28 15:30");
+  });
 });
 
 describe("cancel, refusals and one write at a time", () => {
@@ -202,6 +240,29 @@ describe("cancel, refusals and one write at a time", () => {
 });
 
 describe("what is written", () => {
+  it("does not require time fields for a date-only draft, but still refuses an unrepresentable multi-day end", async () => {
+    const ctl = createCalendarDraft();
+    const m = mapping({ start: "due", end: "due", startTime: "stage", endTime: "stage" });
+    expect(conflictingDraftFields(m, false)).not.toContain("stage");
+    ctl.begin(begin(m, { startTime: undefined, endTime: undefined }));
+    ctl.setEnd(dayjs("2026-10-27"));
+    expect(draftNeedsSeparateEnd(ctl.getState().draft!)).toBe(true);
+    const save = jest.fn();
+    expect(await ctl.confirm(save, TODAY, UNTITLED)).toBe("invalid");
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it("a computed time field does not block a date-only entry", async () => {
+    const ctl = createCalendarDraft();
+    const m = mapping({}, [field("startTime", true), field("endTime", true)]);
+    ctl.begin(begin(m, { startTime: undefined, endTime: undefined }));
+    const save = jest.fn((_payload: DraftPayload) => Promise.resolve());
+    expect(await ctl.confirm(save, TODAY, UNTITLED)).toBe("saved");
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save.mock.calls[0]![0].values).not.toHaveProperty("startTime");
+    expect(save.mock.calls[0]![0].values).not.toHaveProperty("endTime");
+  });
+
   it("cannot move or confirm a range mapped to computed time properties", async () => {
     const ctl = createCalendarDraft();
     ctl.begin(begin(mapping({}, [field("startDate", true)])));

@@ -13,6 +13,7 @@
   import { i18n } from "src/lib/stores/i18n";
   import type { DataField, DataFrame, DataValue, Optional } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
+  import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
   import { parseRelationLinks } from "src/lib/relations/parseRelationLinks";
   import SearchField from "src/ui/components/fields/SearchField.svelte";
   import { isImeKey } from "src/ui/components/fields/draftController";
@@ -24,6 +25,7 @@
   export let value: Optional<DataValue>;
   export let api: ViewApi;
   export let frame: DataFrame;
+  export let triggerEl: HTMLElement | null = null;
 
   const dispatch = createEventDispatcher<{
     commit: Optional<DataValue>;
@@ -39,6 +41,7 @@
   let candidates: string[] = [];
   let loading = true;
   let resolvedCount = 0;
+  let popupOpen = true;
 
   let selected = new Set(parseRelationLinks(value));
 
@@ -76,10 +79,7 @@
   function handleKeydown(e: KeyboardEvent) {
     // An IME candidate's Enter or Escape belongs to the composition.
     if (isImeKey(e)) return;
-    if (e.key === "Escape") {
-      e.preventDefault();
-      dispatch("cancel");
-    } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       active = stepActive(clampActive(active, filtered.length), e.key === "ArrowDown" ? 1 : -1, filtered.length);
     } else if (e.key === "Enter" && filtered.length > 0) {
@@ -88,9 +88,15 @@
       choose(filtered[clampActive(active, filtered.length)]!);
     }
   }
+
+  function handlePopupClose(): void {
+    dispatch("cancel");
+  }
 </script>
 
-<div class="ppp-rel-picker" role="dialog" aria-label={field.name}>
+<FloatingPopup {triggerEl} bind:open={popupOpen} placement="bottom-start" role="dialog"
+  ariaLabel={field.name} autoFocus={false} on:close={handlePopupClose}>
+<div class="ppp-rel-picker">
   <SearchField
     {query}
     focusOnMount
@@ -143,20 +149,14 @@
     </button>
   </div>
 </div>
+</FloatingPopup>
 
 <style>
   .ppp-rel-picker {
-    position: absolute;
-    top: calc(100% + 0.375rem);
-    left: 0;
-    min-width: 14rem;
-    max-width: 20rem;
-    background: var(--background-primary);
-    border: 0.0625rem solid var(--background-modifier-border);
-    border-radius: var(--radius-s, 0.25rem);
-    box-shadow: var(--ppp-shadow-md);
-    z-index: 4;
-    padding: 0.375rem;
+    width: 20rem;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     gap: 0.25rem;

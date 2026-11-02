@@ -1,4 +1,5 @@
 import { rootFontPx } from "src/ui/utils/cssLength";
+import { onKeyboardChange, visibleViewport } from "src/ui/utils/visibleViewport";
 
 /**
  * 3.7.2 B3 — touch on the table: a tap edits, a drag scrolls.
@@ -10,6 +11,7 @@ import { rootFontPx } from "src/ui/utils/cssLength";
  */
 
 export const TAP_SLOP_REM = 0.5;
+const KEYBOARD_LIFT_MARGIN_REM = 0.5;
 
 export interface TapTracker {
   down(e: { pointerType: string; clientX: number; clientY: number }): void;
@@ -63,12 +65,12 @@ export function createTapTracker(slopPx: number): TapTracker {
  */
 export function keyboardLift(
   cell: { top: number; bottom: number },
-  visual: { offsetTop: number; height: number } | null | undefined,
+  visible: { top: number; bottom: number } | null | undefined,
   marginPx = 0,
 ): number {
-  if (!visual) return 0;
-  const visibleBottom = visual.offsetTop + visual.height - marginPx;
-  const visibleTop = visual.offsetTop + marginPx;
+  if (!visible) return 0;
+  const visibleBottom = visible.bottom - marginPx;
+  const visibleTop = visible.top + marginPx;
   if (cell.bottom > visibleBottom) return Math.min(cell.bottom - visibleBottom, cell.top - visibleTop);
   return 0;
 }
@@ -134,6 +136,7 @@ export function trackEdges(scroller: HTMLElement): { destroy(): void } {
  * checkbox is left to the checkbox.
  */
 export function cellTouch(node: HTMLElement, activate: () => void): { update(next: () => void): void; destroy(): void } {
+  const InputCtor = node.ownerDocument.defaultView?.HTMLInputElement ?? HTMLInputElement;
   // Measured on the first touch, not per mounted cell: a scroll mounts hundreds.
   let tracker: TapTracker | null = null;
   const tap = (): TapTracker => {
@@ -148,7 +151,7 @@ export function cellTouch(node: HTMLElement, activate: () => void): { update(nex
   const handlers: Array<[string, (e: Event) => void]> = [
     ["pointerdown", (e) => tap().down(e as PointerEvent)],
     ["pointermove", (e) => tracker?.move(e as PointerEvent)],
-    ["pointerup", (e) => { if (tracker?.up(e as PointerEvent) && !(e.target instanceof HTMLInputElement)) act(); }],
+    ["pointerup", (e) => { if (tracker?.up(e as PointerEvent) && !(e.target instanceof InputCtor)) act(); }],
     ["pointercancel", () => tracker?.cancel()],
     ["click", () => { if (!tracker?.swallowClick()) act(); }],
   ];
@@ -161,10 +164,13 @@ export function cellTouch(node: HTMLElement, activate: () => void): { update(nex
 
 /** Svelte action: while `on`, keep the node above the on-screen keyboard. */
 export function liftOnKeyboard(node: HTMLElement, on: boolean): { update(next: boolean): void; destroy(): void } {
-  const vv = node.ownerDocument.defaultView?.visualViewport ?? null;
+  const view = node.ownerDocument.defaultView;
+  if (!view) return { update() {}, destroy() {} };
+  const ownerView: Window = view;
+  const vv = ownerView.visualViewport;
+  const marginPx = KEYBOARD_LIFT_MARGIN_REM * rootFontPx(node.ownerDocument);
   function lift(): void {
-    if (!vv) return;
-    const delta = keyboardLift(node.getBoundingClientRect(), vv, 8);
+    const delta = keyboardLift(node.getBoundingClientRect(), visibleViewport(ownerView), marginPx);
     if (delta <= 0) return;
     const scroller = node.closest<HTMLElement>(".ppp-t2-scroll");
     const room = scroller ? scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop : 0;
@@ -173,12 +179,26 @@ export function liftOnKeyboard(node: HTMLElement, on: boolean): { update(next: b
   }
   function set(next: boolean): void {
     vv?.removeEventListener("resize", lift);
-    if (!next || !vv) return;
-    vv.addEventListener("resize", lift);
+    vv?.removeEventListener("scroll", lift);
+    if (!next) return;
+    vv?.addEventListener("resize", lift);
+    vv?.addEventListener("scroll", lift);
+    cleanupKeyboard = onKeyboardChange(ownerView, lift);
     void Promise.resolve().then(lift);
   }
-  set(on);
-  return { update: set, destroy: () => set(false) };
+  let cleanupKeyboard: (() => void) | null = null;
+  const update = (next: boolean) => {
+    cleanupKeyboard?.();
+    cleanupKeyboard = null;
+    set(next);
+  };
+  update(on);
+  return {
+    update,
+    destroy() {
+      update(false);
+    },
+  };
 }
 
 export { timedDismiss } from "./timedDismiss";

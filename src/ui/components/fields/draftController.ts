@@ -58,6 +58,7 @@ export interface ImeKeyLike {
   isComposing?: boolean;
   keyCode?: number;
   key?: string;
+  target?: EventTarget | null;
 }
 
 /** Options of one commit. */
@@ -75,21 +76,41 @@ export interface CommitOptions {
  * standard flag; keyCode 229 is what some hosts report for the Enter that
  * accepts a candidate, including Safari's keydown after `compositionend`.
  */
-export function isImeKey(e: ImeKeyLike, now: number = Date.now()): boolean {
+export function isImeKey(
+  e: ImeKeyLike,
+  now: number = Date.now(),
+  compositionEndAt?: number,
+): boolean {
   if (e.isComposing === true) return true;
   if (e.keyCode !== 229) return false;
   // i2-input (D03): iOS Safari also reports keyCode 229 for the plain Return
   // key while the predictive bar is on — «завтра» + Return was dropped as IME
   // and never committed. Return counts as Return unless a composition has
   // just ended: that keydown is the IME accepting its candidate.
-  return e.key !== "Enter" || now - lastCompositionEnd < IME_ACCEPT_WINDOW_MS;
+  const target = e.target;
+  const ownerDocument = target && typeof target === "object" && "nodeType" in target
+    ? ((target as Node).nodeType === 9 ? target as Document : (target as Node).ownerDocument)
+    : null;
+  const endedAt = compositionEndAt ?? (ownerDocument ? lastCompositionEndByDocument.get(ownerDocument) ?? -Infinity : lastCompositionEnd);
+  return e.key !== "Enter" || now - endedAt < IME_ACCEPT_WINDOW_MS;
 }
 
 /** How long after `compositionend` a keyCode-229 Return still belongs to the IME. */
 const IME_ACCEPT_WINDOW_MS = 150;
 let lastCompositionEnd = -Infinity;
+const lastCompositionEndByDocument = new WeakMap<Document, number>();
+export function recordImeCompositionEnd(e: Event): void {
+  const target = e.target;
+  if (!target || typeof target !== "object" || !("nodeType" in target)) return;
+  const node = target as Node;
+  const ownerDocument = node.nodeType === 9 ? node as Document : node.ownerDocument;
+  if (!ownerDocument) return;
+  const endedAt = Date.now();
+  lastCompositionEndByDocument.set(ownerDocument, endedAt);
+  if (typeof document !== "undefined" && ownerDocument === document) lastCompositionEnd = endedAt;
+}
 if (typeof document !== "undefined") {
-  document.addEventListener("compositionend", () => { lastCompositionEnd = Date.now(); }, true);
+  document.addEventListener("compositionend", recordImeCompositionEnd, true);
 }
 
 /** The controller returned by {@link createDraftController}. */
@@ -142,6 +163,7 @@ export function createDraftController(initial = ""): DraftController {
   let committed = initial;
   let focused = false;
   let composing = false;
+  let compositionEndAt = -Infinity;
   // The last prop seen, so only a real change is held back or adopted.
   let seenProp = initial;
   // A prop that changed while the user was in the field.
@@ -170,6 +192,7 @@ export function createDraftController(initial = ""): DraftController {
     focus(current) {
       focused = true;
       composing = false;
+      compositionEndAt = -Infinity;
       baseline = current;
       draft = current;
       committed = current;
@@ -208,10 +231,11 @@ export function createDraftController(initial = ""): DraftController {
 
     compositionEnd() {
       composing = false;
+      compositionEndAt = Date.now();
     },
 
     isComposing(e) {
-      return composing || (e !== undefined && isImeKey(e));
+      return composing || (e !== undefined && isImeKey(e, Date.now(), compositionEndAt));
     },
 
     commit,
@@ -228,6 +252,7 @@ export function createDraftController(initial = ""): DraftController {
     blur(options = {}) {
       focused = false;
       composing = false;
+      compositionEndAt = -Infinity;
       let result: CommitResult | null = null;
       if (options.accept === false) {
         draft = baseline;

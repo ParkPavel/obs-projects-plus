@@ -18,6 +18,7 @@
   import { i18n } from "src/lib/stores/i18n";
   import { DEFAULT_COLOR } from "src/lib/stores/palettes";
   import { isColorFieldName, normalizeHexColor } from "src/lib/colors/recordColor";
+  import { formatDisplayValue } from "src/lib/helpers/dateDisplay";
   import {
     DataFieldType,
     isBoolean,
@@ -105,7 +106,9 @@
 
   // Options of the suggestion list: the field's own options when it has them,
   // otherwise the values already used in the project.
-  $: options = namesToOptions(field.typeConfig?.options?.length ? field.typeConfig.options : suggestions);
+  $: options = namesToOptions([
+    ...new Set([...(field.typeConfig?.options ?? []), ...suggestions]),
+  ]);
     
   // Field type detection (color heuristic shared via UT2026-C contract)
   const IMAGE_FIELDS = ['cover', 'banner', 'image', 'thumbnail', 'icon'];
@@ -208,15 +211,34 @@
 </script>
 
 <div class="field-control-wrapper">
-  {#if field.type === DataFieldType.Boolean}
+  {#if field.derived || field.type === DataFieldType.Formula || field.type === DataFieldType.Rollup || field.type === DataFieldType.AutoTime || !!field.typeConfig?.rollup}
+    <span class="field-computed-value">{formatDisplayValue(value) || "—"}</span>
+  {:else if field.type === DataFieldType.Boolean}
     <Switch
       checked={isBoolean(value) ? value : false}
       disabled={readonly}
       on:check={({ detail }) => commitBoolean(detail)}
     />
     
-  {:else if field.repeated && isOptionalList(value)}
-    <TagList edit={!readonly} values={value ?? []} {onChange} />
+  {:else if (field.type === DataFieldType.List || field.repeated) && isOptionalList(value)}
+    <TagList
+      edit={!readonly}
+      values={value ?? []}
+      richText={field.typeConfig?.richText ?? false}
+      suggestions={options.map((option) => option.label)}
+      {onChange}
+    />
+
+  {:else if field.type === DataFieldType.Select || field.type === DataFieldType.Status}
+    <ComboField
+      value={isString(value) ? value : ""}
+      {options}
+      allowCustom
+      disabled={readonly}
+      ariaLabel={field.name}
+      inputClass="field-combo-input"
+      on:commit={({ detail }) => commitSelection(detail.value)}
+    />
     
   {:else if field.type === DataFieldType.String}
     {#if isColorField}

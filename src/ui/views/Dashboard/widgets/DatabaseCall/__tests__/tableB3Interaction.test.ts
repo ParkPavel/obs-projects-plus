@@ -31,7 +31,7 @@ jest.mock("../tableCanon", () => ({ ...jest.requireActual("../tableCanon"), cell
 const EditableCell = require("../EditableCell.svelte").default;
 const DataTableContent = require("../DataTableContent.svelte").default;
 const { cellAccess } = require("../tableCellAccess");
-const { createTapTracker, keyboardLift, scrollEdges } = require("../tableTouch");
+const { cellTouch, createTapTracker, keyboardLift, liftOnKeyboard, scrollEdges } = require("../tableTouch");
 
 function makeField(type: string, extra: Partial<DataField> & { typeConfig?: Record<string, unknown> } = {}): DataField {
   return { name: "f", type, repeated: false, identifier: false, derived: false, typeConfig: {}, ...extra } as unknown as DataField;
@@ -53,6 +53,34 @@ function pointer(el: HTMLElement, type: string, x: number, y: number, pointerTyp
 }
 
 describe("touch: a still tap edits, a drag scrolls (B3)", () => {
+  it("does not activate a native checkbox from a secondary document", () => {
+    const iframe = document.createElement("iframe");
+    document.body.appendChild(iframe);
+    const ownerDocument = iframe.contentDocument!;
+    const ownerView = iframe.contentWindow! as Window & typeof globalThis;
+    const cell = ownerDocument.createElement("div");
+    const input = ownerDocument.createElement("input");
+    input.type = "checkbox";
+    cell.appendChild(input);
+    ownerDocument.body.appendChild(cell);
+    const activate = jest.fn();
+    const action = cellTouch(cell, activate);
+    const pointer = (type: string) => {
+      const event = new ownerView.MouseEvent(type, { bubbles: true, clientX: 8, clientY: 8 });
+      Object.defineProperty(event, "pointerType", { value: "touch" });
+      input.dispatchEvent(event);
+    };
+
+    try {
+      pointer("pointerdown");
+      pointer("pointerup");
+      expect(activate).not.toHaveBeenCalled();
+    } finally {
+      action.destroy();
+      iframe.remove();
+    }
+  });
+
   it("opens the editor on a tap that moved less than 0.5rem", async () => {
     const { cell, starts } = mountCell(makeField(DataFieldType.String), "x");
     pointer(cell, "pointerdown", 100, 100);
@@ -94,13 +122,46 @@ describe("touch: a still tap edits, a drag scrolls (B3)", () => {
 });
 
 describe("keyboard lift (B3)", () => {
-  it("scrolls by how far the cell is under the visual viewport, never past its top", () => {
+  it("scrolls by how far the cell is under the visible viewport, never past its top", () => {
     // Window 800 high, keyboard leaves 400 visible; a cell at 600–636 needs 236 + 8 margin.
-    expect(keyboardLift({ top: 600, bottom: 636 }, { offsetTop: 0, height: 400 }, 8)).toBe(244);
-    expect(keyboardLift({ top: 100, bottom: 136 }, { offsetTop: 0, height: 400 }, 8)).toBe(0);
+    expect(keyboardLift({ top: 600, bottom: 636 }, { top: 0, bottom: 400 }, 8)).toBe(244);
+    expect(keyboardLift({ top: 100, bottom: 136 }, { top: 0, bottom: 400 }, 8)).toBe(0);
     expect(keyboardLift({ top: 600, bottom: 636 }, null)).toBe(0);
     // A cell taller than the room keeps its top in view.
-    expect(keyboardLift({ top: 50, bottom: 900 }, { offsetTop: 0, height: 400 }, 0)).toBe(50);
+    expect(keyboardLift({ top: 50, bottom: 900 }, { top: 0, bottom: 400 }, 0)).toBe(50);
+  });
+
+  it("repositions an editing cell when Obsidian reports a keyboard viewport change", async () => {
+    const node = document.createElement("div");
+    const scrollIntoView = jest.fn();
+    const viewportDescriptor = Object.getOwnPropertyDescriptor(window, "visualViewport");
+    const viewport = Object.assign(new EventTarget(), {
+      offsetLeft: 0,
+      offsetTop: 0,
+      width: window.innerWidth,
+      height: window.innerHeight,
+    });
+    Object.defineProperty(node, "getBoundingClientRect", {
+      value: () => ({ top: 180, bottom: 200, left: 0, right: 100, width: 100, height: 20 }),
+    });
+    Object.defineProperty(node, "scrollIntoView", { value: scrollIntoView });
+    document.body.append(node);
+    Object.defineProperty(window, "visualViewport", { configurable: true, value: viewport });
+
+    const action = liftOnKeyboard(node, true);
+    try {
+      await Promise.resolve();
+      expect(scrollIntoView).not.toHaveBeenCalled();
+
+      viewport.height = 100;
+      window.dispatchEvent(new Event("keyboardDidShow"));
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: "center" });
+    } finally {
+      action.destroy();
+      node.remove();
+      if (viewportDescriptor) Object.defineProperty(window, "visualViewport", viewportDescriptor);
+      else Reflect.deleteProperty(window, "visualViewport");
+    }
   });
 });
 

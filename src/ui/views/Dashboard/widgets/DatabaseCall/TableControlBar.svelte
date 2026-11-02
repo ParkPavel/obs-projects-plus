@@ -4,12 +4,9 @@
   import { createEventDispatcher } from "svelte";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
-  import SearchField from "src/ui/components/fields/SearchField.svelte";
-  import { isImeKey } from "src/ui/components/fields/draftController";
+  import TableSearch from "./TableSearch.svelte";
   import type { DataTableSortCriteria } from "../../types";
   import type { DataRecord } from "src/lib/dataframe/dataframe";
-  import { searchSuggestions, hintKey, type SearchSuggestion } from "./tableSearchQuery";
-  import SearchHints from "./SearchHints.svelte";
 
   export let sortCriteria: DataTableSortCriteria[] = [];
   export let recordCount = 0;
@@ -28,34 +25,6 @@
 
   // w4-p10a (N8): the button folds the field and KEEPS the query (the button is
   // marked); the field's clear (×) or Escape ends the search.
-  let searchOpen = false;
-  const toggleSearch = () => (searchOpen = !searchOpen);
-  function closeAndClear() {
-    searchOpen = false; searchQuery = ""; dispatch("search", "");
-  }
-  $: queryActive = !searchOpen && searchQuery.trim() !== "";
-  $: searchLabel = $i18n.t("views.dashboard.table-v2.search", { defaultValue: "Search records" });
-
-  let active = -1;
-  const listId = `ppp-t2-hints-${Math.random().toString(36).slice(2, 8)}`;
-  $: suggestions = searchOpen ? searchSuggestions(searchQuery, fieldNames, records) : ([] as SearchSuggestion[]);
-
-  function setQuery(next: string) {
-    searchQuery = next;
-    active = -1;
-    dispatch("search", next);
-  }
-
-  // Arrows/Enter/Tab walk the hints; Escape closes them, then the search; never during IME.
-  function onSearchKeydown(e: KeyboardEvent) {
-    const step = isImeKey(e) ? null : hintKey(e.key, suggestions.length, active);
-    if (!step) return;
-    if (e.key !== "Escape") e.preventDefault();
-    active = step.active;
-    const chosen = step.choose === undefined ? undefined : suggestions[step.choose];
-    if (chosen) setQuery(chosen.query);
-    if (step.close) closeAndClear();
-  }
 </script>
 
 <div class="ppp-t2-controlbar" role="toolbar" aria-label={$i18n.t("views.dashboard.table-v2.controls", { defaultValue: "Table controls" })}>
@@ -75,30 +44,14 @@
 
   <span class="ppp-t2-cb-spacer" />
 
-  {#if searchOpen}
-    <div class="ppp-t2-cb-search">
-      <SearchField
-        query={searchQuery}
-        focusOnMount
-        placeholder={$i18n.t("views.dashboard.table-v2.search-placeholder", { defaultValue: "Search…" })}
-        ariaLabel={$i18n.t("views.dashboard.table-v2.search", { defaultValue: "Search records" })}
-        controls={suggestions.length ? listId : undefined} activeDescendant={active >= 0 ? `${listId}-${active}` : undefined}
-        on:queryChange={(e) => setQuery(e.detail)}
-        on:keydown={onSearchKeydown}
-      />
-      <SearchHints {suggestions} {active} {listId} showTip={searchQuery.trim() === ""} on:choose={(e) => setQuery(e.detail.query)} />
-    </div>
-  {/if}
-  <button
-    class="ppp-t2-cb-btn clickable-icon"
-    class:ppp-t2-cb-btn--active={searchOpen || queryActive} class:ppp-t2-cb-btn--query={queryActive}
-    aria-pressed={searchOpen} on:click={toggleSearch}
-    aria-label={queryActive ? `${searchLabel}: ${searchQuery}` : searchLabel} title={searchLabel}
-  ><Icon name="search" size="sm" />{#if queryActive}<span class="ppp-t2-cb-dot" aria-hidden="true"></span>{/if}</button>
-
-  <span class="ppp-t2-cb-count" aria-live="polite" aria-busy={searching}
-    aria-label={searching ? $i18n.t("views.dashboard.table-v2.searching", { defaultValue: "Searching…" }) : undefined}
-  >{searching ? "…" : recordCount}</span>
+  <TableSearch
+    bind:searchQuery
+    {searching}
+    {recordCount}
+    {fieldNames}
+    {records}
+    on:search={(event) => dispatch("search", event.detail)}
+  />
 </div>
 
 <style>
@@ -149,50 +102,12 @@
     flex: 1;
   }
 
-  .ppp-t2-cb-search {
-    position: relative;
-    min-width: 0;
-    max-width: 14rem;
-  }
-
-  .ppp-t2-cb-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.75rem;
-    height: 1.75rem;
-    border: none;
-    background: transparent;
-    color: var(--text-faint);
-    border-radius: var(--radius-s, 0.25rem);
-    cursor: pointer;
-  }
-
-  /* A search kept while folded: a dot, not colour alone (the label says it too). */
-  .ppp-t2-cb-btn--query { position: relative; }
-  .ppp-t2-cb-dot { position: absolute; top: 0.2em; right: 0.2em; width: 0.4em; height: 0.4em; border-radius: 50%; background: var(--interactive-accent); }
-
-  .ppp-t2-cb-btn:hover,
-  .ppp-t2-cb-btn--active {
-    color: var(--text-normal);
-    background: var(--background-modifier-hover);
-  }
-
   /* #169/#166: in a narrow widget the label yields space in the widget's own
      units (cqi of `widget`, threshold in em) instead of vanishing. */
   @container widget (max-width: 24em) {
     .ppp-t2-cb-pill-label {
       max-width: 40cqi;
     }
-
-    .ppp-t2-cb-search {
-      max-width: 100%;
-    }
   }
 
-  .ppp-t2-cb-count {
-    font-size: var(--font-ui-smaller);
-    color: var(--text-faint);
-    font-variant-numeric: tabular-nums;
-  }
 </style>

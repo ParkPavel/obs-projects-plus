@@ -8,7 +8,7 @@
    * Consumers own validation (`validate`) and persistence (`commit`).
    */
   import { createEventDispatcher } from "svelte";
-  import { createDraftController, isImeKey } from "./draftController";
+  import { createDraftController, isImeKey, recordImeCompositionEnd } from "./draftController";
   import { keepInView } from "./keepInView";
   import { releaseOnOutsideTap } from "./releaseOnOutsideTap";
 
@@ -130,7 +130,7 @@
   on:input={onInput}
   on:keydown={onKeydown}
   on:compositionstart={() => ctl.compositionStart()}
-  on:compositionend={() => ctl.compositionEnd()}
+  on:compositionend={(event) => { recordImeCompositionEnd(event); ctl.compositionEnd(); }}
   {...$$restProps}
 />
 

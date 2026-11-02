@@ -20,6 +20,10 @@ jest.mock("src/lib/stores/i18n", () => {
     "formula-errors.escape": "Неподдерживаемый символ после обратной косой черты",
     "formula-errors.column": "После @ укажите имя столбца",
     "formula-errors.frame": "Нет данных для вычисления столбца",
+    "regex-errors.invalid": "Некорректный синтаксис регулярного выражения",
+    "regex-errors.unsafe": "Регулярное выражение нельзя безопасно вычислить",
+    "regex-errors.too-long": "Регулярное выражение слишком длинное",
+    "regex-errors.input-too-long": "Текст слишком длинный для регулярного выражения",
   };
   const t = (k: string, o: Record<string, string> = {}) => (ru[k] ?? k).replace(/{{(\w+)}}/g, (_: string, n: string) => o[n] ?? "");
   return { i18n: writable({ t }) };
@@ -54,6 +58,17 @@ it("the preview's runtime error is a sentence too", () => {
   const result = evaluateFormulaWithError("1 +", { id: "a.md", values: {} });
   expect(result.value).toBeNull();
   expect(result.error).toBe("Формула не закончена — допишите значение");
+});
+
+it.each([
+  ['REGEX_MATCH("aaa", "^(a|a)+$")', "Регулярное выражение нельзя безопасно вычислить"],
+  ['REGEX_REPLACE("a", "[", "x")', "Некорректный синтаксис регулярного выражения"],
+  [`REGEX_MATCH("a", "${"a".repeat(201)}")`, "Регулярное выражение слишком длинное"],
+  [`REGEX_MATCH("${"a".repeat(10_001)}", "a")`, "Текст слишком длинный для регулярного выражения"],
+])("regex evaluation failures are visible and localized: %s", (source, expected) => {
+  const result = evaluateFormulaWithError(source, { id: "a.md", values: {} });
+  expect(result.value).toBeNull();
+  expect(result.error).toBe(expected);
 });
 
 it("a field is found whatever its case — in the check and in the value", () => {

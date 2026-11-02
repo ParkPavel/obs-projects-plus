@@ -1,19 +1,11 @@
 <script lang="ts">
-  /**
-   * TableNewRow — F2.3 (TABLE_V2_CANON §1/§3). Inline record creation at the
-   * body end: «+ New» → name input; Enter commits and chains the next one,
-   * Esc dismisses, blur commits once.
-   */
+  /** F2.3 inline record creation at the table body's end. */
   import { createEventDispatcher, tick } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
+  import { isImeKey, recordImeCompositionEnd } from "src/ui/components/fields/draftController";
+  import { keepInView } from "src/ui/components/fields/keepInView";
 
-  /**
-   * #169: raised by the widget header's primary action. Compared against a
-   * counter that starts at zero rather than against the incoming value,
-   * because this component is mounted lazily: a signal raised while the widget
-   * was collapsed arrives here as a mount-time value and would otherwise be
-   * read as "nothing happened".
-   */
+  /** Counter catches header signals raised before this lazy row is mounted. */
   export let openSignal = 0;
 
   const dispatch = createEventDispatcher<{ create: string }>();
@@ -31,11 +23,19 @@
   async function open() {
     active = true;
     await tick();
-    // This row sits after a windowed list, so opening it from the header can
-    // focus an input that is scrolled out of sight — which looks like the
-    // button having done nothing at all.
-    inputEl?.scrollIntoView({ block: "nearest" });
     inputEl?.focus();
+  }
+
+  function handleKeydown(e: KeyboardEvent): void {
+    if (isImeKey(e)) return;
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commit(true);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      name = "";
+      active = false;
+    }
   }
 
   function commit(keepOpen: boolean) {
@@ -52,13 +52,12 @@
     <input
       bind:this={inputEl}
       class="ppp-t2-newrow-input"
+      use:keepInView
       type="text"
       bind:value={name}
       placeholder={$i18n.t("views.dashboard.table-v2.new-name", { defaultValue: "Note name…" })}
-      on:keydown={(e) => {
-        if (e.key === "Enter") commit(true);
-        else if (e.key === "Escape") { name = ""; active = false; }
-      }}
+      on:compositionend={recordImeCompositionEnd}
+      on:keydown={handleKeydown}
       on:blur={() => commit(false)}
     />
   {:else}

@@ -29,18 +29,11 @@
 
 <style>
   .ppp-t2-hints {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    z-index: var(--ppp-z-dropdown);
-    margin: 0.25em 0 0;
-    padding: 0.25em;
+    max-height: 20em;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0;
     list-style: none;
-    background: var(--background-primary);
-    border: 0.0625em solid var(--background-modifier-border);
-    border-radius: var(--radius-m);
-    box-shadow: var(--ppp-shadow-md);
   }
 
   .ppp-t2-hint {
@@ -59,14 +52,8 @@
   }
 
   .ppp-t2-hint-tip {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    z-index: var(--ppp-z-dropdown);
-    margin-top: 0.125em;
+    display: block;
     font-size: var(--font-ui-smaller);
     color: var(--text-faint);
-    white-space: nowrap;
-    pointer-events: none;
   }
 </style>

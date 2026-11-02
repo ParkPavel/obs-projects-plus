@@ -70,6 +70,14 @@ describe("CalendarDraftSheet — there at once, and not in the way", () => {
     expect(times[1]).toContain("15:00");
   });
 
+  it("uses date-only inputs for a date-only draft", async () => {
+    const m = mount();
+    begin(m.ctl, { startTime: undefined, endTime: undefined });
+    await tick();
+    const inputs = Array.from(m.container.querySelectorAll<HTMLInputElement>(".ppp-date-field__native"));
+    expect(inputs.map((input) => input.type)).toEqual(["date", "date"]);
+  });
+
   it("a new draft starts from its own name, not from text left in the last one", async () => {
     const m = mount();
     begin(m.ctl);

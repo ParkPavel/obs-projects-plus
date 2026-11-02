@@ -13,13 +13,14 @@ interface GripGate {
   disabled: boolean;
 }
 interface CardListModule {
+  disarmAfterGripTap: (node: HTMLElement, grip: string) => { destroy: () => void };
   isDragZoneDisabled: (state: { editing?: boolean; locked?: boolean }) => boolean;
   gateDisabledGrip: (
     node: HTMLElement,
     gate: GripGate
   ) => { update: (gate: GripGate) => void; destroy: () => void };
 }
-const { gateDisabledGrip, isDragZoneDisabled } = require("../CardList.svelte") as CardListModule;
+const { disarmAfterGripTap, gateDisabledGrip, isDragZoneDisabled } = require("../CardList.svelte") as CardListModule;
 
 describe("isDragZoneDisabled", () => {
   it("leaves a normal zone enabled", () => {
@@ -109,5 +110,43 @@ describe("gateDisabledGrip", () => {
     grip.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
     expect(grip.style.cursor).toBe("grabbing");
     gate.destroy();
+  });
+
+  it("recognizes grips and releases in the zone's owner document", () => {
+    const iframe = document.createElement("iframe");
+    document.body.appendChild(iframe);
+    const ownerDocument = iframe.contentDocument!;
+    const ownerView = iframe.contentWindow! as Window & typeof globalThis;
+    const zone = ownerDocument.createElement("div");
+    const grip = ownerDocument.createElement("span");
+    grip.className = "board-card-grip";
+    zone.appendChild(grip);
+    ownerDocument.body.appendChild(zone);
+    const considered = jest.fn();
+    zone.addEventListener("consider", considered);
+    const disarm = disarmAfterGripTap(zone, ".board-card-grip");
+    const gate = gateDisabledGrip(zone, { grip: ".board-card-grip", disabled: true });
+
+    try {
+      grip.dispatchEvent(new ownerView.Event("touchstart", { bubbles: true }));
+      ownerView.dispatchEvent(new ownerView.Event("touchend"));
+      expect(considered).toHaveBeenCalledTimes(1);
+      expect(considered.mock.calls[0]?.[0]).toBeInstanceOf(ownerView.Event);
+
+      const reached = jest.fn();
+      grip.addEventListener("mousedown", reached);
+      const localPress = new ownerView.MouseEvent("mousedown", { bubbles: true, cancelable: true });
+      grip.dispatchEvent(localPress);
+      expect(localPress.defaultPrevented).toBe(false);
+      expect(reached).not.toHaveBeenCalled();
+      expect(grip.style.cursor).toBe("");
+
+      window.dispatchEvent(new MouseEvent("mouseup"));
+      expect(considered).toHaveBeenCalledTimes(1);
+      disarm.destroy();
+      gate.destroy();
+    } finally {
+      iframe.remove();
+    }
   });
 });

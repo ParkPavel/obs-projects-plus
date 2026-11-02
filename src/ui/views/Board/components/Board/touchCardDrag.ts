@@ -249,10 +249,11 @@ function rectBox(el: Element): Box {
 
 export function createTouchCardDrag(options: TouchCardDragOptions): TouchCardDragHandle {
   const { container, viewport } = options;
+  const ownerView = container.ownerDocument.defaultView ?? window;
   const longPressMs = options.longPressMs ?? 450;
   const gripPressMs = options.gripPressMs ?? 150;
-  const raf = options.raf ?? ((cb: () => void) => window.requestAnimationFrame(cb));
-  const caf = options.caf ?? ((id: number) => window.cancelAnimationFrame(id));
+  const raf = options.raf ?? ((cb: () => void) => ownerView.requestAnimationFrame(cb));
+  const caf = options.caf ?? ((id: number) => ownerView.cancelAnimationFrame(id));
   let state: State = { kind: "idle" };
   /** A click right after a drag or a blocked press opens nothing. */
   let swallowClickUntil = 0;
@@ -267,7 +268,7 @@ export function createTouchCardDrag(options: TouchCardDragOptions): TouchCardDra
       return;
     }
     if (!isTouchLike(e) || !e.isPrimary) return;
-    if (!(e.target instanceof Element)) return;
+    if (!(e.target instanceof ownerView.Element)) return;
     const slot = e.target.closest<HTMLElement>(SLOT);
     if (!slot || !container.contains(slot)) return;
     const onGrip = e.target.closest(GRIP) !== null;
@@ -276,7 +277,7 @@ export function createTouchCardDrag(options: TouchCardDragOptions): TouchCardDra
     if (!column) return;
     const start = pointOf(e);
     const pointerId = e.pointerId;
-    const timer = window.setTimeout(() => fire(), onGrip ? gripPressMs : longPressMs);
+    const timer = ownerView.setTimeout(() => fire(), onGrip ? gripPressMs : longPressMs);
     state = { kind: "pending", pointerId, start, onGrip, slot, column, timer };
     addWindowListeners();
   }
@@ -418,7 +419,7 @@ export function createTouchCardDrag(options: TouchCardDragOptions): TouchCardDra
       if (e.pointerId !== state.pointerId) return;
       const dist = Math.hypot(e.clientX - state.start.x, e.clientY - state.start.y);
       if (state.onGrip && dist > GRIP_SLOP) {
-        window.clearTimeout(state.timer);
+        ownerView.clearTimeout(state.timer);
         fire();
         const after = state as State;
         if (after.kind === "active") {
@@ -459,7 +460,7 @@ export function createTouchCardDrag(options: TouchCardDragOptions): TouchCardDra
   }
 
   function reset() {
-    if (state.kind === "pending") window.clearTimeout(state.timer);
+    if (state.kind === "pending") ownerView.clearTimeout(state.timer);
     if (state.kind === "active") {
       if (state.frame !== null) caf(state.frame);
       state.preview.remove();
@@ -508,22 +509,22 @@ export function createTouchCardDrag(options: TouchCardDragOptions): TouchCardDra
   function addWindowListeners() {
     if (windowListening) return;
     windowListening = true;
-    window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp);
-    window.addEventListener("pointercancel", onCancel);
-    window.addEventListener("keydown", onKeyDown, true);
-    window.addEventListener("blur", onCancel);
-    window.addEventListener("resize", onCancel);
+    ownerView.addEventListener("pointermove", onPointerMove);
+    ownerView.addEventListener("pointerup", onPointerUp);
+    ownerView.addEventListener("pointercancel", onCancel);
+    ownerView.addEventListener("keydown", onKeyDown, true);
+    ownerView.addEventListener("blur", onCancel);
+    ownerView.addEventListener("resize", onCancel);
   }
   function removeWindowListeners() {
     if (!windowListening) return;
     windowListening = false;
-    window.removeEventListener("pointermove", onPointerMove);
-    window.removeEventListener("pointerup", onPointerUp);
-    window.removeEventListener("pointercancel", onCancel);
-    window.removeEventListener("keydown", onKeyDown, true);
-    window.removeEventListener("blur", onCancel);
-    window.removeEventListener("resize", onCancel);
+    ownerView.removeEventListener("pointermove", onPointerMove);
+    ownerView.removeEventListener("pointerup", onPointerUp);
+    ownerView.removeEventListener("pointercancel", onCancel);
+    ownerView.removeEventListener("keydown", onKeyDown, true);
+    ownerView.removeEventListener("blur", onCancel);
+    ownerView.removeEventListener("resize", onCancel);
   }
 
   container.addEventListener("pointerdown", onPointerDown);
@@ -550,11 +551,12 @@ export function createTouchCardDrag(options: TouchCardDragOptions): TouchCardDra
  * is untouched. A second finger passes (a pinch is not a grip press).
  */
 export function blockLibraryTouchGrip(node: HTMLElement): { destroy: () => void } {
+  const ElementCtor = node.ownerDocument.defaultView?.Element ?? Element;
   function block(e: TouchEvent) {
     // A synthetic touchstart may carry no list; it is one finger then.
     const fingers = (e as Partial<TouchEvent>).touches?.length ?? 1;
     if (fingers > 1) return;
-    if (!(e.target instanceof Element)) return;
+    if (!(e.target instanceof ElementCtor)) return;
     const grip = e.target.closest(GRIP);
     if (grip && node.contains(grip)) e.stopPropagation();
   }

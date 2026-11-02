@@ -10,6 +10,7 @@
   import { createEventDispatcher, onMount, tick } from "svelte";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
+  import { recordImeCompositionEnd } from "./draftController";
   import { keepInView } from "./keepInView";
 
   export let query = "";
@@ -88,6 +89,7 @@
     on:focus={() => (typing = true)}
     on:blur={() => (typing = false)}
     on:keydown
+    on:compositionend={recordImeCompositionEnd}
     on:mousedown|stopPropagation
   />
   {#if clearable && text !== ""}

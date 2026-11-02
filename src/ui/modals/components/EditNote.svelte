@@ -77,18 +77,15 @@
     }
   }
   
-  // Field value suggestions: the project's values for each text field, templates
-  // left out — the same list the filters offer (w4-p05).
+  // Field value suggestions share the filter/agenda pool; templates are left out.
   $: fieldSuggestions = suggestionsByField(fields, allRecords, $app);
   function suggestionsByField(list: DataField[], source: DataRecord[], obsidianApp: unknown): Record<string, string[]> {
     const suggestions: Record<string, string[]> = {};
     const templateFolders = templateFoldersOf(obsidianApp);
     for (const field of list) {
-      // A field with declared options shows those; lists and other types have their own editors.
-      if (field.typeConfig?.options?.length) continue;
-      if (field.type !== DataFieldType.String || field.repeated) continue;
+      if (field.derived) continue;
+      if (![DataFieldType.String, DataFieldType.List, DataFieldType.Select, DataFieldType.Status].includes(field.type)) continue;
       const values = valueSuggestions(source, field, { templateFolders });
-      // Only a choice of at least two values is offered.
       if (values.length >= 2) suggestions[field.name] = values;
     }
     return suggestions;

@@ -49,7 +49,8 @@
   $: access = cellAccess(field, value, readonly);
   $: editable = access.editable;
   $: reason = access.editable ? "" : $i18n.t(access.reason.key, { defaultValue: access.reason.defaultValue, ...access.reason.params });
-  let reasonOpen = false; const reasonClose = timedDismiss(() => { reasonOpen = false; }); onDestroy(() => reasonClose(false)); // D16
+  let cellEl: HTMLDivElement;
+  let reasonOpen = false; const reasonClose = timedDismiss(() => { reasonOpen = false; }, 2500, () => cellEl?.ownerDocument ?? null); onDestroy(() => reasonClose(false)); // D16
   $: reasonClose(reasonOpen);
   $: isChoice = field.type === DataFieldType.Select || field.type === DataFieldType.Status;
   let draft = "", committed = false, wasEditing = false, invalid = false;
@@ -86,6 +87,7 @@
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
+  bind:this={cellEl}
   class="ppp-t2-cell"
   class:ppp-t2-cell--number={cell.kind === "number"} class:ppp-t2-cell--editable={editable}
   class:ppp-t2-cell--editing={editing} class:ppp-t2-cell--invalid={invalid}
@@ -96,13 +98,13 @@
 >
   {#if editing && field.type === DataFieldType.Relation}
     <span class="ppp-t2-text">{cell.kind === "text" ? cell.text : ""}</span>
-    <RelationPickerPopover {field} {value} {api} {frame}
+    <RelationPickerPopover {field} {value} {api} {frame} triggerEl={cellEl}
       on:commit={(e) => { committed = true; dispatch("commit", e.detail); }}
       on:cancel={() => { committed = true; dispatch("cancel"); }}
       on:setupRelation={() => { committed = true; dispatch("setupRelation", field); }} />
   {:else if editing && (field.type === DataFieldType.List || (field.type === DataFieldType.String && (field.repeated || Array.isArray(value))))}
-    <ListCellEditor {field} {value} on:commit on:cancel />
-  {:else if editing && isChoice}
+    <ListCellEditor {field} {value} {options} on:commit on:cancel />
+  {:else if editing && (isChoice || (field.type === DataFieldType.String && options.length > 0))}
     <CellChoiceDropdown bind:draft {options}
       on:commit={(e) => commitDraft(e.detail)}
       on:cancel={() => { committed = true; dispatch("cancel"); }} />

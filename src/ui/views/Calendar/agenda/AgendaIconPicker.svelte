@@ -32,11 +32,13 @@
     'home', 'briefcase', 'shopping-cart', 'coffee',
   ];
   
-  $: filteredLucide = searchQuery
-    ? lucideIcons.filter(icon => icon.includes(searchQuery.toLowerCase()))
+  $: normalizedSearch = searchQuery.trim().toLowerCase();
+  $: filteredLucide = normalizedSearch
+    ? lucideIcons.filter(icon => icon.includes(normalizedSearch))
     : lucideIcons;
-    
-  const filteredEmojis = AGENDA_EMOJIS; // Emoji search can be added later
+  $: filteredEmojis = searchQuery.trim()
+    ? AGENDA_EMOJIS.filter(emoji => emoji.includes(searchQuery.trim()))
+    : AGENDA_EMOJIS;
   
   function selectIcon(type: 'lucide' | 'emoji', value: string) {
     const icon: AgendaIcon = { type, value };
@@ -150,13 +152,18 @@
   
   .modal-content {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     padding: 1rem;
     overscroll-behavior: contain;
   }
   
   .search-box {
+    position: sticky;
+    top: 0;
+    z-index: 1;
     margin-bottom: 1rem;
+    background: var(--background-primary);
   }
   
   .icon-section {

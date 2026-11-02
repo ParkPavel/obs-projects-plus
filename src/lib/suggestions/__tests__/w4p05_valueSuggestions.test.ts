@@ -69,6 +69,14 @@ describe("w4-p05 — the list for a field", () => {
     expect(valueSuggestions(records, { name: "tags", type: DataFieldType.List })).toEqual(["x", "y"]);
   });
 
+  test("computed rollup values remain available to read-only filter suggestions", () => {
+    const source = records.map((record, index) => ({
+      ...record,
+      values: { ...record.values, total: index === 0 ? 0 : 12 },
+    }));
+    expect(valueSuggestions(source, { name: "total", type: DataFieldType.Rollup })).toEqual(["0", "12"]);
+  });
+
   test("no field, no list", () => {
     expect(valueSuggestions(records, undefined)).toEqual([]);
   });

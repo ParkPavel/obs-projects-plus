@@ -38,7 +38,7 @@
   import { portal } from "src/ui/portal";
   import { keepInView } from "./keepInView";
   import { remAt, rootFontPx } from "src/ui/utils/cssLength";
-  import { createDraftController, type CommitReason } from "./draftController";
+  import { createDraftController, recordImeCompositionEnd, type CommitReason } from "./draftController";
   import { filterOptions, optionDomId, stepActive, type ComboOption } from "./comboOptions";
   import { onKeyboardChange, visibleViewport } from "src/ui/utils/visibleViewport";
 
@@ -116,6 +116,13 @@
     inputEl?.focus();
   }
 
+  export function reset(next = ""): void {
+    ctl.reset(next);
+    pull();
+    dirty = false;
+    active = -1;
+  }
+
   onMount(async () => {
     if (!focusOnMount) return;
     await tick();
@@ -161,7 +168,8 @@
   function onViewChange(e?: Event): void {
     // i3-input: the list scrolling its own rows is not a move of the field;
     // re-placing on it re-capped the list mid-flick and made it jump.
-    if (e && popupEl && e.target instanceof Node && popupEl.contains(e.target)) return;
+    const target = e?.target;
+    if (popupEl && target && typeof target === "object" && "nodeType" in target && popupEl.contains(target as Node)) return;
     if (expanded) void place();
   }
   function watch(view: Window | null): void {
@@ -187,10 +195,10 @@
   // keyboard moves the field by layout alone — no scroll or resize event —
   // and the list stayed where the field used to be. While the list is open,
   // each frame compares the field's box and re-places the list on a change.
-  let anchorFrame = 0;
+  let anchorFrame: number | null = null;
   let lastAnchor = "";
   function trackAnchor(): void {
-    anchorFrame = 0;
+    anchorFrame = null;
     const view = rootEl?.ownerDocument.defaultView;
     if (!expanded || !rootEl || !view?.requestAnimationFrame) return;
     const r = rootEl.getBoundingClientRect();
@@ -205,11 +213,11 @@
     anchorFrame = view.requestAnimationFrame(trackAnchor);
   }
   function untrackAnchor(): void {
-    if (anchorFrame !== 0) rootEl?.ownerDocument.defaultView?.cancelAnimationFrame(anchorFrame);
-    anchorFrame = 0;
+    if (anchorFrame !== null) rootEl?.ownerDocument.defaultView?.cancelAnimationFrame(anchorFrame);
+    anchorFrame = null;
     lastAnchor = "";
   }
-  $: if (expanded && anchorFrame === 0) trackAnchor();
+  $: if (expanded && anchorFrame === null) trackAnchor();
   $: if (!expanded) untrackAnchor();
   onDestroy(untrackAnchor);
 
@@ -441,7 +449,7 @@
     on:change={() => finish("change")}
     on:keydown={onKeydown}
     on:compositionstart={() => ctl.compositionStart()}
-    on:compositionend={() => ctl.compositionEnd()}
+    on:compositionend={(event) => { recordImeCompositionEnd(event); ctl.compositionEnd(); }}
   />
   {#if expanded}
     <div

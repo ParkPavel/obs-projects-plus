@@ -3,7 +3,7 @@
 
 import type { DataValue, Optional } from "src/lib/dataframe/dataframe";
 import type { FormulaNode } from "./syntax";
-import { isUnsafePattern, MAX_REGEX_INPUT_LENGTH, MAX_REGEX_PATTERN_LENGTH } from "src/lib/helpers/regexSafety";
+import { compileSafeRegex, MAX_REGEX_INPUT_LENGTH } from "src/lib/helpers/regexSafety";
 import { aggregate, type RollupFunction } from "src/lib/engine/aggregate";
 import { isNumeric, toNumber, toNumbers } from "src/lib/engine/numeric";
 import { compileCriterion, matchingRows, numbersPerCell, type CriterionPair } from "./criteria";
@@ -842,18 +842,22 @@ export const COMPUTED_FUNCTIONS: Record<string, FormulaFn> = {
   REGEX_MATCH: (args, evaluate) => {
     const str = String(evaluate(args[0] as FormulaNode) ?? "");
     const pattern = String(evaluate(args[1] as FormulaNode) ?? "");
-    if (!pattern || pattern.length > MAX_REGEX_PATTERN_LENGTH || isUnsafePattern(pattern)) return false;
-    if (str.length > MAX_REGEX_INPUT_LENGTH) return false;
-    try { return new RegExp(pattern).test(str); } catch { return false; }
+    if (!pattern) return false;
+    const result = compileSafeRegex(pattern);
+    if (!result.ok) throw new Error(`Regex pattern ${result.issue}`);
+    if (str.length > MAX_REGEX_INPUT_LENGTH) throw new Error("Regex input too long");
+    return result.regex.test(str);
   },
 
   REGEX_REPLACE: (args, evaluate) => {
     const str = String(evaluate(args[0] as FormulaNode) ?? "");
     const pattern = String(evaluate(args[1] as FormulaNode) ?? "");
     const replacement = String(evaluate(args[2] as FormulaNode) ?? "");
-    if (!pattern || pattern.length > MAX_REGEX_PATTERN_LENGTH || isUnsafePattern(pattern)) return str;
-    if (str.length > MAX_REGEX_INPUT_LENGTH) return str;
-    try { return str.replace(new RegExp(pattern, "g"), replacement); } catch { return str; }
+    if (!pattern) return str;
+    const result = compileSafeRegex(pattern, "g");
+    if (!result.ok) throw new Error(`Regex pattern ${result.issue}`);
+    if (str.length > MAX_REGEX_INPUT_LENGTH) throw new Error("Regex input too long");
+    return str.replace(result.regex, replacement);
   },
 
   JOIN: (args, evaluate) => {

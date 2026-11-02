@@ -45,8 +45,8 @@ export class ConfigureFieldModal extends Modal {
         availableProjects: this.availableProjects,
         currentProjectId: this.currentProjectId,
         onSetupRelation: this.onSetupRelation,
-        onSave: (field: DataField) => {
-          void this.onSave(field);
+        onSave: async (field: DataField) => {
+          await this.onSave(field);
           this.close();
         },
       },

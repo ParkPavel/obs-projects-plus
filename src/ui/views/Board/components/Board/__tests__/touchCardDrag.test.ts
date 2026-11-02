@@ -4,6 +4,7 @@
  * move, drop, cancel and blocker paths on synthetic pointer events.
  */
 import {
+  blockLibraryTouchGrip,
   boxToBoard,
   computeDropWrites,
   createTouchCardDrag,
@@ -302,5 +303,103 @@ describe("createTouchCardDrag", () => {
     expect(b.handle.isActive()).toBe(true);
     pointer("pointercancel", { x: 398, y: 60 });
     expect(b.onDrop).not.toHaveBeenCalled();
+  });
+});
+
+describe("createTouchCardDrag in a secondary document", () => {
+  it("uses the board's owner window for pointer and Escape lifecycle", () => {
+    const iframe = document.createElement("iframe");
+    document.body.appendChild(iframe);
+    const ownerDocument = iframe.contentDocument!;
+    const ownerView = iframe.contentWindow! as Window & typeof globalThis;
+    const originalCreateDiv = Object.getOwnPropertyDescriptor(ownerView.HTMLElement.prototype, "createDiv");
+    let clearTimeoutSpy: jest.SpyInstance | undefined;
+    Object.defineProperty(ownerView.HTMLElement.prototype, "createDiv", {
+      configurable: true,
+      value(this: HTMLElement, options: { cls: string }) {
+        const element = ownerDocument.createElement("div");
+        element.className = options.cls;
+        this.appendChild(element);
+        return element;
+      },
+    });
+
+    try {
+      const container = ownerDocument.createElement("div");
+      const viewport = ownerDocument.createElement("div");
+      const column = ownerDocument.createElement("section");
+      const list = ownerDocument.createElement("div");
+      const slot = ownerDocument.createElement("div");
+      const grip = ownerDocument.createElement("span");
+      container.appendChild(viewport);
+      viewport.appendChild(column);
+      column.appendChild(list);
+      list.appendChild(slot);
+      slot.appendChild(grip);
+      ownerDocument.body.appendChild(container);
+      column.className = "projects--board--column";
+      column.dataset["id"] = "A";
+      list.className = "projects--board--card-list";
+      slot.className = "ppp-board-card-slot";
+      slot.dataset["recordId"] = "record";
+      grip.className = "board-card-grip";
+      const place = (element: HTMLElement, left: number, top: number, width: number, height: number) => {
+        element.getBoundingClientRect = () => ({
+          left, top, width, height, right: left + width, bottom: top + height,
+          x: left, y: top, toJSON: () => ({}),
+        });
+      };
+      place(container, 0, 0, 400, 400);
+      place(viewport, 0, 0, 400, 400);
+      place(column, 0, 0, 300, 300);
+      place(list, 0, 0, 300, 300);
+      place(slot, 0, 0, 200, 80);
+
+      const frames: Array<() => void> = [];
+      const handle = createTouchCardDrag({
+        container,
+        viewport,
+        getScale: () => 1,
+        blockReason: () => null,
+        onBlocked: jest.fn(),
+        onDrop: jest.fn(),
+        raf: (callback) => { frames.push(callback); return frames.length; },
+        caf: () => undefined,
+      });
+      clearTimeoutSpy = jest.spyOn(ownerView, "clearTimeout");
+      const dispatch = (target: EventTarget, type: string, init: Record<string, unknown> = {}) => {
+        const event = new ownerView.Event(type, { bubbles: true, cancelable: true });
+        Object.assign(event, init);
+        target.dispatchEvent(event);
+      };
+      dispatch(grip, "pointerdown", {
+        pointerId: 1, pointerType: "touch", isPrimary: true, clientX: 5, clientY: 5,
+      });
+      dispatch(ownerView, "pointermove", {
+        pointerId: 1, pointerType: "touch", isPrimary: true, clientX: 12, clientY: 12,
+      });
+      expect(handle.isActive()).toBe(true);
+      expect(clearTimeoutSpy).toHaveBeenCalled();
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      expect(handle.isActive()).toBe(true);
+      dispatch(ownerView, "keydown", { key: "Escape" });
+      expect(handle.isActive()).toBe(false);
+      expect(viewport.querySelector(".ppp-board-touch-preview, .ppp-board-touch-line")).toBeNull();
+      handle.destroy();
+
+      const bodyTouch = jest.fn();
+      ownerDocument.body.addEventListener("touchstart", bodyTouch);
+      const blocker = blockLibraryTouchGrip(container);
+      dispatch(grip, "touchstart");
+      expect(bodyTouch).not.toHaveBeenCalled();
+      blocker.destroy();
+      ownerDocument.body.removeEventListener("touchstart", bodyTouch);
+    } finally {
+      if (clearTimeoutSpy) clearTimeoutSpy.mockRestore();
+      if (originalCreateDiv) Object.defineProperty(ownerView.HTMLElement.prototype, "createDiv", originalCreateDiv);
+      else Reflect.deleteProperty(ownerView.HTMLElement.prototype, "createDiv");
+      iframe.remove();
+    }
   });
 });

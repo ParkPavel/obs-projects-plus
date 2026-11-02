@@ -6,6 +6,7 @@
 import "@testing-library/jest-dom";
 import { fireEvent, render } from "@testing-library/svelte";
 import { tick } from "svelte";
+import { optionLabels, optionRows, tap } from "src/ui/components/fields/__tests__/support/comboKit";
 jest.mock("src/lib/stores/i18n", () => {
   const { writable } = require("svelte/store");
   return { i18n: writable({ t: (key: string) => key }) };
@@ -69,4 +70,16 @@ test("Escape closes the field without adding", async () => {
   await fireEvent.keyDown(input, { key: "Escape" }); await settle();
   expect(onChange).not.toHaveBeenCalled();
   expect(view.container.querySelector(".tag-list-add")).toBeNull();
+});
+
+test("a declared value can be selected as a tag and the input remains ready", async () => {
+  const onChange = jest.fn();
+  const view = render(TagList, { props: { values: ["a"], edit: true, suggestions: ["b", "c"], onChange } });
+  await open(view);
+  expect(optionLabels()).toEqual(["b", "c"]);
+  tap(optionRows()[0]!);
+  await settle();
+  expect(onChange).toHaveBeenLastCalledWith(["a", "b"]);
+  expect(view.container.querySelector<HTMLInputElement>(".tag-list-add input")?.value).toBe("");
+  expect(view.container.querySelector(".tag-list-add")).not.toBeNull();
 });

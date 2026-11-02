@@ -209,10 +209,10 @@ describe("RelationPickerPopover", () => {
     component.$on("commit", (e: CustomEvent<unknown>) => commits.push(e.detail));
     component.$on("cancel", () => (cancels += 1));
     await settle();
-    const input = target.querySelector("input.ppp-rel-picker-search") as HTMLInputElement;
+    const input = document.querySelector("input.ppp-rel-picker-search") as HTMLInputElement;
     return { target, component, commits, cancels: () => cancels, input };
   }
-  const items = (m: { target: HTMLElement }) => Array.from(m.target.querySelectorAll<HTMLElement>(".ppp-rel-picker-item"));
+  const items = () => Array.from(document.querySelectorAll<HTMLElement>(".ppp-rel-picker-item"));
 
   test("Enter takes the top match until the user moves, then the active option", async () => {
     const first = await mount();
@@ -230,16 +230,16 @@ describe("RelationPickerPopover", () => {
   test("the active option is named by aria-activedescendant, wraps, and follows the filter", async () => {
     const m = await mount();
     expect(m.input).toHaveAttribute("role", "combobox");
-    const list = m.target.querySelector('[role="listbox"]') as HTMLElement;
+    const list = document.querySelector('[role="listbox"]') as HTMLElement;
     expect(m.input).toHaveAttribute("aria-controls", list.id);
-    expect(m.input).toHaveAttribute("aria-activedescendant", items(m)[0]!.id);
+    expect(m.input).toHaveAttribute("aria-activedescendant", items()[0]!.id);
     key(m.input, "ArrowUp");
     await tick();
-    expect(m.input).toHaveAttribute("aria-activedescendant", items(m)[2]!.id);
-    expect(items(m)[2]).toHaveClass("ppp-rel-picker-item--active");
+    expect(m.input).toHaveAttribute("aria-activedescendant", items()[2]!.id);
+    expect(items()[2]).toHaveClass("ppp-rel-picker-item--active");
     type(m.input, "ga");
     await tick();
-    expect(items(m).map((i) => i.textContent?.trim())).toEqual(["Gamma"]);
+    expect(items().map((i) => i.textContent?.trim())).toEqual(["Gamma"]);
     key(m.input, "Enter");
     expect(m.commits).toEqual(["[[Gamma]]"]);
     m.component.$destroy();
@@ -262,22 +262,22 @@ describe("RelationPickerPopover", () => {
   test("a mouse press keeps focus and its click picks; a click with no press (touch, keyboard) picks too", async () => {
     const m = await mount();
     const pressEvent = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
-    items(m)[1]!.dispatchEvent(pressEvent);
+    items()[1]!.dispatchEvent(pressEvent);
     expect(pressEvent.defaultPrevented).toBe(true);
     expect(m.commits).toEqual([]);
-    items(m)[1]!.click();
+    items()[1]!.click();
     expect(m.commits).toEqual(["[[Beta]]"]);
     m.component.$destroy();
 
     const t = await mount();
-    items(t)[2]!.click();
+    items()[2]!.click();
     expect(t.commits).toEqual(["[[Gamma]]"]);
     t.component.$destroy();
   });
 
   test("Cancel works from a click (touch, keyboard), not only from a mouse press", async () => {
     const m = await mount();
-    (m.target.querySelector(".ppp-rel-picker-cancel") as HTMLButtonElement).click();
+    (document.querySelector(".ppp-rel-picker-cancel") as HTMLButtonElement).click();
     expect(m.cancels()).toBe(1);
     m.component.$destroy();
   });
@@ -395,6 +395,42 @@ describe("TableControlBar search", () => {
     await tick();
     expect(target.querySelector(".ppp-search-field")).toBeNull();
     expect(searches).toEqual(["ab", ""]);
+    component.$destroy();
+  });
+
+  test("portals field suggestions while preserving input focus and keyboard selection", async () => {
+    const target = host();
+    const component = new TableControlBar({
+      target,
+      props: { sortCriteria: [], recordCount: 3, fieldNames: ["Status"] },
+    });
+    const searches: string[] = [];
+    component.$on("search", (e: CustomEvent<string>) => searches.push(e.detail));
+    click(target.querySelector(".ppp-t2-cb-btn") as HTMLElement);
+    await settle();
+
+    const input = target.querySelector(".ppp-search-field input") as HTMLInputElement;
+    expect(document.activeElement).toBe(input);
+    type(input, "Sta");
+    await settle();
+
+    const list = document.body.querySelector(".ppp-t2-hints");
+    expect(list).not.toBeNull();
+    expect(target.querySelector(".ppp-t2-hints")).toBeNull();
+    const popup = list?.closest(".ppp-popup--floating");
+    expect(popup).not.toBeNull();
+    expect(popup).toHaveAttribute("role", "presentation");
+    expect(popup).not.toHaveAttribute("aria-label");
+    expect(document.activeElement).toBe(input);
+
+    key(input, "ArrowDown");
+    await tick();
+    expect(input).toHaveAttribute("aria-activedescendant", list?.querySelector('[role="option"]')?.id);
+    key(input, "Enter");
+    await settle();
+    expect(searches).toContain("Status:");
+    expect(document.body.querySelector(".ppp-t2-hints")).toBeNull();
+
     component.$destroy();
   });
 });

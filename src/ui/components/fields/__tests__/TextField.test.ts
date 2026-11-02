@@ -161,6 +161,35 @@ describe("TextField", () => {
     m.destroy();
   });
 
+  test("IME acceptance in a secondary document does not commit on keyCode 229 Enter", async () => {
+    const iframe = document.createElement("iframe");
+    document.body.appendChild(iframe);
+    const doc = iframe.contentDocument!;
+    const view = iframe.contentWindow! as Window & typeof globalThis;
+    const target = doc.createElement("div");
+    doc.body.appendChild(target);
+    const component = new TextField({ target, props: { value: "a" } });
+    const commits: Commit[] = [];
+    component.$on("commit", (event: CustomEvent<Commit>) => commits.push(event.detail));
+
+    try {
+      const input = target.querySelector("input")!;
+      input.focus();
+      input.value = "ab";
+      input.dispatchEvent(new view.Event("input", { bubbles: true }));
+      await tick();
+      input.dispatchEvent(new view.Event("compositionstart", { bubbles: true }));
+      input.dispatchEvent(new view.Event("compositionend", { bubbles: true }));
+      const enter = new view.KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+      Object.defineProperty(enter, "keyCode", { value: 229 });
+      input.dispatchEvent(enter);
+      expect(commits).toEqual([]);
+    } finally {
+      component.$destroy();
+      iframe.remove();
+    }
+  });
+
   test("IME: between compositionstart and compositionend neither Enter nor Escape acts", async () => {
     const m = mount();
     m.input.focus();

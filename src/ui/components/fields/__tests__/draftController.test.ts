@@ -5,7 +5,7 @@
  * baseline, and an IME composition owns Enter and Escape until it ends.
  */
 
-import { createDraftController, isImeKey } from "../draftController";
+import { createDraftController, isImeKey, recordImeCompositionEnd } from "../draftController";
 import { filterOptions, optionDomId, stepActive } from "../comboOptions";
 
 describe("draftController — seed", () => {
@@ -158,6 +158,28 @@ describe("draftController — IME", () => {
     document.dispatchEvent(new Event("compositionend"));
     expect(isImeKey({ keyCode: 229, key: "Enter" })).toBe(true);
     expect(isImeKey({ keyCode: 229, key: "Enter" }, Date.now() + 1000)).toBe(false);
+  });
+
+  test("keyCode 229 Enter uses the compositionend timestamp from its own document", () => {
+    const iframe = document.createElement("iframe");
+    document.body.appendChild(iframe);
+    const doc = iframe.contentDocument!;
+    const view = iframe.contentWindow! as Window & typeof globalThis;
+    const input = doc.createElement("input");
+    doc.body.appendChild(input);
+
+    try {
+      const end = new view.Event("compositionend", { bubbles: true });
+      input.dispatchEvent(end);
+      recordImeCompositionEnd(end);
+      const enter = new view.KeyboardEvent("keydown", { key: "Enter", bubbles: true });
+      Object.defineProperty(enter, "keyCode", { value: 229 });
+      input.dispatchEvent(enter);
+      expect(isImeKey(enter)).toBe(true);
+      expect(isImeKey(enter, Date.now() + 1000)).toBe(false);
+    } finally {
+      iframe.remove();
+    }
   });
 
   test("leaving the field ends a composition", () => {

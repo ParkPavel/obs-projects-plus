@@ -41,7 +41,7 @@
   } from "src/lib/dashboard-engine/formulaMetadata";
   import { i18n } from "src/lib/stores/i18n";
   import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
-  import { isImeKey } from "src/ui/components/fields/draftController";
+  import { isImeKey, recordImeCompositionEnd } from "src/ui/components/fields/draftController";
   import { keepInView } from "src/ui/components/fields/keepInView";
   import { releaseOnOutsideTap } from "src/ui/components/fields/releaseOnOutsideTap";
   import { tokenize, type Token } from "src/lib/helpers/formulaParser";
@@ -446,7 +446,7 @@
         on:focus={handleCursorMove}
         on:scroll={syncScroll}
         on:compositionstart={() => { composing = true; showSuggestions = false; }}
-        on:compositionend={(event) => { composing = false; handleCursorMove(event); }}
+        on:compositionend={(event) => { recordImeCompositionEnd(event); composing = false; handleCursorMove(event); }}
         spellcheck="false"
       ></textarea>
     </div>

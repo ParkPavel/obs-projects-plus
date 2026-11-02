@@ -41,6 +41,31 @@ it("only the most recently opened popup owns Escape", async () => {
   first.unmount(); second.unmount();
 });
 
+it("ignores an IME acceptance Escape reported by keyCode 229 in the popup's document", async () => {
+  const iframe = document.createElement("iframe");
+  document.body.appendChild(iframe);
+  const doc = iframe.contentDocument!;
+  const view = iframe.contentWindow! as Window & typeof globalThis;
+  const target = doc.createElement("div");
+  const trigger = doc.createElement("button");
+  doc.body.append(target, trigger);
+  const component = new FloatingPopup({ target, props: { open: true, triggerEl: trigger, ariaLabel: "Popout" } });
+
+  try {
+    await settle();
+    expect(doc.querySelector('[aria-label="Popout"]')).not.toBeNull();
+    trigger.dispatchEvent(new view.Event("compositionend", { bubbles: true }));
+    const escape229 = new view.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+    Object.defineProperty(escape229, "keyCode", { value: 229 });
+    doc.body.dispatchEvent(escape229);
+    await settle();
+    expect(doc.querySelector('[aria-label="Popout"]')).not.toBeNull();
+  } finally {
+    component.$destroy();
+    iframe.remove();
+  }
+});
+
 describe("keyboard-visible viewport, not the covered layout viewport", () => {
   const descriptor = Object.getOwnPropertyDescriptor(window, "visualViewport");
   let viewport: EventTarget & { offsetTop: number; offsetLeft: number; width: number; height: number };
@@ -109,5 +134,45 @@ describe("keyboard-visible viewport, not the covered layout viewport", () => {
       expect(popup.style.top).not.toBe(before);
       view.unmount();
     } finally { rect.mockRestore(); anchor.remove(); }
+  });
+
+  it("an anchored mobile popup stays within the keyboard-visible viewport", async () => {
+    isMobile.set(true);
+    const anchor = document.createElement("button");
+    document.body.append(anchor);
+    const rect = jest.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      if (this === anchor) {
+        return { left: 250, top: 220, right: 450, bottom: 248, width: 200, height: 28, x: 0, y: 0, toJSON: () => ({}) };
+      }
+      return { left: 0, top: 0, right: 200, bottom: 80, width: 200, height: 80, x: 0, y: 0, toJSON: () => ({}) };
+    });
+    try {
+      const view = render(FloatingPopup, {
+        props: { open: true, triggerEl: anchor, mobilePresentation: "anchored", role: "listbox", autoFocus: false },
+      });
+      await settle();
+      const popup = document.querySelector<HTMLElement>(".ppp-popup--floating")!;
+      const top = parseFloat(popup.style.top) * 16;
+      expect(popup.style.maxHeight).not.toBe("");
+      expect(top + 80).toBeLessThanOrEqual(visibleBottom() - 8);
+      expect(document.querySelector(".ppp-popup-backdrop")).toBeNull();
+      expect(popup).not.toHaveAttribute("aria-modal");
+
+      const before = popup.style.top;
+      viewport.offsetTop = 140;
+      viewport.dispatchEvent(new Event("resize"));
+      await settle();
+      expect(popup.style.top).not.toBe(before);
+      expect(parseFloat(popup.style.top) * 16 + 80).toBeLessThanOrEqual(visibleBottom() - 8);
+
+      view.unmount();
+    } finally {
+      rect.mockRestore();
+      anchor.remove();
+    }
+
+    function visibleBottom(): number {
+      return viewport.offsetTop + viewport.height;
+    }
   });
 });

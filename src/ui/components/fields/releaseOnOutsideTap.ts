@@ -27,7 +27,7 @@ export function releaseOnOutsideTap(node: HTMLElement): { destroy(): void } {
     press = null;
     if (doc.activeElement !== node) return;
     const target = e.target;
-    if (target instanceof Node && node.contains(target)) return;
+    if (target && typeof target === "object" && "nodeType" in target && node.contains(target as Node)) return;
     if ((target as Element | null)?.closest?.(OWN_LAYERS)) return;
     press = { id: e.pointerId, x: e.clientX, y: e.clientY };
   };

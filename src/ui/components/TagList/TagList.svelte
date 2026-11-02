@@ -16,19 +16,25 @@
 
   import { i18n } from "src/lib/stores/i18n";
   import TextField from "src/ui/components/fields/TextField.svelte";
+  import ComboField from "src/ui/components/fields/ComboField.svelte";
+  import { namesToOptions } from "src/ui/components/fields/comboOptions";
   import RichTextTag from "src/ui/components/TagList/RichTextTag.svelte";
 
   export let values: Optional<DataValue>[];
   export let richText: boolean = false;
   export let edit: boolean = false;
+  export let suggestions: string[] = [];
 
   export let onChange: (values: Optional<DataValue>[]) => void = () => {};
 
   $: stringValues = values.filter(isString);
+  $: suggestionOptions = namesToOptions(suggestions);
 
   let adding = false;
   let field: TextField | null = null;
+  let suggestionField: ComboField | null = null;
   let addEl: HTMLElement | null = null;
+  let suggestedDraft = "";
 
   async function startAdding(): Promise<void> {
     adding = true;
@@ -40,6 +46,17 @@
     const item = e.detail.value.trim();
     if (item) onChange([...values, item]);
     if (e.detail.reason === "enter" && item) field?.reset("");
+  }
+
+  function addSuggested(e: CustomEvent<{ value: string; reason: string }>): void {
+    const item = e.detail.value.trim();
+    if (item) onChange([...values, item]);
+    if ((e.detail.reason === "enter" || e.detail.reason === "select") && item) {
+      suggestedDraft = "";
+      suggestionField?.reset("");
+    } else if (e.detail.reason !== "enter" && e.detail.reason !== "select") {
+      adding = false;
+    }
   }
 
   // The blur commit runs first; the field closes once the focus has left it.
@@ -67,13 +84,31 @@
     {/each}
     {#if adding}
       <span class="tag-list-add" bind:this={addEl} on:focusout={closeAfterBlur}>
-        <TextField
-          bind:this={field}
-          ariaLabel={$i18n.t("common.add-item")}
-          placeholder={$i18n.t("common.add-item")}
-          on:commit={add}
-          on:cancel={() => (adding = false)}
-        />
+        {#if suggestionOptions.length > 0}
+          <ComboField
+            bind:this={suggestionField}
+            value={suggestedDraft}
+            options={suggestionOptions}
+            allowCustom
+            focusOnMount
+            ariaLabel={$i18n.t("common.add-item")}
+            placeholder={$i18n.t("common.add-item")}
+            on:draftChange={(e) => (suggestedDraft = e.detail)}
+            on:commit={addSuggested}
+            on:cancel={() => {
+              suggestedDraft = "";
+              adding = false;
+            }}
+          />
+        {:else}
+          <TextField
+            bind:this={field}
+            ariaLabel={$i18n.t("common.add-item")}
+            placeholder={$i18n.t("common.add-item")}
+            on:commit={add}
+            on:cancel={() => (adding = false)}
+          />
+        {/if}
       </span>
     {:else}
       <IconButton

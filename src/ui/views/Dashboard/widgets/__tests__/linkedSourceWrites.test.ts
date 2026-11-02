@@ -97,8 +97,9 @@ describe("#142/#C4 the gallery branch is guarded too", () => {
     expect(gallery).toMatch(/export let dataReadOnly = false;/);
   });
 
-  it("record creation is gated on the generic flag, unchanged since #142", () => {
-    expect(gallery).toMatch(/\{#if !readonly\}\s*\n\s*<IconButton\s*\n\s*icon="plus"/);
+  it("all record-creation entry points require writable data", () => {
+    expect(gallery).toMatch(/\$: canCreate = !readonly && !dataReadOnly;/);
+    expect(gallery.match(/\{#if canCreate\b/g) ?? []).toHaveLength(3);
   });
 
   it("the edit modal keys on dataReadOnly, not the generic flag — #C4", () => {

@@ -45,9 +45,9 @@ const helpers = require("src/ui/views/helpers") as { showMobileNavMenu: jest.Moc
 
 const record = (id: string, done = false) => ({ id, values: { done } });
 
-function mountCards(props: Record<string, unknown> = {}) {
-  const target = document.createElement("div");
-  document.body.appendChild(target);
+function mountCards(props: Record<string, unknown> = {}, doc: Document = document) {
+  const target = doc.createElement("div");
+  doc.body.appendChild(target);
   const items = [record("a.md"), record("b.md")];
   const onRecordClick = jest.fn();
   const onRecordCheck = jest.fn();
@@ -150,6 +150,19 @@ describe("cards-g2 — what a click does on each part of a board card", () => {
     grip.querySelector(".board-card-grip-glyph")?.dispatchEvent(click());
     expect(m.onRecordClick).not.toHaveBeenCalled();
     m.destroy();
+  });
+
+  it("a click on an iframe grip does not activate the card", () => {
+    const iframe = document.createElement("iframe");
+    document.body.appendChild(iframe);
+    const m = mountCards({}, iframe.contentDocument!);
+    try {
+      m.card(0).querySelector<HTMLElement>(".board-card-grip-glyph")?.dispatchEvent(click());
+      expect(m.onRecordClick).not.toHaveBeenCalled();
+    } finally {
+      m.destroy();
+      iframe.remove();
+    }
   });
 
   it("the checkbox toggles the record without opening it", async () => {

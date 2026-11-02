@@ -7,6 +7,7 @@ import { DataFieldType } from "src/lib/dataframe/dataframe";
 import type { DataField, DataRecord } from "src/lib/dataframe/dataframe";
 import type { ContextMenuEntry } from "src/lib/contextMenu";
 import { aggregationLabel, aggregationOptionsFor } from "src/lib/dashboard-engine/aggregationOptions";
+import { valueSuggestions, type SuggestionContext } from "src/lib/suggestions/valueSuggestions";
 import type { ColumnAggregation, DataTableConfig, DataTableSortCriteria } from "../../types";
 
 export type SortOrder = "asc" | "desc";
@@ -33,17 +34,18 @@ export function calculateOptions(field: DataField): ColumnAggregation[] {
  */
 export function optionPools(
   fields: readonly DataField[],
-  records: readonly DataRecord[]
+  records: readonly DataRecord[],
+  context: SuggestionContext = {},
 ): Map<string, string[]> {
   const map = new Map<string, string[]>();
   for (const f of fields) {
-    if (f.type !== DataFieldType.Select && f.type !== DataFieldType.Status) continue;
-    const seen = new Set<string>();
-    for (const r of records) {
-      const v = r.values[f.name];
-      if (typeof v === "string" && v !== "") seen.add(v);
-    }
-    map.set(f.name, [...seen].sort((a, b) => a.localeCompare(b)));
+    if (
+      f.type !== DataFieldType.String
+      && f.type !== DataFieldType.List
+      && f.type !== DataFieldType.Select
+      && f.type !== DataFieldType.Status
+    ) continue;
+    map.set(f.name, valueSuggestions(records, f, context));
   }
   return map;
 }
@@ -138,6 +140,7 @@ export function startColumnResize(
   onLive: (rem: number) => void,
   onCommit: (rem: number) => void
 ): void {
+  const ownerView = (e.currentTarget as HTMLElement | null)?.ownerDocument.defaultView ?? window;
   e.stopPropagation();
   e.preventDefault();
   const startX = e.clientX;
@@ -147,12 +150,12 @@ export function startColumnResize(
     onLive(lastRem);
   };
   const onUp = () => {
-    window.removeEventListener("pointermove", onMove);
-    window.removeEventListener("pointerup", onUp);
+    ownerView.removeEventListener("pointermove", onMove);
+    ownerView.removeEventListener("pointerup", onUp);
     onCommit(lastRem);
   };
-  window.addEventListener("pointermove", onMove);
-  window.addEventListener("pointerup", onUp);
+  ownerView.addEventListener("pointermove", onMove);
+  ownerView.addEventListener("pointerup", onUp);
 }
 
 // ── Menu (canon §3: everything about a column lives in its header menu) ──

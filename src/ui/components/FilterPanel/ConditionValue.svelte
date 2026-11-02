@@ -13,6 +13,8 @@
   import ValueSuggestField from "src/ui/components/fields/ValueSuggestField.svelte";
   import DateFormulaInput from "src/ui/views/Calendar/agenda/DateFormulaInput.svelte";
   import { getFilterOperatorType, type FilterOperator } from "src/settings/base/settings";
+  import { getRegexPatternIssue } from "src/lib/helpers/regexSafety";
+  import { i18n } from "src/lib/stores/i18n";
 
   export let fieldType: string | undefined;
   export let operator: FilterOperator;
@@ -25,6 +27,7 @@
 
   $: dateFormula =
     (fieldType === "date" || fieldType === "autotime") && getFilterOperatorType(operator) === "binary-date";
+  $: regexIssue = operator === "regex" ? getRegexPatternIssue(value, "i") : null;
 </script>
 
 {#if dateFormula}
@@ -39,3 +42,14 @@
     on:commit={(e) => dispatch("commit", e.detail)}
   />
 {/if}
+{#if regexIssue}
+  <p class="ppp-filter-regex-error" role="alert">{$i18n.t(`regex-errors.${regexIssue}`)}</p>
+{/if}
+
+<style>
+  .ppp-filter-regex-error {
+    margin: 0.25rem 0 0;
+    color: var(--text-error, var(--text-muted));
+    font-size: var(--font-ui-smaller, 0.8em);
+  }
+</style>

@@ -3,10 +3,12 @@
   import type { DataField, DataValue, Optional } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
   import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
-  import TextField from "src/ui/components/fields/TextField.svelte";
+  import ListCellEditorItem from "./ListCellEditorItem.svelte";
+  import { namesToOptions } from "src/ui/components/fields/comboOptions";
 
   export let field: DataField;
   export let value: Optional<DataValue>;
+  export let options: string[] = [];
   const dispatch = createEventDispatcher<{ commit: Optional<DataValue>; cancel: void }>();
   const initial = Array.isArray(value) ? value : value == null ? [] : [value];
   // Independent draft + stable item identity; never mutate the datasource.
@@ -15,6 +17,7 @@
   let triggerEl: HTMLSpanElement | null = null;
   let listEl: HTMLDivElement | null = null;
   let finished = false;
+  $: suggestionOptions = namesToOptions(options);
 
   function finish(apply: boolean): void {
     if (finished) return;
@@ -35,6 +38,14 @@
       inputs?.[inputs.length - 1]?.focus();
     });
   }
+
+  function updateItem(id: number, value: Optional<DataValue>): void {
+    items = items.map((item) => item.id === id ? { ...item, value } : item);
+  }
+
+  function removeItem(id: number): void {
+    items = items.filter((item) => item.id !== id);
+  }
 </script>
 
 <span bind:this={triggerEl} aria-hidden="true" />
@@ -42,18 +53,15 @@
   <div class="ppp-t2-list-editor" bind:this={listEl}>
     <span>{field.name}</span>
     {#each items as item, i (item.id)}
-      <div class="ppp-t2-list-item">
-        {#if typeof item.value === "string"}
-          <TextField value={item.value} ariaLabel={`${field.name}: ${i + 1}`}
-            on:input={(e) => { items = items.map(v => v.id === item.id ? { ...v, value: e.detail } : v); }} />
-        {:else}
-          <!-- A mixed list keeps non-text values exactly as read. -->
-          <span>{item.value == null ? "∅" : String(item.value)}</span>
-        {/if}
-        <button type="button" on:click={() => { items = items.filter(v => v.id !== item.id); }}>
-          {$i18n.t("views.dashboard.table-v2.list-remove", { defaultValue: `Remove item ${i + 1}`, index: i + 1 })}
-        </button>
-      </div>
+      <ListCellEditorItem
+        {item}
+        index={i}
+        fieldName={field.name}
+        options={suggestionOptions}
+        on:change={(event) => updateItem(item.id, event.detail)}
+        on:remove={() => removeItem(item.id)}
+        on:cancel={() => finish(false)}
+      />
     {/each}
     <button type="button" on:click={add}>
       {$i18n.t("views.dashboard.table-v2.list-add", { defaultValue: "Add item" })}
@@ -78,18 +86,10 @@
     box-sizing: border-box;
   }
 
-  .ppp-t2-list-item, .ppp-t2-list-actions {
+  .ppp-t2-list-actions {
     display: flex;
     align-items: center;
     gap: var(--ppp-space-sm);
-  }
-
-  .ppp-t2-list-item :global(input) {
-    min-width: 0;
-    flex: 1;
-  }
-
-  .ppp-t2-list-actions {
     justify-content: flex-end;
   }
 </style>

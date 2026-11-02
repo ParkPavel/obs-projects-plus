@@ -51,6 +51,12 @@
             "unknown-operator": "无法识别的符号「{{op}}」",
             "invalid": "无法读取公式：{{detail}}"
         },
+        "regex-errors": {
+            "invalid": "正则表达式语法无效。",
+            "unsafe": "不支持此正则表达式，因为无法可靠限制其计算时间。",
+            "too-long": "正则表达式超过了允许的长度。",
+            "input-too-long": "文本超过了正则表达式处理长度限制。"
+        },
         "formula-docs": {
             "IS_EMPTY": "值缺失、空文本或空列表时返回 true；零和 false 视为已填写。",
             "IS_NOT_EMPTY": "值存在且不是空文本或空列表时返回 true。",
@@ -451,6 +457,8 @@
                     },
                     "empty-name-error": "字段名不能为空。",
                     "existing-name-error": "不能重命名为已有字段。",
+                    "save-error": "无法保存字段更改：{{message}}",
+                    "saving": "正在保存…",
                     "type": {
                         "name": "字段类型",
                         "description": "转换字段为另一种类型。兼容的值将被保留。"
@@ -1826,6 +1834,7 @@
                     "change-icon": "更换图标",
                     "icon-input": "表情符号或图标名称",
                     "frontmatter": "Frontmatter 属性",
+                    "computed-properties": "计算属性",
                     "unresolved": "未找到笔记：",
                     "empty": "未选择记录"
                 },

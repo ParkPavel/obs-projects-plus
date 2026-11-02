@@ -95,14 +95,26 @@ export function mappingKey(m: DraftMapping): string {
 }
 
 /** Different values cannot be safely written into the same property. */
-export function conflictingDraftFields(m: DraftMapping): string[] {
-  const names = [m.start, m.end === m.start ? undefined : m.end, m.startTime, m.endTime, m.creation, m.check, m.status, m.color, m.icon].filter((n): n is string => !!n);
+export function conflictingDraftFields(m: DraftMapping, hasTime = true): string[] {
+  const names = [
+    m.start,
+    m.end === m.start ? undefined : m.end,
+    ...(hasTime ? [m.startTime, m.endTime] : []),
+    m.creation,
+    m.check,
+    m.status,
+    m.color,
+    m.icon,
+  ].filter((n): n is string => !!n);
   return [...new Set(names.filter((name, index) => names.indexOf(name) !== index))];
 }
 
 export function hasComputedDraftTime(draft: CalendarDraft): boolean {
   const m = draft.mapping;
-  return [m.start, m.end, m.startTime, m.endTime].some((name) => m.computed.includes(name));
+  const mapped = draft.hasTime
+    ? [m.start, m.end, m.startTime, m.endTime]
+    : [m.start, m.end];
+  return mapped.some((name) => m.computed.includes(name));
 }
 
 export interface CalendarDraft {
@@ -111,8 +123,11 @@ export interface CalendarDraft {
   readonly revision: number;
   /** The project and mapping it was begun under. */
   readonly owner: string;
+  /** Date-only creations stay all-day and do not write time properties. */
+  readonly hasTime: boolean;
   readonly start: Dayjs;
   readonly end: Dayjs;
+  readonly durationMinutes: number;
   readonly name: string;
   readonly templatePath: string;
   readonly color: string;
@@ -132,13 +147,16 @@ export function clockOn(day: Dayjs, clock: string): Dayjs {
 }
 
 /** The four time values in the separate model the calendar reads and writes. */
-function timeValues(start: Dayjs, end: Dayjs, m: DraftMapping): Record<string, string> {
-  return {
+function timeValues(start: Dayjs, end: Dayjs, m: DraftMapping, hasTime: boolean): Record<string, string> {
+  const values: Record<string, string> = {
     [m.start]: start.format(DAY),
-    [m.startTime]: start.format(CLOCK),
     ...(m.end !== m.start ? { [m.end]: end.format(DAY) } : {}),
-    [m.endTime]: end.format(CLOCK),
   };
+  if (hasTime) {
+    values[m.startTime] = start.format(CLOCK);
+    values[m.endTime] = end.format(CLOCK);
+  }
+  return values;
 }
 
 const minEnd = (start: Dayjs) => start.add(DND_CONSTANTS.MIN_DURATION_MINUTES, "minute");
@@ -150,12 +168,17 @@ const minEnd = (start: Dayjs) => start.add(DND_CONSTANTS.MIN_DURATION_MINUTES, "
  * that still lands on or before the start becomes the shortest event.
  */
 export function movedRange(
-  draft: Pick<CalendarDraft, "start" | "end" | "mapping">,
+  draft: Pick<CalendarDraft, "start" | "end" | "mapping" | "hasTime">,
   date: Dayjs,
   options?: RecordChangeOptions
 ): { start: Dayjs; end: Dayjs } {
+  if (!draft.hasTime) {
+    const start = date.startOf("day");
+    const span = Math.max(0, draft.end.startOf("day").diff(draft.start.startOf("day"), "day"));
+    return { start, end: start.add(span, "day") };
+  }
   const m = draft.mapping;
-  const values = timeValues(draft.start, draft.end, m);
+  const values = timeValues(draft.start, draft.end, m, true);
   const { updates, newStartDate } = buildRecordChangeUpdates({
     values,
     dateFieldName: m.start,
@@ -197,7 +220,7 @@ export function draftFileName(draft: CalendarDraft, untitled: string): string {
 /** The temporary record the calendar draws. Its id is not a path and ends in a title. */
 export function draftRecord(draft: CalendarDraft, untitled: string): DataRecord {
   const m = draft.mapping;
-  const values: Values = { ...draft.prefill, ...timeValues(draft.start, draft.end, m) };
+  const values: Values = { ...draft.prefill, ...timeValues(draft.start, draft.end, m, draft.hasTime) };
   // The start stored in the name is read from the title in the id, as a note's file name is.
   if (m.start === "name") delete values["name"];
   if (m.color) values[m.color] = draft.color || null;
@@ -216,6 +239,9 @@ export interface DraftPayload {
 
 /** The single-date time model can infer an overnight end, but not multiple days. */
 export function draftNeedsSeparateEnd(draft: CalendarDraft): boolean {
+  if (!draft.hasTime) {
+    return draft.mapping.start === draft.mapping.end && !draft.end.isSame(draft.start, "day");
+  }
   if (draft.mapping.start !== draft.mapping.end) return false;
   let inferred = clockOn(draft.start, draft.end.format(CLOCK));
   if (inferred.isBefore(draft.start)) inferred = inferred.add(1, "day");
@@ -231,9 +257,9 @@ export function draftNeedsSeparateEnd(draft: CalendarDraft): boolean {
  */
 export function draftPayload(draft: CalendarDraft, today: Dayjs, untitled: string): DraftPayload {
   const m = draft.mapping;
-  const values: Values = { ...draft.prefill, ...timeValues(draft.start, draft.end, m) };
+  const values: Values = { ...draft.prefill, ...timeValues(draft.start, draft.end, m, draft.hasTime) };
   if (m.start === "name") delete values["name"];
-  if (m.creation) values[m.creation] = today.format(DAY);
+  if (m.creation) values[m.creation] = (draft.hasTime ? today : draft.start).format(DAY);
   if (m.check && (!draft.templatePath || draft.done || draft.edited.includes("done"))) values[m.check] = draft.done;
   if (m.status && (draft.status || draft.edited.includes("status"))) values[m.status] = draft.status || null;
   if (m.color && (draft.color || draft.edited.includes("color"))) values[m.color] = draft.color || null;
@@ -245,7 +271,7 @@ export function draftPayload(draft: CalendarDraft, today: Dayjs, untitled: strin
 export interface DraftBegin {
   readonly owner: string;
   readonly day: Dayjs;
-  readonly startTime: string;
+  readonly startTime?: string | undefined;
   /** The end chosen on the grid; without it the view's creation length applies. */
   readonly endTime?: string | undefined;
   readonly durationMinutes: number;
@@ -311,14 +337,17 @@ export function createCalendarDraft(): CalendarDraftController {
 
     begin(input) {
       if (!alive || state.saving) return null;
-      const start = clockOn(input.day, input.startTime);
-      let end = input.endTime ? clockOn(input.day, input.endTime) : start.add(input.durationMinutes, "minute");
-      if (!end.isAfter(start)) end = input.endTime ? end.add(1, "day") : minEnd(start);
-      if (!end.isAfter(start)) end = minEnd(start);
+      const hasTime = !!input.startTime;
+      const start = hasTime ? clockOn(input.day, input.startTime ?? "00:00") : input.day.startOf("day");
+      let end = hasTime
+        ? input.endTime ? clockOn(input.day, input.endTime) : start.add(input.durationMinutes, "minute")
+        : start;
+      if (hasTime && !end.isAfter(start)) end = input.endTime ? end.add(1, "day") : minEnd(start);
+      if (hasTime && !end.isAfter(start)) end = minEnd(start);
       const prior = state.draft?.owner === input.owner ? state.draft : null;
       // Holding elsewhere while a draft is open moves it: what was typed stays.
       if (prior) {
-        change(prior, { start, end });
+        change(prior, { hasTime, start, end, durationMinutes: input.durationMinutes });
         return state.draft;
       }
       sessions += 1;
@@ -327,8 +356,10 @@ export function createCalendarDraft(): CalendarDraftController {
         session: sessions,
         revision: 0,
         owner: input.owner,
+        hasTime,
         start,
         end,
+        durationMinutes: input.durationMinutes,
         name: input.name,
         templatePath: input.templatePath,
         color: mapping.color ? textOf(prefill[mapping.color]) : "",
@@ -345,7 +376,17 @@ export function createCalendarDraft(): CalendarDraftController {
 
     move(date, options) {
       const draft = editable();
-      if (draft && !hasComputedDraftTime(draft)) change(draft, movedRange(draft, date, options));
+      if (!draft || hasComputedDraftTime(draft)) return;
+      if (!draft.hasTime && options?.startTime) {
+        const start = clockOn(date, options.startTime);
+        let end = options.endTime
+          ? clockOn(options.endDate ?? date, options.endTime)
+          : start.add(draft.durationMinutes, "minute");
+        if (!end.isAfter(start)) end = end.add(1, "day");
+        change(draft, { hasTime: true, start, end });
+        return;
+      }
+      change(draft, movedRange(draft, date, options));
     },
 
     edit(fields) {
@@ -359,12 +400,25 @@ export function createCalendarDraft(): CalendarDraftController {
 
     setStart(start) {
       const draft = editable();
-      if (draft && !hasComputedDraftTime(draft)) change(draft, { start, end: start.add(draft.end.diff(draft.start, "minute"), "minute") });
+      if (!draft || hasComputedDraftTime(draft)) return;
+      if (draft.hasTime) {
+        change(draft, { start, end: start.add(draft.end.diff(draft.start, "minute"), "minute") });
+        return;
+      }
+      const nextStart = start.startOf("day");
+      const span = Math.max(0, draft.end.startOf("day").diff(draft.start.startOf("day"), "day"));
+      change(draft, { start: nextStart, end: nextStart.add(span, "day") });
     },
 
     setEnd(end) {
       const draft = editable();
-      if (draft && !hasComputedDraftTime(draft)) change(draft, { end: end.isAfter(draft.start) ? end : minEnd(draft.start) });
+      if (!draft || hasComputedDraftTime(draft)) return;
+      if (draft.hasTime) {
+        change(draft, { end: end.isAfter(draft.start) ? end : minEnd(draft.start) });
+        return;
+      }
+      const nextEnd = end.startOf("day");
+      change(draft, { end: nextEnd.isBefore(draft.start.startOf("day")) ? draft.start.startOf("day") : nextEnd });
     },
 
     cancel() {
@@ -375,7 +429,7 @@ export function createCalendarDraft(): CalendarDraftController {
       const draft = state.draft;
       if (!alive || !draft) return "none";
       if (state.saving) return "busy";
-      if (conflictingDraftFields(draft.mapping).length || draftNeedsSeparateEnd(draft) || hasComputedDraftTime(draft)) return "invalid";
+      if (conflictingDraftFields(draft.mapping, draft.hasTime).length || draftNeedsSeparateEnd(draft) || hasComputedDraftTime(draft)) return "invalid";
       const session = draft.session;
       set({ draft, saving: true, error: null });
       const current = () => alive && state.draft?.session === session;

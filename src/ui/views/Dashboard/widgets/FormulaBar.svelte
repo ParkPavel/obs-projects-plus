@@ -14,7 +14,7 @@
   import type { DataFrame, DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
   import type { FormulaFieldDef } from "../types";
   import { previewFormulaField, formulaWouldCycle } from "./formulaPreview";
-  import { isImeKey } from "src/ui/components/fields/draftController";
+  import { isImeKey, recordImeCompositionEnd } from "src/ui/components/fields/draftController";
   import TextField from "src/ui/components/fields/TextField.svelte";
   import { i18n } from "src/lib/stores/i18n";
   import FormulaConstructor from "src/ui/components/FormulaConstructor/FormulaConstructor.svelte";
@@ -164,7 +164,8 @@
 </script>
 
 <div class="ppp-formula-bar" bind:this={barEl} on:focusout={adoptDeferred}
-  on:keydown={(event) => { if (event.key === "Escape" && !isImeKey(event)) dispatch("cancel"); }}>
+  on:keydown={(event) => { if (event.key === "Escape" && !isImeKey(event)) dispatch("cancel"); }}
+  on:compositionend={recordImeCompositionEnd}>
   <div class="ppp-formula-header">
     <span class="ppp-formula-title">{$i18n.t("views.dashboard.formula.title")}</span>
     <span class="ppp-formula-hint">{$i18n.t("views.dashboard.formula.hint")}</span>

@@ -21,7 +21,7 @@
   import type { ComboOption } from "src/ui/components/fields/comboOptions";
   import ColorPicker from "src/ui/components/ColorPicker/ColorPicker.svelte";
   import DateField from "src/ui/components/fields/DateField.svelte";
-  import { isImeKey } from "src/ui/components/fields/draftController";
+  import { isImeKey, recordImeCompositionEnd } from "src/ui/components/fields/draftController";
   import { conflictingDraftFields, draftNeedsSeparateEnd, hasComputedDraftTime, draftFileName, type CalendarDraft, type CalendarDraftController } from "./calendarDraft";
 
   export let controller: CalendarDraftController;
@@ -60,7 +60,7 @@
   }
 
   $: untitled = $i18n.t("modals.note.create.untitled");
-  $: conflicts = draft ? conflictingDraftFields(draft.mapping) : [];
+  $: conflicts = draft ? conflictingDraftFields(draft.mapping, draft.hasTime) : [];
   $: rangeConflict = draft ? draftNeedsSeparateEnd(draft) : false;
   $: readonlyTime = draft ? hasComputedDraftTime(draft) : false;
   $: mappingProblem = conflicts.length ? $i18n.t("views.calendar.draft.mapping-conflict", { fields: conflicts.join(", ") })
@@ -74,7 +74,16 @@
 
   function computedOf(d: CalendarDraft): string[] {
     const m = d.mapping;
-    const mapped = [m.start, m.end, m.startTime, m.endTime, m.creation, m.color, m.icon, m.check, m.status];
+    const mapped = [
+      m.start,
+      m.end,
+      ...(d.hasTime ? [m.startTime, m.endTime] : []),
+      m.creation,
+      m.color,
+      m.icon,
+      m.check,
+      m.status,
+    ];
     return [...new Set(mapped.filter((n): n is string => !!n && m.computed.includes(n)))];
   }
 
@@ -142,6 +151,7 @@
     aria-busy={state.saving}
     data-draft-session={draft.session}
     on:keydown={onKeydown}
+    on:compositionend={recordImeCompositionEnd}
   >
     <div class="ppp-draft-sheet__bar">
       <button
@@ -215,7 +225,7 @@
       <div class="ppp-draft-sheet__field">
         <span class="ppp-draft-sheet__caption">{$i18n.t("views.calendar.draft.start")}</span>
         <DateField
-          withTime
+          withTime={draft.hasTime}
           value={draft.start.toDate()}
           disabled={state.saving || readonlyTime}
           ariaLabel={$i18n.t("views.calendar.draft.start")}
@@ -226,7 +236,7 @@
       <div class="ppp-draft-sheet__field">
         <span class="ppp-draft-sheet__caption">{$i18n.t("views.calendar.draft.end")}</span>
         <DateField
-          withTime
+          withTime={draft.hasTime}
           value={draft.end.toDate()}
           disabled={state.saving || readonlyTime}
           ariaLabel={$i18n.t("views.calendar.draft.end")}

@@ -37,7 +37,7 @@
   export let field: DataField;
   export let editable: boolean;
   export let existingFields: DataField[];
-  export let onSave: (field: DataField) => void;
+  export let onSave: (field: DataField) => void | Promise<void>;
   /**
    * Catalogue of all known projects in the vault. Used by Relation/Rollup
    * sub-panels to populate the target-project picker. Defaults to an empty
@@ -62,6 +62,8 @@
   }
 
   $: fieldNameError = validateFieldName(field.name);
+  let saving = false;
+  let saveError = "";
 
   function validateFieldName(fieldName: string) {
     if (fieldName.trim() === "") {
@@ -113,6 +115,9 @@
       case DataFieldType.Status:
         keep("options");
         keep("statusGroups");
+        break;
+      case DataFieldType.List:
+        keep("options");
         break;
       case DataFieldType.Date:
         keep("time");
@@ -578,6 +583,32 @@
   }
 
   $: options = dataFieldTypeOptions((key) => $i18n.t(key));
+
+  async function handleSave() {
+    if (saving || fieldNameError) return;
+    if (field?.typeConfig && field.typeConfig?.options) {
+      const options = field.typeConfig.options;
+      field = {
+        ...field,
+        typeConfig: {
+          ...field.typeConfig,
+          options: [...new Set(options)].filter((value) => value !== ""),
+        },
+      };
+    }
+
+    saving = true;
+    saveError = "";
+    try {
+      await onSave(field);
+    } catch (error) {
+      saveError = $i18n.t("modals.field.configure.save-error", {
+        message: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      saving = false;
+    }
+  }
 </script>
 
 <ModalLayout {title}>
@@ -628,6 +659,18 @@
         <Switch
           checked={field.typeConfig?.fileLinks ?? false}
           on:check={handleFileLinksChange}
+        />
+      </SettingItem>
+    {/if}
+    {#if field.type === DataFieldType.List && !field.identifier}
+      <SettingItem
+        name={$i18n.t("modals.field.configure.options.name")}
+        description={$i18n.t("modals.field.configure.options.description")}
+        vertical
+      >
+        <MultiTextInput
+          options={field.typeConfig?.options ?? []}
+          onChange={handleOptionsChange}
         />
       </SettingItem>
     {/if}
@@ -941,24 +984,16 @@
     {/if}
   </ModalContent>
   <ModalButtonGroup>
+    {#if saveError}
+      <p class="ppp-configure-field-save-error" role="alert">{saveError}</p>
+    {/if}
     <Button
       variant="primary"
-      disabled={!!fieldNameError}
-      on:click={() => {
-        // uniquify options items and omit empty
-        if (field?.typeConfig && field.typeConfig?.options) {
-          const options = field.typeConfig.options;
-          field = {
-            ...field,
-            typeConfig: {
-              ...field.typeConfig,
-              options: [...new Set(options)].filter((v) => v !== ""),
-            },
-          };
-        }
-
-        onSave(field);
-      }}>{$i18n.t("modals.field.configure.save")}</Button
+      disabled={!!fieldNameError || saving}
+      on:click={() => void handleSave()}
+      >{saving
+        ? $i18n.t("modals.field.configure.saving")
+        : $i18n.t("modals.field.configure.save")}</Button
     >
   </ModalButtonGroup>
 </ModalLayout>
@@ -968,6 +1003,11 @@
     margin: 0;
     color: var(--text-muted);
     font-size: var(--font-ui-smaller, 0.75rem);
+  }
+  .ppp-configure-field-save-error {
+    margin: 0;
+    color: var(--text-error);
+    font-size: var(--font-ui-smaller);
   }
   .ppp-status-groups {
     display: flex;

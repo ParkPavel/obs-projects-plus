@@ -51,6 +51,12 @@
             "unknown-operator": "Unknown sign «{{op}}»",
             "invalid": "The formula cannot be read: {{detail}}"
         },
+        "regex-errors": {
+            "invalid": "This regular expression has invalid syntax.",
+            "unsafe": "This regular expression is not supported because its evaluation cost cannot be safely bounded.",
+            "too-long": "This regular expression exceeds the supported pattern length.",
+            "input-too-long": "The text is longer than the regular-expression evaluation limit."
+        },
         "formula-docs": {
             "IS_EMPTY": "True for a missing value, empty text or empty list; zero and false are filled values.",
             "IS_NOT_EMPTY": "True when a value is present and is not empty text or an empty list.",
@@ -446,6 +452,8 @@
                     },
                     "empty-name-error": "Field name can't be empty.",
                     "existing-name-error": "Can't rename to a existing field name.",
+                    "save-error": "Could not save field changes: {{message}}",
+                    "saving": "Saving…",
                     "type": {
                         "name": "Type",
                         "description": "Convert this field to another type. Existing values are preserved when compatible."
@@ -1184,6 +1192,9 @@
                     "add": "Filter",
                     "remove": "Remove condition",
                     "scope": "This block — all its views"
+                },
+                "record-card": {
+                    "computed-properties": "Computed properties"
                 },
                 "smart-suggest": {
                     "numeric-message": "Numeric field \"{{field}}\" detected — want a Stats block with sum and average?",

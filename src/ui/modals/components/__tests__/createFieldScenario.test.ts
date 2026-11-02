@@ -94,6 +94,106 @@ describe("formula property mode persistence through real field components", () =
       expect(field.typeConfig.formulaVersion).toBe("future-v9");
     } finally { component.$destroy(); target.remove(); }
   });
+
+  it("offers type-specific list suggestions and preserves them when changing the type", async () => {
+    const target = document.createElement("div");
+    document.body.appendChild(target);
+    const field = { ...f("Tags", DataFieldType.List), typeConfig: { options: ["Priority"] } };
+    const onSave = jest.fn();
+    const component = new ConfigureField({
+      target,
+      props: { title: "Tags", field, editable: true, existingFields: [], onSave },
+    });
+    try {
+      expect(target.querySelectorAll('[data-testid="setting-item"]')).toHaveLength(3);
+      const type = target.querySelector<HTMLSelectElement>('[data-testid="select"]');
+      if (!type) throw new Error("Missing field type selector");
+      change(type, DataFieldType.String);
+      await settle();
+      target.querySelector<HTMLButtonElement>("[data-testid='modal-button-group'] button[data-variant='primary']")!.click();
+      await settle();
+      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+        type: DataFieldType.String,
+        typeConfig: expect.objectContaining({ options: ["Priority"] }),
+      }));
+    } finally {
+      component.$destroy();
+      target.remove();
+    }
+  });
+
+  it("keeps ConfigureField open with its draft after a failed save and allows retry", async () => {
+    const target = document.createElement("div");
+    document.body.appendChild(target);
+    const field = f("Priority", DataFieldType.Select);
+    const onSave = jest.fn()
+      .mockRejectedValueOnce(new Error("write refused"))
+      .mockResolvedValueOnce(undefined);
+    const component = new ConfigureField({
+      target,
+      props: { title: "Priority", field, editable: true, existingFields: [], onSave },
+    });
+    try {
+      const save = target.querySelector<HTMLButtonElement>(
+        "[data-testid='modal-button-group'] button[data-variant='primary']"
+      )!;
+      save.click();
+      await settle();
+      expect(target.querySelector('[role="alert"]')).not.toBeNull();
+      expect(target.querySelector("input")).not.toBeNull();
+      expect(onSave).toHaveBeenCalledTimes(1);
+
+      save.click();
+      await settle();
+      expect(onSave).toHaveBeenCalledTimes(2);
+      expect(onSave.mock.calls[1]![0]).toEqual(expect.objectContaining({
+        name: "Priority",
+        type: DataFieldType.Select,
+      }));
+      expect(target.querySelector('[role="alert"]')).toBeNull();
+    } finally {
+      component.$destroy();
+      target.remove();
+    }
+  });
+
+  it("prevents duplicate ConfigureField saves while the write is pending", async () => {
+    const target = document.createElement("div");
+    document.body.appendChild(target);
+    let finishSave!: () => void;
+    const onSave = jest.fn(() => new Promise<void>((resolve) => {
+      finishSave = resolve;
+    }));
+    const component = new ConfigureField({
+      target,
+      props: {
+        title: "Priority",
+        field: f("Priority", DataFieldType.Select),
+        editable: true,
+        existingFields: [],
+        onSave,
+      },
+    });
+    try {
+      const save = target.querySelector<HTMLButtonElement>(
+        "[data-testid='modal-button-group'] button[data-variant='primary']"
+      )!;
+      save.click();
+      await settle();
+      expect(save.disabled).toBe(true);
+
+      save.click();
+      await settle();
+      expect(onSave).toHaveBeenCalledTimes(1);
+
+      finishSave();
+      await settle();
+      expect(save.disabled).toBe(false);
+    } finally {
+      component.$destroy();
+      target.remove();
+    }
+  });
 });
 
 describe("B5 scenario — rollup from scratch in one dialog", () => {

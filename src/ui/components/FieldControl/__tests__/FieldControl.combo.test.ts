@@ -119,6 +119,14 @@ describe("FieldControl — suggestion box", () => {
     m.destroy();
   });
 
+  test("Select and Status use the same typed suggestion control", async () => {
+    const select = { ...optionField, type: DataFieldType.Select };
+    const m = mount({ field: select });
+    await enter(m.box());
+    expect(optionLabels()).toEqual(["Todo", "Doing", "Done"]);
+    m.destroy();
+  });
+
   test("typing filters, a pick writes once, the blur after it adds nothing", async () => {
     const m = mount();
     await enter(m.box());
@@ -176,6 +184,21 @@ describe("FieldControl — suggestion box", () => {
   test("readonly: the box is disabled and writes nothing", async () => {
     const m = mount({ readonly: true });
     expect(m.box()).toBeDisabled();
+    m.destroy();
+  });
+
+  test("computed fields render their value without an editor", () => {
+    const formula = {
+      name: "Total",
+      type: DataFieldType.Formula,
+      repeated: false,
+      identifier: false,
+      derived: true,
+    } as DataField;
+    const m = mount({ field: formula, value: 0 });
+    expect(m.target.querySelector("input")).toBeNull();
+    expect(m.target.textContent).toContain("0");
+    expect(m.onChange).not.toHaveBeenCalled();
     m.destroy();
   });
 });

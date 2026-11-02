@@ -239,14 +239,17 @@
   {#if record && isNote && noteFile}
     <NotePropertiesBlock app={$appStore} file={noteFile} />
     {#if computedFields.length > 0}
-      <dl class="ppp-rcv-computed">
-        {#each computedFields as field (field.name)}
-          <div class="ppp-rcv-fm-row">
-            <dt>{field.name}</dt>
-            <dd>{formatDisplayValue(record.values[field.name]) || "—"}</dd>
-          </div>
-        {/each}
-      </dl>
+      <details class="ppp-rcv-computed" open>
+        <summary>{$i18n.t("views.dashboard.record-card.computed-properties", { defaultValue: "Computed properties" })}</summary>
+        <dl class="ppp-rcv-computed-values">
+          {#each computedFields as field (field.name)}
+            <div class="ppp-rcv-fm-row">
+              <dt>{field.name}</dt>
+              <dd>{formatDisplayValue(record.values[field.name]) || "—"}</dd>
+            </div>
+          {/each}
+        </dl>
+      </details>
     {/if}
   {:else if record}
     <EditNote
@@ -295,15 +298,28 @@
     font-size: 0.85em;
   }
 
-  /* Computed properties sit under the block as its own rows read-only:
-     label left and muted, value right — the block's own columns. */
+  /* The native disclosure starts open, preserving the existing view while
+     letting a phone reader collapse long computed results when needed. */
   .ppp-rcv-computed {
+    min-width: 0;
+    max-width: 100%;
+    margin: 0 0 0.75rem;
+    font-size: var(--font-ui-small);
+  }
+
+  .ppp-rcv-computed > summary {
+    cursor: pointer;
+    color: var(--text-muted);
+  }
+
+  .ppp-rcv-computed-values {
     display: grid;
     grid-template-columns: minmax(7rem, 30%) minmax(0, 1fr);
     gap: 0.25rem 0.5rem;
-    margin: 0 0 0.75rem;
+    min-width: 0;
+    max-width: 100%;
+    margin: 0.375rem 0 0;
     padding: 0 0.25rem;
-    font-size: var(--font-ui-small);
   }
 
 
@@ -313,6 +329,7 @@
   }
 
   .ppp-rcv-computed dt {
+    min-width: 0;
     color: var(--text-muted);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -321,6 +338,7 @@
 
   .ppp-rcv-computed dd {
     margin: 0;
+    min-width: 0;
     overflow-wrap: anywhere;
   }
 

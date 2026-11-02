@@ -26,8 +26,9 @@ import { matchesFilterConditions } from "src/lib/engine/filterEvaluator";
 import { isNumeric, toNumber, toNumbers } from "src/lib/engine/numeric";
 import { aggregate, type RollupFunction } from "src/lib/engine/aggregate";
 import { createFormulaPass, evaluateFormulaValue } from "./formulaEngine";
+import { evaluateFormulaValue as evaluateCanonicalFormulaValue } from "src/lib/formula";
 import { evaluateVersionedFormula } from "src/lib/formula/version";
-import { isUnsafePattern, MAX_REGEX_PATTERN_LENGTH } from "src/lib/helpers/regexSafety";
+import { compileSafeRegex } from "src/lib/helpers/regexSafety";
 import { joinKey } from "./joinKey";
 import dayjs from "dayjs";
 import { parseStoredDate } from "src/lib/helpers/dateShape";
@@ -46,6 +47,7 @@ const STEP_ORDER: Record<TransformStep["type"], number> = {
 
 const PIPELINE_TIMEOUT_MS = 2000;
 const MAX_OUTPUT_RECORDS = 100_000;
+const MAX_UNPIVOT_FIELD_NAME_LENGTH = 256;
 
 /**
  * Validate that pipeline steps follow canonical order.
@@ -268,36 +270,21 @@ function executeUnnest(
 
 // ── UNPIVOT ──────────────────────────────────────────────────
 
-/**
- * Safe regex execution with ReDoS mitigation.
- */
 function safeRegexExec(
-  pattern: string,
+  regex: RegExp,
   input: string
 ): RegExpExecArray | null {
-  // Check pattern safety BEFORE constructing RegExp
-  if (isUnsafePattern(pattern)) return null;
-
-  // Field names should be short
-  if (input.length > 256) return null;
-
-  let regex: RegExp;
-  try {
-    regex = new RegExp(`^${pattern}$`);
-  } catch {
-    return null;
-  }
-
+  if (input.length > MAX_UNPIVOT_FIELD_NAME_LENGTH) return null;
   return regex.exec(input);
 }
 
 function findFieldByIndex(
   fields: readonly DataField[],
-  pattern: string,
+  regex: RegExp,
   index: string
 ): string | null {
   for (const field of fields) {
-    const match = safeRegexExec(pattern, field.name);
+    const match = safeRegexExec(regex, field.name);
     if (match?.[1] === index) {
       return field.name;
     }
@@ -310,17 +297,34 @@ function executeUnpivot(
   step: UnpivotStep,
   warnings: string[]
 ): DataFrame {
-  const compiledPatterns = step.fieldGroups.map((fg) => ({
-    regex: safeRegexCompile(fg.pattern),
-    outputName: fg.outputName,
-  }));
+  const compiledPatterns = step.fieldGroups.map((fg) => {
+    const result = compileSafeRegex(fg.pattern, "", { fullMatch: true });
+    if (!result.ok) {
+      warnings.push(
+        `Unpivot: skipped regex pattern ${JSON.stringify(fg.pattern.slice(0, 80))} (${result.issue})`
+      );
+    }
+    return {
+      pattern: fg.pattern,
+      regex: result.ok ? result.regex : null,
+    };
+  });
+
+  if (
+    compiledPatterns.some((pattern) => pattern.regex) &&
+    df.fields.some((field) => field.name.length > MAX_UNPIVOT_FIELD_NAME_LENGTH)
+  ) {
+    warnings.push(
+      `Unpivot: field names longer than ${MAX_UNPIVOT_FIELD_NAME_LENGTH} characters were skipped`
+    );
+  }
 
   // Discover all indices
   const indicesSet = new Set<string>();
   for (const field of df.fields) {
     for (const cp of compiledPatterns) {
       if (!cp.regex) continue;
-      const match = cp.regex.exec(field.name);
+      const match = safeRegexExec(cp.regex, field.name);
       if (match?.[1]) {
         indicesSet.add(match[1]);
       }
@@ -338,10 +342,10 @@ function executeUnpivot(
   // Pre-compute field name mapping: [groupIdx][indexStr] → fieldName
   // Eliminates repeated regex matching inside the hot loop
   const fieldMap = new Map<string, string | null>();
-  for (const fg of step.fieldGroups) {
+  for (const fg of compiledPatterns) {
     for (const idx of indices) {
       const key = `${fg.pattern}\0${idx}`;
-      fieldMap.set(key, findFieldByIndex(df.fields, fg.pattern, idx));
+      fieldMap.set(key, fg.regex ? findFieldByIndex(df.fields, fg.regex, idx) : null);
     }
   }
 
@@ -396,20 +400,6 @@ function executeUnpivot(
 
   const newFields = buildUnpivotFields(df.fields, step);
   return { fields: newFields, records: newRecords };
-}
-
-function safeRegexCompile(pattern: string): RegExp | null {
-  try {
-    // CV-2 — this call site skipped the length bound that the other two regex
-    // sites apply. The bound is the blunt second line of defence against the
-    // alternation backtracking `isUnsafePattern` cannot see (#126), so leaving
-    // it out here made unpivot the softest of the three surfaces.
-    if (pattern.length > MAX_REGEX_PATTERN_LENGTH) return null;
-    if (isUnsafePattern(pattern)) return null;
-    return new RegExp(`^${pattern}$`);
-  } catch {
-    return null;
-  }
 }
 
 function buildUnpivotFields(
@@ -547,9 +537,8 @@ function executeVersionedCompute(df: DataFrame, step: ComputeStep, warnings: str
 }
 
 /**
- * @deprecated Legacy arithmetic evaluator — kept for backward compatibility.
- * New code must use evaluateFormulaValue() from "src/lib/formula" (canonical path).
- * The formulaEngine.ts re-export wrapper is a transitional alias — prefer the direct import.
+ * @deprecated Compatibility adapter for the old numeric-only API. Arithmetic
+ * evaluation is delegated to the canonical formula runtime.
  */
 export function evaluateExpression(
   expression: string,
@@ -561,7 +550,7 @@ export function evaluateExpression(
     .split(/\s*([+\-*/()])\s*/)
     .filter((t) => t.length > 0);
 
-  if (tokens.length === 0) return null;
+  if (tokens.length === 0 || tokens.includes("(") || tokens.includes(")")) return null;
 
   // Simple two-pass evaluator (no parentheses for Phase 1)
   const resolvedTokens: (number | string)[] = tokens.map((token) => {
@@ -584,53 +573,26 @@ export function evaluateExpression(
   });
 
   // Evaluate: first pass * and /, second pass + and -
-  return evaluateTokens(resolvedTokens);
+  return evaluateArithmeticCompatibility(resolvedTokens);
 }
 
-function evaluateTokens(tokens: (number | string)[]): number | null {
-  // Convert to numbers and operators
-  const nums: number[] = [];
-  const ops: string[] = [];
+function evaluateArithmeticCompatibility(tokens: (number | string)[]): number | null {
+  if (tokens.length === 0 || tokens.length % 2 === 0) return null;
 
-  for (const token of tokens) {
-    if (typeof token === "number") {
-      nums.push(token);
-    } else if (typeof token === "string" && ["+", "-", "*", "/"].includes(token)) {
-      ops.push(token);
+  const parts: string[] = [];
+  for (let index = 0; index < tokens.length; index++) {
+    const token = tokens[index];
+    if (index % 2 === 0) {
+      if (typeof token !== "number" || !Number.isFinite(token)) return null;
+      parts.push(String(token));
     } else {
-      return null; // Invalid token
+      if (typeof token !== "string" || !["+", "-", "*", "/"].includes(token)) return null;
+      parts.push(token);
     }
   }
 
-  if (nums.length === 0) return null;
-  if (nums.length !== ops.length + 1) return null;
-
-  // First pass: * and /
-  let i = 0;
-  while (i < ops.length) {
-    if (ops[i] === "*" || ops[i] === "/") {
-      const left = nums[i] as number;
-      const right = nums[i + 1] as number;
-      if (ops[i] === "/" && right === 0) return null; // Division by zero
-      nums[i] = ops[i] === "*" ? left * right : left / right;
-      nums.splice(i + 1, 1);
-      ops.splice(i, 1);
-    } else {
-      i++;
-    }
-  }
-
-  // Second pass: + and -
-  let result = nums[0] as number;
-  for (let j = 0; j < ops.length; j++) {
-    const right = nums[j + 1] as number;
-    result = ops[j] === "+" ? result + right : result - right;
-  }
-
-  // `result` is already a number; this asks whether the arithmetic produced a
-  // real one. `Number.isFinite` rather than `!isNaN` so an overflow to
-  // ±Infinity is rejected too, matching `toNumber`'s finiteness rule (#180a).
-  return Number.isFinite(result) ? result : null;
+  const result = evaluateCanonicalFormulaValue(parts.join(" "), { id: "", values: {} });
+  return typeof result === "number" && Number.isFinite(result) ? result : null;
 }
 
 // ── FILTER ───────────────────────────────────────────────────
@@ -1252,4 +1214,3 @@ function executeJoin(
 
   return { fields: newFields, records: newRecords };
 }
-

@@ -127,7 +127,7 @@
     max-width: 100%;
     box-sizing: border-box;
     padding: var(--size-4-3);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-m);
     background: var(--background-secondary);
   }

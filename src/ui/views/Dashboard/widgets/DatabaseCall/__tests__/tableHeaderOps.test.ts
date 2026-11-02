@@ -2,7 +2,7 @@
  * tableHeaderOps.test.ts — F2.4 (#074) column-menu config patches.
  */
 
-import { DataFieldType, type DataField } from "src/lib/dataframe/dataframe";
+import { DataFieldType, type DataField, type DataRecord } from "src/lib/dataframe/dataframe";
 import {
   applySortPatch,
   applyHidePatch,
@@ -10,6 +10,8 @@ import {
   applyCalculatePatch,
   calculateOptions,
   buildHeaderMenuEntries,
+  optionPools,
+  startColumnResize,
 } from "../tableHeaderOps";
 import type { DataTableConfig } from "../../../types";
 
@@ -18,6 +20,37 @@ function field(name: string, type: DataFieldType): DataField {
 }
 
 describe("tableHeaderOps (F2.4)", () => {
+  it("tracks and commits column resize in the handle's owner window", () => {
+    const iframe = document.createElement("iframe");
+    document.body.appendChild(iframe);
+    const ownerDocument = iframe.contentDocument!;
+    const ownerView = iframe.contentWindow! as Window & typeof globalThis;
+    const handle = ownerDocument.createElement("div");
+    ownerDocument.body.appendChild(handle);
+    const live = jest.fn();
+    const commit = jest.fn();
+    handle.addEventListener("pointerdown", (event) => {
+      startColumnResize(event as PointerEvent, 8, live, commit);
+    });
+    const dispatch = (target: EventTarget, type: string, x: number) => {
+      const event = new ownerView.MouseEvent(type, { bubbles: true, cancelable: true, clientX: x });
+      Object.defineProperty(event, "pointerId", { value: 1 });
+      target.dispatchEvent(event);
+    };
+
+    try {
+      dispatch(handle, "pointerdown", 10);
+      window.dispatchEvent(new MouseEvent("pointermove", { clientX: 100 }));
+      expect(live).not.toHaveBeenCalled();
+      dispatch(ownerView, "pointermove", 42);
+      expect(live).toHaveBeenCalledWith(10);
+      dispatch(ownerView, "pointerup", 42);
+      expect(commit).toHaveBeenCalledWith(10);
+    } finally {
+      iframe.remove();
+    }
+  });
+
   it("applySortPatch replaces criteria and clears legacy sortField", () => {
     const next = applySortPatch({ sortField: "old", sortAsc: true } as DataTableConfig, "mrr", "desc");
     expect(next.sortCriteria).toEqual([{ field: "mrr", order: "desc" }]);
@@ -67,5 +100,38 @@ describe("tableHeaderOps (F2.4)", () => {
       entries.filter((e) => !("separator" in e)).map((e) => (e as { title: string }).title);
     expect(titles(make(false))).toContain("Hide in view");
     expect(titles(make(true))).not.toContain("Hide in view");
+  });
+
+  it("offers declared and used values for editable string, list and choice fields, excluding templates", () => {
+    const records: DataRecord[] = [
+      {
+        id: "Clients/a.md",
+        values: {
+          name: "Alice",
+          tags: ["warm", "returning"],
+          status: "Active",
+          computed: 42,
+        },
+      },
+      {
+        id: "Templates/client.md",
+        values: { name: "Template", tags: ["template-tag"], status: "Template status" },
+      },
+    ];
+    const pools = optionPools(
+      [
+        { ...field("name", DataFieldType.String), typeConfig: { options: ["Pinned"] } },
+        { ...field("tags", DataFieldType.List), typeConfig: { options: ["Priority"] } },
+        { ...field("status", DataFieldType.Status), typeConfig: { options: ["Planned"] } },
+        field("computed", DataFieldType.Rollup),
+      ],
+      records,
+      { templateFolders: ["Templates"] },
+    );
+
+    expect(pools.get("name")).toEqual(["Pinned", "Alice"]);
+    expect(pools.get("tags")).toEqual(["Priority", "returning", "warm"]);
+    expect(pools.get("status")).toEqual(["Planned", "Active"]);
+    expect(pools.has("computed")).toBe(false);
   });
 });

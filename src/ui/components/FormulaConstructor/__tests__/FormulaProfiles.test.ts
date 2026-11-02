@@ -69,6 +69,19 @@ describe("profile-aware shared formula editor", () => {
     expect(textarea.value).toBe(source);
     expect(evaluateVersionedFormula(textarea.value, "unified-v1", { record: { id: "r", values: { [fieldName]: expected as number } } }).value).toBe(expected);
   });
+  it("suggests and inserts a Unicode column name at the caret", async () => {
+    const fieldName = "доход";
+    const view = render(FormulaConstructor, { props: { semantics: "unified-v1", fields: [fieldName] } });
+    const textarea = view.container.querySelector("textarea")!;
+    textarea.value = "@дох";
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    await fireEvent.input(textarea); await fireEvent.keyUp(textarea);
+    const suggestion = Array.from(document.querySelectorAll<HTMLButtonElement>(".ppp-fc-suggestion"))
+      .find(button => button.textContent?.trim() === fieldName);
+    expect(suggestion).toBeDefined();
+    await fireEvent.click(suggestion!); await tick();
+    expect(textarea.value).toBe("@доход");
+  });
   it.each([
     ["SUM # (comment\n (amount,", "SUM"],
     ['IF(true, SUM(") #", amount), MAX # (\n (', "MAX"],

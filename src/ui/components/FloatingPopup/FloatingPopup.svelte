@@ -7,7 +7,8 @@
     - `triggerEl` HTMLElement is the anchor. If null at mount, no positioning.
     - `open` controls visibility (two-way bind supported via dispatch('close')).
     - Desktop: fixed position with flip + clamp inside viewport.
-    - Mobile (`$isMobile`): bottom sheet with backdrop.
+    - Mobile (`$isMobile`): bottom sheet with backdrop by default; anchored
+      popovers can opt into viewport-positioned floating mode.
     - Close paths: Escape, outside-mousedown, optional close-on-inner-click.
     - Focus: traps Tab inside popup, restores to trigger on close.
 
@@ -18,7 +19,7 @@
   import { portal } from "src/ui/portal";
   import { isMobile } from "src/lib/stores/ui";
   import { remAt, rootFontPx } from "src/ui/utils/cssLength";
-  import { isImeKey } from "src/ui/components/fields/draftController";
+  import { isImeKey, recordImeCompositionEnd } from "src/ui/components/fields/draftController";
   import { fitVisibleViewport } from "src/ui/actions/fitVisibleViewport";
   import { onKeyboardChange, visibleViewport } from "src/ui/utils/visibleViewport";
 
@@ -46,6 +47,9 @@
   /** Preferred placement; flip kicks in when no space. */
   export let placement: PopupPlacement = "bottom-start";
 
+  /** Mobile presentation; use `anchored` for inline suggestions near an input. */
+  export let mobilePresentation: "sheet" | "anchored" = "sheet";
+
   /** Gap from trigger in rem (default 0.25rem). */
   export let offsetRem: number = 0.25;
 
@@ -53,7 +57,7 @@
   export let closeOnInnerClick: boolean = false;
 
   /** ARIA role. */
-  export let role: "menu" | "listbox" | "dialog" | "tooltip" = "dialog";
+  export let role: "menu" | "listbox" | "dialog" | "tooltip" | "presentation" = "dialog";
 
   /** Accessible label for the popup container. */
   export let ariaLabel: string = "";
@@ -129,6 +133,7 @@
     if (listening && doc === boundDoc) return;
     if (listening) {
       boundDoc.removeEventListener("keydown", handleKeydown);
+      boundDoc.removeEventListener("compositionend", recordImeCompositionEnd, true);
       boundDoc.removeEventListener("mousedown", handleOutsideMouseDown, true);
       boundView.removeEventListener("resize", handleReposition);
       boundView.removeEventListener("scroll", handleReposition, true);
@@ -139,6 +144,7 @@
     boundDoc = doc;
     boundView = doc.defaultView ?? window;
     boundDoc.addEventListener("keydown", handleKeydown);
+    boundDoc.addEventListener("compositionend", recordImeCompositionEnd, true);
     boundDoc.addEventListener("mousedown", handleOutsideMouseDown, true);
     boundView.addEventListener("resize", handleReposition);
     boundView.addEventListener("scroll", handleReposition, true);
@@ -159,6 +165,7 @@
   onDestroy(() => {
     if (!listening) return;
     boundDoc.removeEventListener("keydown", handleKeydown);
+    boundDoc.removeEventListener("compositionend", recordImeCompositionEnd, true);
     boundDoc.removeEventListener("mousedown", handleOutsideMouseDown, true);
     boundView.removeEventListener("resize", handleReposition);
     boundView.removeEventListener("scroll", handleReposition, true);
@@ -398,7 +405,7 @@
 </script>
 
 {#if open}
-  {#if $isMobile}
+  {#if $isMobile && mobilePresentation === "sheet"}
     <!-- ── MOBILE: Bottom Sheet ──────────────────────────── -->
     <div
       class="ppp-popup ppp-popup-backdrop"
@@ -414,7 +421,7 @@
         aria-label={ariaLabel || undefined}
         aria-modal="true"
         on:click={handleInnerClick}
-        on:compositionstart={() => { composing = true; }} on:compositionend={() => { composing = false; }}
+        on:compositionstart={() => { composing = true; }} on:compositionend={(event) => { recordImeCompositionEnd(event); composing = false; }}
       >
         <div class="ppp-bottom-sheet-handle" aria-hidden="true"></div>
         <slot />
@@ -430,7 +437,7 @@
       {role}
       aria-label={ariaLabel || undefined}
       on:click={handleInnerClick}
-      on:compositionstart={() => { composing = true; }} on:compositionend={() => { composing = false; }}
+      on:compositionstart={() => { composing = true; }} on:compositionend={(event) => { recordImeCompositionEnd(event); composing = false; }}
     >
       <slot />
     </div>

@@ -16,6 +16,7 @@
   import { createEventDispatcher, getContext, onDestroy } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
+  import { templateFoldersOf } from "src/lib/suggestions/valueSuggestions";
   import { openRecord, modeFromEvent } from "src/lib/record/openRecord";
   import { settings as settingsStore } from "src/lib/stores/settings";
   import {
@@ -105,7 +106,7 @@
   // F2.5: grouping flattens into the render list (group headers + records).
   $: renderRows = buildRenderRows(visibleRecords, config);
   $: rowHeightRem = config?.rowHeight === "compact" ? 1.75 : config?.rowHeight === "expanded" ? 3 : 2.25;
-  $: optionsByField = optionPools(fields, frame.records);
+  $: optionsByField = optionPools(fields, frame.records, { templateFolders: templateFoldersOf($app) });
   $: frozen = !!config?.freezeUpTo && columns.some((c) => c.field.name === config?.freezeUpTo); // i3-table: pinned only on request
 
   // ── Windowing (canon: simple overscan, no framework) ─────────

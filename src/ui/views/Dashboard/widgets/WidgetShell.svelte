@@ -15,7 +15,7 @@
   import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { ariaWidget } from "src/lib/dashboard-engine/accessibility";
-  import { isImeKey } from "src/ui/components/fields/draftController";
+  import { isImeKey, recordImeCompositionEnd } from "src/ui/components/fields/draftController";
 
   export let widgetId: string;
   export let title: string;
@@ -131,7 +131,7 @@
         class="ppp-widget-title-input"
         type="text"
         bind:value={titleDraft}
-        on:compositionstart={() => { composingTitle = true; }} on:compositionend={() => { composingTitle = false; }}
+        on:compositionstart={() => { composingTitle = true; }} on:compositionend={(event) => { recordImeCompositionEnd(event); composingTitle = false; }}
         on:keydown={(e) => {
           if (composingTitle || isImeKey(e)) return;
           if (e.key === "Enter") { e.preventDefault(); commitTitle(); }

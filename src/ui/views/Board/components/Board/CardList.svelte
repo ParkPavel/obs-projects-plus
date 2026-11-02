@@ -26,11 +26,13 @@
    * never a reorder; the zone's own handlers drop it via `isDisarmEvent`.
    */
   export function disarmAfterGripTap(node: HTMLElement, grip: string): { destroy: () => void } {
+    const ownerView = node.ownerDocument.defaultView ?? window;
+    const ElementCtor = ownerView.Element;
     let pressed = false;
     let dragStarted = false;
 
     function onPress(e: Event) {
-      if (!(e.target instanceof Element) || !e.target.closest(grip)) return;
+      if (!(e.target instanceof ElementCtor) || !e.target.closest(grip)) return;
       pressed = true;
       dragStarted = false;
     }
@@ -43,7 +45,7 @@
       if (!pressed) return;
       pressed = false;
       if (dragStarted) return;
-      const disarm = new CustomEvent("consider", {
+      const disarm = new ownerView.CustomEvent("consider", {
         detail: { items: [], info: { trigger: TRIGGERS.DRAG_STOPPED, id: "", source: SOURCES.KEYBOARD } },
       });
       disarmEvents.add(disarm);
@@ -54,17 +56,17 @@
     node.addEventListener("mousedown", onPress, true);
     node.addEventListener("touchstart", onPress, { capture: true, passive: true });
     node.addEventListener("consider", onConsider);
-    window.addEventListener("mouseup", onRelease);
-    window.addEventListener("touchend", onRelease);
-    window.addEventListener("touchcancel", onRelease);
+    ownerView.addEventListener("mouseup", onRelease);
+    ownerView.addEventListener("touchend", onRelease);
+    ownerView.addEventListener("touchcancel", onRelease);
     return {
       destroy() {
         node.removeEventListener("mousedown", onPress, true);
         node.removeEventListener("touchstart", onPress, true);
         node.removeEventListener("consider", onConsider);
-        window.removeEventListener("mouseup", onRelease);
-        window.removeEventListener("touchend", onRelease);
-        window.removeEventListener("touchcancel", onRelease);
+        ownerView.removeEventListener("mouseup", onRelease);
+        ownerView.removeEventListener("touchend", onRelease);
+        ownerView.removeEventListener("touchcancel", onRelease);
       },
     };
   }
@@ -119,11 +121,12 @@
    * an enabled zone are untouched.
    */
   export function gateDisabledGrip(node: HTMLElement, gate: GripGate): { update: (gate: GripGate) => void; destroy: () => void } {
+    const ElementCtor = node.ownerDocument.defaultView?.Element ?? Element;
     let current = gate;
 
     function block(e: Event) {
       if (!current.disabled) return;
-      if (!(e.target instanceof Element)) return;
+      if (!(e.target instanceof ElementCtor)) return;
       const grip = e.target.closest(current.grip);
       if (!grip || !node.contains(grip)) return;
       if (e.type === "keydown") {
@@ -245,7 +248,12 @@
   const flipDurationMs = getAnimationDuration(150);
 
   /** cards-g1: whether a click landed on the grip lane, which drags rather than opens the card. */
-  const isGripTarget = (e: Event) => e.target instanceof Element && e.target.closest(".board-card-grip") !== null;
+  const isGripTarget = (e: Event) => {
+    const target = e.target;
+    if (!target || typeof target !== "object" || !("closest" in target)) return false;
+    const closest = target.closest;
+    return typeof closest === "function" && closest.call(target, ".board-card-grip") !== null;
+  };
 
   $: zoneDisabled = isDragZoneDisabled({ editing: boardEditing, locked: disableDnd });
 

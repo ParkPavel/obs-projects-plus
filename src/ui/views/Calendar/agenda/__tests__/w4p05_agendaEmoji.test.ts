@@ -53,6 +53,25 @@ describe("w4-p05 — the picker's emoji", () => {
     expect(buttons.filter((b) => b.classList.contains("selected"))).toHaveLength(1);
     picker.$destroy();
   });
+
+  test("search stays pinned and filters both icon catalogs", async () => {
+    const target = document.createElement("div");
+    document.body.append(target);
+    const picker = new AgendaIconPicker({ target, props: { currentIcon: undefined } });
+    const search = target.querySelector<HTMLInputElement>(".ppp-search-field-input")!;
+    expect(getComputedStyle(target.querySelector(".search-box")!).position).toBe("sticky");
+
+    search.value = "star";
+    search.dispatchEvent(new Event("input", { bubbles: true }));
+    await tick();
+    expect(Array.from(target.querySelectorAll<HTMLButtonElement>(".icon-btn")).map((button) => button.title)).toEqual(["star"]);
+
+    search.value = "🔥";
+    search.dispatchEvent(new Event("input", { bubbles: true }));
+    await tick();
+    expect(Array.from(target.querySelectorAll<HTMLButtonElement>(".icon-btn")).map((button) => button.title)).toEqual(["🔥"]);
+    picker.$destroy();
+  });
 });
 
 describe("w4-p05 — reading back stored values", () => {

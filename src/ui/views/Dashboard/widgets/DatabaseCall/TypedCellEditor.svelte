@@ -4,7 +4,8 @@
   import type { DataField, DataValue, Optional } from "src/lib/dataframe/dataframe";
   import { dateInputValue } from "src/lib/helpers/dateShape";
   import { toNumber } from "src/lib/engine/numeric";
-  import { isImeKey } from "src/ui/components/fields/draftController";
+  import { isImeKey, recordImeCompositionEnd } from "src/ui/components/fields/draftController";
+  import { keepInView } from "src/ui/components/fields/keepInView";
   import { i18n } from "src/lib/stores/i18n";
   import { editedCellValue } from "./editedCellValue";
   import { dayFromTyped, typedFromDay } from "src/lib/helpers/typedDate";
@@ -57,14 +58,14 @@
 </script>
 
 <!-- 3.7.2 B1: a date is typed too (14.10.2026, 1.11, «завтра»); the day goes on as YYYY-MM-DD. -->
-<input bind:this={inputEl} class="ppp-t2-editor" type="text" bind:value={draft}
+<input use:keepInView bind:this={inputEl} class="ppp-t2-editor" type="text" bind:value={draft}
   class:ppp-t2-editor--number={field.type === DataFieldType.Number} class:ppp-t2-editor--date={field.type === DataFieldType.Date}
   inputmode={field.type === DataFieldType.Number ? "decimal" : undefined}
   placeholder={field.type === DataFieldType.Date ? $i18n.t("common.date-typed-placeholder") : undefined}
   aria-label={invalid ? `${field.name}: ${inputError}` : field.name}
   title={invalid ? inputError : undefined} aria-invalid={invalid ? "true" : undefined}
   on:input={() => setInvalid(false)}
-  on:compositionstart={() => { composing = true; }} on:compositionend={() => { composing = false; }}
+  on:compositionstart={() => { composing = true; }} on:compositionend={(event) => { recordImeCompositionEnd(event); composing = false; }}
   on:keydown={handleKeydown} on:blur={commitDraft} />
 
 <style>

@@ -19,15 +19,25 @@ it.each([false, true])("preserves untouched template values and clears only expl
   const ctl = createCalendarDraft();
   ctl.begin({ owner: "p", day: dayjs("2026-10-28"), startTime: "10:00", durationMinutes: 60,
     name: "new", templatePath: "Template.md", prefill: { count: 0, archived: false },
-    mapping: draftMapping({ config: { statusField: "stage", iconField: "icon", eventColorField: "color", checkField: "done" }, fields: [] }) });
+    mapping: draftMapping({ config: {
+      startDateField: "starts",
+      endDateField: "ends",
+      startTimeField: "opens",
+      endTimeField: "closes",
+      dateField: "created",
+      statusField: "stage",
+      iconField: "icon",
+      eventColorField: "color",
+      checkField: "done",
+    }, fields: [], creation: "created" }) });
   if (edited) ctl.edit({ status: "", icon: "", color: "", done: false });
   const create = jest.fn(async (_path: string, _content: string) => new CreatedFile());
-  const template = '---\nstage: Queued\nicon: star\ncolor: "#ff8800"\ndone: true\n---\nTemplate body';
+  const template = '---\nstarts: 2000-01-01\nends: 2000-01-02\nopens: "08:00"\ncloses: "09:00"\ncreated: 2000-01-01\nstage: Queued\nicon: star\ncolor: "#ff8800"\ndone: true\n---\nTemplate body';
   const templateFile = new CreatedFile();
   const read = jest.spyOn(templateFile, "read").mockResolvedValue(template);
   const getFile = jest.fn((path: string) => path === "Template.md" ? templateFile : null);
   const api = new DataApi({ create, getFile, getAllFiles: () => [] });
-  await ctl.confirm(({ values, templatePath }) => api.createNote({ id: "new.md", values }, [], templatePath), dayjs(), "Untitled");
+  await ctl.confirm(({ values, templatePath }) => api.createNote({ id: "new.md", values }, [], templatePath), dayjs("2026-10-28"), "Untitled");
   expect(getFile).toHaveBeenCalledWith("Template.md");
   expect(read).toHaveBeenCalledTimes(1);
   expect(create).toHaveBeenCalledTimes(1);
@@ -35,7 +45,15 @@ it.each([false, true])("preserves untouched template values and clears only expl
   const fields = parse(content.split("---")[1]!);
   expect(fields).toMatchObject(edited ? { stage: null, icon: null, color: null, done: false }
     : { stage: "Queued", icon: "star", color: "#ff8800", done: true });
-  expect(fields).toMatchObject({ count: 0, archived: false, startDate: "2026-10-28", endDate: "2026-10-28" });
+  expect(fields).toMatchObject({
+    count: 0,
+    archived: false,
+    starts: "2026-10-28",
+    opens: "10:00",
+    ends: "2026-10-28",
+    closes: "11:00",
+    created: "2026-10-28",
+  });
   expect(content).toContain("Template body");
   ctl.destroy();
 });

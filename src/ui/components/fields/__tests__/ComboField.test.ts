@@ -121,6 +121,51 @@ describe("ComboField — ARIA and the portalled popup", () => {
     m.destroy();
   });
 
+  test("scrolling the portalled list in a secondary document does not reposition it", async () => {
+    const iframe = document.createElement("iframe");
+    document.body.appendChild(iframe);
+    const ownerDocument = iframe.contentDocument!;
+    const ownerView = iframe.contentWindow! as Window & typeof globalThis;
+    const rafDescriptor = Object.getOwnPropertyDescriptor(ownerView, "requestAnimationFrame");
+    Object.defineProperty(ownerView, "requestAnimationFrame", { configurable: true, value: () => 0 });
+    const target = ownerDocument.createElement("div");
+    ownerDocument.body.appendChild(target);
+    const component = new ComboField({
+      target,
+      props: { value: "Todo", options: OPTIONS, allowCustom: true },
+    });
+
+    try {
+      const input = target.querySelector("input")!;
+      input.focus();
+      await tick();
+      await tick();
+      const root = input.parentElement!;
+      const measureAnchor = jest.fn(() => ({
+        top: 100, bottom: 130, left: 20, right: 220, width: 200, height: 30,
+        x: 20, y: 100, toJSON: () => ({}),
+      }));
+      root.getBoundingClientRect = measureAnchor;
+      const popup = ownerDocument.querySelector<HTMLElement>('[role="listbox"]')!;
+      for (let attempt = 0; attempt < 10 && !popup.style.top; attempt++) await tick();
+      expect(popup.style.top).not.toBe("");
+      await tick();
+      await Promise.resolve();
+      await tick();
+      const before = measureAnchor.mock.calls.length;
+      popup.dispatchEvent(new ownerView.Event("scroll", { bubbles: true }));
+      await tick();
+      await Promise.resolve();
+      await tick();
+      expect(measureAnchor).toHaveBeenCalledTimes(before);
+    } finally {
+      component.$destroy();
+      if (rafDescriptor) Object.defineProperty(ownerView, "requestAnimationFrame", rafDescriptor);
+      else Reflect.deleteProperty(ownerView, "requestAnimationFrame");
+      iframe.remove();
+    }
+  });
+
   test("a field that already holds a value offers every option; typing filters", async () => {
     const m = mount();
     await open(m);

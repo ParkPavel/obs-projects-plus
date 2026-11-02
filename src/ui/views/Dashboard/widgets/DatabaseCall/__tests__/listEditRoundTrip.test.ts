@@ -7,6 +7,7 @@ import { InMemFileSystem } from "src/lib/filesystem/inmem/filesystem";
 import { DataApi } from "src/lib/dataApi";
 import { DEFAULT_PROJECT, DEFAULT_SETTINGS } from "src/settings/settings";
 import { updateRecordValues } from "src/lib/datasources/helpers";
+import { optionLabels, optionRows, tap } from "src/ui/components/fields/__tests__/support/comboKit";
 import DataTableContent from "../DataTableContent.svelte";
 import { cellDisplay } from "../tableCanon";
 import { get } from "svelte/store";
@@ -107,6 +108,23 @@ it("duplicates and empty items survive a no-op", async () => {
   expect(updateRecord).not.toHaveBeenCalled();
 });
 
+it("offers project list values as suggestions while editing a tag", async () => {
+  const { files, source, field, writes } = await mount(DataFieldType.List, ["alpha", "beta"]);
+  const input = document.querySelector<HTMLInputElement>(".ppp-t2-list-editor input");
+  if (!input) throw new Error("Missing list item editor");
+  input.focus();
+  await tick();
+  expect(optionLabels()).toEqual(["alpha", "beta"]);
+  const beta = optionRows().find((row) => row.textContent?.trim() === "beta");
+  if (!beta) throw new Error("Missing beta suggestion");
+  tap(beta);
+  await tick();
+  button("Apply").click();
+  await tick();
+  await writes[0];
+  expect((await source.queryFiles(files, [field])).records[0]?.values["tags"]).toEqual(["beta", "beta"]);
+});
+
 it("removing every item writes an empty array, not null or a string", async () => {
   const { files, field, source, writes } = await mount(DataFieldType.List, ["only"]);
   button("Remove item 1").click();
@@ -122,16 +140,23 @@ it("the writer tracks a list-only patch", () => {
   expect(patch.values).toEqual({ tags: ["new"], other: "keep" });
 });
 
-it.each([{}, { isComposing: true }, { keyCode: 229 }])("IME Escape does not close the list editor (%j)", async flags => {
+it.each([{}, { isComposing: true }, { keyCode: 229 }])("IME Escape leaves suggestions open; the next Escapes close suggestions and cancel (%j)", async flags => {
   const { updateRecord } = await mount(DataFieldType.String);
   const input = document.querySelector<HTMLInputElement>(".ppp-t2-list-editor input");
   if (!input) throw new Error("Missing list editor");
+  input.focus();
+  await tick();
   input.dispatchEvent(new Event("compositionstart", { bubbles: true }));
   input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, ...flags }));
   await tick();
   expect(document.querySelector(".ppp-t2-list-editor input")).not.toBeNull();
+  expect(document.querySelector('[role="listbox"]')).not.toBeNull();
   expect(updateRecord).not.toHaveBeenCalled();
   input.dispatchEvent(new Event("compositionend", { bubbles: true }));
+  input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  await tick();
+  expect(document.querySelector(".ppp-t2-list-editor")).not.toBeNull();
+  expect(document.querySelector('[role="listbox"]')).toBeNull();
   input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
   await tick();
   expect(document.querySelector(".ppp-t2-list-editor")).toBeNull();

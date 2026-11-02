@@ -97,4 +97,25 @@ describe("#169 — a signal raised before this row existed still opens it", () =
     await Promise.resolve();
     expect(created).toEqual(["Acme"]);
   });
+
+  it("does not commit or dismiss on IME Enter or Escape", async () => {
+    const created: string[] = [];
+    const { container, component } = render(TableNewRow, { props: { openSignal: 1 } });
+    component.$on("create", (e: CustomEvent<string>) => created.push(e.detail));
+    await waitFor(() => expect(input(container)).not.toBeNull());
+
+    const el = input(container)!;
+    el.value = "日本語";
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    for (const key of ["Enter", "Escape"]) {
+      const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+      Object.defineProperty(event, "isComposing", { value: true });
+      el.dispatchEvent(event);
+      expect(input(container)).toBe(el);
+      expect(created).toEqual([]);
+    }
+
+    el.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    await waitFor(() => expect(created).toEqual(["日本語"]));
+  });
 });

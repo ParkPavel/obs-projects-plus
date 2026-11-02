@@ -280,4 +280,22 @@ describe("FloatingPopup", () => {
     expect(document.querySelector(".ppp-popup-backdrop")).toBeNull();
     isMobile.set(false);
   });
+
+  test("keeps anchored popovers floating on mobile without a modal backdrop", async () => {
+    isMobile.set(true);
+    const trigger = createTrigger({ top: 100, left: 100, bottom: 120, right: 200, width: 100, height: 20 });
+    const view = mount({ open: true, triggerEl: trigger, mobilePresentation: "anchored", role: "dialog" });
+
+    await flush(10);
+
+    const popup = document.querySelector(".ppp-popup--floating");
+    expect(popup).not.toBeNull();
+    expect(popup?.parentElement).toBe(document.body);
+    expect(popup).not.toHaveAttribute("aria-modal");
+    expect(document.querySelector(".ppp-popup-backdrop")).toBeNull();
+    expect(document.querySelector(".ppp-popup--bottom-sheet")).toBeNull();
+
+    view.destroy();
+    isMobile.set(false);
+  });
 });
