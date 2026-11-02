@@ -36,6 +36,21 @@ it("receives a popout drag from its own window, ignoring the main window", async
   } finally { m.destroy(); }
 });
 
+it("cancels a preview on loss of its own window, with no later write", async () => {
+  const m = mountForeign();
+  try {
+    await fireEvent.mouseDown(m.hue, { clientX: 50 });
+    window.dispatchEvent(new Event("blur"));
+    await tick();
+    expect(m.hue.getAttribute("aria-valuenow")).toBe("180");
+    m.view.dispatchEvent(new Event("blur"));
+    await tick();
+    expect(m.hue.getAttribute("aria-valuenow")).toBe("0");
+    m.view.dispatchEvent(new MouseEvent("mouseup"));
+    expect(m.change).not.toHaveBeenCalled();
+  } finally { m.destroy(); }
+});
+
 it("removes every drag listener on destroy before mouseup", async () => {
   const m = mountForeign();
   const add = jest.spyOn(m.view, "addEventListener");

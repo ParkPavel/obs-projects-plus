@@ -1,4 +1,4 @@
-/** Terminal events belong to the document/window where the drag began. */
+/** Shared drag termination in the document/window where the gesture began. */
 export function bindDragSessionEnd(
   doc: Document,
   release: (event: MouseEvent | TouchEvent) => void,

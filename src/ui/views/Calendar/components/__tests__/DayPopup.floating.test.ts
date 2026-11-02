@@ -83,7 +83,11 @@ describe("B10 — DayPopup on FloatingPopup", () => {
     await flush();
     document.querySelector<HTMLElement>(".color-action")!.click();
     await flush();
-    return document.querySelector<HTMLElement>('.hsl-apply-button[aria-label="views.calendar.colors.apply"]')!;
+    const input = document.querySelector<HTMLInputElement>(".color-palette .hex-input")!;
+    input.value = "#123456";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    await flush();
+    return document.querySelector<HTMLElement>(".color-palette .hex-row .apply-btn")!;
   }
 
   it("one color selection produces one legacy event", async () => {
@@ -113,7 +117,10 @@ describe("B10 — DayPopup on FloatingPopup", () => {
     resolve(false);
     await flush();
     expect(document.querySelector(".color-palette")).not.toBeNull();
-    apply.click();
+    const input = document.querySelector<HTMLInputElement>(".color-palette .hex-input")!;
+    expect(input).toHaveValue("#123456");
+    input.focus();
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
     await flush();
     expect(saveRecordColor).toHaveBeenCalledTimes(2);
     resolve(true);

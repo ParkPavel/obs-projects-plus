@@ -29,7 +29,7 @@ import { writable, derived, get } from 'svelte/store';
 import type { Readable, Writable } from 'svelte/store';
 import type dayjs from 'dayjs';
 import dayjsFactory from 'dayjs';
-import { bindDragSessionEnd } from './dragSessionLifecycle';
+import { bindDragSessionEnd } from 'src/ui/utils/dragSessionLifecycle';
 import type { DataRecord } from '../../../../lib/dataframe/dataframe';
 import type { ProcessedRecord } from '../types';
 import {

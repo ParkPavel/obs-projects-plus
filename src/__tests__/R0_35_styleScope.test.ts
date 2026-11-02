@@ -104,8 +104,6 @@ const PICKER_SPECTRUM: readonly Justified[] = [
  */
 const JUSTIFIED_COLOURS: Readonly<Record<string, readonly Justified[]>> = {
   "ui/components/ColorPicker/ColorPicker.svelte": PICKER_SPECTRUM,
-  // The record popup carries its own copy of the picker (same field, strip and handles).
-  "ui/views/Calendar/components/DayPopup/RecordItem.svelte": PICKER_SPECTRUM,
   // Drawn over the user's image, not a theme surface: a dark scrim or chip keeps
   // light text readable over any photo in light and dark themes alike.
   "ui/views/Dashboard/widgets/CoverBanner/CoverBannerWidget.svelte": [
@@ -125,7 +123,6 @@ const JUSTIFIED_COLOURS: Readonly<Record<string, readonly Justified[]>> = {
  */
 const HARD_COLOUR_BUDGET: Readonly<Record<string, number>> = {
   "ui/components/ColorPicker/ColorPicker.svelte": 13,
-  "ui/views/Calendar/components/DayPopup/RecordItem.svelte": 13,
   "ui/views/Dashboard/widgets/CoverBanner/CoverBannerWidget.svelte": 1,
   "ui/components/ImagePreview/ImagePreview.svelte": 1,
 };

@@ -24,7 +24,6 @@ import { collectSourceFiles, SRC_ROOT } from "./support/cssScan";
 const NOT_LANGUAGE: ReadonlyMap<string, string> = new Map([
   ["ui/components/ColorPicker/ColorPicker.svelte|#RRGGBB", "hex colour format hint"],
   ["ui/components/FieldControl/FieldControl.svelte|#RRGGBB", "hex colour format hint"],
-  ["ui/views/Calendar/components/DayPopup/RecordItem.svelte|#RRGGBB", "hex colour format hint"],
   ["ui/modals/components/DateFormatSelector.svelte|YYYY-MM-DD", "date format token"],
   ["ui/modals/components/CreateProject.svelte|#tag", "tag syntax hint"],
   ["ui/modals/components/CreateProject.svelte|folder/path", "path syntax hint"],

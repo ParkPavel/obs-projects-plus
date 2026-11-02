@@ -8,6 +8,7 @@
   import { normalizeHexColor } from 'src/lib/colors/recordColor';
   import { DEFAULT_COLOR } from 'src/lib/stores/palettes';
   import { useFavoritesStore } from 'src/ui/paletteProject';
+  import { bindDragSessionEnd } from 'src/ui/utils/dragSessionLifecycle';
   const favoritesStore = useFavoritesStore();
 
   const dispatch = createEventDispatcher<{ change: string }>();
@@ -23,6 +24,9 @@
   export let projectPalette: string[] = [];
   /** Custom label for the project palette section. */
   export let projectPaletteLabel: string = '';
+  /** A persistent consumer acknowledges writes; failure keeps the draft for retry. */
+  export let saveColor: ((color: string) => Promise<boolean>) | undefined = undefined;
+  let saving = false;
 
   // Internal HSV state
   let hueValue = 220;
@@ -40,8 +44,19 @@
   let isDraggingSatLight = false;
   let isDraggingHue = false;
   let dragWindow: Window | null = null;
+  let releaseSession: (() => void) | null = null;
+
+  function bindSession(node: HTMLElement): void {
+    dragWindow = node.ownerDocument.defaultView;
+    releaseSession = bindDragSessionEnd(node.ownerDocument, () => {
+      if (isDraggingSatLight) handleSatLightMouseUp();
+      else if (isDraggingHue) handleHueMouseUp();
+    }, cancelDrag);
+  }
 
   function stopWatching(): void {
+    releaseSession?.();
+    releaseSession = null;
     dragWindow?.removeEventListener('mousemove', handleSatLightMouseMove);
     dragWindow?.removeEventListener('mouseup', handleSatLightMouseUp);
     dragWindow?.removeEventListener('mousemove', handleHueMouseMove);
@@ -103,24 +118,44 @@
   // Apply color immediately
   function applyColor() {
     const hex = exactHex ?? hsvToHex(hueValue, saturationValue, valueValue);
-    if (hex) dispatch('change', hex);
+    return commitColor(hex);
+  }
+  function commitColor(color: string): boolean | Promise<boolean> {
+    if (!color || saving) return false;
+    const save = saveColor;
+    if (!save) { dispatch('change', color); return true; }
+    return persistColor(color, save);
+  }
+  async function persistColor(color: string, save: (color: string) => Promise<boolean>): Promise<boolean> {
+    saving = true;
+    try {
+      const written = await save(color);
+      if (!written) hexField?.retryCommit();
+      return written;
+    } catch (error) {
+      console.error("[Projects+] color write failed", error);
+      hexField?.retryCommit();
+      return false;
+    } finally { saving = false; }
   }
   
   // Select from favorites
   function selectColor(color: string) {
+    if (saving) return;
     parseHex(color);
-    dispatch('change', color);
+    void commitColor(color);
   }
   
   // === Saturation/Value picker handlers ===
   function handleSatLightMouseDown(e: MouseEvent) {
+    if (saving) return;
     e.preventDefault();
     e.stopPropagation();
     stopWatching();
     isDraggingHue = false;
     isDraggingSatLight = true;
     updateSatLight(e.clientX, e.clientY);
-    dragWindow = satLightElement.ownerDocument.defaultView;
+    bindSession(satLightElement);
     dragWindow?.addEventListener('mousemove', handleSatLightMouseMove);
     dragWindow?.addEventListener('mouseup', handleSatLightMouseUp);
   }
@@ -139,9 +174,13 @@
   }
   
   function handleSatLightTouchStart(e: TouchEvent) {
+    if (saving) return;
     e.preventDefault();
     e.stopPropagation();
+    stopWatching();
+    isDraggingHue = false;
     isDraggingSatLight = true;
+    bindSession(satLightElement);
     const touch = e.touches[0];
     if (touch) {
       updateSatLight(touch.clientX, touch.clientY);
@@ -178,13 +217,14 @@
   
   // === Hue slider handlers ===
   function handleHueMouseDown(e: MouseEvent) {
+    if (saving) return;
     e.preventDefault();
     e.stopPropagation();
     stopWatching();
     isDraggingSatLight = false;
     isDraggingHue = true;
     updateHue(e.clientX);
-    dragWindow = hueSliderElement.ownerDocument.defaultView;
+    bindSession(hueSliderElement);
     dragWindow?.addEventListener('mousemove', handleHueMouseMove);
     dragWindow?.addEventListener('mouseup', handleHueMouseUp);
   }
@@ -203,9 +243,13 @@
   }
   
   function handleHueTouchStart(e: TouchEvent) {
+    if (saving) return;
     e.preventDefault();
     e.stopPropagation();
+    stopWatching();
+    isDraggingSatLight = false;
     isDraggingHue = true;
+    bindSession(hueSliderElement);
     const touch = e.touches[0];
     if (touch) {
       updateHue(touch.clientX);
@@ -239,14 +283,16 @@
   
   // === Hex input handlers ===
   function applyCustomHex() {
+    if (saving) return;
     const clean = customHexInput.trim();
     const hex = normalizeHexColor(clean.startsWith('#') ? clean : '#' + clean);
     if (hex !== null) {
       parseHex(hex);
       hexInputError = false;
-      customHexInput = '';
-      hexField?.reset('');
-      applyColor();
+      const clear = () => { customHexInput = ''; hexField?.reset(''); };
+      const written = commitColor(hex);
+      if (typeof written === "boolean") { if (written) clear(); }
+      else void written.then(saved => { if (saved) clear(); });
     } else {
       hexInputError = true;
     }
@@ -256,7 +302,7 @@
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <!-- svelte-ignore a11y-click-events-have-key-events -->
-<div class="color-picker">
+<div class="color-picker" aria-busy={saving}>
   <!-- Section: HSV Picker -->
   <div class="palette-section">
     <span class="palette-label">{$i18n.t('components.color.pick-color')}</span>
@@ -313,19 +359,21 @@
       </div>
       <button
         class="action-btn star-btn"
-        disabled={!normalizeHexColor(currentHex)}
+        disabled={saving || !normalizeHexColor(currentHex)}
         on:click|stopPropagation={() => favoritesStore.add(currentHex.toLowerCase())}
         type="button"
         title={$i18n.t('components.color.add-to-favorites')}
+        aria-label={$i18n.t('components.color.add-to-favorites')}
       >
         <Icon name="star" size="sm" />
       </button>
       <button 
         class="action-btn apply-btn"
         on:click|stopPropagation={applyColor}
-        disabled={!currentHex}
+        disabled={saving || !currentHex}
         type="button"
         title={$i18n.t('components.color.apply-color')}
+        aria-label={$i18n.t('components.color.apply-color')}
       >
         <Icon name="check" size="sm" />
       </button>
@@ -347,7 +395,9 @@
               style:--swatch-color={pc}
               on:click|stopPropagation={() => selectColor(pc)}
               type="button"
+              disabled={saving}
               title={pc}
+              aria-label={pc}
             >
               {#if currentHex.toLowerCase() === pc.toLowerCase()}
                 <Icon name="check" size="xs" />
@@ -357,9 +407,10 @@
               class="remove-btn star-promote-btn"
               on:click|stopPropagation={() => { selectColor(pc); favoritesStore.add(pc.toLowerCase()); }}
               type="button"
+              disabled={saving}
               title={$i18n.t('components.color.add-to-favorites')}
               aria-label={$i18n.t('components.color.add-to-favorites')}
-            >★</button>
+            ><Icon name="star" size="sm" /></button>
           </div>
         {/each}
       </div>
@@ -382,7 +433,9 @@
             style:--swatch-color={fav.color}
             on:click|stopPropagation={() => selectColor(fav.color)}
             type="button"
+            disabled={saving}
             title={fav.name}
+            aria-label={fav.name}
           >
             {#if currentHex.toLowerCase() === fav.color.toLowerCase()}
               <Icon name="check" size="xs" />
@@ -392,8 +445,10 @@
             class="remove-btn"
             on:click|stopPropagation={() => favoritesStore.remove(fav.color)}
             type="button"
+            disabled={saving}
             title={$i18n.t('common.remove')}
-          >×</button>
+            aria-label={`${$i18n.t('common.remove')}: ${fav.name}`}
+          ><Icon name="x" size="sm" /></button>
         </div>
       {/each}
     </div>
@@ -414,6 +469,7 @@
           ariaLabel={$i18n.t('components.color.hex-code')}
           inputClass="hex-input"
           error={hexInputError}
+          readOnly={saving}
           on:input={(e) => (customHexInput = e.detail)}
           on:commit={(e) => { if (e.detail.reason === 'enter') applyCustomHex(); }}
         />
@@ -421,7 +477,7 @@
       <button 
         class="action-btn apply-btn"
         on:click|stopPropagation={applyCustomHex}
-        disabled={!customHexInput}
+        disabled={saving || !customHexInput}
         type="button"
         title={$i18n.t('common.apply')}
       >
@@ -454,7 +510,7 @@
     --cp-handle-size: calc(var(--cp-base) * 0.875);
     --cp-preview-size: calc(var(--cp-base) * 1.75);
     --cp-btn-size: calc(var(--cp-base) * 1.75);
-    --cp-swatch-size: calc(var(--cp-base) * 1.5);
+    --cp-swatch-size: var(--ppp-touch-target-min, 2.75rem);
     
     display: flex;
     flex-direction: column;
@@ -590,7 +646,7 @@
   }
   
   /* === Action Buttons === */
-  .action-btn {
+  .color-picker .action-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -636,28 +692,34 @@
   
   /* === Favorites Grid === */
   .favorites-grid {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 6.25rem), 1fr));
     gap: calc(var(--cp-base) * 0.5);
-    width: calc(100% + calc(var(--cp-base) * 0.5));
+    width: 100%;
     max-height: calc((var(--cp-swatch-size) + calc(var(--cp-base) * 0.75)) * 3);
     overflow-y: auto;
     overflow-x: hidden;
     box-sizing: border-box;
-    padding: calc(var(--cp-base) * 0.5);
-    margin: calc(var(--cp-base) * -0.25);
+    padding: 0;
+    margin: 0;
   }
   
   .swatch-container {
-    position: relative;
-    width: var(--cp-swatch-size);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--cp-swatch-size);
+    gap: calc(var(--cp-base) * 0.25);
+    min-width: 0;
     height: var(--cp-swatch-size);
     flex-shrink: 0;
   }
   
-  .color-swatch {
+  .color-picker .color-swatch {
     width: 100%;
-    height: 100%;
+    min-width: 0;
+    max-width: 100%;
+    height: var(--cp-swatch-size);
+    min-height: var(--cp-swatch-size);
+    max-height: var(--cp-swatch-size);
     background: var(--swatch-color);
     border: 0.125rem solid transparent;
     border-radius: calc(var(--cp-base) * 0.375);
@@ -681,15 +743,18 @@
     box-shadow: 0 0 0 0.125rem var(--background-primary);
   }
   
-  .remove-btn {
-    position: absolute;
-    top: calc(var(--cp-base) * -0.25);
-    right: calc(var(--cp-base) * -0.25);
-    width: calc(var(--cp-base) * 0.75);
-    height: calc(var(--cp-base) * 0.75);
+  .color-picker .remove-btn {
+    position: static;
+    width: var(--cp-swatch-size);
+    height: var(--cp-swatch-size);
+    min-width: var(--cp-swatch-size);
+    max-width: var(--cp-swatch-size);
+    min-height: var(--cp-swatch-size);
+    max-height: var(--cp-swatch-size);
+    box-sizing: border-box;
     background: var(--background-primary);
     border: var(--cp-border) solid var(--background-modifier-border);
-    border-radius: 50%;
+    border-radius: calc(var(--cp-base) * 0.25);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -697,16 +762,12 @@
     font-weight: 700;
     line-height: 1;
     cursor: pointer;
-    opacity: 0;
+    opacity: 1;
     transition: opacity 0.2s;
-    z-index: 2;
     color: var(--text-muted);
     padding: 0;
   }
   
-  .swatch-container:hover .remove-btn {
-    opacity: 1;
-  }
   
   .remove-btn:hover {
     color: var(--text-error);
@@ -783,8 +844,7 @@
       --cp-hue-height: calc(var(--cp-base) * 1.5);
       --cp-handle-size: calc(var(--cp-base) * 1.5);
       --cp-preview-size: calc(var(--cp-base) * 2.25);
-      --cp-btn-size: calc(var(--cp-base) * 2.5);
-      --cp-swatch-size: calc(var(--cp-base) * 2);
+      --cp-btn-size: var(--ppp-touch-target-min, 2.75rem);
       
       /* v5.0.0: Ensure proper touch handling */
       touch-action: pan-y;
@@ -812,14 +872,6 @@
       transform: scale(0.95);
     }
     
-    .remove-btn {
-      opacity: 1;
-      width: calc(var(--cp-base) * 0.625);
-      height: calc(var(--cp-base) * 0.625);
-      font-size: calc(var(--cp-base) * 0.375);
-      top: calc(var(--cp-base) * -0.25);
-      right: calc(var(--cp-base) * -0.25);
-    }
   }
   
   /* v5.0.0: Landscape optimizations */
