@@ -34,7 +34,7 @@ it("accepts only a result from the live source, field and frame revision", async
   await pending;
   expect(source.accepts("Folder/Note", field, api, frame)).toBe(true);
   expect(source.accepts("Folder/Note", { ...field, name: "another" }, api, frame)).toBe(false);
-  expect(source.accepts("Folder/Note", field, { ...api }, frame)).toBe(false);
+  expect(source.accepts("Folder/Note", field, {} as ViewApi, frame)).toBe(false);
   expect(source.accepts("Folder/Note", field, api, { ...frame })).toBe(false);
   source.destroy();
   expect(source.accepts("Folder/Note", field, api, frame)).toBe(false);

@@ -39,7 +39,7 @@
   import { keepInView } from "./keepInView";
   import { remAt, rootFontPx } from "src/ui/utils/cssLength";
   import { createDraftController, recordImeCompositionEnd, type CommitReason } from "./draftController";
-  import { filterOptions, optionDomId, stepActive, type ComboOption } from "./comboOptions";
+  import { createOptionSearch, optionDomId, stepActive, type ComboOption } from "./comboOptions";
   import { onKeyboardChange, visibleViewport } from "src/ui/utils/visibleViewport";
   import { aboveFieldPlacement, makeRoomAbove } from "./aboveFieldPlacement";
   import { fieldViewport } from "./fieldViewport";
@@ -78,6 +78,8 @@
   const listId = `${uid}-list`;
 
   const ctl = createDraftController(value);
+  const search = createOptionSearch<ComboOption>();
+  $: suggestions = search.update(options);
   let draft = value;
   let open = false;
   let active = -1;
@@ -113,9 +115,9 @@
   $: adopt(value);
 
   function visible(): ComboOption[] {
-    return filterOptions(options, dirty ? draft : "");
+    return suggestions(dirty ? draft : "");
   }
-  $: shown = filterOptions(options, dirty ? draft : "");
+  $: shown = suggestions(dirty ? draft : "");
   $: expanded = open && !disabled && (shown.length > 0 || loading);
   $: activeOpt = expanded && !placementHidden && active >= 0 && active < shown.length ? shown[active] : undefined;
 
@@ -283,7 +285,7 @@
     if (!t) return undefined;
     const same = options.find((o) => o.label.toLowerCase() === t);
     if (same) return same;
-    const hits = filterOptions(options, text);
+    const hits = suggestions(text);
     return hits.length === 1 ? hits[0] : undefined;
   }
   /**

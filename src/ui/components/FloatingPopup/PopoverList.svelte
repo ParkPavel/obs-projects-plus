@@ -42,7 +42,7 @@
   import SearchField from "src/ui/components/fields/SearchField.svelte";
   import { isMobile } from "src/lib/stores/ui";
   import { isImeKey } from "src/ui/components/fields/draftController";
-  import { filterOptions, stepActive } from "src/ui/components/fields/comboOptions";
+  import { createOptionSearch, stepActive } from "src/ui/components/fields/comboOptions";
 
   export let items: PopoverItem[] = [];
   export let searchable: boolean = false;
@@ -56,12 +56,14 @@
   let activeIdx = -1;
   // The item a pointer just chose, so the click of the same tap does not choose it again.
   let pointerPicked: string | null = null;
+  const search = createOptionSearch<PopoverItem>();
+  $: suggestions = search.update(items);
 
-  $: filtered = searchable ? filterOptions(items, query) : items;
+  $: filtered = searchable ? suggestions(query) : items;
 
   function setQuery(next: string): void {
     query = next;
-    activeIdx = searchable && filterOptions(items, next).length > 0 && next.trim() !== "" ? 0 : -1;
+    activeIdx = searchable && suggestions(next).length > 0 && next.trim() !== "" ? 0 : -1;
   }
 
   function pick(item: PopoverItem): void {

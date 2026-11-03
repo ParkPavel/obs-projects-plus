@@ -1,10 +1,7 @@
 <script lang="ts">
   /**
-   * RelationPickerPopover — #081 (W1, NOTION_GRADE_PIPELINE). The Relation
-   * Searches the target project, or this column's links when unconfigured.
-   * A single pick commits; multiple picks commit on Done. Escape cancels.
-   * SearchField owns the query; arrow keys and Enter navigate candidates.
-   * IME composition suppresses navigation and commit.
+   * Target-scoped relations; single pick or explicit Done, Escape cancels.
+   * The search query never replaces a stored link or its alias.
    */
   import { createEventDispatcher, onDestroy } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
@@ -14,7 +11,7 @@
   import { parseRelationLinks } from "src/lib/relations/parseRelationLinks";
   import SearchField from "src/ui/components/fields/SearchField.svelte";
   import { isImeKey } from "src/ui/components/fields/draftController";
-  import { clampActive, filterOptions, optionDomId, stepActive } from "src/ui/components/fields/comboOptions";
+  import { clampActive, createOptionSearch, optionDomId, stepActive } from "src/ui/components/fields/comboOptions";
   import { createRelationCandidates } from "./relationCandidates";
   import { selectedCandidateIds, serializeRelationSelection, toggleRelationSelection } from "./relationSelection";
   import RelationCountBadge from "./RelationCountBadge.svelte";
@@ -43,14 +40,15 @@
   const original = value;
   let selected = new Set(parseRelationLinks(value));
   const source = createRelationCandidates();
+  const search = createOptionSearch<{ label: string }>();
   onDestroy(source.destroy);
   $: void source.load(field, api, frame);
   $: candidates = $source.candidates;
   $: loading = $source.loading;
   $: selectedIds = selectedCandidateIds(selected, candidates);
-
   $: listId = optionDomId("ppp-rel-list", field.name);
-  $: filtered = filterOptions(candidates.map((label) => ({ label })), query).map((o) => o.label);
+  $: suggestions = search.update(candidates.map((label) => ({ label })));
+  $: filtered = suggestions(query).map((o) => o.label);
   $: activeIdx = clampActive(active, filtered.length);
 
   function setQuery(next: string) {

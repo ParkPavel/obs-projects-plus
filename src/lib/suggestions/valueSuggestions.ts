@@ -12,8 +12,6 @@
 
 import { DataFieldType, type DataRecord } from "src/lib/dataframe/dataframe";
 
-export const SUGGESTION_LIMIT = 200;
-
 const TEMPLATE_TEXT = /<%[\s\S]*?%>|\{\{[\s\S]*?\}\}/;
 
 /** Text a template engine would fill in, not a value a note holds. */
@@ -91,11 +89,9 @@ function collect(records: readonly DataRecord[], field: SuggestionField, folders
     for (const text of suggestionTexts(record.values[field.name])) used.add(text);
   }
   const out = new Set(declared);
-  for (const text of [...used].sort()) {
-    if (out.size >= SUGGESTION_LIMIT) break;
-    out.add(text);
-  }
-  return [...out].slice(0, SUGGESTION_LIMIT);
+  for (const text of [...used].sort()) out.add(text);
+  // Page the rendered results after querying, never the permitted source pool.
+  return [...out];
 }
 
 // One memo for every surface: a set of records maps to its lists by field.
@@ -110,7 +106,7 @@ export function valueSuggestions(
 ): string[] {
   if (!field) return [];
   const folders = context.templateFolders ?? [];
-  const id = [field.name, field.type, ...(field.typeConfig?.options ?? []), "\u0000", ...folders].join("\u0001");
+  const id = JSON.stringify([field.name, field.type, field.typeConfig?.options ?? [], folders]);
   let byField = memo.get(records);
   if (!byField) {
     byField = new Map();

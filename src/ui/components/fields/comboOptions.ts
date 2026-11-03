@@ -6,18 +6,30 @@
  * they are testable without a DOM.
  */
 
+import { createSuggestionIndex, searchSuggestions } from "src/lib/suggestions/suggestionSearch";
+import type { SearchText } from "src/lib/suggestions/searchText";
+
 /** One selectable option. `id` is stable and names the option in the DOM. */
-export interface ComboOption {
+export interface ComboOption extends SearchText {
   id: string;
   label: string;
   icon?: string;
 }
 
-/** Options whose label contains the query, case-insensitively; all of them for an empty query. */
-export function filterOptions<T extends { label: string }>(options: readonly T[], query: string): T[] {
-  const q = query.trim().toLowerCase();
-  if (q === "") return [...options];
-  return options.filter((o) => o.label.toLowerCase().includes(q));
+/** Ranked first page from this caller's immutable, permitted option revision. */
+export function filterOptions<T extends SearchText>(options: readonly T[], query: string): T[] {
+  return searchSuggestions(options, query);
+}
+
+/** Call update on reactive source changes; typing uses the same projections. */
+export function createOptionSearch<T extends SearchText & { id?: string }>() {
+  const index = createSuggestionIndex<T>();
+  return {
+    update(options: readonly T[]): (query: string) => T[] {
+      index.replace(options, (option, position) => option.id === undefined ? `position:${position}` : `id:${option.id}`);
+      return query => index.search(query).items;
+    },
+  };
 }
 
 /**

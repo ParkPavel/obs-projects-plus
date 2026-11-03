@@ -70,6 +70,49 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
+test.each(["massazh", "vfccf;", "масаж"])("searches %s in the original input and commits the canonical label", async query => {
+  const m = mount({ value: "", options: [{ id: "service-id", label: "Массаж" }], allowCustom: false });
+  try {
+    await open(m);
+    type(m.input, query); await tick(); await tick(); await tick();
+    expect(m.target.querySelector("input")).toBe(m.input);
+    expect(document.activeElement).toBe(m.input);
+    expect(labels()).toEqual(["Массаж"]);
+    key(m.input, "Enter");
+    expect(m.selects).toEqual(["service-id"]);
+    expect(m.commits.map(commit => commit.value)).toEqual(["Массаж"]);
+  } finally { m.destroy(); }
+});
+
+test("bounds the first page and can still find a canonical option beyond it", async () => {
+  const m = mount({ value: "", options: Array.from({ length: 500 }, (_, id) => ({ id: `id-${id}`, label: `Service ${id}` })), allowCustom: false });
+  try {
+    await open(m);
+    expect(options()).toHaveLength(50);
+    type(m.input, "Service 499"); await tick(); await tick(); await tick();
+    key(m.input, "Enter");
+    expect(m.selects).toEqual(["id-499"]);
+    expect(m.commits.map(commit => commit.value)).toEqual(["Service 499"]);
+  } finally { m.destroy(); }
+});
+
+test("a reactive schema update invalidates indexed labels even when the array is reused", async () => {
+  const source = [{ id: "service-id", label: "Массаж" }];
+  const m = mount({ value: "", options: source, allowCustom: false });
+  try {
+    await open(m); type(m.input, "massazh"); await tick(); await tick(); await tick();
+    expect(labels()).toEqual(["Массаж"]);
+    source[0] = { id: "service-id", label: "Йога" };
+    m.component.$set({ options: source }); await tick(); await tick(); await tick();
+    expect(options()).toHaveLength(0);
+    expect(m.target.querySelector("input")).toBe(m.input);
+    expect(m.input.value).toBe("massazh");
+    type(m.input, "yoga"); await tick(); await tick(); await tick();
+    expect(labels()).toEqual(["Йога"]);
+    key(m.input, "Enter"); expect(m.selects).toEqual(["service-id"]);
+  } finally { m.destroy(); }
+});
+
 describe("ComboField — ARIA and the portalled popup", () => {
   const rect = (top: number, height: number) => ({ top, bottom: top + height, left: 20, right: 220, width: 200, height, x: 20, y: top, toJSON: () => ({}) });
   const settlePlacement = async () => { await tick(); await tick(); await tick(); };
@@ -226,7 +269,7 @@ describe("ComboField — ARIA and the portalled popup", () => {
     expect(labels()).toEqual(["Todo", "Doing", "Done"]);
     type(m.input, "do");
     await tick();
-    expect(labels()).toEqual(["Todo", "Doing", "Done"]);
+    expect(labels()).toEqual(["Doing", "Done", "Todo"]);
     type(m.input, "doi");
     await tick();
     expect(labels()).toEqual(["Doing"]);
