@@ -75,5 +75,6 @@ export function comboOwnsEscape(target: EventTarget | null): boolean {
 
 /** The DOM id of an option:the list's id and the option's own, made safe for an id attribute. */
 export function optionDomId(listId: string, optionId: string): string {
-  return `${listId}-opt-${optionId.replace(/[^\w-]/g, (c) => `_${c.charCodeAt(0).toString(16)}_`)}`;
+  const encoded = Array.from(optionId, char => char.codePointAt(0)!.toString(16)).join("-");
+  return `${listId}-opt-${encoded}`;
 }

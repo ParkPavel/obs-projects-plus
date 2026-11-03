@@ -1,12 +1,12 @@
 <script lang="ts">
   /**
    * RelationPickerPopover — #081 (W1, NOTION_GRADE_PIPELINE). The Relation
-   * Searches the target project, falling back to links in the current column.
+   * Searches the target project, or this column's links when unconfigured.
    * A single pick commits; multiple picks commit on Done. Escape cancels.
    * SearchField owns the query; arrow keys and Enter navigate candidates.
    * IME composition suppresses navigation and commit.
    */
-  import { createEventDispatcher, onMount } from "svelte";
+  import { createEventDispatcher, onDestroy } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
   import type { DataField, DataFrame, DataValue, Optional } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
@@ -14,9 +14,12 @@
   import { parseRelationLinks } from "src/lib/relations/parseRelationLinks";
   import SearchField from "src/ui/components/fields/SearchField.svelte";
   import { isImeKey } from "src/ui/components/fields/draftController";
-  import { clampActive, filterOptions, optionDomId, reveal, stepActive } from "src/ui/components/fields/comboOptions";
-  import { loadRelationCandidates } from "./relationCandidates";
+  import { clampActive, filterOptions, optionDomId, stepActive } from "src/ui/components/fields/comboOptions";
+  import { createRelationCandidates } from "./relationCandidates";
+  import { selectedCandidateIds, serializeRelationSelection, toggleRelationSelection } from "./relationSelection";
   import RelationCountBadge from "./RelationCountBadge.svelte";
+  import RelationSelection from "./RelationSelection.svelte";
+  import RelationCandidateList from "./RelationCandidateList.svelte";
 
   export let field: DataField;
   export let value: Optional<DataValue>;
@@ -36,18 +39,15 @@
 
   let query = "";
   let active = 0;
-  let candidates: string[] = [];
-  let loading = true;
-  let resolvedCount = 0;
   let popupOpen = true;
-
+  const original = value;
   let selected = new Set(parseRelationLinks(value));
-
-  onMount(async () => {
-    candidates = await loadRelationCandidates(field, api, frame);
-    loading = false;
-    resolvedCount = parseRelationLinks(value).filter((label) => candidates.includes(label)).length;
-  });
+  const source = createRelationCandidates();
+  onDestroy(source.destroy);
+  $: void source.load(field, api, frame);
+  $: candidates = $source.candidates;
+  $: loading = $source.loading;
+  $: selectedIds = selectedCandidateIds(selected, candidates);
 
   $: listId = optionDomId("ppp-rel-list", field.name);
   $: filtered = filterOptions(candidates.map((label) => ({ label })), query).map((o) => o.label);
@@ -60,19 +60,16 @@
 
   function commitSelection(labels: string[]) {
     if (saving) return;
-    const links = labels.map((l) => `[[${l}]]`);
-    dispatch("commit", multi ? links : links[0] ?? "");
+    dispatch("commit", serializeRelationSelection(labels, original, multi));
   }
 
   function choose(label: string) {
-    if (saving) return;
+    if (saving || !source.accepts(label, field, api, frame)) return;
     if (!multi) {
-      commitSelection([label]);
+      commitSelection(selectedIds.includes(label) ? [...selected] : [label]);
       return;
     }
-    if (selected.has(label)) selected.delete(label);
-    else selected.add(label);
-    selected = new Set(selected);
+    selected = toggleRelationSelection(selected, label, candidates);
   }
 
   function handleKeydown(e: KeyboardEvent) {
@@ -107,44 +104,22 @@
     on:queryChange={(e) => setQuery(e.detail)}
     on:keydown={handleKeydown}
   />
-  <RelationCountBadge count={resolvedCount} {loading} />
-  <div class="ppp-rel-picker-list" id={listId} role="listbox" aria-multiselectable={multi}>
-    {#if loading}
-      <span class="ppp-rel-picker-hint">…</span>
-    {:else if filtered.length === 0}
-      {#if !hasTargetProject && candidates.length === 0}
-        <button class="ppp-rel-picker-setup" on:mousedown|preventDefault on:click={() => dispatch("setupRelation")}>{$i18n.t("relation-setup.open", { defaultValue: "Link database…" })}</button>
-      {:else}
-        <span class="ppp-rel-picker-hint">{$i18n.t("views.dashboard.table-v2.relation-empty", { defaultValue: "No records to link" })}</span>
-      {/if}
-    {:else}
-      {#each filtered as label, i (label)}
-        <button
-          id={optionDomId(listId, label)}
-          class="ppp-rel-picker-item"
-          class:ppp-rel-picker-item--active={i === activeIdx}
-          role="option"
-          aria-selected={selected.has(label)}
-          use:reveal={i === activeIdx}
-          on:mousedown|preventDefault
-          on:click={() => choose(label)}
-        >
-          {#if multi}
-            <input type="checkbox" checked={selected.has(label)} tabindex="-1" />
-          {/if}
-          <span class="ppp-rel-picker-label">{label}</span>
-        </button>
-      {/each}
-    {/if}
-  </div>
+  <RelationCountBadge count={selectedIds.length} {loading} />
+  {#if multi}<RelationSelection selected={[...selected]} {saving}
+    on:remove={(event) => { selected = new Set([...selected].filter(target => target !== event.detail)); }} />{/if}
+  <RelationCandidateList {listId} labels={filtered} {selectedIds} active={activeIdx} {multi} {loading} {saving}
+    failed={$source.error} showSetup={!hasTargetProject && candidates.length === 0}
+    on:choose={(event) => choose(event.detail)} on:retry={() => source.load(field, api, frame)}
+    on:setup={() => dispatch("setupRelation")} />
   <div class="ppp-rel-picker-actions">
     {#if multi}
       <span class="ppp-rel-picker-count">{selected.size}</span>
-      <button class="ppp-rel-picker-done mod-cta" on:mousedown|preventDefault on:click={() => commitSelection([...selected])}>
+      <button type="button" class="ppp-rel-picker-done mod-cta" disabled={saving || loading} on:mousedown|preventDefault on:click={() => commitSelection([...selected])}>
         {$i18n.t("views.dashboard.table-v2.relation-done", { defaultValue: "Done" })}
       </button>
     {/if}
-    <button class="ppp-rel-picker-cancel" on:mousedown|preventDefault on:click={() => dispatch("cancel")}>
+    {#if !multi}<button type="button" class="ppp-rel-picker-clear" disabled={saving} on:mousedown|preventDefault on:click={() => commitSelection([])}>{$i18n.t("common.clear")}</button>{/if}
+    <button type="button" class="ppp-rel-picker-cancel" disabled={saving} on:mousedown|preventDefault on:click={() => dispatch("cancel")}>
       {$i18n.t("views.dashboard.table-v2.relation-cancel", { defaultValue: "Cancel" })}
     </button>
   </div>
@@ -162,54 +137,6 @@
     gap: 0.25rem;
   }
 
-  .ppp-rel-picker-list {
-    max-height: 12rem;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .ppp-rel-picker-item {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.25rem 0.375rem;
-    border: none;
-    background: transparent;
-    color: var(--text-normal);
-    font-size: var(--font-ui-small);
-    text-align: left;
-    border-radius: var(--radius-s, 0.25rem);
-    cursor: pointer;
-  }
-
-  .ppp-rel-picker-item:hover,
-  .ppp-rel-picker-item--active {
-    background: var(--background-modifier-hover);
-  }
-
-  .ppp-rel-picker-label {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .ppp-rel-picker-hint {
-    padding: 0.375rem;
-    color: var(--text-faint);
-    font-size: var(--font-ui-smaller);
-  }
-
-  .ppp-rel-picker-setup {
-    padding: 0.25rem 0.375rem;
-    font-size: var(--font-ui-small);
-    color: var(--interactive-accent);
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    text-align: left;
-  }
-
   .ppp-rel-picker-actions {
     display: flex;
     align-items: center;
@@ -224,6 +151,7 @@
   }
 
   .ppp-rel-picker-done,
+  .ppp-rel-picker-clear,
   .ppp-rel-picker-cancel {
     padding: 0.2rem 0.6rem;
     font-size: var(--font-ui-small);
@@ -231,7 +159,7 @@
     cursor: pointer;
   }
 
-  .ppp-rel-picker-cancel {
+  .ppp-rel-picker-cancel, .ppp-rel-picker-clear {
     border: 0.0625rem solid var(--background-modifier-border);
     background: transparent;
     color: var(--text-muted);

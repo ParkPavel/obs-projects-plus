@@ -31,7 +31,7 @@
         },
         "formula-errors": {
             "column-mode": "Column references in Agenda require New rules. Choose that mode explicitly or use a condition on this record.",
-    "version": "This formula uses an unsupported version. Update Projects Plus before evaluating or changing it.",
+            "version": "This formula uses an unsupported version. Update Projects Plus before evaluating or changing it.",
             "number": "Invalid number. Check its sign, decimal point and exponent.",
             "string": "Close the text with a matching quote.",
             "escape": "Unsupported character after a backslash. Check the escape sequence.",
@@ -1763,7 +1763,9 @@
                     "sort-desc": "Sort descending",
                     "unfilter-canvas": "Stop filtering canvas by this row",
                     "ungroup": "Ungroup",
-                    "group-empty": "No value"
+                    "group-empty": "No value",
+                    "relation-load-error": "Could not load records from the linked database. Retry or check its source.",
+                    "relation-retry": "Retry"
                 },
                 "agg-consequence": {
                     "count_total": "Every record, including ones with nothing in this field",

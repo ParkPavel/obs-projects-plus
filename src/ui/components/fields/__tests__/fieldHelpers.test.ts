@@ -5,7 +5,12 @@
  * open suggestion list to the field, whose first Escape only closes the list).
  */
 
-import { comboOwnsEscape, namesToOptions } from "../comboOptions";
+import { comboOwnsEscape, namesToOptions, optionDomId } from "../comboOptions";
+
+it("distinct canonical paths and Unicode names have distinct option DOM identities", () => {
+  const paths = ["Folder/Note", "Folder_2f_Note", "Status", "status", "STATUS", "😀", "_d83d__de00_"];
+  expect(new Set(paths.map(path => optionDomId("list", path))).size).toBe(paths.length);
+});
 
 describe("namesToOptions", () => {
   it("makes the name both id and label, in order", () => {

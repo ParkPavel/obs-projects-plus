@@ -217,13 +217,13 @@ describe("RelationPickerPopover", () => {
   test("Enter takes the top match until the user moves, then the active option", async () => {
     const first = await mount();
     key(first.input, "Enter");
-    expect(first.commits).toEqual(["[[Alpha]]"]);
+    expect(first.commits).toEqual(["[[Beta]]"]);
     first.component.$destroy();
 
     const moved = await mount();
     key(moved.input, "ArrowDown");
     key(moved.input, "Enter");
-    expect(moved.commits).toEqual(["[[Beta]]"]);
+    expect(moved.commits).toEqual(["[[Gamma]]"]);
     moved.component.$destroy();
   });
 
@@ -262,15 +262,15 @@ describe("RelationPickerPopover", () => {
   test("a mouse press keeps focus and its click picks; a click with no press (touch, keyboard) picks too", async () => {
     const m = await mount();
     const pressEvent = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
-    items()[1]!.dispatchEvent(pressEvent);
+    items().find(item => item.title === "Beta")!.dispatchEvent(pressEvent);
     expect(pressEvent.defaultPrevented).toBe(true);
     expect(m.commits).toEqual([]);
-    items()[1]!.click();
+    items().find(item => item.title === "Beta")!.click();
     expect(m.commits).toEqual(["[[Beta]]"]);
     m.component.$destroy();
 
     const t = await mount();
-    items()[2]!.click();
+    items().find(item => item.title === "Gamma")!.click();
     expect(t.commits).toEqual(["[[Gamma]]"]);
     t.component.$destroy();
   });

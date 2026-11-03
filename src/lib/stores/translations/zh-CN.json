@@ -31,7 +31,7 @@
         },
         "formula-errors": {
             "column-mode": "Agenda 中的列引用需要新规则。请明确选择该模式，或使用针对当前记录的条件。",
-    "version": "此公式使用不支持的版本。请先更新 Projects Plus，再计算或更改公式。",
+            "version": "此公式使用不支持的版本。请先更新 Projects Plus，再计算或更改公式。",
             "number": "数字格式不正确。请检查正负号、小数点和指数。",
             "string": "请使用相同类型的引号结束文本。",
             "escape": "反斜杠后的字符不受支持。请检查转义序列。",
@@ -1828,7 +1828,9 @@
                     "relation-cancel": "取消",
                     "filter-canvas": "按此行筛选关联的块",
                     "unfilter-canvas": "停止按此行筛选画布",
-                    "group-empty": "无值"
+                    "group-empty": "无值",
+                    "relation-load-error": "无法加载关联数据库中的记录。请重试或检查数据源。",
+                    "relation-retry": "重试"
                 },
                 "record-card": {
                     "change-icon": "更换图标",
