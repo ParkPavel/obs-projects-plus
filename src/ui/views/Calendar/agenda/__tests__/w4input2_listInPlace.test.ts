@@ -58,6 +58,22 @@ async function mount(lists: unknown[] = []) {
 
 const nameInput = (root: ParentNode) => root.querySelector<HTMLInputElement>(".agenda-list-name input")!;
 
+test("the desktop header exposes one named create action and passes its selected day once", async () => {
+  const { isMobileDevice } = require("src/lib/stores/ui"); isMobileDevice.set(false);
+  const create = jest.fn();
+  const view = render(Sidebar, { props: { project: { id: "p", name: "Project", agenda: { mode: "custom", custom: { lists: [] } } },
+    currentDate: dayjs("2026-11-03"), records: [], fields: [], width: 240, onCreateRecord: create } });
+  try {
+    await settle();
+    const buttons = view.getAllByRole("button", { name: "views.calendar.agenda.add-note" });
+    expect(buttons).toHaveLength(1); expect(buttons[0]!.getAttribute("type")).toBe("button");
+    await fireEvent.click(buttons[0]!); expect(create).toHaveBeenCalledTimes(1);
+    expect(create.mock.calls[0]![0].format("YYYY-MM-DD")).toBe("2026-11-03");
+    view.component.$set({ onCreateRecord: undefined }); await settle();
+    expect(view.queryByRole("button", { name: "views.calendar.agenda.add-note" })).toBeNull();
+  } finally { view.unmount(); isMobileDevice.set(true); }
+});
+
 describe("custom agenda lists intersect the selected day with their conditions", () => {
   it("scopes empty and filtered lists to the day, includes spanning events and follows date navigation", async () => {
     const todo = { ...list("todo", "Todo", 0), filterGroup: { id:"g",conjunction:"AND",groups:[],filters:[{id:"s",field:"status",operator:"is",value:"todo",enabled:true}] } };

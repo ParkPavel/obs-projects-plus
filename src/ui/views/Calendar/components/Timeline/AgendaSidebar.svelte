@@ -692,7 +692,7 @@
     {/if}
     {#if !collapsed}
       <div class="date-picker-container">
-        <button class="date-btn" on:click={toggleDatePicker}>
+        <button class="date-btn" type="button" title={dateDisplay} on:click={toggleDatePicker}>
           <span class="date-icon"><Icon name="calendar" size="sm" /></span>
           <span class="date-text">{dateDisplay}</span>
           <span class="date-arrow"><Icon name={showDatePicker ? 'chevron-up' : 'chevron-down'} size="xs" /></span>
@@ -747,7 +747,7 @@
       </div>
       
       {#if onCreateRecord}
-        <button class="add-btn" on:click={handleAdd} title={labels.addNote}>
+        <button class="ppp-agenda-add-record" type="button" aria-label={labels.addNote} on:click={handleAdd} title={labels.addNote}>
           <Icon name="plus" size="md" />
         </button>
       {/if}
@@ -964,6 +964,7 @@
   /* Base container */
   .agenda {
     width: var(--w, var(--agenda-width));
+    box-sizing: border-box;
     min-width: var(--w, var(--agenda-width));
     max-width: var(--w, var(--agenda-width));
     background: var(--background-secondary);
@@ -1026,7 +1027,7 @@
        0/unset on desktop and tablets. Because the box itself is bounded, the
        list inside no longer pads for the bar (see `.agenda.mobile .content`). */
     bottom: var(--view-bottom-spacing, 0);
-    width: 85vw;
+    width: 85%;
     max-width: 20rem;
     min-width: auto;
     /* CRITICAL: Lower than SettingsMenu (101) to avoid overlap */
@@ -1123,6 +1124,7 @@
     align-items: center;
     gap: var(--agenda-gap-md);
     width: 100%;
+    min-width: 0;
     padding: var(--agenda-gap-md) var(--agenda-gap-lg);
     background: var(--background-primary);
     border: 0.0625rem solid var(--background-modifier-border);
@@ -1139,7 +1141,7 @@
     align-items: center;
     color: var(--text-muted);
   }
-  .date-text { flex: 1; text-align: left; font-weight: var(--ppp-font-weight-medium, 500); }
+  .date-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; font-weight: var(--ppp-font-weight-medium, 500); }
   .date-arrow { 
     display: flex; 
     align-items: center;
@@ -1282,9 +1284,13 @@
   .stat-overdue { background: rgba(var(--color-red-rgb, 244, 67, 54), 0.15); color: var(--text-error); }
   
   /* Add button */
-  .add-btn {
-    width: var(--ppp-icon-size-lg, 1.5rem);
-    height: var(--ppp-icon-size-lg, 1.5rem);
+  .ppp-agenda-add-record {
+    width: var(--agenda-touch-min);
+    height: var(--agenda-touch-min);
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: var(--interactive-accent);
     color: var(--text-on-accent);
     border: none;
@@ -1294,7 +1300,7 @@
     font-weight: var(--ppp-font-weight-semibold, 600);
     flex-shrink: 0;
   }
-  .add-btn:hover { opacity: 0.9; transform: scale(1.05); }
+  @media (hover: hover) and (pointer: fine) { .ppp-agenda-add-record:hover { opacity: 0.9; } }
   
   /* Content */
   .content {
@@ -1510,13 +1516,6 @@
   .agenda.mobile .events { 
     max-height: 16rem; 
   }
-  .agenda.mobile .add-btn {
-    min-width: var(--agenda-touch-min);
-    min-height: var(--agenda-touch-min);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
   
   /* CUSTOM MODE STYLES */
   .custom-lists {
@@ -1659,7 +1658,7 @@
   
   /* Reduced motion */
   @media (prefers-reduced-motion: reduce) {
-    .agenda, .event, .add-btn, .date-btn, .custom-add-btn, .custom-add-empty { transition: none; }
+    .agenda, .event, .ppp-agenda-add-record, .date-btn, .custom-add-btn, .custom-add-empty { transition: none; }
     .agenda-scrim { animation: none; }
   }
 </style>

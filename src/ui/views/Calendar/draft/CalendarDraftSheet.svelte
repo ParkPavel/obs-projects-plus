@@ -190,6 +190,7 @@
       </button>
     </div>
 
+    <div class="ppp-draft-sheet__body">
     {#if mappingProblem}
       <p class="ppp-draft-sheet__error" role="alert">{mappingProblem}</p>
     {/if}
@@ -262,7 +263,7 @@
       </div>
 
       {#if writable(draft.mapping.status)}
-        <div class="ppp-draft-sheet__field">
+        <div class="ppp-draft-sheet__field ppp-draft-sheet__field--clearable">
           <label class="ppp-draft-sheet__caption" for="{uid}-status">{$i18n.t("views.calendar.draft.status")}</label>
           <ComboField
             id="{uid}-status"
@@ -297,7 +298,7 @@
       {/if}
 
       {#if writable(draft.mapping.icon)}
-        <div class="ppp-draft-sheet__field">
+        <div class="ppp-draft-sheet__field ppp-draft-sheet__field--clearable">
           <label class="ppp-draft-sheet__caption" for="{uid}-icon">{$i18n.t("views.calendar.draft.icon")}</label>
           <TextField
             id="{uid}-icon"
@@ -350,6 +351,7 @@
     {#if computed.length}
       <p class="ppp-draft-sheet__hint">{$i18n.t("views.calendar.draft.computed", { fields: computed.join(", ") })}</p>
     {/if}
+    </div>
   </div>
   {/key}
 {/if}
@@ -361,8 +363,12 @@
     flex-direction: column;
     gap: 0.5em;
     max-block-size: 55%;
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    min-block-size: 0;
+    min-inline-size: 0;
+    inline-size: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    container-type: inline-size;
     padding: 0.5em 0.75em calc(0.75em + env(safe-area-inset-bottom, 0em));
     background: var(--background-primary);
     border-top: var(--ppp-border-width) solid var(--background-modifier-border);
@@ -383,8 +389,18 @@
     }
   }
   .ppp-draft-sheet__bar {
+    flex: none;
     display: flex;
     align-items: center;
+    gap: 0.5em;
+  }
+  .ppp-draft-sheet__body {
+    min-block-size: 0;
+    min-inline-size: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
     gap: 0.5em;
   }
   .ppp-draft-sheet__title {
@@ -424,6 +440,16 @@
   }
   .ppp-draft-sheet__field--wide {
     grid-column: 1 / -1;
+  }
+  .ppp-draft-sheet__field--clearable {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
+  .ppp-draft-sheet__field--clearable > .ppp-draft-sheet__caption { grid-column: 1 / -1; }
+  @container (min-width: 48em) {
+    .ppp-draft-sheet__fields { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .ppp-draft-sheet__field--wide { grid-column: span 2; }
   }
   .ppp-draft-sheet__caption {
     font-size: var(--font-ui-smaller);
