@@ -14,7 +14,8 @@
   import type { FilterDefinition } from "src/settings/base/settings";
   import FilterPanel from "src/ui/components/FilterPanel/FilterPanel.svelte";
   import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
-  import FilterPills from "src/ui/components/FilterPills/FilterPills.svelte";
+  import FilterSummary from "src/ui/components/FilterPills/FilterSummary.svelte";
+  import { enabledFilterConditionCount, hasFilterEffect } from "src/lib/engine/filterCompose";
   import { Icon } from "obsidian-svelte";
 
   export let filter: FilterDefinition | undefined = undefined;
@@ -27,16 +28,16 @@
   let open = false;
   let triggerEl: HTMLButtonElement | null = null;
 
-  $: conditions = (filter?.conditions ?? []).filter((c) => c.enabled !== false);
+  $: conditionCount = enabledFilterConditionCount(filter);
 
   function handleUpdate(e: CustomEvent<FilterDefinition>) {
     const next = e.detail;
-    dispatch("change", next.conditions.length > 0 ? next : undefined);
+    dispatch("change", hasFilterEffect(next) ? next : undefined);
   }
 
 </script>
 
-{#if !readonly || conditions.length > 0}
+{#if !readonly || conditionCount > 0}
   <!-- w4-p10a (N8, Codex design A): one button, "Filter · N", in the block's
        row beside its views — the pills' own row is gone. N counts the switched
        on conditions; none, no number. It opens the same editor (on a phone the
@@ -46,28 +47,22 @@
       bind:this={triggerEl}
       type="button"
       class="ppp-blockfilter-button clickable-icon"
-      class:ppp-blockfilter-button--on={conditions.length > 0}
+      class:ppp-blockfilter-button--on={conditionCount > 0}
       aria-haspopup="dialog"
       aria-expanded={open}
-      aria-label={conditions.length > 0
-        ? `${$i18n.t("views.dashboard.block-filter.add", { defaultValue: "Filter" })}: ${conditions.length}`
+      aria-label={conditionCount > 0
+        ? `${$i18n.t("views.dashboard.block-filter.add", { defaultValue: "Filter" })}: ${conditionCount}`
         : $i18n.t("views.dashboard.block-filter.add", { defaultValue: "Filter" })}
       on:click={() => (open = !open)}
     >
       <Icon name="filter" size="sm" />
-      {#if conditions.length > 0}<span class="ppp-blockfilter-count">{conditions.length}</span>{/if}
+      {#if conditionCount > 0}<span class="ppp-blockfilter-count">{conditionCount}</span>{/if}
     </button>
     <FloatingPopup {triggerEl} bind:open placement="bottom-start" role="dialog"
       ariaLabel={$i18n.t("views.dashboard.block-filter.aria", { defaultValue: "Block filter" })}>
       <div class="ppp-blockfilter-popover">
         {#if readonly}
-          <FilterPills
-            {conditions}
-            readonly
-            ariaLabel={$i18n.t("views.dashboard.block-filter.aria", { defaultValue: "Block filter" })}
-            addLabel={$i18n.t("views.dashboard.block-filter.add", { defaultValue: "Filter" })}
-            removeLabel={$i18n.t("views.dashboard.block-filter.remove", { defaultValue: "Remove condition" })}
-          />
+          <FilterSummary value={filter} />
         {:else}
           <FilterPanel
             value={filter}

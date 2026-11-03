@@ -368,9 +368,16 @@ describe("R0.33 — the tree", () => {
     const editor = stripComponentComments(readText(join(SRC_ROOT, "ui/views/Calendar/agenda/AgendaFilterEditor.svelte")));
     expect(editor).toContain("<FilterPanel");
     const panel = stripComponentComments(readText(join(SRC_ROOT, "ui/components/FilterPanel/FilterPanel.svelte")));
-    expect(panel).toContain("<FloatingPopup");
-    expect(panel).not.toContain("ppp-popover-container");
-    expect(panel).not.toContain("activeDocument.body.appendChild");
+    expect(panel).toContain("<OptionField");
+    const option = stripComponentComments(readText(join(SRC_ROOT, "ui/components/fields/OptionField.svelte")));
+    expect(option).toContain("<ComboField");
+    const combo = stripComponentComments(readText(join(SRC_ROOT, "ui/components/fields/ComboField.svelte")));
+    expect(combo).toContain('class="ppp-popup ppp-combo-popup"');
+    expect(combo).toContain('use:portal={{ to: "document-body" }}');
+    for (const source of [panel, option, combo]) {
+      expect(source).not.toContain("ppp-popover-container");
+      expect(source).not.toContain("activeDocument.body.appendChild");
+    }
   });
 
   it("every node portalled to <body> carries a plugin root", () => {

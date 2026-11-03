@@ -53,7 +53,7 @@ describe("AgendaFilterEditor — the view filter's editor (N11)", () => {
 
   test("P1 #12: typing in the value box emits a change whose filter carries the text, with its id", async () => {
     const m = mount();
-    const box = comboInputs(m.target)[0]!;
+    const box = comboInputs(m.target.querySelector(".value-area")!)[0]!;
     await enter(box);
     typeInto(box, "Be");
     await flush();
@@ -67,7 +67,7 @@ describe("AgendaFilterEditor — the view filter's editor (N11)", () => {
 
   test("P1 #12: the text stays in the box through the re-render the edit causes", async () => {
     const m = mount();
-    const box = comboInputs(m.target)[0]!;
+    const box = comboInputs(m.target.querySelector(".value-area")!)[0]!;
     await enter(box);
     typeInto(box, "Be");
     await flush();

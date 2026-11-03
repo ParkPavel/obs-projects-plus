@@ -53,7 +53,7 @@ afterEach(() => {
 
 async function offered(component: unknown, props: Record<string, unknown>): Promise<string[]> {
   const m = mountCollecting(component as never, props, "update");
-  const box = comboInputs(m.target)[0]!;
+  const box = comboInputs(m.target.querySelector(".value-area")!)[0]!;
   await enter(box);
   const labels = optionLabels();
   m.destroy();
