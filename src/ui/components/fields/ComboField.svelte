@@ -37,12 +37,11 @@
   import { setIcon } from "obsidian";
   import { portal } from "src/ui/portal";
   import { keepInView } from "./keepInView";
-  import { remAt, rootFontPx } from "src/ui/utils/cssLength";
   import { createDraftController, recordImeCompositionEnd, type CommitReason } from "./draftController";
   import { createOptionSearch, optionDomId, stepActive, type ComboOption } from "./comboOptions";
   import { onKeyboardChange, visibleViewport } from "src/ui/utils/visibleViewport";
-  import { aboveFieldPlacement, makeRoomAbove } from "./aboveFieldPlacement";
-  import { fieldViewport } from "./fieldViewport";
+  import { placeAboveField } from "./placeAboveField";
+  import { revealInList } from "./revealInList";
 
   export let value = "";
   export let options: ComboOption[] = [];
@@ -147,24 +146,11 @@
     const version = ++placementVersion;
     await tick();
     if (version !== placementVersion || !expanded || !rootEl || !popupEl || !inputEl) return;
-    const doc = rootEl.ownerDocument;
-    const view = doc.defaultView ?? window;
-    const base = rootFontPx(doc);
-    let anchor = measureAnchor()!;
-    const box = popupEl.getBoundingClientRect();
-    const bounds = fieldViewport(view, insetEl ? view.getComputedStyle(insetEl) : undefined);
-    const natural = Math.min(Math.max(popupEl.scrollHeight, box.height), 12 * base);
-    let placement = aboveFieldPlacement(anchor, natural, box.width, bounds, base);
-    const area = `${bounds.width}|${bounds.height}`;
-    if (!placement.visible && placement.missing > 0 && roomAttempt !== area) {
-      roomAttempt = area;
-      makeRoomAbove(inputEl, placement.missing, bounds);
-      anchor = measureAnchor()!;
-      placement = aboveFieldPlacement(anchor, natural, box.width, bounds, base);
-    }
+    const placement = placeAboveField(inputEl, popupEl, insetEl, roomAttempt);
     if (version !== placementVersion || !expanded) return;
+    roomAttempt = placement.roomAttempt;
     placementHidden = !placement.visible;
-    popupStyle = `top: ${remAt(placement.top, base)}; left: ${remAt(placement.left, base)}; width: ${remAt(placement.width, base)}; max-height: ${remAt(placement.height, base)}; visibility: ${placementHidden ? "hidden" : "visible"};`;
+    popupStyle = placement.style;
   }
   $: if (expanded && popupEl && shown) void place();
 
@@ -227,7 +213,7 @@
   async function revealActive(): Promise<void> {
     await tick();
     const row = popupEl?.querySelector<HTMLElement>(".ppp-combo-option--active");
-    if (row && typeof row.scrollIntoView === "function") row.scrollIntoView({ block: "nearest" });
+    if (row) revealInList(row, popupEl);
   }
 
   // ── Lifecycle ──────────────────────────────────────────────

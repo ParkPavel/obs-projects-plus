@@ -22,6 +22,8 @@
   import { isImeKey, recordImeCompositionEnd } from "src/ui/components/fields/draftController";
   import { fitVisibleViewport } from "src/ui/actions/fitVisibleViewport";
   import { onKeyboardChange, visibleViewport } from "src/ui/utils/visibleViewport";
+  import { placeAboveField } from "src/ui/components/fields/placeAboveField";
+  import { followFieldAnchor } from "src/ui/actions/followFieldAnchor";
 
   // ── Public types ───────────────────────────────────────────
   type PopupPlacement =
@@ -31,10 +33,11 @@
     | "top-end"
     | "right-start"
     | "left-start"
+    | "above-field"
     // w4-p07 (N13): beside the anchor — right, else left; under it, else over
     // it, only when neither side has room. Chosen once per opening.
     | "side-start";
-  type ResolvedPlacement = Exclude<PopupPlacement, "side-start">;
+  type ResolvedPlacement = Exclude<PopupPlacement, "side-start" | "above-field">;
 
   // ── Props ──────────────────────────────────────────────────
 
@@ -44,13 +47,13 @@
   /** Popup open. */
   export let open: boolean = false;
 
-  /** Preferred placement; flip kicks in when no space. */
+  /** General placements flip; above-field uses the shared strict upper input policy. */
   export let placement: PopupPlacement = "bottom-start";
 
   /** Mobile presentation; use `anchored` for inline suggestions near an input. */
   export let mobilePresentation: "sheet" | "anchored" = "sheet";
 
-  /** Gap from trigger in rem (default 0.25rem). */
+  /** Gap for general popups; above-field uses the shared input gap. */
   export let offsetRem: number = 0.25;
 
   /** Close when a click lands inside the popup (action menus). */
@@ -63,6 +66,7 @@
 
   /** Accessible label for the popup container. */
   export let ariaLabel: string = "";
+  export let id: string | undefined = undefined;
 
   /**
    * Auto-focus the first interactive element when the popup opens.
@@ -75,10 +79,13 @@
   // ── Internal ───────────────────────────────────────────────
   // w4-p06 (N9): the tallest a list or menu grows — about ten rows.
   const LIST_MAX_REM = 20;
-  const dispatch = createEventDispatcher<{ close: void }>();
+  const dispatch = createEventDispatcher<{ close: void; position: { visible: boolean } }>();
 
   let popupEl: HTMLDivElement | null = null;
   let style = "";
+  let insetEl: HTMLSpanElement | null = null;
+  let roomAttempt = "", placementVersion = 0, placementHidden = true;
+  $: if (!open) { roomAttempt = ""; placementVersion++; placementHidden = true; }
   // The side a "side-start" popup took on this opening: a list that grows or
   // shrinks afterwards does not carry the window across its anchor.
   let sideTaken: ResolvedPlacement | null = null;
@@ -186,9 +193,17 @@
 
   // ── Positioning ────────────────────────────────────────────
   async function recompute(): Promise<void> {
+    const version = ++placementVersion;
     // Wait one tick so the popup is laid out and we can measure.
     await tick();
-    if (!open || !popupEl || !triggerEl) return;
+    if (version !== placementVersion || !open || !popupEl || !triggerEl) return;
+    if (placement === "above-field") {
+      const result = placeAboveField(triggerEl, popupEl, insetEl, roomAttempt);
+      if (version !== placementVersion || !open) return;
+      roomAttempt = result.roomAttempt; style = result.style; placementHidden = !result.visible;
+      dispatch("position", { visible: result.visible });
+      return;
+    }
     // An anchor re-rendered away measures as a zero box at the corner; the
     // window stays where it was instead of jumping there.
     if (!triggerEl.isConnected && style) return;
@@ -220,7 +235,7 @@
       "left-start": { top: tRect.top, left: tRect.left - pRect.width - offsetPx },
     };
 
-    const side = resolvePlacement(tRect, pRect, bounds, offsetPx, marginPx);
+    const side = resolvePlacement(tRect, pRect, bounds, offsetPx, marginPx, placement);
     let { top, left } = positions[side];
 
     // w4-p06 (N9): a popup under or over its anchor stays against it. One too
@@ -292,9 +307,10 @@
     pRect: DOMRect,
     bounds: { top: number; left: number; right: number; bottom: number },
     offsetPx: number,
-    marginPx: number
+    marginPx: number,
+    preferred: Exclude<PopupPlacement, "above-field">
   ): ResolvedPlacement {
-    if (placement !== "side-start") return placement;
+    if (preferred !== "side-start") return preferred;
     if (sideTaken) return sideTaken;
     const below = bounds.bottom - marginPx - (tRect.bottom + offsetPx);
     const above = tRect.top - offsetPx - (bounds.top + marginPx);
@@ -408,7 +424,7 @@
 </script>
 
 {#if open}
-  {#if $isMobile && mobilePresentation === "sheet"}
+  {#if $isMobile && mobilePresentation === "sheet" && placement !== "above-field"}
     <!-- ── MOBILE: Bottom Sheet ──────────────────────────── -->
     <div
       class="ppp-popup ppp-popup-backdrop"
@@ -421,6 +437,7 @@
         bind:this={popupEl}
         class="ppp-popup ppp-popup--bottom-sheet"
         {role}
+        {id}
         aria-label={ariaLabel || undefined}
         aria-modal="true"
         on:click={handleInnerClick}
@@ -435,19 +452,27 @@
     <div
       bind:this={popupEl}
       use:portal={{ to: "document-body" }}
+      use:followFieldAnchor={placement === "above-field" ? { anchor: triggerEl, changed: handleReposition } : null}
       class="ppp-popup ppp-popup--floating"
-      {style}
+      class:ppp-popup--field-suggestions={placement === "above-field"}
+      style={placement === "above-field" && placementHidden ? "visibility: hidden;" : style}
+      aria-hidden={placement === "above-field" && placementHidden ? "true" : undefined}
+      data-settings-dropdown={placement === "above-field" ? "true" : undefined}
+      {id}
       {role}
       aria-label={ariaLabel || undefined}
       on:click={handleInnerClick}
       on:compositionstart={() => { composing = true; }} on:compositionend={(event) => { recordImeCompositionEnd(event); composing = false; }}
     >
+      {#if placement === "above-field"}<span bind:this={insetEl} class="ppp-popup-insets" aria-hidden="true"></span>{/if}
       <slot />
     </div>
   {/if}
 {/if}
 
 <style>
+  .ppp-popup--floating.ppp-popup--field-suggestions { min-width: 0; max-width: none; overscroll-behavior: contain; touch-action: pan-y; }
+  .ppp-popup-insets { position: fixed; width: 0; height: 0; padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); visibility: hidden; pointer-events: none; }
   .ppp-popup--floating {
     position: fixed;
     z-index: var(--ppp-z-popover, 50);

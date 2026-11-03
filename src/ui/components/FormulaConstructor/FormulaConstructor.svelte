@@ -1,4 +1,5 @@
 <script lang="ts" context="module">
+  let sequence = 0;
   export type FormulaSnippet = {
     label: string;
     insert: string;
@@ -46,6 +47,9 @@
   import { releaseOnOutsideTap } from "src/ui/components/fields/releaseOnOutsideTap";
   import { tokenize, type Token } from "src/lib/helpers/formulaParser";
   import { MAX_FORMULA_INPUT_LENGTH } from "src/lib/formula/limits";
+  import { optionDomId } from "src/ui/components/fields/comboOptions";
+  import { revealInList } from "src/ui/components/fields/revealInList";
+  import { createOwnerFrames } from "src/ui/utils/ownerFrames";
 
   // ── Snippets catalog (default) ──────────────────────────────
   // Small built-in catalog for empty-state Ctrl+Space discovery. Each surface
@@ -106,6 +110,13 @@
   let highlightEl: HTMLDivElement | null = null;
   let suggestionListEl: HTMLDivElement | null = null;
   let composing = false;
+  const listId = `ppp-fc-list-${++sequence}`;
+  const frames = createOwnerFrames(); onDestroy(frames.destroy);
+  let suggestionsVisible = false;
+  $: if (!showSuggestions) suggestionsVisible = false;
+  $: expanded = showSuggestions && suggestionsVisible;
+  $: suggestionKeys = snippetsMode ? snippets.map(snippet => `snippet:${snippet.label}:${snippet.insert}`) : filteredSuggestions.map(suggestion => `${suggestion.kind}:${suggestion.label}`);
+  $: activeId = expanded && selectedSuggestionIndex >= 0 && suggestionKeys[selectedSuggestionIndex] ? optionDomId(listId, suggestionKeys[selectedSuggestionIndex]!) : undefined;
 
   /** Help and external tools insert at the native selection, preserving surrounding text. */
   export function insertText(text: string): void {
@@ -317,7 +328,7 @@
     forceOpen = false;
     cursorWord = "";
 
-    requestAnimationFrame(() => {
+    frames.schedule(textarea, () => {
       textarea.focus();
       const newPos = replaceFrom + insert.length;
       textarea.setSelectionRange(newPos, newPos);
@@ -335,7 +346,7 @@
     forceOpen = false;
     cursorWord = "";
 
-    requestAnimationFrame(() => {
+    frames.schedule(textarea, () => {
       textarea.focus();
       const newPos = value.length;
       textarea.setSelectionRange(newPos, newPos);
@@ -344,10 +355,10 @@
   }
 
   function scrollSuggestionIntoView() {
-    requestAnimationFrame(() => {
+    frames.schedule(textareaEl, () => {
       // suggestionListEl lives inside FloatingPopup portal (outside containerEl DOM tree).
       const el = suggestionListEl?.querySelector(".ppp-fc-suggestion--selected");
-      if (el) el.scrollIntoView({ block: "nearest" });
+      if (el) revealInList(el as HTMLElement, suggestionListEl?.parentElement ?? null);
     });
   }
 
@@ -374,7 +385,7 @@
 
     const listLen = snippetsMode ? snippets.length : filteredSuggestions.length;
 
-    if (showSuggestions && listLen > 0) {
+    if (expanded && listLen > 0) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
         selectedSuggestionIndex =
@@ -430,7 +441,7 @@
       {/if}
       <textarea
         bind:this={textareaEl}
-        use:keepInView
+        use:keepInView={{ confirm: commitCurrent }}
         use:releaseOnOutsideTap
         class="ppp-fc-textarea"
         class:ppp-fc-textarea--error={errors.length > 0}
@@ -440,11 +451,14 @@
         {disabled}
         {placeholder}
         aria-label={ariaLabel || $i18n.t("views.dashboard.formula.title")}
+        role="combobox" aria-autocomplete="list" aria-haspopup="listbox" aria-expanded={expanded}
+        aria-controls={expanded ? listId : undefined} aria-activedescendant={activeId}
         on:input={(e) => { handleInput(e); syncScroll(); }}
         on:click={handleCursorMove}
         on:keyup={handleCursorMove}
         on:focus={handleCursorMove}
         on:scroll={syncScroll}
+        on:blur={frames.clear}
         on:compositionstart={() => { composing = true; showSuggestions = false; }}
         on:compositionend={(event) => { recordImeCompositionEnd(event); composing = false; handleCursorMove(event); }}
         spellcheck="false"
@@ -469,7 +483,8 @@
     <FloatingPopup
       triggerEl={textareaEl}
       open={showSuggestions && (snippetsMode || filteredSuggestions.length > 0)}
-      placement="bottom-start"
+      placement="above-field"
+      id={listId}
       offsetRem={0.25}
       role="listbox"
       autoFocus={false}
@@ -477,6 +492,7 @@
         ? $i18n.t("views.dashboard.formula.snippets-label")
         : $i18n.t("views.dashboard.formula.suggestions-label")}
       on:close={() => { showSuggestions = false; forceOpen = false; }}
+      on:position={(event) => { suggestionsVisible = event.detail.visible; }}
     >
       {#if snippetsMode}
         <div
@@ -488,7 +504,9 @@
               class="ppp-fc-suggestion ppp-fc-suggestion--snippet"
               class:ppp-fc-suggestion--selected={i === selectedSuggestionIndex}
               role="option"
+              id={optionDomId(listId, suggestionKeys[i] ?? "")}
               aria-selected={i === selectedSuggestionIndex}
+              on:mousedown|preventDefault
               on:click|stopPropagation={() => insertSnippet(snippet)}
             >
               <span class="ppp-fc-snippet-label">{snippet.label}</span>
@@ -506,7 +524,9 @@
               class:ppp-fc-suggestion--fn={suggestion.kind === "function"}
               class:ppp-fc-suggestion--selected={i === selectedSuggestionIndex}
               role="option"
+              id={optionDomId(listId, suggestionKeys[i] ?? "")}
               aria-selected={i === selectedSuggestionIndex}
+              on:mousedown|preventDefault
               on:click|stopPropagation={() => insertSuggestion(suggestion)}
             >
               {suggestion.label}{suggestion.kind === "function" ? "(" : ""}
@@ -659,18 +679,19 @@
   .ppp-fc-suggestions {
     display: flex;
     flex-direction: column;
-    min-width: 12rem;
-    max-height: 12rem;
-    overflow-y: auto;
+    min-width: 0;
   }
 
   .ppp-fc-suggestions--snippets {
-    min-width: 16rem;
+    width: 100%;
   }
 
   .ppp-fc-suggestion {
     display: block;
     width: 100%;
+    min-height: var(--ppp-touch-target-min);
+    height: auto;
+    box-shadow: none;
     text-align: left;
     padding: 0.25rem 0.5rem;
     border: none;
@@ -681,10 +702,10 @@
     font-size: var(--font-ui-small);
   }
 
-  .ppp-fc-suggestion:hover,
   .ppp-fc-suggestion--selected {
     background: var(--background-modifier-hover);
   }
+  @media (hover: hover) and (pointer: fine) { .ppp-fc-suggestion:hover { background: var(--background-modifier-hover); } }
 
   .ppp-fc-suggestion--fn {
     color: var(--text-accent);

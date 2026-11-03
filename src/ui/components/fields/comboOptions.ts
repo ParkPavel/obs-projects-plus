@@ -8,6 +8,7 @@
 
 import { createSuggestionIndex, searchSuggestions } from "src/lib/suggestions/suggestionSearch";
 import type { SearchText } from "src/lib/suggestions/searchText";
+import { revealInList } from "./revealInList";
 
 /** One selectable option. `id` is stable and names the option in the DOM. */
 export interface ComboOption extends SearchText {
@@ -54,11 +55,11 @@ export function clampActive(active: number, length: number): number {
 
 /**
  * Svelte action: keep the active row of a scrolling list in view. Pass whether
- * the row is the active one; `scrollIntoView` is missing in some test hosts.
+ * the row is active. Only its list scrolls, preserving the source field's place.
  */
 export function reveal(node: HTMLElement, active: boolean): { update(next: boolean): void } {
   const run = (on: boolean): void => {
-    if (on && typeof node.scrollIntoView === "function") node.scrollIntoView({ block: "nearest" });
+    if (on) revealInList(node, node.parentElement);
   };
   run(active);
   return { update: run };
