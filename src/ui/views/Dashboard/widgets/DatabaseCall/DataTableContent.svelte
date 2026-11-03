@@ -92,9 +92,9 @@
     (pending) => { searching = pending; },
   );
   onDestroy(search.destroy);
-  const editing = createTableEditing(() => api, () => fields);
+  const editing = createTableEditing(() => api, () => fields, () => sourceProjectId ?? project?.id, () => readonly);
   onDestroy(editing.destroy);
-
+  $: editing.refresh(api, fields, sourceProjectId ?? project?.id, readonly);
   $: columns = buildColumns(fields, config);
   // F2.4: live resize preview overrides one column width until commit.
   let liveWidth: { field: string; rem: number } | null = null;

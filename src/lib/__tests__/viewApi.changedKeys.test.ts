@@ -181,10 +181,15 @@ describe("touched keys", () => {
     expect(files["a.md"]!.fm).toEqual({ source: "new", since: "10.04.2026", price: 9 });
   });
 
-  it("a record the frame does not hold is written whole even when built with updateRecordValues", async () => {
+  it("an explicit patch preserves untouched disk fields even when the current frame does not hold the record", async () => {
     const { files, api } = setup(["c.md"]);
     await api.updateRecord(updateRecordValues(rec("c.md", { source: "x", since, price: 1 }), { price: 9 }), fields);
-    expect(files["c.md"]!.fm["source"]).toBe("x");
-    expect(files["c.md"]!.fm["price"]).toBe(9);
+    expect(files["c.md"]!.fm).toEqual({ source: "old", since: "10.04.2026", price: 9 });
+  });
+
+  it("the batch path also honors explicit patches outside the current frame", async () => {
+    const { files, api } = setup(["c.md"]);
+    await api.updateRecords([updateRecordValues(rec("c.md", { source: "x", since, price: 1 }), { price: 9 })], fields);
+    expect(files["c.md"]!.fm).toEqual({ source: "old", since: "10.04.2026", price: 9 });
   });
 });

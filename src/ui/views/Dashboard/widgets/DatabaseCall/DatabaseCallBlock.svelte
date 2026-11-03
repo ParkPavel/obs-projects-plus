@@ -731,7 +731,7 @@
               </svelte:fragment>
             </EmptyState>
           {:else}
-            <DataTableContent
+            {#key activeTab.id}<DataTableContent
               frame={effectiveFrame}
               {api}
               readonly={readonly || sourceReadOnly}
@@ -746,7 +746,7 @@
               {newRowSignal}
               on:configChange={handleDataTableConfigChange}
               on:fieldPresetsChange={(e) => dispatch("fieldPresetsChange", e.detail)}
-            />
+            />{/key}
           {/if}
         {:else if activeTab.viewType === "board" && project}
           {#key activeTab.id}

@@ -74,3 +74,26 @@ it.each([
   expect(view.container.querySelector(".ppp-t2-editor, .ppp-t2-choice-input")).toBeNull();
   view.unmount();
 });
+
+it.each(["writer", "source", "readonly", "schema"])("cancels the old draft when its %s context changes", async change => {
+  const field = { name: "f", type: DataFieldType.String, repeated: false, identifier: false, derived: false, typeConfig: {} };
+  const name = { ...field, name: "name", identifier: true };
+  const record = { id: "A.md", values: { name: "A", f: "old" } };
+  const frame = { fields: [name, field], records: [record] };
+  const updateA = jest.fn().mockResolvedValue(true), updateB = jest.fn().mockResolvedValue(true);
+  const view = render(DataTableContent, { props: { frame, fields: frame.fields, api: { updateRecord: updateA } as never, sourceProjectId: "source-a", readonly: false, config: undefined, getRecordColor: () => null } });
+  try {
+    await settle(); view.container.querySelector<HTMLElement>(".ppp-t2-cell--editable")!.click(); await settle();
+    const input = view.container.querySelector<HTMLInputElement>(".ppp-t2-editor, .ppp-t2-choice-input")!;
+    expect(input).not.toBeNull();
+    input.value = "draft"; input.dispatchEvent(new Event("input", { bubbles: true })); await settle();
+    if (change === "writer") view.component.$set({ api: { updateRecord: updateB } as never });
+    else if (change === "source") view.component.$set({ sourceProjectId: "source-b" });
+    else if (change === "readonly") view.component.$set({ readonly: true });
+    else view.component.$set({ fields: [name, { ...field, type: DataFieldType.Number }] });
+    await settle();
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })); await settle();
+    expect(updateA).not.toHaveBeenCalled(); expect(updateB).not.toHaveBeenCalled();
+    expect(view.container.querySelector(".ppp-t2-editor, .ppp-t2-choice-input")).toBeNull();
+  } finally { view.unmount(); }
+});
