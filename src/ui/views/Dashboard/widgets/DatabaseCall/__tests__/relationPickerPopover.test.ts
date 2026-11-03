@@ -53,12 +53,14 @@ describe("relation picker popup", () => {
     await settle();
 
     const popup = document.querySelector<HTMLElement>(".ppp-popup--floating");
-    expect(popup).toHaveAttribute("role", "dialog");
+    expect(popup).toHaveAttribute("role", "presentation");
     expect(popup).toHaveAttribute("aria-label", "Related");
     expect(popup?.querySelector(".ppp-rel-picker")).not.toBeNull();
     expect(popup?.querySelector(".ppp-rel-picker-list")).toHaveTextContent("Alpha");
+    const input = view.container.querySelector<HTMLInputElement>("input.ppp-rel-picker-search")!;
+    expect(input).not.toBeNull(); expect(popup?.querySelector("input")).toBeNull();
 
-    popup?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
     await settle();
     expect(cancel).toHaveBeenCalledTimes(1);
     expect(document.querySelector(".ppp-popup--floating")).toBeNull();
@@ -67,7 +69,7 @@ describe("relation picker popup", () => {
     trigger.remove();
   });
 
-  it("uses the shared bottom sheet on mobile", async () => {
+  it("keeps mobile suggestions floating and the input in its original row", async () => {
     isMobile.set(true);
     const trigger = document.createElement("div");
     document.body.append(trigger);
@@ -76,7 +78,9 @@ describe("relation picker popup", () => {
     });
     await settle();
 
-    expect(document.querySelector(".ppp-popup--bottom-sheet .ppp-rel-picker")).not.toBeNull();
+    expect(document.querySelector(".ppp-popup--bottom-sheet")).toBeNull();
+    expect(document.querySelector(".ppp-popup--floating .ppp-rel-picker")).not.toBeNull();
+    expect(view.container.querySelector("input.ppp-rel-picker-search")).not.toBeNull();
 
     view.unmount();
     trigger.remove();

@@ -210,6 +210,13 @@ describe("RelationPickerPopover", () => {
     component.$on("cancel", () => (cancels += 1));
     await settle();
     const input = document.querySelector("input.ppp-rel-picker-search") as HTMLInputElement;
+    // This fixture exercises keyboard selection with a visible list. The
+    // production zero-layout guard deliberately hides an unmeasurable anchor.
+    jest.spyOn(input, "getBoundingClientRect").mockReturnValue({ top: 300, bottom: 328, left: 20, right: 220, width: 200, height: 28 } as DOMRect);
+    const popup = document.querySelector<HTMLElement>(".ppp-popup--floating")!;
+    jest.spyOn(popup, "getBoundingClientRect").mockReturnValue({ top: 0, bottom: 160, left: 0, right: 240, width: 240, height: 160 } as DOMRect);
+    Object.defineProperty(popup, "scrollHeight", { configurable: true, value: 160 });
+    window.dispatchEvent(new Event("resize")); await settle();
     return { target, component, commits, cancels: () => cancels, input };
   }
   const items = () => Array.from(document.querySelectorAll<HTMLElement>(".ppp-rel-picker-item"));

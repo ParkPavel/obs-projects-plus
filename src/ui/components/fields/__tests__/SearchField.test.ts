@@ -33,6 +33,16 @@ function mount(props: Record<string, unknown> = {}) {
 }
 
 describe("SearchField", () => {
+  test("a closed list exposes no expanded state and a read-only query cannot be cleared", async () => {
+    const m = mount({ query: "Kept", controls: "list", expanded: false, readOnly: true });
+    expect(m.input()).toHaveAttribute("aria-expanded", "false"); expect(m.input().readOnly).toBe(true);
+    expect(m.clearBtn()).toBeDisabled(); m.clearBtn()!.click(); expect(m.events).toEqual([]); expect(m.input().value).toBe("Kept");
+    m.destroy();
+  });
+  test("a cancelled mount cannot focus its detached input after the queued tick", async () => {
+    const m = mount({ focusOnMount: true }), focus = jest.spyOn(m.input(), "focus");
+    m.destroy(); await tick(); await tick(); expect(focus).not.toHaveBeenCalled();
+  });
   test("shows the search icon, the input and no clear button while the query is empty", () => {
     const m = mount();
     expect(m.target.querySelector(".ppp-search-field-icon")).not.toBeNull();

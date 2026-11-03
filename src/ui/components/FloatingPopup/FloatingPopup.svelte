@@ -43,6 +43,8 @@
 
   /** Element-anchor the popup positions relative to. May be null for programmatic open. */
   export let triggerEl: HTMLElement | null = null;
+  /** Sibling controls of the input belong to this interaction, not an outside tap. */
+  export let interactionEl: HTMLElement | null = null;
 
   /** Popup open. */
   export let open: boolean = false;
@@ -396,6 +398,7 @@
     if ((target as Element).closest?.("[data-settings-dropdown]")) return;
     // Don't auto-close on trigger — let the trigger handle toggle.
     if (triggerEl && triggerEl.contains(target)) return;
+    if (interactionEl?.contains(target)) return;
     requestClose();
   }
 

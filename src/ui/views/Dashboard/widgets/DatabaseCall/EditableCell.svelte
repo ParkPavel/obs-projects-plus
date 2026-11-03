@@ -98,7 +98,6 @@
   on:keydown={(e) => { if (e.target === e.currentTarget && e.key === "Enter" && !editing) { e.preventDefault(); handleCellClick(); } }}
 >
   {#if editing && field.type === DataFieldType.Relation}
-    <span class="ppp-t2-text">{cell.kind === "text" ? cell.text : ""}</span>
     <RelationPickerPopover {field} {value} {api} {frame} triggerEl={cellEl}
       {saving}
       on:commit on:cancel

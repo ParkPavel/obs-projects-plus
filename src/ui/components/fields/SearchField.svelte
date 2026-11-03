@@ -7,7 +7,7 @@
    * `queryChange` with ""). Keydown is forwarded so a consumer can add arrow
    * navigation; it must skip IME keys itself (`isImeKey`).
    */
-  import { createEventDispatcher, onMount, tick } from "svelte";
+  import { createEventDispatcher, onMount, onDestroy, tick } from "svelte";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { recordImeCompositionEnd } from "./draftController";
@@ -28,13 +28,20 @@
    */
   export let controls: string | undefined = undefined;
   export let activeDescendant: string | undefined = undefined;
+  export let expanded = true;
+  export let readOnly = false;
+  export let inputEl: HTMLInputElement | null = null;
+  export let onConfirm: (() => void) | undefined = undefined;
 
   const dispatch = createEventDispatcher<{
     queryChange: string;
     clear: void;
   }>();
 
-  let inputEl: HTMLInputElement | null = null;
+  let alive = true, composing = false;
+  onDestroy(() => { alive = false; });
+  export function isComposing(): boolean { return composing; }
+  function confirm(): void { if (alive && !readOnly && !composing) onConfirm?.(); }
 
   // i3-input: the field shows its own text while it has focus. The input was
   // bound to the parent's `query`, so a late or debounced echo of an older
@@ -46,20 +53,22 @@
 
   /** Move focus into the input. */
   export function focus(): void {
-    inputEl?.focus();
+    if (alive) inputEl?.focus();
   }
 
   onMount(async () => {
     if (!focusOnMount) return;
     await tick();
-    inputEl?.focus();
+    if (alive && inputEl?.isConnected) inputEl.focus();
   });
 
   function onInput(e: Event): void {
+    if (readOnly) return;
     text = (e.currentTarget as HTMLInputElement).value;
     dispatch("queryChange", text);
   }
   function clear(): void {
+    if (readOnly || composing) return;
     text = "";
     dispatch("queryChange", "");
     dispatch("clear");
@@ -72,15 +81,16 @@
   <!-- svelte-ignore a11y-role-supports-aria-props -->
   <input
     bind:this={inputEl}
-    use:keepInView
+    use:keepInView={onConfirm ? { confirm } : undefined}
     class="ppp-search-field-input {inputClass}"
     type="text"
     role={controls ? "combobox" : "searchbox"}
     value={text}
+    readonly={readOnly}
     {placeholder}
     aria-label={ariaLabel ?? (placeholder || undefined)}
     aria-controls={controls}
-    aria-expanded={controls ? "true" : undefined}
+    aria-expanded={controls ? expanded : undefined}
     aria-autocomplete={controls ? "list" : undefined}
     aria-activedescendant={activeDescendant}
     autocomplete="off"
@@ -89,7 +99,8 @@
     on:focus={() => (typing = true)}
     on:blur={() => (typing = false)}
     on:keydown
-    on:compositionend={recordImeCompositionEnd}
+    on:compositionstart={() => (composing = true)}
+    on:compositionend={(event) => { composing = false; recordImeCompositionEnd(event); }}
     on:mousedown|stopPropagation
   />
   {#if clearable && text !== ""}
@@ -97,6 +108,7 @@
       type="button"
       class="ppp-search-field-clear clickable-icon"
       aria-label={$i18n.t("common.clear", { defaultValue: "Clear" })}
+      disabled={readOnly}
       on:mousedown|preventDefault
       on:click={clear}
     ><Icon name="x" size="sm" /></button>

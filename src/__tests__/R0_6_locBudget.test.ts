@@ -112,7 +112,8 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   { file: "ui/views/Dashboard/widgets/DatabaseCall/tabLinkMenu.ts", maxLines: 50 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/fieldLayout.ts", maxLines: 70 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TableGroupSection.svelte", maxLines: 100 },
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/RelationPickerPopover.svelte", maxLines: 166 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/RelationPickerPopover.svelte", maxLines: 146 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/RelationPickerActions.svelte", maxLines: 32 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/RelationCandidateList.svelte", maxLines: 59 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/RelationSelection.svelte", maxLines: 28 },
   // B10: the calendar's day window moved onto FloatingPopup (1124 → 230 lines:

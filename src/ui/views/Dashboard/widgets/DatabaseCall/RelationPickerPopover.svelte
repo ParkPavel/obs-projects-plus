@@ -1,3 +1,4 @@
+<script context="module" lang="ts">let instances = 0;</script>
 <script lang="ts">
   /**
    * Target-scoped relations; single pick or explicit Done, Escape cancels.
@@ -17,6 +18,7 @@
   import RelationCountBadge from "./RelationCountBadge.svelte";
   import RelationSelection from "./RelationSelection.svelte";
   import RelationCandidateList from "./RelationCandidateList.svelte";
+  import RelationPickerActions from "./RelationPickerActions.svelte";
 
   export let field: DataField;
   export let value: Optional<DataValue>;
@@ -37,6 +39,9 @@
   let query = "";
   let active = 0;
   let popupOpen = true;
+  let inputEl: HTMLInputElement | null = null, interactionEl: HTMLDivElement | null = null;
+  let searchField: SearchField | undefined, overlayVisible = false;
+  const uid = `ppp-relation-${++instances}`;
   const original = value;
   let selected = new Set(parseRelationLinks(value));
   const source = createRelationCandidates();
@@ -46,7 +51,7 @@
   $: candidates = $source.candidates;
   $: loading = $source.loading;
   $: selectedIds = selectedCandidateIds(selected, candidates);
-  $: listId = optionDomId("ppp-rel-list", field.name);
+  $: listId = optionDomId(uid, field.name);
   $: suggestions = search.update(candidates.map((label) => ({ label })));
   $: filtered = suggestions(query).map((o) => o.label);
   $: activeIdx = clampActive(active, filtered.length);
@@ -57,12 +62,12 @@
   }
 
   function commitSelection(labels: string[]) {
-    if (saving) return;
+    if (saving || loading || searchField?.isComposing()) return;
     dispatch("commit", serializeRelationSelection(labels, original, multi));
   }
 
   function choose(label: string) {
-    if (saving || !source.accepts(label, field, api, frame)) return;
+    if (saving || searchField?.isComposing() || !source.accepts(label, field, api, frame)) return;
     if (!multi) {
       commitSelection(selectedIds.includes(label) ? [...selected] : [label]);
       return;
@@ -72,7 +77,8 @@
 
   function handleKeydown(e: KeyboardEvent) {
     // An IME candidate's Enter or Escape belongs to the composition.
-    if (isImeKey(e)) return;
+    if (searchField?.isComposing() || isImeKey(e)) { e.stopPropagation(); return; }
+    if (saving || !overlayVisible) return;
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       active = stepActive(clampActive(active, filtered.length), e.key === "ArrowDown" ? 1 : -1, filtered.length);
@@ -87,21 +93,31 @@
     if (saving) return;
     dispatch("cancel");
   }
+  function confirmSelection(): void {
+    if (multi) commitSelection([...selected]);
+    else if (overlayVisible && filtered.length) choose(filtered[clampActive(active, filtered.length)]!);
+  }
 </script>
 
-<FloatingPopup {triggerEl} bind:open={popupOpen} dismissible={!saving} placement="bottom-start" role="dialog"
-  ariaLabel={field.name} autoFocus={false} on:close={handlePopupClose}>
-<div class="ppp-rel-picker">
+<div class="ppp-rel-editor" bind:this={interactionEl}>
   <SearchField
+    bind:this={searchField} bind:inputEl readOnly={saving}
+    ariaLabel={field.name}
     {query}
     focusOnMount
     inputClass="ppp-rel-picker-search"
     placeholder={$i18n.t("views.dashboard.table-v2.relation-search", { defaultValue: "Search records…" })}
     controls={listId}
-    activeDescendant={activeIdx >= 0 ? optionDomId(listId, filtered[activeIdx] ?? "") : undefined}
+    expanded={popupOpen && overlayVisible}
+    activeDescendant={overlayVisible && activeIdx >= 0 ? optionDomId(listId, filtered[activeIdx] ?? "") : undefined}
+    onConfirm={confirmSelection}
     on:queryChange={(e) => setQuery(e.detail)}
     on:keydown={handleKeydown}
   />
+</div>
+<FloatingPopup triggerEl={inputEl ?? triggerEl} {interactionEl} bind:open={popupOpen} dismissible={!saving} placement="above-field" role="presentation"
+  ariaLabel={field.name} autoFocus={false} on:position={(event) => (overlayVisible = event.detail.visible)} on:close={handlePopupClose}>
+<div class="ppp-rel-picker">
   <RelationCountBadge count={selectedIds.length} {loading} />
   {#if multi}<RelationSelection selected={[...selected]} {saving}
     on:remove={(event) => { selected = new Set([...selected].filter(target => target !== event.detail)); }} />{/if}
@@ -109,22 +125,13 @@
     failed={$source.error} showSetup={!hasTargetProject && candidates.length === 0}
     on:choose={(event) => choose(event.detail)} on:retry={() => source.load(field, api, frame)}
     on:setup={() => dispatch("setupRelation")} />
-  <div class="ppp-rel-picker-actions">
-    {#if multi}
-      <span class="ppp-rel-picker-count">{selected.size}</span>
-      <button type="button" class="ppp-rel-picker-done mod-cta" disabled={saving || loading} on:mousedown|preventDefault on:click={() => commitSelection([...selected])}>
-        {$i18n.t("views.dashboard.table-v2.relation-done", { defaultValue: "Done" })}
-      </button>
-    {/if}
-    {#if !multi}<button type="button" class="ppp-rel-picker-clear" disabled={saving} on:mousedown|preventDefault on:click={() => commitSelection([])}>{$i18n.t("common.clear")}</button>{/if}
-    <button type="button" class="ppp-rel-picker-cancel" disabled={saving} on:mousedown|preventDefault on:click={() => dispatch("cancel")}>
-      {$i18n.t("views.dashboard.table-v2.relation-cancel", { defaultValue: "Cancel" })}
-    </button>
-  </div>
+  <RelationPickerActions {multi} {saving} {loading} count={selected.size}
+    on:done={() => commitSelection([...selected])} on:clear={() => commitSelection([])} on:cancel={handlePopupClose} />
 </div>
 </FloatingPopup>
 
 <style>
+  .ppp-rel-editor { flex: 1; min-width: 0; }
   .ppp-rel-picker {
     width: 20rem;
     max-width: 100%;
@@ -135,31 +142,4 @@
     gap: 0.25rem;
   }
 
-  .ppp-rel-picker-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0.375rem;
-  }
-
-  .ppp-rel-picker-count {
-    color: var(--text-faint);
-    font-size: var(--font-ui-smaller);
-    margin-right: auto;
-  }
-
-  .ppp-rel-picker-done,
-  .ppp-rel-picker-clear,
-  .ppp-rel-picker-cancel {
-    padding: 0.2rem 0.6rem;
-    font-size: var(--font-ui-small);
-    border-radius: var(--radius-s, 0.25rem);
-    cursor: pointer;
-  }
-
-  .ppp-rel-picker-cancel, .ppp-rel-picker-clear {
-    border: 0.0625rem solid var(--background-modifier-border);
-    background: transparent;
-    color: var(--text-muted);
-  }
 </style>

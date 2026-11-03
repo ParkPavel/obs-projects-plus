@@ -37,7 +37,7 @@
       <button type="button" id={optionDomId(listId, label)} class="ppp-rel-picker-item"
         class:ppp-rel-picker-item--active={i === active} role="option" aria-selected={selectedIds.includes(label)}
         disabled={saving || loading} title={label} use:reveal={i === active}
-        on:mousedown|preventDefault on:click={() => dispatch("choose", label)}>
+        on:pointerdown|preventDefault on:mousedown|preventDefault on:click={() => dispatch("choose", label)}>
         {#if multi}<span class="ppp-rel-picker-mark" aria-hidden="true">{#if selectedIds.includes(label)}<Icon name="check" size="xs" />{/if}</span>{/if}
         <span class="ppp-rel-picker-label">{label}</span>
       </button>

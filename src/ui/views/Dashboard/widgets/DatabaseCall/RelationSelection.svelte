@@ -13,7 +13,7 @@
         <span title={target}>{target}</span>
         <button type="button" disabled={saving}
           aria-label={`${$i18n.t("common.remove", { defaultValue: "Remove" })}: ${target}`}
-          on:mousedown|preventDefault on:click={() => dispatch("remove", target)}>×</button>
+          on:pointerdown|preventDefault on:mousedown|preventDefault on:click={() => dispatch("remove", target)}>×</button>
       </span>
     {/each}
   </div>
