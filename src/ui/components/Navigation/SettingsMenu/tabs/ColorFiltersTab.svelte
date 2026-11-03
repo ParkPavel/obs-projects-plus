@@ -2,8 +2,7 @@
   import { createEventDispatcher } from "svelte";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "../../../../../lib/stores/i18n";
-  import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
-  import PopoverList, { type PopoverItem } from "src/ui/components/FloatingPopup/PopoverList.svelte";
+  import OptionField from "src/ui/components/fields/OptionField.svelte";
   import type {
     ColorFilterDefinition,
     ColorRule,
@@ -11,7 +10,7 @@
     FilterOperator,
   } from "../../../../../settings/base/settings";
   import type { DataRecord } from "src/lib/dataframe/dataframe";
-  import { getOperatorsForField, getOperatorLabel, getFieldIcon } from "./filterHelpers";
+  import { getOperatorsForField, getOperatorLabel, getFieldChoices, getOperatorChoices } from "./filterHelpers";
   import { operatorNeedsValue } from "src/settings/base/settings";
   import { COLOR_RULE_DEFAULT } from "src/lib/stores/palettes";
   import ConditionValue from "src/ui/components/FilterPanel/ConditionValue.svelte";
@@ -33,6 +32,7 @@
   }
 
   let local: ColorFilterDefinition = toLocal(value);
+  $: fieldChoices = getFieldChoices(fields);
 
   function updateRule(index: number, patch: Partial<ColorRule>) {
     const newConditions = local.conditions.map((c, i) =>
@@ -114,50 +114,17 @@
     updateNestedCondition(index, { value: next });
   }
 
-  // ═══════════════════════════════
-  // FloatingPopup-backed dropdowns (#034.2a)
-  // ═══════════════════════════════
-
-  let activePopover: {
-    anchorEl: HTMLElement;
-    items: PopoverItem[];
-    autoFocus: boolean;
-  } | null = null;
-
-  function openFieldPop(index: number, anchor: HTMLElement) {
-    const cond = local.conditions[index]!.condition;
-    activePopover = {
-      anchorEl: anchor,
-      autoFocus: true,
-      items: fields.map((f) => ({
-        label: f.name,
-        icon: getFieldIcon(f.type),
-        selected: f.name === cond.field,
-        handler: () => {
-          const ops = getOperatorsForField(f.type);
-          const op = ops.includes(cond.operator) ? cond.operator : ops[0] ?? 'is';
-          updateNestedCondition(index, { field: f.name, operator: op as FilterOperator, value: '' });
-        },
-      })),
-    };
+  function setField(index: number, name: string) {
+    const cond = local.conditions[index]?.condition, field = fields.find(item => item.name === name);
+    if (!cond || !field) return;
+    const ops = getOperatorsForField(field.type);
+    const operator = ops.includes(cond.operator) ? cond.operator : ops[0] ?? 'is';
+    updateNestedCondition(index, { field: name, operator, value: '' });
   }
-
-  function openOpPop(index: number, anchor: HTMLElement) {
-    const cond = local.conditions[index]!.condition;
-    const ops = getOperatorsForField(getFieldType(cond.field));
-    activePopover = {
-      anchorEl: anchor,
-      autoFocus: true,
-      items: ops.map((op) => ({
-        label: getOperatorLabel(op),
-        selected: op === cond.operator,
-        handler: () => updateNestedCondition(index, { operator: op, value: operatorNeedsValue(op) ? (cond.value ?? '') : '' }),
-      })),
-    };
-  }
-
-  function handlePopoverSelect(e: CustomEvent<{ item: PopoverItem; keepOpen: boolean }>): void {
-    if (!e.detail.keepOpen) activePopover = null;
+  function setOperator(index: number, code: string) {
+    const cond = local.conditions[index]?.condition; if (!cond) return;
+    const operator = getOperatorsForField(getFieldType(cond.field)).find(op => op === code);
+    if (operator) updateNestedCondition(index, { operator, value: operatorNeedsValue(operator) ? (cond.value ?? '') : '' });
   }
 </script>
 
@@ -211,19 +178,17 @@
           </label>
 
           <!-- Field chip -->
-          <button class="chip chip--field" type="button"
-            on:click={(e) => openFieldPop(index, e.currentTarget)}>
-            <span class="chip-icon"><Icon name={getFieldIcon(fieldType)} size="sm" /></span>
-            <span class="chip-label">{cond.field || $i18n.t('common.field')}</span>
-            <span class="chip-chevron"><Icon name="chevron-down" size="xs" /></span>
-          </button>
+          <div class="chip chip--field">
+            <OptionField value={cond.field} options={fieldChoices} ariaLabel={$i18n.t('common.field')}
+              disabled={!cond.enabled} on:change={(e) => setField(index, e.detail)} />
+          </div>
 
           <!-- Operator chip -->
-          <button class="chip chip--op" type="button"
-            on:click={(e) => openOpPop(index, e.currentTarget)}>
-            <span class="chip-label">{getOperatorLabel(cond.operator)}</span>
-            <span class="chip-chevron"><Icon name="chevron-down" size="xs" /></span>
-          </button>
+          <div class="chip chip--op">
+            <OptionField value={cond.operator} options={getOperatorChoices(fieldType, $i18n)}
+              displayLabel={getOperatorLabel(cond.operator, $i18n)} contextKey={cond.field}
+              disabled={!cond.enabled} on:change={(e) => setOperator(index, e.detail)} />
+          </div>
 
           <!-- Value -->
           <div class="value-area">
@@ -258,19 +223,6 @@
   </button>
 </div>
 
-<FloatingPopup
-  triggerEl={activePopover?.anchorEl ?? null}
-  open={activePopover !== null}
-  placement="bottom-start"
-  role="menu"
-  autoFocus={activePopover?.autoFocus ?? true}
-  on:close={() => (activePopover = null)}
->
-  {#if activePopover}
-    <PopoverList items={activePopover.items} on:select={handlePopoverSelect} />
-  {/if}
-</FloatingPopup>
-
 <style>
   /* px→rem migration (REFACTOR-404 partial). Hairline 1 borders and the
      2 thick border on .color-swatch are kept verbatim per design-tokens
@@ -284,7 +236,7 @@
   .list { display: flex; flex-direction: column; gap: 0.25rem; max-height: 20rem; overflow-y: auto; }
 
   .color-row {
-    display: flex; align-items: center; gap: 0.25rem;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; min-width: 0;
     padding: 0.1875rem 0.125rem; min-height: 2rem; border-radius: 0.375rem;
     transition: background 100ms ease;
   }
@@ -334,16 +286,12 @@
     border: var(--ppp-border-width) solid var(--background-modifier-border); border-radius: 0.375rem;
     background: var(--background-primary); color: var(--text-normal);
     cursor: pointer; font-size: 0.8125rem; font-family: var(--font-interface);
-    white-space: nowrap; line-height: 1; flex-shrink: 0;
+    white-space: nowrap; line-height: 1; flex: 0 1 auto; min-width: 0; max-width: 100%; overflow: hidden;
     transition: border-color 100ms ease, background 100ms ease;
   }
   .chip:hover { border-color: var(--interactive-accent); background: var(--background-primary-alt); }
-  .chip-icon { display: inline-flex; align-items: center; color: var(--text-muted); flex-shrink: 0; }
-  .chip-label { max-width: 6.25rem; overflow: hidden; text-overflow: ellipsis; }
-  .chip--field .chip-label { font-weight: 500; }
-  .chip-chevron { display: inline-flex; align-items: center; color: var(--text-faint); margin-left: 0.125rem; }
 
-  .value-area { flex: 1; min-width: 3.75rem; }
+  .value-area { flex: 1 1 10em; min-width: 0; }
   .no-value { color: var(--text-faint); font-size: 0.75rem; font-style: italic; padding: 0 0.5rem; }
 
   .row-btn {
@@ -374,7 +322,14 @@
      that, with the row gap, put each neighbour half a target away from its
      centre, and the row is a full target tall so the square stays inside it. */
   @media (pointer: coarse) {
-    .color-row { gap: 0.1875rem; min-height: var(--ppp-touch-target-min); }
+    .color-row { display: grid; grid-template-columns: auto auto minmax(0, 1fr) minmax(0, 1fr) auto; grid-template-areas: "toggle swatch field op delete" "value value value value value"; gap: 0.1875rem; min-height: var(--ppp-touch-target-min); }
+    .row-drag { display: none; }
+    .row-toggle { grid-area: toggle; }
+    .color-swatch { grid-area: swatch; }
+    .chip--field { grid-area: field; }
+    .chip--op { grid-area: op; }
+    .row-delete { grid-area: delete; }
+    .value-area { grid-area: value; }
     .color-swatch {
       width: 2rem; height: 2rem;
       margin-inline: calc((var(--ppp-touch-target-min) - 2rem) / 2 - 0.1875rem);
@@ -385,8 +340,8 @@
       width: var(--ppp-touch-target-min); height: var(--ppp-touch-target-min);
       transform: translate(-50%, -50%);
     }
-    .chip { height: 2rem; padding: 0 0.625rem; font-size: 0.875rem; }
-    .row-btn { opacity: 1; padding: 0.375rem; }
+    .chip { height: var(--ppp-touch-target-min); padding: 0 0.625rem; font-size: 0.875rem; }
+    .row-btn { opacity: 1; width: var(--ppp-touch-target-min); height: var(--ppp-touch-target-min); padding: 0; }
     .add-btn { min-height: 2.5rem; font-size: 0.875rem; }
   }
 </style>

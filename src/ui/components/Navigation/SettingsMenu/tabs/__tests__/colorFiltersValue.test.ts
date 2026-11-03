@@ -54,7 +54,7 @@ afterEach(() => {
 describe("ColorFiltersTab — value box", () => {
   test("a combobox over the values the field holds", async () => {
     const m = mount();
-    const box = comboInputs(m.target)[0]!;
+    const box = comboInputs(m.target.querySelector(".value-area")!)[0]!;
     await enter(box);
     expect(optionLabels()).toEqual(["Alpha", "Beta"]);
     m.destroy();
@@ -62,7 +62,7 @@ describe("ColorFiltersTab — value box", () => {
 
   test("typing updates the rule", async () => {
     const m = mount();
-    const box = comboInputs(m.target)[0]!;
+    const box = comboInputs(m.target.querySelector(".value-area")!)[0]!;
     await enter(box);
     typeInto(box, "Al");
     await settle();
@@ -73,7 +73,7 @@ describe("ColorFiltersTab — value box", () => {
 
   test("a pick writes the value once; the commit and the blur after it write nothing more", async () => {
     const m = mount();
-    const box = comboInputs(m.target)[0]!;
+    const box = comboInputs(m.target.querySelector(".value-area")!)[0]!;
     await enter(box);
     typeInto(box, "Al");
     await settle();
@@ -89,7 +89,7 @@ describe("ColorFiltersTab — value box", () => {
 
   test("Escape closes the list, then restores the entry text", async () => {
     const m = mount();
-    const box = comboInputs(m.target)[0]!;
+    const box = comboInputs(m.target.querySelector(".value-area")!)[0]!;
     await enter(box);
     typeInto(box, "A");
     await settle();

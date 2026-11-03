@@ -132,6 +132,8 @@ export interface DraftController {
   compositionStart(): void;
   /** An IME composition ended. */
   compositionEnd(): void;
+  /** A blur during composition must be revalidated against its final native text. */
+  needsBlurCommit(): boolean;
   /** Whether the key event must be ignored because of composition. */
   isComposing(e?: ImeKeyLike): boolean;
   /** Commit at most once per arming; null when there is nothing to hand out. */
@@ -164,6 +166,7 @@ export function createDraftController(initial = ""): DraftController {
   let focused = false;
   let composing = false;
   let compositionEndAt = -Infinity;
+  let pendingBlur = false;
   // The last prop seen, so only a real change is held back or adopted.
   let seenProp = initial;
   // A prop that changed while the user was in the field.
@@ -174,7 +177,7 @@ export function createDraftController(initial = ""): DraftController {
   let done = false;
 
   function commit(reason: CommitReason, options: CommitOptions = {}): CommitResult | null {
-    if (options.accept === false || done) return null;
+    if (composing || options.accept === false || done) return null;
     const value = options.value ?? draft;
     const explicit = reason === "enter" || reason === "select";
     if (!explicit && value === committed && options.unchanged !== true) return null;
@@ -190,6 +193,7 @@ export function createDraftController(initial = ""): DraftController {
     getState: () => ({ baseline, draft, committed, focused, composing }),
 
     focus(current) {
+      pendingBlur = false;
       focused = true;
       composing = false;
       compositionEndAt = -Infinity;
@@ -204,7 +208,7 @@ export function createDraftController(initial = ""): DraftController {
     refresh(next) {
       if (next === seenProp) return false;
       seenProp = next;
-      if (focused) {
+      if (focused || composing) {
         // Never pull the text from under the user's fingers.
         pending = next;
         return false;
@@ -233,6 +237,7 @@ export function createDraftController(initial = ""): DraftController {
       composing = false;
       compositionEndAt = Date.now();
     },
+    needsBlurCommit: () => pendingBlur,
 
     isComposing(e) {
       return composing || (e !== undefined && isImeKey(e, Date.now(), compositionEndAt));
@@ -251,7 +256,8 @@ export function createDraftController(initial = ""): DraftController {
 
     blur(options = {}) {
       focused = false;
-      composing = false;
+      if (composing) { pendingBlur = true; return null; }
+      pendingBlur = false;
       compositionEndAt = -Infinity;
       let result: CommitResult | null = null;
       if (options.accept === false) {
@@ -271,6 +277,7 @@ export function createDraftController(initial = ""): DraftController {
     },
 
     reset(next) {
+      pendingBlur = false;
       baseline = next;
       draft = next;
       committed = next;

@@ -48,6 +48,33 @@ const key = (el: HTMLElement, k: string, init: KeyboardEventInit & { keyCode?: n
 };
 
 describe("TextField", () => {
+  test("only the final native control value is reported to live consumers, including a cancelled composition", async () => {
+    const m = mount({ value: "prefix " }); m.input.focus();
+    m.input.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+    type(m.input, "prefix か"); await tick(); expect(m.inputs).toEqual([]);
+    m.input.value = "prefix かな";
+    m.input.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: "かな" }));
+    type(m.input, "prefix かな"); await tick(); expect(m.inputs).toEqual(["prefix かな"]);
+    m.input.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+    type(m.input, "prefix かなx"); await tick();
+    m.input.value = "prefix かな";
+    m.input.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: "" }));
+    await tick(); expect(m.inputs).toEqual(["prefix かな"]);
+    m.input.blur(); expect(m.commits).toEqual([{ value: "prefix かな", reason: "blur" }]); m.destroy();
+  });
+  test.each(["readOnly", "destroy"])("a deferred composition cannot write after %s retires its interaction", async retirement => {
+    const m = mount(); m.input.focus(); m.input.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+    type(m.input, "か"); m.input.blur();
+    if (retirement === "readOnly") { m.component.$set({ readOnly: true }); await tick(); } else m.destroy();
+    m.input.value = "かな"; m.input.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: "かな" }));
+    expect(m.commits).toEqual([]); expect(m.inputs).toEqual([]); if (retirement === "readOnly") m.destroy();
+  });
+  test("an early blur waits for compositionend and commits the final native value once", async () => {
+    const m = mount(); m.input.focus(); m.input.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+    type(m.input, "か"); m.input.blur(); await tick(); expect(m.commits).toEqual([]);
+    m.input.value = "かな"; m.input.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: "かな" })); await tick();
+    expect(m.commits).toEqual([{ value: "かな", reason: "blur" }]); expect(m.inputs[m.inputs.length - 1]).toBe("かな"); m.destroy();
+  });
   test("is seeded from the value and passes placeholder, disabled and inputmode through", () => {
     const m = mount({ inputMode: "decimal", disabled: true });
     expect(m.input.value).toBe("a");
@@ -139,6 +166,8 @@ describe("TextField", () => {
   });
 
   test("i2-input (D03): iOS Return with keyCode 229 and no composition commits", async () => {
+    const other = document.createElement("input"); document.body.appendChild(other);
+    other.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: "other field" })); other.remove();
     const m = mount();
     m.input.focus();
     type(m.input, "завтра");

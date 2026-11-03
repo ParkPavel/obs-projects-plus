@@ -107,8 +107,16 @@ export const OPERATOR_LABELS: Record<FilterOperator, string> = {
 /**
  * Get display label for operator
  */
-export function getOperatorLabel(op: FilterOperator): string {
-  return get(i18n).t(`components.filter.operators.${op}`, { defaultValue: OPERATOR_LABELS[op] ?? op });
+export function getOperatorLabel(op: FilterOperator, labels = get(i18n)): string {
+  return labels.t(`components.filter.operators.${op}`, { defaultValue: OPERATOR_LABELS[op] ?? op });
+}
+
+export function getOperatorChoices(type: string, labels = get(i18n)) {
+  return getOperatorsForField(type).map(op => ({ id: op, label: getOperatorLabel(op, labels) }));
+}
+
+export function getFieldChoices(fields: ReadonlyArray<{ name: string; type: string }>) {
+  return fields.map(field => ({ id: field.name, label: field.name, icon: getFieldIcon(field.type) }));
 }
 
 /**

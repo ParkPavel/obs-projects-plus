@@ -182,12 +182,21 @@ describe("draftController — IME", () => {
     }
   });
 
-  test("leaving the field ends a composition", () => {
+  test("leaving during composition defers blur until its final value is available", () => {
     const c = createDraftController("a");
     c.focus("a");
     c.compositionStart();
-    c.blur();
+    c.input("か");
+    expect(c.blur()).toBeNull();
+    expect(c.getState().focused).toBe(false); expect(c.getState().composing).toBe(true);
+    expect(c.refresh("external")).toBe(false); expect(c.getState().draft).toBe("か");
+    c.input("かな"); c.compositionEnd(); expect(c.needsBlurCommit()).toBe(true);
+    expect(c.blur()).toEqual({ value: "かな", reason: "blur" }); expect(c.needsBlurCommit()).toBe(false);
     expect(c.getState().composing).toBe(false);
+  });
+  test("a direct commit never accepts an unfinished composition", () => {
+    const c = createDraftController("a"); c.focus("a"); c.compositionStart(); c.input("か");
+    expect(c.commit("enter")).toBeNull(); expect(c.commit("select", { value: "picked" })).toBeNull(); expect(c.getState().draft).toBe("か");
   });
 });
 

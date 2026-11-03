@@ -58,7 +58,7 @@ afterEach(() => {
 describe("FilterPanel — value box", () => {
   test("the value box is a combobox over the values the field holds", async () => {
     const m = mount();
-    const box = comboInputs(m.target)[0]!;
+    const box = comboInputs(m.target.querySelector(".value-area")!)[0]!;
     await enter(box);
     expect(optionLabels()).toEqual(["Alpha", "Beta"]);
     expect(listbox()).toHaveAttribute("role", "listbox");
@@ -67,7 +67,7 @@ describe("FilterPanel — value box", () => {
 
   test("typing filters the suggestions and writes once, after the debounce", async () => {
     const m = mount();
-    const box = comboInputs(m.target)[0]!;
+    const box = comboInputs(m.target.querySelector(".value-area")!)[0]!;
     await enter(box);
     typeInto(box, "Al");
     await settle();
@@ -81,7 +81,7 @@ describe("FilterPanel — value box", () => {
 
   test("a pick writes at once and exactly once; the typed write pending before it is superseded", async () => {
     const m = mount();
-    const box = comboInputs(m.target)[0]!;
+    const box = comboInputs(m.target.querySelector(".value-area")!)[0]!;
     await enter(box);
     typeInto(box, "Al");
     await settle();
@@ -97,7 +97,7 @@ describe("FilterPanel — value box", () => {
 
   test("Enter on typed text writes it once; the blur after it adds nothing", async () => {
     const m = mount();
-    const box = comboInputs(m.target)[0]!;
+    const box = comboInputs(m.target.querySelector(".value-area")!)[0]!;
     await enter(box);
     typeInto(box, "Gamma");
     press(box, "Enter");
@@ -111,7 +111,7 @@ describe("FilterPanel — value box", () => {
 
   test("Escape closes the list, then restores the entry text; only the original value is ever written", async () => {
     const m = mount();
-    const box = comboInputs(m.target)[0]!;
+    const box = comboInputs(m.target.querySelector(".value-area")!)[0]!;
     await enter(box);
     typeInto(box, "A");
     await settle();

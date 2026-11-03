@@ -33,6 +33,16 @@ function mount(props: Record<string, unknown> = {}) {
 }
 
 describe("SearchField", () => {
+  test("an early blur preserves composition and reports its final entire query once", async () => {
+    const m = mount({ query: "prefix " }), input = m.input(); input.focus();
+    input.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+    input.value = "prefix か"; input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.blur(); await tick(); expect(input.value).toBe("prefix か"); expect(m.events).toEqual([]);
+    input.value = "prefix かな";
+    input.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: "かな" }));
+    input.dispatchEvent(new Event("input", { bubbles: true })); await tick();
+    expect(input.value).toBe("prefix かな"); expect(m.events).toEqual(["q:prefix かな"]); m.destroy();
+  });
   test("a closed list exposes no expanded state and a read-only query cannot be cleared", async () => {
     const m = mount({ query: "Kept", controls: "list", expanded: false, readOnly: true });
     expect(m.input()).toHaveAttribute("aria-expanded", "false"); expect(m.input().readOnly).toBe(true);

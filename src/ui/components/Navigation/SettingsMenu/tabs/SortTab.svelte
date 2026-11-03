@@ -2,16 +2,12 @@
   import { createEventDispatcher } from "svelte";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "../../../../../lib/stores/i18n";
-  import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
-  import PopoverList, {
-    type PopoverItem,
-  } from "src/ui/components/FloatingPopup/PopoverList.svelte";
+  import OptionField from "src/ui/components/fields/OptionField.svelte";
   import type {
     SortDefinition,
     SortingCriteria,
-    SortOrder,
   } from "../../../../../settings/base/settings";
-  import { getSortOrderLabel, getFieldIcon } from "./filterHelpers";
+  import { getSortOrderLabel, getFieldChoices } from "./filterHelpers";
 
   export let value: SortDefinition | undefined;
   export let fields: Array<{ name: string; type: string }> = [];
@@ -25,6 +21,8 @@
   }
 
   let local: SortDefinition = toLocal(value);
+  $: fieldChoices = getFieldChoices(fields);
+  const orderChoices = ["asc", "desc"].map(order => ({ id: order, label: getSortOrderLabel(order) }));
 
   function updateCriteria(index: number, patch: Partial<SortingCriteria>) {
     const newCriteria = local.criteria.map((c, i) =>
@@ -32,6 +30,9 @@
     );
     local = { ...local, criteria: newCriteria };
     dispatch("update", local);
+  }
+  function setOrder(index: number, code: string): void {
+    if (code === "asc" || code === "desc") updateCriteria(index, { order: code });
   }
 
   function addCriteria() {
@@ -48,10 +49,6 @@
   function removeCriteria(index: number) {
     local = { ...local, criteria: local.criteria.filter((_, i) => i !== index) };
     dispatch("update", local);
-  }
-
-  function getFieldType(fieldName: string): string {
-    return fields.find(f => f.name === fieldName)?.type ?? 'string';
   }
 
   // DG-3: drag-to-reorder sort criteria
@@ -86,46 +83,6 @@
     dragOverIndex = null;
   }
 
-  // ═══════════════════════════════
-  // FloatingPopup-backed dropdowns (#034.2a)
-  // ═══════════════════════════════
-
-  let activePopover: {
-    anchorEl: HTMLElement;
-    items: PopoverItem[];
-  } | null = null;
-
-  function openFieldPop(index: number, anchor: HTMLElement) {
-    const crit = local.criteria[index]!;
-    activePopover = {
-      anchorEl: anchor,
-      items: fields.map((f) => ({
-        label: f.name,
-        icon: getFieldIcon(f.type),
-        selected: f.name === crit.field,
-        handler: () => updateCriteria(index, { field: f.name }),
-      })),
-    };
-  }
-
-  function openOrderPop(index: number, anchor: HTMLElement) {
-    const crit = local.criteria[index]!;
-    const orders: SortOrder[] = ["asc", "desc"];
-    activePopover = {
-      anchorEl: anchor,
-      items: orders.map((o) => ({
-        label: getSortOrderLabel(o),
-        selected: o === crit.order,
-        handler: () => updateCriteria(index, { order: o }),
-      })),
-    };
-  }
-
-  function handlePopoverSelect(
-    e: CustomEvent<{ item: PopoverItem; keepOpen: boolean }>,
-  ): void {
-    if (!e.detail.keepOpen) activePopover = null;
-  }
 </script>
 
 <div class="section">
@@ -138,7 +95,6 @@
   {:else}
     <div class="list">
       {#each local.criteria as criterion, index}
-        {@const fieldType = getFieldType(criterion.field)}
         <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
         <div class="sort-row"
           class:sort-row--disabled={!criterion.enabled}
@@ -164,21 +120,18 @@
           </button>
 
           <!-- Field chip -->
-          <button class="chip chip--field" type="button"
-            on:click={(e) => openFieldPop(index, e.currentTarget)}>
-            <span class="chip-icon"><Icon name={getFieldIcon(fieldType)} size="sm" /></span>
-            <span class="chip-label">{criterion.field || $i18n.t('common.field-placeholder')}</span>
-            <span class="chip-chevron"><Icon name="chevron-down" size="xs" /></span>
-          </button>
+          <div class="chip chip--field">
+            <OptionField value={criterion.field} options={fieldChoices} ariaLabel={$i18n.t('common.field-placeholder')}
+              disabled={!criterion.enabled} on:change={(e) => updateCriteria(index, { field: e.detail })} />
+          </div>
 
           <!-- Order chip -->
-          <button class="chip chip--order" type="button"
-            on:click={(e) => openOrderPop(index, e.currentTarget)}>
-            <span class="chip-label">{getSortOrderLabel(criterion.order)}</span>
-            <span class="chip-chevron"><Icon name="chevron-down" size="xs" /></span>
-          </button>
+          <div class="chip chip--order">
+            <OptionField value={criterion.order} options={orderChoices} displayLabel={getSortOrderLabel(criterion.order)}
+              disabled={!criterion.enabled} on:change={(e) => setOrder(index, e.detail)} />
+          </div>
 
-          <span style="flex:1"></span>
+          <span class="row-space"></span>
 
           <!-- Delete -->
           <button class="row-btn row-delete" type="button"
@@ -196,19 +149,6 @@
   </button>
 </div>
 
-<FloatingPopup
-  triggerEl={activePopover?.anchorEl ?? null}
-  open={activePopover !== null}
-  placement="bottom-start"
-  role="menu"
-  autoFocus={false}
-  on:close={() => (activePopover = null)}
->
-  {#if activePopover}
-    <PopoverList items={activePopover.items} on:select={handlePopoverSelect} />
-  {/if}
-</FloatingPopup>
-
 <style>
   /* px→rem migration (REFACTOR-404). Hairline 1 borders kept verbatim;
      transition timings are durations, not sizes. */
@@ -220,7 +160,7 @@
   .list { display: flex; flex-direction: column; gap: 0.25rem; max-height: 20rem; overflow-y: auto; }
 
   .sort-row {
-    display: flex; align-items: center; gap: 0.25rem;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; min-width: 0;
     padding: 0.1875rem 0.125rem; min-height: 2rem; border-radius: 0.375rem;
     transition: background 100ms ease;
   }
@@ -236,14 +176,11 @@
     border: var(--ppp-border-width) solid var(--background-modifier-border); border-radius: 0.375rem;
     background: var(--background-primary); color: var(--text-normal);
     cursor: pointer; font-size: 0.8125rem; font-family: var(--font-interface);
-    white-space: nowrap; line-height: 1; flex-shrink: 0;
+    white-space: nowrap; line-height: 1; flex: 0 1 auto; min-width: 0; max-width: 100%; overflow: hidden;
     transition: border-color 100ms ease, background 100ms ease;
   }
   .chip:hover { border-color: var(--interactive-accent); background: var(--background-primary-alt); }
-  .chip-icon { display: inline-flex; align-items: center; color: var(--text-muted); flex-shrink: 0; }
-  .chip-label { max-width: 6.25rem; overflow: hidden; text-overflow: ellipsis; }
-  .chip--field .chip-label { font-weight: 500; }
-  .chip-chevron { display: inline-flex; align-items: center; color: var(--text-faint); margin-left: 0.125rem; }
+  .row-space { flex: 1; }
 
   .row-btn {
     flex-shrink: 0; color: var(--text-faint); border-radius: 0.25rem;
@@ -272,9 +209,10 @@
   .add-btn:hover { border-color: var(--interactive-accent); color: var(--text-normal); }
 
   @media (pointer: coarse) {
-    .sort-row { gap: 0.1875rem; min-height: 2.375rem; }
-    .chip { height: 2rem; padding: 0 0.625rem; font-size: 0.875rem; }
-    .row-btn { opacity: 1; padding: 0.375rem; }
+    .sort-row { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto; gap: 0.1875rem; min-height: var(--ppp-touch-target-min); }
+    .row-drag, .row-space { display: none; }
+    .chip { height: var(--ppp-touch-target-min); padding: 0 0.625rem; font-size: 0.875rem; }
+    .row-btn { opacity: 1; width: var(--ppp-touch-target-min); height: var(--ppp-touch-target-min); padding: 0; }
     .add-btn { min-height: 2.5rem; font-size: 0.875rem; }
   }
 </style>

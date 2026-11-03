@@ -483,6 +483,45 @@ describe("ComboField — keyboard", () => {
 });
 
 describe("ComboField — pointer and touch", () => {
+  test("live queries receive the entire completed control value once, never partial composition text", async () => {
+    const m = mount({ value: "prefix " }); await open(m);
+    m.input.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+    type(m.input, "prefix か"); await tick(); expect(m.drafts).toEqual([]);
+    m.input.value = "prefix かな";
+    m.input.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: "かな" }));
+    type(m.input, "prefix かな"); await tick(); expect(m.drafts).toEqual(["prefix かな"]);
+    m.input.blur(); expect(m.commits).toEqual([{ value: "prefix かな", reason: "blur" }]); m.destroy();
+  });
+  test.each(["readOnly", "destroy"])("a deferred composition cannot write after %s retires its interaction", async retirement => {
+    const m = mount(); await open(m); m.input.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+    type(m.input, "か"); m.input.blur();
+    if (retirement === "readOnly") { m.component.$set({ readOnly: true }); await tick(); } else m.destroy();
+    m.input.value = "かな"; m.input.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: "かな" }));
+    expect(m.commits).toEqual([]); expect(m.drafts).toEqual([]); if (retirement === "readOnly") m.destroy();
+  });
+  test("a containing form cannot navigate or hide the active composition", async () => {
+    const m = mount(); await open(m); m.input.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+    m.component.commitForNavigation(); await tick(); expect(listbox()).not.toBeNull(); expect(m.commits).toEqual([]); m.destroy();
+  });
+  test("an early blur waits for the final composition value without reopening its popup", async () => {
+    const m = mount(); await open(m); m.input.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+    type(m.input, "か"); m.input.blur(); await tick(); expect(m.commits).toEqual([]);
+    m.input.value = "かな"; m.input.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: "かな" })); await tick();
+    expect(m.commits).toEqual([{ value: "かな", reason: "blur" }]); expect(listbox()).toBeNull(); m.destroy();
+  });
+  test("a typed unique option chosen on blur leaves the interaction, so a later saved value is adopted", async () => {
+    const m = mount({ allowCustom: false }); await open(m); type(m.input, "doin"); await tick();
+    m.input.blur(); await tick(); expect(m.selects).toEqual(["doing"]);
+    m.component.$set({ value: "Done" }); await tick(); expect(m.input.value).toBe("Done"); m.destroy();
+  });
+  test.each(["mousedown", "click"])("%s cannot commit a suggestion during an active composition", async eventName => {
+    const m = mount(); await open(m); const option = options().find(row => row.textContent === "Doing")!;
+    m.input.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+    option.dispatchEvent(new MouseEvent(eventName, { bubbles: true, cancelable: true })); expect(m.commits).toEqual([]);
+    m.input.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true }));
+    option.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+    expect(m.commits).toEqual([{ value: "Doing", reason: "select" }]); m.destroy();
+  });
   test("a case-ambiguous query does not silently choose the first option on blur", async () => {
     const m = mount({ value: "Legacy", allowCustom: false, options: [{ id: "a", label: "READY" }, { id: "b", label: "Ready" }] });
     await open(m); type(m.input, "ready"); m.input.blur(); await tick();

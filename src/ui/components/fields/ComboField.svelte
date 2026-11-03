@@ -8,6 +8,7 @@
   export function retryCommit(): void { ctl.arm(); }
   /** A containing editor can own Tab while keeping the field's selected option. */
   export function commitForNavigation(): void {
+    if (readOnly || disabled || ctl.isComposing()) return;
     const pick = allowEmpty && ctl.getState().draft === "" && !userNav ? undefined : activeNow();
     if (!multi && pick && (userNav || !allowCustom)) choose(pick);
     else finish("tab");
@@ -66,6 +67,8 @@
   export let openOnFocus = true;
   /** Report a blur that changed nothing (a cell editor that must leave edit mode). */
   export let commitUnchanged = false;
+  /** Query-only selectors retire their draft when the owner removes them. */
+  export let commitOnDestroy = true;
   /** Focus the input once mounted. */
   export let focusOnMount = false;
 
@@ -83,6 +86,7 @@
   const search = createOptionSearch<ComboOption>();
   $: suggestions = search.update(options);
   let draft = value;
+  let reportedDraft = value;
   let invalid = false, alive = true;
   onDestroy(() => { alive = false; });
   let open = false;
@@ -108,13 +112,12 @@
   /** Show the controller's text, and report it when it changed (an edit, a pick, a restore). */
   function pull(): void {
     const next = ctl.getState().draft;
-    if (next === draft) return;
     draft = next;
-    dispatch("draftChange", next);
+    if (!readOnly && !disabled && !ctl.isComposing() && next !== reportedDraft) { reportedDraft = next; dispatch("draftChange", next); }
   }
   // A text the parent passed is not an edit of the user's: shown, not reported.
   function adopt(next: string): void {
-    if (ctl.refresh(next)) draft = ctl.getState().draft;
+    if (ctl.refresh(next)) { draft = ctl.getState().draft; reportedDraft = draft; }
   }
   $: adopt(value);
 
@@ -248,6 +251,7 @@
 
   function onFocus(): void {
     ctl.focus(draft);
+    reportedDraft = draft;
     dirty = false;
     userNav = false;
     pickedByPointer = null;
@@ -261,7 +265,7 @@
     pull();
     dirty = true;
     invalid = false;
-    show();
+    if (ctl.getState().focused) show();
     resetActive();
   }
 
@@ -290,7 +294,7 @@
    * leaves the field where it is.
    */
   function finish(reason: "enter" | "tab" | "blur" | "change"): void {
-    if (readOnly || disabled) return;
+    if (readOnly || disabled || ctl.isComposing()) return;
     if (multi) {
       if (reason === "blur") {
         ctl.blur({ accept: false });
@@ -304,6 +308,7 @@
       const meant = plainMatch(text);
       if (meant) {
         choose(meant);
+        if (reason === "blur") ctl.blur();
         return;
       }
     }
@@ -319,7 +324,7 @@
     dispatch("commit", { value: result.value, reason: result.reason });
   }
   function choose(opt: ComboOption): void {
-    if (readOnly || disabled) return;
+    if (readOnly || disabled || ctl.isComposing()) return;
     invalid = false;
     if (multi) {
       dispatch("select", opt);
@@ -407,14 +412,22 @@
   }
   function onBlur(): void {
     hide();
+    if (ctl.isComposing()) { ctl.blur(); return; }
     finish("blur");
     dirty = false;
+  }
+  function onCompositionEnd(event: CompositionEvent): void {
+    if (!alive) return;
+    recordImeCompositionEnd(event);
+    if (inputEl && inputEl.value !== draft) ctl.input(inputEl.value);
+    ctl.compositionEnd(); pull();
+    if (ctl.needsBlurCommit()) finish("blur");
   }
   // i3-input: a host that closes on an outside press removes the field while
   // it still has focus, and whether a blur fires first depends on the browser.
   // An edit still pending when the field goes is committed as a blur would.
   onDestroy(() => {
-    if (!multi && ctl.getState().draft !== ctl.getState().baseline) finish("blur");
+    if (commitOnDestroy && !multi && ctl.getState().draft !== ctl.getState().baseline) finish("blur");
   });
 
   function isSelected(opt: ComboOption, chosen: string[], text: string): boolean {
@@ -462,7 +475,7 @@
     on:change={() => finish("change")}
     on:keydown={onKeydown}
     on:compositionstart={() => ctl.compositionStart()}
-    on:compositionend={(event) => { recordImeCompositionEnd(event); ctl.compositionEnd(); }}
+    on:compositionend={onCompositionEnd}
   />
   {#if expanded}
     <div

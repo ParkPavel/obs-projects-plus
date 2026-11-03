@@ -10,7 +10,7 @@
   import { createEventDispatcher, onMount, onDestroy, tick } from "svelte";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
-  import { recordImeCompositionEnd } from "./draftController";
+  import { createDraftController, recordImeCompositionEnd } from "./draftController";
   import { keepInView } from "./keepInView";
 
   export let query = "";
@@ -38,20 +38,22 @@
     clear: void;
   }>();
 
-  let alive = true, composing = false;
+  let alive = true;
+  const ctl = createDraftController(query);
+  let text = query, reportedQuery = query;
   onDestroy(() => { alive = false; });
-  export function isComposing(): boolean { return composing; }
+  export function isComposing(): boolean { return ctl.isComposing(); }
   /** An explicit completion replaces the query; ordinary prop echoes still do not. */
-  export function reset(next: string): void { if (alive) text = next; }
-  function confirm(): void { if (alive && !readOnly && !composing) onConfirm?.(); }
+  export function reset(next: string): void { if (alive) { ctl.reset(next); pull(); reportedQuery = text; } }
+  function confirm(): void { if (alive && !readOnly && !ctl.isComposing()) onConfirm?.(); }
 
   // i3-input: the field shows its own text while it has focus. The input was
   // bound to the parent's `query`, so a late or debounced echo of an older
   // query replaced what was being typed. A query the parent sets while the
   // field is not being typed in (a reset, a restore) is still shown.
-  let text = query;
-  let typing = false;
-  $: if (!typing) text = query;
+  function pull(): void { text = ctl.getState().draft; }
+  function adopt(next: string): void { if (ctl.refresh(next)) { pull(); reportedQuery = text; } }
+  $: adopt(query);
 
   /** Move focus into the input. */
   export function focus(): void {
@@ -66,13 +68,22 @@
 
   function onInput(e: Event): void {
     if (readOnly) return;
-    text = (e.currentTarget as HTMLInputElement).value;
-    dispatch("queryChange", text);
+    ctl.input((e.currentTarget as HTMLInputElement).value); pull(); reportQuery();
+  }
+  function reportQuery(): void {
+    if (alive && !readOnly && !ctl.isComposing() && text !== reportedQuery) { reportedQuery = text; dispatch("queryChange", text); }
+  }
+  function onBlur(): void { ctl.blur(); pull(); }
+  function onCompositionEnd(event: CompositionEvent): void {
+    if (!alive) return;
+    recordImeCompositionEnd(event);
+    if (inputEl && inputEl.value !== text) ctl.input(inputEl.value);
+    ctl.compositionEnd(); pull(); reportQuery();
+    if (ctl.needsBlurCommit()) { ctl.blur(); pull(); }
   }
   function clear(): void {
-    if (readOnly || composing) return;
-    text = "";
-    dispatch("queryChange", "");
+    if (readOnly || ctl.isComposing()) return;
+    ctl.input(""); pull(); reportQuery();
     dispatch("clear");
     inputEl?.focus();
   }
@@ -98,11 +109,11 @@
     autocomplete="off"
     spellcheck="false"
     on:input={onInput}
-    on:focus={() => (typing = true)}
-    on:blur={() => (typing = false)}
+    on:focus={() => { ctl.focus(text); reportedQuery = text; }}
+    on:blur={onBlur}
     on:keydown
-    on:compositionstart={() => (composing = true)}
-    on:compositionend={(event) => { composing = false; recordImeCompositionEnd(event); }}
+    on:compositionstart={() => ctl.compositionStart()}
+    on:compositionend={onCompositionEnd}
     on:mousedown|stopPropagation
   />
   {#if clearable && text !== ""}

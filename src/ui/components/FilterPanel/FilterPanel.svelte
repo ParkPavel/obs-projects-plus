@@ -2,15 +2,14 @@
   import { createEventDispatcher, onDestroy } from "svelte";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "../../../lib/stores/i18n";
-  import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
-  import PopoverList, { type PopoverItem } from "src/ui/components/FloatingPopup/PopoverList.svelte";
+  import OptionField from "src/ui/components/fields/OptionField.svelte";
   import type {
     FilterCondition,
     FilterDefinition,
     FilterOperator,
   } from "../../../settings/base/settings";
   import type { DataRecord } from "src/lib/dataframe/dataframe";
-  import { getOperatorsForField, getOperatorLabel, getFieldIcon } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
+  import { getOperatorsForField, getOperatorLabel, getFieldChoices, getOperatorChoices } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
   import { operatorNeedsValue } from "src/settings/base/settings";
   import ConditionValue from "src/ui/components/FilterPanel/ConditionValue.svelte";
   import { app } from "src/lib/stores/obsidian";
@@ -40,6 +39,7 @@
   }
 
   let local: FilterDefinition = toLocal(value);
+  $: fieldChoices = getFieldChoices(fields);
 
   $: hasContent = local.conditions.length > 0 || (local.groups?.length ?? 0) > 0;
 
@@ -183,55 +183,19 @@
     return valueSuggestions(source, fields.find((f) => f.name === fieldName), { templateFolders: folders });
   }
 
-  // ═══════════════════════════════
-  // FloatingPopup-backed dropdowns (#034.2a)
-  // ═══════════════════════════════
-
-  let activePopover: {
-    anchorEl: HTMLElement;
-    items: PopoverItem[];
-    searchable: boolean;
-    autoFocus: boolean;
-  } | null = null;
-
-  function openFieldPop(index: number, anchor: HTMLElement, groupPath: number[] = []) {
+  function setField(index: number, name: string, groupPath: number[] = []) {
     const group = groupPath.length === 0 ? local : getGroupAtPath(local, groupPath);
-    const cond = group.conditions[index]!;
-    activePopover = {
-      anchorEl: anchor,
-      searchable: true,
-      autoFocus: true,
-      items: fields.map((f) => ({
-        label: f.name,
-        icon: getFieldIcon(f.type),
-        selected: f.name === cond.field,
-        handler: () => {
-          const ops = getOperatorsForField(f.type);
-          const op = ops.includes(cond.operator) ? cond.operator : ops[0] ?? 'is';
-          updateCondition(index, { field: f.name, operator: op as FilterOperator, value: '' }, groupPath);
-        },
-      })),
-    };
+    const cond = group.conditions[index], field = fields.find(item => item.name === name);
+    if (!cond || !field) return;
+    const ops = getOperatorsForField(field.type);
+    const operator = ops.includes(cond.operator) ? cond.operator : ops[0] ?? 'is';
+    updateCondition(index, { field: name, operator, value: '' }, groupPath);
   }
-
-  function openOpPop(index: number, anchor: HTMLElement, groupPath: number[] = []) {
+  function setOperator(index: number, code: string, groupPath: number[] = []) {
     const group = groupPath.length === 0 ? local : getGroupAtPath(local, groupPath);
-    const cond = group.conditions[index]!;
-    const ops = getOperatorsForField(getFieldType(cond.field));
-    activePopover = {
-      anchorEl: anchor,
-      searchable: false,
-      autoFocus: true,
-      items: ops.map((op) => ({
-        label: getOperatorLabel(op),
-        selected: op === cond.operator,
-        handler: () => updateCondition(index, { operator: op, value: operatorNeedsValue(op) ? (cond.value ?? '') : '' }, groupPath),
-      })),
-    };
-  }
-
-  function handlePopoverSelect(e: CustomEvent<{ item: PopoverItem; keepOpen: boolean }>): void {
-    if (!e.detail.keepOpen) activePopover = null;
+    const cond = group.conditions[index]; if (!cond) return;
+    const operator = getOperatorsForField(getFieldType(cond.field)).find(op => op === code);
+    if (operator) updateCondition(index, { operator, value: operatorNeedsValue(operator) ? (cond.value ?? '') : '' }, groupPath);
   }
 </script>
 
@@ -303,19 +267,17 @@
           </button>
 
           <!-- Field chip -->
-          <button class="chip chip--field" type="button"
-            on:click={(e) => openFieldPop(index, e.currentTarget)}>
-            <span class="chip-icon"><Icon name={getFieldIcon(fieldType)} size="sm" /></span>
-            <span class="chip-label">{condition.field || $i18n.t('common.field')}</span>
-            <span class="chip-chevron"><Icon name="chevron-down" size="xs" /></span>
-          </button>
+          <div class="chip chip--field">
+            <OptionField value={condition.field} options={fieldChoices} ariaLabel={$i18n.t('common.field')}
+              disabled={!condition.enabled} on:change={(e) => setField(index, e.detail)} />
+          </div>
 
           <!-- Operator chip -->
-          <button class="chip chip--op" type="button"
-            on:click={(e) => openOpPop(index, e.currentTarget)}>
-            <span class="chip-label">{getOperatorLabel(condition.operator)}</span>
-            <span class="chip-chevron"><Icon name="chevron-down" size="xs" /></span>
-          </button>
+          <div class="chip chip--op">
+            <OptionField value={condition.operator} options={getOperatorChoices(fieldType, $i18n)}
+              displayLabel={getOperatorLabel(condition.operator, $i18n)} contextKey={condition.field}
+              disabled={!condition.enabled} on:change={(e) => setOperator(index, e.detail)} />
+          </div>
 
           <!-- Value -->
           <div class="value-area">
@@ -397,18 +359,16 @@
                   <Icon name={gCond.enabled ? 'eye' : 'eye-off'} size="sm" />
                 </button>
 
-                <button class="chip chip--field" type="button"
-                  on:click={(e) => openFieldPop(cIdx, e.currentTarget, [gIndex])}>
-                  <span class="chip-icon"><Icon name={getFieldIcon(gFieldType)} size="sm" /></span>
-                  <span class="chip-label">{gCond.field || $i18n.t('common.field')}</span>
-                  <span class="chip-chevron"><Icon name="chevron-down" size="xs" /></span>
-                </button>
+                <div class="chip chip--field">
+                  <OptionField value={gCond.field} options={fieldChoices} ariaLabel={$i18n.t('common.field')}
+                    disabled={!gCond.enabled} on:change={(e) => setField(cIdx, e.detail, [gIndex])} />
+                </div>
 
-                <button class="chip chip--op" type="button"
-                  on:click={(e) => openOpPop(cIdx, e.currentTarget, [gIndex])}>
-                  <span class="chip-label">{getOperatorLabel(gCond.operator)}</span>
-                  <span class="chip-chevron"><Icon name="chevron-down" size="xs" /></span>
-                </button>
+                <div class="chip chip--op">
+                  <OptionField value={gCond.operator} options={getOperatorChoices(gFieldType, $i18n)}
+                    displayLabel={getOperatorLabel(gCond.operator, $i18n)} contextKey={gCond.field}
+                    disabled={!gCond.enabled} on:change={(e) => setOperator(cIdx, e.detail, [gIndex])} />
+                </div>
 
                 <div class="value-area">
                   {#if gNeedsVal}
@@ -486,18 +446,16 @@
                         <Icon name={nCond.enabled ? 'eye' : 'eye-off'} size="sm" />
                       </button>
 
-                      <button class="chip chip--field" type="button"
-                        on:click={(e) => openFieldPop(nCIdx, e.currentTarget, nPath)}>
-                        <span class="chip-icon"><Icon name={getFieldIcon(nFieldType)} size="sm" /></span>
-                        <span class="chip-label">{nCond.field || $i18n.t('common.field')}</span>
-                        <span class="chip-chevron"><Icon name="chevron-down" size="xs" /></span>
-                      </button>
+                      <div class="chip chip--field">
+                        <OptionField value={nCond.field} options={fieldChoices} ariaLabel={$i18n.t('common.field')}
+                          disabled={!nCond.enabled} on:change={(e) => setField(nCIdx, e.detail, nPath)} />
+                      </div>
 
-                      <button class="chip chip--op" type="button"
-                        on:click={(e) => openOpPop(nCIdx, e.currentTarget, nPath)}>
-                        <span class="chip-label">{getOperatorLabel(nCond.operator)}</span>
-                        <span class="chip-chevron"><Icon name="chevron-down" size="xs" /></span>
-                      </button>
+                      <div class="chip chip--op">
+                        <OptionField value={nCond.operator} options={getOperatorChoices(nFieldType, $i18n)}
+                          displayLabel={getOperatorLabel(nCond.operator, $i18n)} contextKey={nCond.field}
+                          disabled={!nCond.enabled} on:change={(e) => setOperator(nCIdx, e.detail, nPath)} />
+                      </div>
 
                       <div class="value-area">
                         {#if nNeedsVal}
@@ -558,19 +516,6 @@
     </button>
   </div>
 </div>
-
-<FloatingPopup
-  triggerEl={activePopover?.anchorEl ?? null}
-  open={activePopover !== null}
-  placement="bottom-start"
-  role="menu"
-  autoFocus={activePopover?.autoFocus ?? true}
-  on:close={() => (activePopover = null)}
->
-  {#if activePopover}
-    <PopoverList items={activePopover.items} searchable={activePopover.searchable} on:select={handlePopoverSelect} />
-  {/if}
-</FloatingPopup>
 
 <style>
   .ppp-filter-scope-label {
@@ -700,10 +645,6 @@
   @media (hover: hover) and (pointer: fine) {
     .chip:hover { border-color: var(--interactive-accent); background: var(--background-primary-alt); }
   }
-  .chip-icon { display: inline-flex; align-items: center; color: var(--text-muted); flex-shrink: 0; }
-  .chip-label { max-width: 6.25rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-  .chip--field .chip-label { font-weight: 500; }
-  .chip-chevron { display: inline-flex; align-items: center; color: var(--text-faint); margin-left: 0.125rem; }
 
   .value-area { flex: 1 1 10em; min-width: 0; }
   .no-value { color: var(--text-faint); font-size: 0.75rem; font-style: italic; padding: 0 0.5rem; }
@@ -777,7 +718,6 @@
     .filter-row .row-delete { grid-area: delete; }
     .filter-row .row-drag { display: none; }
     .chip { width: 100%; height: var(--ppp-touch-target-min); min-width: 0; overflow: hidden; padding: 0 0.625rem; font-size: 0.875rem; }
-    .chip-label { min-width: 0; flex: 0 1 auto; }
     .row-btn {
       opacity: 1; display: inline-flex; align-items: center; justify-content: center;
       width: var(--ppp-touch-target-min); height: var(--ppp-touch-target-min); padding: 0;

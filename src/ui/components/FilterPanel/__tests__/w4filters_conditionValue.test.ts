@@ -9,7 +9,7 @@
  */
 
 import "@testing-library/jest-dom";
-import { comboInputs, mountCollecting } from "src/ui/components/fields/__tests__/support/comboKit";
+import { mountCollecting } from "src/ui/components/fields/__tests__/support/comboKit";
 
 jest.mock("src/lib/stores/ui", () => {
   const { writable } = require("svelte/store");
@@ -34,7 +34,7 @@ describe("w4-filters — the condition's value cell", () => {
     const value = { conjunction: "and", conditions: [cond("due", "is-before"), cond("title", "is")], groups: [] };
     const m = mountCollecting(FilterPanel, { value, fields, records }, "update");
     expect(formulaInputs(m.target)).toHaveLength(1);
-    expect(comboInputs(m.target)).toHaveLength(1);
+    expect(m.target.querySelectorAll('.value-area input[role="combobox"]')).toHaveLength(1);
     m.destroy();
   });
 

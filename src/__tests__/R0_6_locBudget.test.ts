@@ -108,6 +108,7 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   { file: "ui/views/Dashboard/widgets/DatabaseCall/tableNewRowDraft.ts", maxLines: 34 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/tableHeaderOps.ts", maxLines: 216 },
   { file: "lib/suggestions/choiceOptions.ts", maxLines: 33 },
+  { file: "ui/components/fields/OptionField.svelte", maxLines: 47 },
   { file: "ui/views/Dashboard/widgets/ViewTabBar.svelte", maxLines: 260 },
   // i3-final (B3/B4): linked-view tabs and the inherited field list enter at
   // their measured sizes; the tab bar paid for its two lines inside its ceiling.

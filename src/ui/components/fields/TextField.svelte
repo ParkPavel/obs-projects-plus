@@ -7,8 +7,8 @@
    * the field had on entry; an IME composition suppresses Enter and Escape.
    * Consumers own validation (`validate`) and persistence (`commit`).
    */
-  import { createEventDispatcher } from "svelte";
-  import { createDraftController, isImeKey, recordImeCompositionEnd } from "./draftController";
+  import { createEventDispatcher, onDestroy } from "svelte";
+  import { createDraftController, recordImeCompositionEnd } from "./draftController";
   import { keepInView } from "./keepInView";
   import { releaseOnOutsideTap } from "./releaseOnOutsideTap";
 
@@ -44,12 +44,14 @@
   let draft = value;
   let invalid = false;
   let inputEl: HTMLInputElement | null = null;
+  let alive = true, reportedInput = value;
+  onDestroy(() => { alive = false; });
 
   function pull(): void {
     draft = ctl.getState().draft;
   }
   function adopt(next: string): void {
-    if (ctl.refresh(next)) pull();
+    if (ctl.refresh(next)) { pull(); reportedInput = draft; }
   }
   $: adopt(value);
 
@@ -58,6 +60,7 @@
     ctl.reset(next);
     pull();
     invalid = false;
+    reportedInput = draft;
   }
 
   /** Move focus into the field. */
@@ -78,10 +81,11 @@
   }
 
   function emit(reason: "enter" | "blur" | "tab"): boolean {
-    if (readOnly || disabled) return false;
+    if (!alive || readOnly || disabled || ctl.isComposing()) return false;
     const verdict = accepts(ctl.getState().draft);
     const result = reason === "blur" ? ctl.blur({ accept: verdict, unchanged: commitUnchanged }) : ctl.commit(reason, { accept: verdict, unchanged: commitUnchanged });
     pull();
+    reportedInput = draft;
     // A rejected draft left on blur was restored, so nothing is invalid any more.
     if (reason === "blur") invalid = false;
     if (result) dispatch("commit", { value: result.value, reason });
@@ -90,18 +94,35 @@
 
   function onFocus(): void {
     ctl.focus(draft);
+    reportedInput = draft;
   }
   function confirm(): void {
     if (!readOnly && !disabled && !ctl.isComposing()) emit("enter");
   }
   function onInput(e: Event): void {
+    if (readOnly || disabled) return;
     ctl.input((e.currentTarget as HTMLInputElement).value);
     pull();
     invalid = false;
-    dispatch("input", draft);
+    reportInput();
+  }
+  function reportInput(): void {
+    if (!readOnly && !disabled && !ctl.isComposing() && draft !== reportedInput) { reportedInput = draft; dispatch("input", draft); }
+  }
+  function onBlur(): void {
+    if (ctl.isComposing()) { ctl.blur(); return; }
+    emit("blur");
+  }
+  function onCompositionEnd(event: CompositionEvent): void {
+    if (!alive) return;
+    recordImeCompositionEnd(event);
+    // UI Events: compositionend follows the native control update.
+    if (inputEl && inputEl.value !== draft) ctl.input(inputEl.value);
+    ctl.compositionEnd(); pull(); reportInput();
+    if (ctl.needsBlurCommit()) emit("blur");
   }
   function onKeydown(e: KeyboardEvent): void {
-    if (readOnly || disabled || ctl.isComposing(e) || isImeKey(e)) return;
+    if (readOnly || disabled || ctl.isComposing(e)) return;
     if (e.key === "Enter") {
       e.preventDefault();
       emit("enter");
@@ -110,6 +131,7 @@
       ctl.cancel();
       pull();
       invalid = false;
+      reportedInput = draft;
       // The restore consumed this Escape; an untouched field lets it through.
       if (edited) e.stopPropagation();
       dispatch("cancel");
@@ -136,11 +158,11 @@
   aria-label={ariaLabel}
   aria-invalid={invalid || error ? "true" : undefined}
   on:focus={onFocus}
-  on:blur={() => emit("blur")}
+  on:blur={onBlur}
   on:input={onInput}
   on:keydown={onKeydown}
   on:compositionstart={() => ctl.compositionStart()}
-  on:compositionend={(event) => { recordImeCompositionEnd(event); ctl.compositionEnd(); }}
+  on:compositionend={onCompositionEnd}
   {...$$restProps}
 />
 
