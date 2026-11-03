@@ -20,7 +20,7 @@
  */
 import { get } from "svelte/store";
 import { i18n } from "src/lib/stores/i18n";
-import { onKeyboardChange, visibleViewport } from "src/ui/utils/visibleViewport";
+import { keyboardHeight, onKeyboardChange, visibleViewport } from "src/ui/utils/visibleViewport";
 import { offerKeyboardDismiss } from "./keyboardDismiss";
 
 export type ViewportBounds = ReturnType<typeof visibleViewport>;
@@ -32,27 +32,34 @@ export interface KeepInViewOptions {
 export function keepInView(node: HTMLElement, options: KeepInViewOptions | ((view: Window) => ViewportBounds) = {}) {
   const boundsOf = typeof options === "function" ? options : options.boundsOf ?? visibleViewport;
   const view = node.ownerDocument.defaultView ?? window;
-  let listening = false;
-  let frame = 0;
+  let listening = false, alive = true;
+  let frame: number | null = null;
   let dismiss: (() => void) | null = null;
   let unwatchKeyboard: (() => void) | null = null;
   // w4-p06: the scroll positions before the keyboard came up, and the visible
   // height then. When the keyboard goes (the height is back) after the field
   // was scrolled into view, the view is put back where the user left it.
-  let before: Array<{ el: Element; top: number }> = [];
+  let before: Array<{ el: Element; top: number; left: number; assistedTop: number; assistedLeft: number }> = [];
   let restingHeight = 0;
-  let moved = false;
+  let moved = false, shrunk = false, userMoved = false;
 
   function check(): void {
-    frame = 0;
+    frame = null;
+    if (!listening || !alive) return;
     const bounds = boundsOf(view);
+    if (bounds.height < restingHeight - 1) shrunk = true;
+    // Native panning and deliberate user scrolling both take precedence over
+    // restoring our old position. Never pull a manually explored form back.
+    if (before.some(({ el, assistedTop, assistedLeft }) => Math.abs(el.scrollTop - assistedTop) > 1 || Math.abs(el.scrollLeft - assistedLeft) > 1)) userMoved = true;
+    if (userMoved) return;
     const rect = node.getBoundingClientRect();
-    if (rect.top < bounds.top || rect.bottom > bounds.bottom) {
+    if (rect.top < bounds.top || rect.bottom > bounds.bottom || rect.left < bounds.left || rect.right > bounds.right) {
       moved = true;
       node.scrollIntoView?.({ block: "nearest", inline: "nearest", behavior: "auto" });
-    } else if (moved && bounds.height >= restingHeight - 1) {
+      for (const item of before) { item.assistedTop = item.el.scrollTop; item.assistedLeft = item.el.scrollLeft; }
+    } else if (moved && shrunk && bounds.height >= restingHeight - 1) {
       moved = false;
-      for (const { el, top } of before) el.scrollTop = top;
+      for (const { el, top, left } of before) { el.scrollTop = top; el.scrollLeft = left; }
     }
   }
   // i3-input: one check per frame, and only when the visible area changes
@@ -61,17 +68,20 @@ export function keepInView(node: HTMLElement, options: KeepInViewOptions | ((vie
   // the keyboard: each scrollIntoView fired another scroll, and the field
   // drifted away while typing.
   function schedule(): void {
-    if (frame === 0) frame = view.requestAnimationFrame ? view.requestAnimationFrame(check) : (check(), 0);
+    if (!listening || !alive || frame !== null) return;
+    if (view.requestAnimationFrame) frame = view.requestAnimationFrame(check);
+    else check();
   }
   function start(): void {
-    if (listening) return;
+    if (listening || !alive) return;
     listening = true;
     before = [];
     for (let el = node.parentElement; el; el = el.parentElement) {
-      if (el.scrollHeight > el.clientHeight) before.push({ el, top: el.scrollTop });
+      if (el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth) before.push({ el, top: el.scrollTop, left: el.scrollLeft, assistedTop: el.scrollTop, assistedLeft: el.scrollLeft });
     }
-    restingHeight = boundsOf(view).height;
-    moved = false;
+    const height = boundsOf(view).height;
+    restingHeight = keyboardHeight(view) > 0 ? Math.max(height, view.innerHeight) : height;
+    moved = false; shrunk = false; userMoved = false;
     // A tag test, not instanceof: the field may live in a popout window.
     if (node.tagName === "INPUT" || node.tagName === "TEXTAREA") {
       const confirm = typeof options === "function" ? undefined : options.confirm;
@@ -90,8 +100,8 @@ export function keepInView(node: HTMLElement, options: KeepInViewOptions | ((vie
     listening = false;
     dismiss?.();
     dismiss = null;
-    if (frame !== 0) view.cancelAnimationFrame?.(frame);
-    frame = 0;
+    if (frame !== null) view.cancelAnimationFrame?.(frame);
+    frame = null;
     view.visualViewport?.removeEventListener("resize", schedule);
     view.removeEventListener("resize", schedule);
     unwatchKeyboard?.();
@@ -112,6 +122,7 @@ export function keepInView(node: HTMLElement, options: KeepInViewOptions | ((vie
   if (node.ownerDocument.activeElement === node) start();
   return {
     destroy(): void {
+      alive = false;
       stop();
       node.removeEventListener("focus", start);
       node.removeEventListener("blur", blurred);

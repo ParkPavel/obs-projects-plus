@@ -26,7 +26,7 @@ function fakeViewport() {
       listeners.get(type)!.add(fn);
     },
     removeEventListener: (type: string, fn: EventListener) => listeners.get(type)?.delete(fn),
-    fire: (type: string) => listeners.get(type)?.forEach((fn) => fn(new Event(type))),
+    fire: (type: string) => { listeners.get(type)?.forEach((fn) => fn(new Event(type))); flushFrames(); },
     count: () => [...listeners.values()].reduce((n, s) => n + s.size, 0),
   };
   Object.defineProperty(window, "visualViewport", { configurable: true, value: vv });
@@ -37,13 +37,19 @@ function boxAt(el: HTMLElement, top: number, height = 40): void {
   el.getBoundingClientRect = () => ({ top, bottom: top + height, left: 0, right: 200, width: 200, height, x: 0, y: top, toJSON: () => ({}) });
 }
 
-// i3-input: the check runs on the next frame; the tests run that frame at once.
+// Model real asynchronous RAF semantics, including the valid first ID0.
 const realRaf = window.requestAnimationFrame;
+const realCancelRaf = window.cancelAnimationFrame;
+let scheduled = new Map<number, FrameRequestCallback>();
+function flushFrames() { const batch = [...scheduled.values()]; scheduled.clear(); for (const callback of batch) callback(0); }
 beforeEach(() => {
-  window.requestAnimationFrame = (cb: FrameRequestCallback) => { cb(0); return 0; };
+  scheduled = new Map(); let sequence = 0;
+  window.requestAnimationFrame = (callback: FrameRequestCallback) => { const id = sequence++; scheduled.set(id, callback); return id; };
+  window.cancelAnimationFrame = (id: number) => { scheduled.delete(id); };
 });
 afterEach(() => {
   window.requestAnimationFrame = realRaf;
+  window.cancelAnimationFrame = realCancelRaf;
   document.body.innerHTML = "";
   delete (window as { visualViewport?: unknown }).visualViewport;
 });
