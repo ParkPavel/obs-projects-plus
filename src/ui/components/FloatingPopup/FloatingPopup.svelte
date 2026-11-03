@@ -472,7 +472,7 @@
 
 <style>
   .ppp-popup--floating.ppp-popup--field-suggestions { min-width: 0; max-width: none; overscroll-behavior: contain; touch-action: pan-y; }
-  .ppp-popup-insets { position: fixed; width: 0; height: 0; padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); visibility: hidden; pointer-events: none; }
+  .ppp-popup-insets { position: fixed; width: 0; height: 0; padding: env(safe-area-inset-top, 0rem) env(safe-area-inset-right, 0rem) env(safe-area-inset-bottom, 0rem) env(safe-area-inset-left, 0rem); visibility: hidden; pointer-events: none; }
   .ppp-popup--floating {
     position: fixed;
     z-index: var(--ppp-z-popover, 50);
