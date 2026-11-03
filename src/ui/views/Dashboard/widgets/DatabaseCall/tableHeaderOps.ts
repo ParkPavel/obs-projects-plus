@@ -8,6 +8,7 @@ import type { DataField, DataRecord } from "src/lib/dataframe/dataframe";
 import type { ContextMenuEntry } from "src/lib/contextMenu";
 import { aggregationLabel, aggregationOptionsFor } from "src/lib/dashboard-engine/aggregationOptions";
 import { valueSuggestions, type SuggestionContext } from "src/lib/suggestions/valueSuggestions";
+import { configuredChoiceOptions } from "src/lib/suggestions/choiceOptions";
 import type { ColumnAggregation, DataTableConfig, DataTableSortCriteria } from "../../types";
 
 export type SortOrder = "asc" | "desc";
@@ -25,12 +26,8 @@ export function calculateOptions(field: DataField): ColumnAggregation[] {
 }
 
 /**
- * Dropdown option pools for Select/Status columns: the values those columns
- * already hold, deduplicated and sorted.
- *
- * Derived from the data rather than declared, which is why an option a user
- * typed into one note shows up as a choice in the next — the field's own
- * `typeConfig` is not the only source of truth for what a column contains.
+ * Configured Select/Status edits offer exact schema choices. Free text and
+ * unconfigured choices retain the project pool; filters retain legacy values.
  */
 export function optionPools(
   fields: readonly DataField[],
@@ -45,7 +42,7 @@ export function optionPools(
       && f.type !== DataFieldType.Select
       && f.type !== DataFieldType.Status
     ) continue;
-    map.set(f.name, valueSuggestions(records, f, context));
+    map.set(f.name, configuredChoiceOptions(f) ?? valueSuggestions(records, f, context));
   }
   return map;
 }

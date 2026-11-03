@@ -8,7 +8,7 @@
   export function retryCommit(): void { ctl.arm(); }
   /** A containing editor can own Tab while keeping the field's selected option. */
   export function commitForNavigation(): void {
-    const pick = activeNow();
+    const pick = allowEmpty && ctl.getState().draft === "" && !userNav ? undefined : activeNow();
     if (!multi && pick && (userNav || !allowCustom)) choose(pick);
     else finish("tab");
     hide();
@@ -46,6 +46,9 @@
   export let value = "";
   export let options: ComboOption[] = [];
   export let allowCustom = false;
+  export let allowEmpty = false;
+  /** A legacy stored value can be left untouched without becoming a new option. */
+  export let allowUnlistedUnchanged = false;
   export let multi = false;
   export let loading = false;
   /** Ids shown as chosen in `multi` mode. */
@@ -80,6 +83,8 @@
   const search = createOptionSearch<ComboOption>();
   $: suggestions = search.update(options);
   let draft = value;
+  let invalid = false, alive = true;
+  onDestroy(() => { alive = false; });
   let open = false;
   let active = -1;
   // The user typed since the list opened: only then is the list filtered, so a
@@ -122,7 +127,7 @@
 
   /** Move focus into the input. */
   export function focus(): void {
-    inputEl?.focus();
+    if (alive) inputEl?.focus();
   }
 
   export function reset(next = ""): void {
@@ -130,12 +135,13 @@
     pull();
     dirty = false;
     active = -1;
+    invalid = false;
   }
 
   onMount(async () => {
     if (!focusOnMount) return;
     await tick();
-    inputEl?.focus();
+    if (alive && inputEl?.isConnected) inputEl.focus();
   });
 
   // ── Popup placement ────────────────────────────────────────
@@ -145,7 +151,7 @@
   async function place(): Promise<void> {
     const version = ++placementVersion;
     await tick();
-    if (version !== placementVersion || !expanded || !rootEl || !popupEl || !inputEl) return;
+    if (!alive || version !== placementVersion || !expanded || !rootEl || !popupEl || !inputEl) return;
     const placement = placeAboveField(inputEl, popupEl, insetEl, roomAttempt);
     if (version !== placementVersion || !expanded) return;
     roomAttempt = placement.roomAttempt;
@@ -212,6 +218,7 @@
 
   async function revealActive(): Promise<void> {
     await tick();
+    if (!alive) return;
     const row = popupEl?.querySelector<HTMLElement>(".ppp-combo-option--active");
     if (row) revealInList(row, popupEl);
   }
@@ -249,9 +256,11 @@
     if (openOnFocus) show();
   }
   function onInput(e: Event): void {
+    if (readOnly || disabled) return;
     ctl.input((e.currentTarget as HTMLInputElement).value);
     pull();
     dirty = true;
+    invalid = false;
     show();
     resetActive();
   }
@@ -269,8 +278,8 @@
   function plainMatch(text: string): ComboOption | undefined {
     const t = text.trim().toLowerCase();
     if (!t) return undefined;
-    const same = options.find((o) => o.label.toLowerCase() === t);
-    if (same) return same;
+    const same = options.filter((o) => o.label.toLowerCase() === t);
+    if (same.length) return same.length === 1 ? same[0] : undefined;
     const hits = suggestions(text);
     return hits.length === 1 ? hits[0] : undefined;
   }
@@ -298,7 +307,9 @@
         return;
       }
     }
-    const accept = allowCustom || exact !== undefined;
+    const accept = allowCustom || exact !== undefined || allowEmpty && text === "" ||
+      allowUnlistedUnchanged && text === ctl.getState().baseline;
+    invalid = !accept && reason !== "blur";
     const opts = { accept, unchanged: commitUnchanged };
     const result = reason === "blur" ? ctl.blur(opts) : ctl.commit(reason === "change" ? "blur" : reason, opts);
     pull();
@@ -309,6 +320,7 @@
   }
   function choose(opt: ComboOption): void {
     if (readOnly || disabled) return;
+    invalid = false;
     if (multi) {
       dispatch("select", opt);
       return;
@@ -374,6 +386,7 @@
       ctl.cancel();
       pull();
       dirty = false;
+      invalid = false;
       // The restore consumed this Escape; an untouched field lets it through.
       if (edited) e.stopPropagation();
       dispatch("cancel");
@@ -383,6 +396,7 @@
   }
   function confirm(): void {
     if (readOnly || disabled || ctl.isComposing()) return;
+    if (!multi && allowEmpty && ctl.getState().draft === "" && !userNav) { finish("enter"); hide(); return; }
     const pick = activeNow();
     if (pick) choose(pick);
     else if (!multi) {
@@ -434,6 +448,7 @@
     aria-controls={expanded ? listId : undefined}
     aria-activedescendant={activeOpt ? optionDomId(listId, activeOpt.id) : undefined}
     aria-label={ariaLabel}
+    aria-invalid={invalid || undefined}
     autocomplete="off"
     spellcheck="false"
     value={draft}
@@ -495,6 +510,7 @@
     flex: 1;
     min-width: 0;
   }
+  .ppp-combo-input[aria-invalid="true"] { border-color: var(--text-error); }
   .ppp-combo-insets {
     position: fixed;
     width: 0;

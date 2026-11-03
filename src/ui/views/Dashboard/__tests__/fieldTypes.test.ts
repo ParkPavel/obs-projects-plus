@@ -13,6 +13,14 @@ import {
 } from "../fieldTypes";
 
 describe("fieldTypes — type guards", () => {
+  test.each([
+    { type: "select", options: ["Ready"] },
+    { type: "select", options: [null] },
+    { type: "status", options: ["Ready"], statusGroups: { todo: ["Ready"] } },
+    { type: "status", groups: [null] },
+  ])("does not mistake an ordinary or damaged field config for a colored-options config: %p", config => {
+    expect(isSelectConfig(config)).toBe(false); expect(isStatusConfig(config)).toBe(false);
+  });
   test("isSelectConfig identifies select config", () => {
     const config: SelectFieldTypeConfig = {
       type: "select",

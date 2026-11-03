@@ -8,6 +8,15 @@ const record = { id: "A.md", values: { f: "old" } };
 const cell = { recordId: record.id, field: "f" };
 const edit = { record, field: "f", value: "draft" };
 
+it.each([DataFieldType.Select, DataFieldType.Status])("the %s persistence boundary refuses an undeclared value without altering its draft", async type => {
+  const updateRecord = jest.fn().mockResolvedValue(true), api = { updateRecord } as unknown as ViewApi;
+  const schema = [{ ...fields[0]!, type, typeConfig: { options: ["Ready"] } }];
+  const editing = createTableEditing(() => api, () => schema); editing.start(cell, []);
+  await editing.commit(edit);
+  expect(updateRecord).not.toHaveBeenCalled(); expect(get(editing).cell).toBe(cell);
+  await editing.commit({ ...edit, value: "Ready" }); expect(updateRecord).toHaveBeenCalledTimes(1); editing.destroy();
+});
+
 it("rejects a late text commit after cancellation instead of treating it as a fresh edit", async () => {
   const updateRecord = jest.fn().mockResolvedValue(true);
   const editing = createTableEditing(() => ({ updateRecord }) as unknown as ViewApi, () => fields);

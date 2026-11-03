@@ -28,7 +28,7 @@ it.each([
   [DataFieldType.Number, "0", 0, [], false],
   [DataFieldType.String, "", "", [], false],
   [DataFieldType.Date, "03.11.2026", "2026-11-03", [], false],
-  [DataFieldType.Select, "new choice", "new choice", ["old choice"], false],
+  [DataFieldType.Select, "new choice", "new choice", ["old choice", "new choice"], false],
   [DataFieldType.Number, "2", 2, [], true],
 ])("keeps the same type %s editor until the write succeeds, with a retry after failure", async (type, text, expected, options, rejects) => {
   const field = { name: "f", type, repeated: false, identifier: false, derived: false, typeConfig: { options } };

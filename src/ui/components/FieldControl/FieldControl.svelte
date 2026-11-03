@@ -7,6 +7,7 @@
   import ComboField from "../fields/ComboField.svelte";
   import TextField from "../fields/TextField.svelte";
   import { namesToOptions } from "../fields/comboOptions";
+  import { configuredChoiceOptions, choiceValueAllowed } from "src/lib/suggestions/choiceOptions";
   import DateInput from "../DateInput.svelte";
   import DatetimeInput from "../DatetimeInput.svelte";
   import { ColorPicker } from "src/ui/components/ColorPicker";
@@ -78,7 +79,7 @@
   }
 
   function commitSelection(detail: string) {
-    if (readonly) return;
+    if (readonly || !choiceValueAllowed(field, detail)) return;
     if (Object.is(detail, isString(value) ? value : "")) return;
     onChange(detail);
   }
@@ -106,7 +107,8 @@
 
   // Options of the suggestion list: the field's own options when it has them,
   // otherwise the values already used in the project.
-  $: options = namesToOptions([
+  $: declaredChoices = configuredChoiceOptions(field);
+  $: options = namesToOptions(declaredChoices ?? [
     ...new Set([...(field.typeConfig?.options ?? []), ...suggestions]),
   ]);
     
@@ -233,7 +235,8 @@
     <ComboField
       value={isString(value) ? value : ""}
       {options}
-      allowCustom
+      allowCustom={declaredChoices === null}
+      allowEmpty allowUnlistedUnchanged
       disabled={readonly}
       ariaLabel={field.name}
       inputClass="field-combo-input"

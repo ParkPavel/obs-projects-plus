@@ -7,6 +7,7 @@ import { noticeFor } from "src/lib/errors/errorText";
 import type { RenderRow } from "./tableCanon";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
 import { cellAccess } from "./tableCellAccess";
+import { choiceValueAllowed } from "src/lib/suggestions/choiceOptions";
 
 interface EditingCell { recordId: string; field: string }
 interface EditState {
@@ -56,6 +57,7 @@ export function createTableEditing(api: () => ViewApi, fields: () => DataField[]
       if (!session && (target.type !== DataFieldType.Boolean || typeof value !== "boolean")) return;
       const writer = owner ?? context();
       if (record.values[field] === value) { finish(); return; }
+      if (!choiceValueAllowed(target, value)) { set({ retry: state.retry + 1 }); return; }
       set({ saving: true });
       try {
         const written = await writer.api.updateRecord(updateRecordValues(record, { [field]: value }), writer.fields);

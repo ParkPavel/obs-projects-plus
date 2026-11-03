@@ -104,6 +104,11 @@ afterEach(() => {
 });
 
 describe("FieldControl — suggestion box", () => {
+  test.each([DataFieldType.Select, DataFieldType.Status])("configured %s neither offers nor writes undeclared observed values", async type => {
+    const m = mount({ field: { ...optionField, type }, value: "Legacy", suggestions: ["Observed"] });
+    await enter(m.box()); expect(optionLabels()).toEqual(["Todo", "Doing", "Done"]);
+    typeInto(m.box(), "Undeclared"); press(m.box(), "Enter"); await settle(); expect(m.onChange).not.toHaveBeenCalled(); m.destroy();
+  });
   test("a field with options of its own is a combobox over them", async () => {
     const m = mount();
     await enter(m.box());

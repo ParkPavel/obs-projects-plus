@@ -81,6 +81,7 @@
 
   function commitDraft(raw: string) {
     if (saving) return;
+    if (isChoice && raw === (value == null ? "" : String(value))) { dispatch("cancel"); return; }
     dispatch("commit", editedCellValue(field, value, raw, dateFormat));
   }
 
@@ -105,7 +106,7 @@
   {:else if editing && (field.type === DataFieldType.List || (field.type === DataFieldType.String && (field.repeated || Array.isArray(value))))}
     <ListCellEditor {field} {value} {options} {saving} {retryVersion} on:commit on:cancel />
   {:else if editing && (isChoice || (field.type === DataFieldType.String && options.length > 0))}
-    <CellChoiceDropdown bind:draft {options} {saving} {retryVersion}
+    <CellChoiceDropdown bind:draft {field} {options} {saving} {retryVersion}
       on:commit={(e) => commitDraft(e.detail)}
       on:cancel />
   {:else if editing}

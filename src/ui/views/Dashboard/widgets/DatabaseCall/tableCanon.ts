@@ -17,7 +17,7 @@ import {
   type Optional,
 } from "src/lib/dataframe/dataframe";
 import type { DataTableConfig, DataTableSortCriteria } from "../../types";
-import { getOptionColor, type ExtendedFieldTypeConfig } from "../../fieldTypes";
+import { getOptionColor } from "../../fieldTypes";
 import { groupRecords } from "./groupRows";
 import { parseRelationLinks } from "src/lib/relations/parseRelationLinks";
 
@@ -212,7 +212,7 @@ const computedText = (v: Optional<DataValue>, f?: DateFormatConfig) => (v instan
 export function cellDisplay(field: DataField, value: Optional<DataValue>, dateFormat?: DateFormatConfig): CellDisplay {
   if (value === null || value === undefined || value === "") return { kind: "empty" };
 
-  const cfg = field.typeConfig as ExtendedFieldTypeConfig | undefined;
+  const cfg = field.typeConfig;
   const optionColor = (label: string) => (cfg ? getOptionColor(cfg, label) : null);
 
   if ((field.repeated || field.type === DataFieldType.List) && Array.isArray(value)) return toPills(value.map((v) => String(v)), optionColor, false);

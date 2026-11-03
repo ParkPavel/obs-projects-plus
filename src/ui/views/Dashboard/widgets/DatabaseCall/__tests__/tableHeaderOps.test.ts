@@ -14,6 +14,7 @@ import {
   startColumnResize,
 } from "../tableHeaderOps";
 import type { DataTableConfig } from "../../../types";
+import { valueSuggestions } from "src/lib/suggestions/valueSuggestions";
 
 function field(name: string, type: DataFieldType): DataField {
   return { name, type, repeated: false, identifier: false, derived: false } as DataField;
@@ -131,7 +132,14 @@ describe("tableHeaderOps (F2.4)", () => {
 
     expect(pools.get("name")).toEqual(["Pinned", "Alice"]);
     expect(pools.get("tags")).toEqual(["Priority", "returning", "warm"]);
-    expect(pools.get("status")).toEqual(["Planned", "Active"]);
+    expect(pools.get("status")).toEqual(["Planned"]);
     expect(pools.has("computed")).toBe(false);
+  });
+  it.each([DataFieldType.Select, DataFieldType.Status])("configured %s edits offer schema values while filters retain legacy values", type => {
+    const configured = { ...field("state", type), typeConfig: { options: [" Ready ", "Ready", "Done"] } };
+    const records = [{ id: "a.md", values: { state: "Legacy" } }];
+    expect(optionPools([configured], records).get("state")).toEqual([" Ready ", "Ready", "Done"]);
+    expect(valueSuggestions(records, configured)).toContain("Legacy");
+    expect(optionPools([{ ...configured, typeConfig: { options: [] } }], records).get("state")).toEqual([]);
   });
 });

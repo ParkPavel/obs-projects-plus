@@ -64,6 +64,10 @@ const key = (el: HTMLElement, k: string): void => {
 };
 
 describe("text cell", () => {
+  it.each([DataFieldType.Select, DataFieldType.Status])("renders canonical %s config without requiring legacy color groups", async type => {
+    const view = mount(makeField(type, { type, options: ["Ready"], statusGroups: { todo: ["Ready"] } }), "Legacy", { editing: false });
+    await tick(); expect(view.container).toHaveTextContent("Legacy"); expect(view.container.querySelector("input")).toBeNull(); view.unmount();
+  });
   it("keeps the typed text across a flush and commits it on Enter", async () => {
     const { container, commits } = mount(makeField(DataFieldType.String), "Сарафан");
     await tick();
@@ -171,6 +175,21 @@ describe("number cell", () => {
 
 describe("select cell (CellChoiceDropdown)", () => {
   const options = ["Todo", "Doing", "Done"];
+  it.each([DataFieldType.Select, DataFieldType.Status])("configured %s refuses a typed undeclared value and preserves an unchanged legacy value", async type => {
+    const view = mount(makeField(type, { options }), "Legacy", { options: [...options, "Observed"] }); await tick();
+    const input = editor(view.container); await typeInto(input, "Undeclared"); key(input, "Enter"); await tick();
+    expect(view.commits).toEqual([]); expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(Array.from(document.querySelectorAll(".ppp-t2-choice-item")).map(row => row.textContent)).not.toContain("Observed");
+    view.unmount();
+    const unchanged = mount(makeField(type, { options }), 42, { options }); await tick();
+    editor(unchanged.container).dispatchEvent(new FocusEvent("blur")); await tick();
+    expect(unchanged.commits).toEqual([]); expect(unchanged.cancels()).toBe(1); unchanged.unmount();
+  });
+  it("a configured choice can be cleared explicitly", async () => {
+    const view = mount(makeField(DataFieldType.Select, { options }), "Todo", { options }); await tick();
+    const input = editor(view.container); await typeInto(input, ""); key(input, "Enter"); await tick();
+    expect(view.commits).toEqual([""]); view.unmount();
+  });
 
   it("keeps the typed choice across a flush and commits it on Enter", async () => {
     const { container, commits } = mount(makeField(DataFieldType.Select), "Todo", { options });

@@ -483,6 +483,23 @@ describe("ComboField — keyboard", () => {
 });
 
 describe("ComboField — pointer and touch", () => {
+  test("a case-ambiguous query does not silently choose the first option on blur", async () => {
+    const m = mount({ value: "Legacy", allowCustom: false, options: [{ id: "a", label: "READY" }, { id: "b", label: "Ready" }] });
+    await open(m); type(m.input, "ready"); m.input.blur(); await tick();
+    expect(m.commits).toEqual([]); expect(m.input.value).toBe("Legacy"); m.destroy();
+  });
+  test("a configured choice can be cleared without picking an implicit first result", async () => {
+    const m = mount({ allowCustom: false, allowEmpty: true }); await open(m); type(m.input, ""); await tick(); key(m.input, "Enter");
+    expect(m.commits).toEqual([{ value: "", reason: "enter" }]); expect(m.selects).toEqual([]); m.destroy();
+  });
+  test("an unchanged unlisted value stays outside the options and can leave its editor", async () => {
+    const m = mount({ value: "Legacy", allowCustom: false, allowUnlistedUnchanged: true, commitUnchanged: true });
+    await open(m); expect(labels()).not.toContain("Legacy"); m.input.blur(); await tick();
+    expect(m.commits).toEqual([{ value: "Legacy", reason: "blur" }]); m.destroy();
+  });
+  test("a queued mount cannot focus an input after its interaction was destroyed", async () => {
+    const m = mount({ focusOnMount: true }), focus = jest.spyOn(m.input, "focus"); m.destroy(); await tick(); await tick(); expect(focus).not.toHaveBeenCalled();
+  });
   test("a press selects before the input blurs: it is prevented, so focus stays, and commits once", async () => {
     const m = mount();
     await open(m);
