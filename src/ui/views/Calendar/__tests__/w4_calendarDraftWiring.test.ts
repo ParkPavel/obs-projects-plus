@@ -146,5 +146,5 @@ it("keys the embedded calendar instance by its tab, so switching tabs destroys t
   const source = fs.readFileSync(path.resolve(CALENDAR, "../Dashboard/widgets/DatabaseCall/DatabaseCallBlock.svelte"), "utf8");
   expect(source).toMatch(/\{#key activeTab\.id\}\s*<CalendarView/);
   const calendar = source.slice(source.indexOf('activeTab.viewType === "calendar"'), source.indexOf('activeTab.viewType === "gallery"'));
-  expect(calendar).toMatch(/filterConditions=\{tabScope\.filterConditions\}/);
+  expect(calendar).toMatch(/filterConditions=\{creationConditions\}/);
 });

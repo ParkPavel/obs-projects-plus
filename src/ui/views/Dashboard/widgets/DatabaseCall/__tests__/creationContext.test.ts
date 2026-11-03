@@ -36,6 +36,31 @@ it.each<ViewTab["viewType"]>(["table", "board", "calendar", "gallery"])("%s rece
   expect(getFilterValuesFromConditions(conditions)).toEqual({ type: "visit", paid: false, status: "open", channel: "web" });
 });
 
+it.each(["filter", "readonly", "writer"])("invalidates a first-record draft on %s change and ignores its late completion", async change => {
+  const previous = get(app); app.set({ vault: { getAbstractFileByPath: () => null } } as never);
+  const project = { ...DEFAULT_PROJECT, id: "own", name: "Own", views: [] };
+  settings.set({ ...DEFAULT_SETTINGS, projects: [project] });
+  let resolve!: () => void;
+  const addRecord = jest.fn().mockReturnValueOnce(new Promise<void>(done => { resolve = done; })).mockResolvedValue(undefined);
+  const frame = { fields: [], records: [] }, api = { addRecord } as never;
+  const config = { activeTabId: "tab", viewTabs: [{ id: "tab", label: "Table", viewType: "table", config: {} }], subFilter: { conjunction: "and", conditions: [condition("type", "visit")] } };
+  try {
+    const view = render(DatabaseCallBlock, { props: { project, frame, fields: [], api, readonly: false, getRecordColor: () => null,
+      sourceState: { kind: "parent", frame }, sourceReadOnly: false, config } });
+    const flush = async () => { await tick(); await tick(); await tick(); };
+    await flush(); view.getByRole("button", { name: "Add first record" }).click(); await flush();
+    view.container.querySelector<HTMLButtonElement>("[data-note-save]")!.click(); await flush();
+    expect(addRecord).toHaveBeenCalledTimes(1);
+    view.component.$set(change === "filter" ? { config: { ...config, subFilter: { conjunction: "and", conditions: [condition("type", "call")] } } }
+      : change === "readonly" ? { sourceReadOnly: true } : { api: { addRecord: jest.fn().mockResolvedValue(undefined) } as never });
+    await flush(); expect(view.container.querySelector("[data-note-draft]")).toBeNull();
+    if (change === "readonly") { view.component.$set({ sourceReadOnly: false }); await flush(); }
+    view.getByRole("button", { name: "Add first record" }).click(); await flush();
+    const fresh = view.container.querySelector("[data-note-draft]"); expect(fresh).not.toBeNull();
+    resolve(); await flush(); expect(view.container.querySelector("[data-note-draft]")).toBe(fresh);
+  } finally { cleanup(); app.set(previous); }
+});
+
 it.each([false, true])("the first table note keeps its context and draft until acknowledgement; failure=%s", async fails => {
   const previous = get(app);
   app.set({ vault: { getAbstractFileByPath: () => null } } as never);

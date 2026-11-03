@@ -7,9 +7,7 @@ import type { DataField, DataRecord } from "src/lib/dataframe/dataframe";
 import type { ViewApi } from "src/lib/viewApi";
 import type { FilterCondition, ProjectDefinition } from "src/settings/settings";
 
-export function tableCreationContext(project: ProjectDefinition | undefined, sourceId: string | undefined, fields: DataField[], conditions: FilterCondition[], readonly: boolean): string {
-  return JSON.stringify([project?.id, project?.dataSource, project?.newNotesFolder, sourceId, fields, conditions, readonly]);
-}
+export { creationContextKey as tableCreationContext } from "src/ui/utils/creationContext";
 
 export async function createNamedRecord(name: string, project: ProjectDefinition, fields: DataField[], api: ViewApi, values?: DataRecord["values"]): Promise<void> {
   const problem = noteNameProblem(get(app), project, name);

@@ -8,7 +8,6 @@ describe("first record creation in a database block", () => {
     expect(block).toContain('import NoteDraft from "src/ui/components/NoteDraft.svelte";');
     expect(block).toMatch(/else openFirstRecordDraft\(\);/);
     expect(block).toMatch(/on:click=\{openFirstRecordDraft\}/);
-    expect(block).toMatch(/\{:else if effectiveFrame\.records\.length === 0 && firstRecordDraftOpen && project\}\s*<div class="ppp-dbc-first-record-draft">\s*<NoteDraft/);
     expect(block).not.toContain("CreateNoteModal");
   });
 

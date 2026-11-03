@@ -94,7 +94,7 @@
   onDestroy(editing.destroy);
   $: editing.refresh(api, fields, sourceProjectId ?? project?.id, readonly);
   $: createRow = bindTableCreation(project, fields, api, creationConditions);
-  $: createContext = tableCreationContext(project, sourceProjectId, fields, creationConditions, readonly);
+  $: createContext = tableCreationContext(project, sourceProjectId, fields, creationConditions, readonly, api);
   $: columns = buildColumns(fields, config);
   // F2.4: live resize preview overrides one column width until commit.
   let liveWidth: { field: string; rem: number } | null = null;

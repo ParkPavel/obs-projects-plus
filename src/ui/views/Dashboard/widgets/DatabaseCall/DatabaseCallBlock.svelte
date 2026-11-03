@@ -62,6 +62,7 @@
   import { namedSourceNotice } from "./namedSourceNotice";
   import EmptyState from "src/ui/components/EmptyState/EmptyState.svelte";
   import NoteDraft from "src/ui/components/NoteDraft.svelte";
+  import { creationContextKey } from "src/ui/utils/creationContext";
   import { createDataRecord } from "src/lib/dataApi";
   import { getFilterValuesFromConditions, prefillConditions } from "src/lib/helpers";
   import { settings } from "src/lib/stores/settings";
@@ -321,6 +322,15 @@
   let seenPrimarySignal = 0;
   let newRowSignal = 0;
   let firstRecordDraftOpen = false;
+  let firstRecordVersion = 0, firstRecordContext = "", alive = true;
+  onDestroy(() => { alive = false; firstRecordVersion++; });
+  function syncFirstRecordContext(next: string): void {
+    if (firstRecordContext === next) return;
+    firstRecordContext = next;
+    closeFirstRecordDraft();
+  }
+  function closeFirstRecordDraft(): void { firstRecordVersion++; firstRecordDraftOpen = false; }
+  $: syncFirstRecordContext(JSON.stringify([creationContextKey(project, sourceProjectId, fields, creationConditions, readonly || sourceReadOnly, api), activeTab?.id, sourceState.kind, namedSource.kind]));
   $: if (primaryActionSignal > seenPrimarySignal) {
     seenPrimarySignal = primaryActionSignal;
     runPrimaryAction();
@@ -356,6 +366,8 @@
   }
 
   function openFirstRecordDraft(): void {
+    if (!alive || readonly || sourceReadOnly || !project || namedSource.kind === "broken") return;
+    firstRecordVersion++;
     firstRecordDraftOpen = true;
   }
 
@@ -364,8 +376,10 @@
     templatePath: string,
     targetProject: ProjectDefinition
   ): Promise<void> {
-    await api.addRecord(createDataRecord(name, targetProject, getFilterValuesFromConditions(creationConditions)), fields, templatePath);
-    firstRecordDraftOpen = false;
+    if (!alive || !firstRecordDraftOpen || readonly || sourceReadOnly) return;
+    const version = firstRecordVersion;
+    await api.addRecord(createDataRecord(name, targetProject, getFilterValuesFromConditions(creationConditions)), JSON.parse(JSON.stringify(fields)) as DataField[], templatePath);
+    if (alive && firstRecordVersion === version) closeFirstRecordDraft();
   }
 
   function handleClearCanvasFilter() {
@@ -706,11 +720,13 @@
             </EmptyState>
           {:else if effectiveFrame.records.length === 0 && firstRecordDraftOpen && project}
             <div class="ppp-dbc-first-record-draft">
+              {#key firstRecordVersion}
               <NoteDraft
                 {project}
                 onSave={saveFirstRecord}
-                onCancel={() => (firstRecordDraftOpen = false)}
+                onCancel={closeFirstRecordDraft}
               />
+              {/key}
             </div>
           {:else if effectiveFrame.records.length === 0}
             <EmptyState

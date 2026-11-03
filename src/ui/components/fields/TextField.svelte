@@ -29,6 +29,8 @@
 
   /** A consumer whose persistence failed can keep the draft and permit retry. */
   export function retryCommit(): void { ctl.arm(); }
+  /** Containing forms must honor the same composition guard as Enter and ✓. */
+  export function isComposing(): boolean { return ctl.isComposing(); }
   /** A containing editor owns Tab navigation; commit through this field once. */
   export function commitForNavigation(): void { emit("tab"); }
 

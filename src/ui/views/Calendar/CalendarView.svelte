@@ -34,6 +34,7 @@
   import { onDestroy, onMount, tick } from "svelte";
   import CalendarDraftSheet from "./draft/CalendarDraftSheet.svelte";
   import { createCalendarDraft, draftMapping, draftRecord, interceptDraft, isDraftId, mappingKey } from "./draft/calendarDraft";
+  import { creationContextKey } from "src/ui/utils/creationContext";
   import { valueSuggestions, templateFoldersOf } from "src/lib/suggestions/valueSuggestions";
   import { namesToOptions } from "src/ui/components/fields/comboOptions";
   import { normalizeColor } from "src/lib/visualizer/colors";
@@ -258,13 +259,14 @@
     creation: creationDateField?.name,
     check: booleanField?.name,
   });
-  $: draftOwner = `${project.id}|${mappingKey(draftMap)}`;
+  $: draftScope = creationContextKey(project, undefined, [], filterConditions, false, api);
+  $: draftOwner = `${draftScope}|${mappingKey(draftMap)}`;
   $: draftState = $draftCtl;
   // Another project, read-only data or, outside its own write, another mapping:
   // the draft is not this view's any more.
   $: if (draftState.draft && (
     readonly || dataReadOnly ||
-    !draftState.draft.owner.startsWith(`${project.id}|`) ||
+    !draftState.draft.owner.startsWith(`${draftScope}|`) ||
     (!draftState.saving && draftState.draft.owner !== draftOwner)
   )) draftCtl.cancel();
   $: draftUntitled = $i18n.t("modals.note.create.untitled");
@@ -1635,6 +1637,7 @@
    */
   async function confirmDraft(): Promise<void> {
     if (dataReadOnly || readonly) return;
+    if (draftState.draft?.owner !== draftOwner) return;
     const result = await draftCtl.confirm(
       ({ name, templatePath, values, defaults }) => api.addRecord(createDataRecord(name, project, values), fields, templatePath, undefined, defaults),
       dayjs(),

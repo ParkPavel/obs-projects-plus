@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import TextField from "src/ui/components/fields/TextField.svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
@@ -19,6 +19,8 @@
   let field: TextField;
   let saving = false;
   let saveError = "";
+  let alive = true;
+  onDestroy(() => { alive = false; });
 
   $: nameProblem = noteNameProblem($app, project, name);
 
@@ -28,19 +30,20 @@
 
   async function submit(value = name): Promise<void> {
     const problem = noteNameProblem($app, project, value);
-    if (saving || problem) return;
+    if (!alive || saving || field.isComposing() || problem) return;
 
     saving = true;
     saveError = "";
     try {
       await onSave(value.trim(), templatePath, project);
     } catch (error) {
+      if (!alive) return;
       saveError = $i18n.t("modals.note.create.save-error", {
         message: error instanceof Error ? error.message : String(error),
       });
       field.retryCommit();
     } finally {
-      saving = false;
+      if (alive) saving = false;
     }
   }
 
@@ -63,7 +66,7 @@
       ariaLabel={$i18n.t("modals.note.create.name.name")}
       validate={validName}
       error={!!nameProblem || !!saveError}
-      disabled={saving}
+      readOnly={saving}
       on:input={(event) => {
         name = event.detail;
         saveError = "";
