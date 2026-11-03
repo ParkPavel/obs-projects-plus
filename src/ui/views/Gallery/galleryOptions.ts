@@ -5,8 +5,9 @@
  * dashboard's database-call block, or from a hand-edited data.json. Every
  * place that renders or edits a gallery reads it through
  * `normalizeGalleryConfig`, so "absent", "legacy" and "nonsense" each have one
- * answer, and a config with none of the cards-g3 keys renders as it did before
- * them: grid, 16/10 media, cover, field labels shown, 300 wide.
+ * answer: grid, 16/10 media, cover preview, field labels shown, 300 wide.
+ * Empty embedded tabs use the conventional `cover` property. Explicit null
+ * disables that property and survives JSON, unlike an undefined clear.
  *
  * Pure: no DOM, no stores. The numeric width goes through the project's one
  * coercion module (R0.15).
@@ -56,6 +57,7 @@ export const GALLERY_WIDTH_RANGE = { min: 120, max: 640, step: 10 } as const;
 export const GALLERY_CARD_PREVIEWS: readonly GalleryCardPreview[] = ["cover", "property", "content"];
 
 export const GALLERY_DEFAULTS = {
+  coverField: "cover",
   layout: "grid",
   coverAspectRatio: "16/10",
   fitStyle: "cover",
@@ -96,7 +98,7 @@ export function normalizeGalleryConfig(
     ? c.collapsedGroups.filter((key): key is string => typeof key === "string")
     : [];
   return {
-    coverField: fieldName(c.coverField),
+    coverField: c.coverField === undefined ? GALLERY_DEFAULTS.coverField : fieldName(c.coverField),
     iconField: fieldName(c.iconField),
     fitStyle: oneOf(c.fitStyle, GALLERY_FIT_STYLES, GALLERY_DEFAULTS.fitStyle),
     cardWidth: cardWidthOf(c.cardWidth),

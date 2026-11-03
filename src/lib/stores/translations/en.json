@@ -2408,7 +2408,7 @@
                     },
                     "hints": {
                         "card-width": "Width of each gallery card in pixels",
-                        "cover-field": "Text field with path to image",
+                        "cover-field": "Uses the cover property by default. Clear the field to disable property images. Cover and Content previews can still use the first image in the note.",
                         "include-fields": "Select which fields to show on cards",
                         "card-fields": "Shown under the title of every card, in this order"
                     }

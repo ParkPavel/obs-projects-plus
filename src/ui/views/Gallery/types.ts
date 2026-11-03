@@ -10,7 +10,8 @@ import type { CardFrameConfig } from "src/ui/components/SharedCard/cardFrames";
  * from CardFrameConfig and are read through `normalizeCardFrames`.
  */
 export interface GalleryConfig extends CardFrameConfig {
-  readonly coverField?: string;
+  /** Unset uses the conventional cover property; null explicitly disables the property. */
+  readonly coverField?: string | null;
   /** NPLAN-D2 — page-level icon field (emoji or lucide icon name). */
   readonly iconField?: string;
   /** cover | contain; legacy fill is kept; anything else reads as cover. */

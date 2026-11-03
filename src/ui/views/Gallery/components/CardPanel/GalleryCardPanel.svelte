@@ -90,9 +90,12 @@
       class="dropdown"
       data-gcp-cover
       value={options.coverField ?? ""}
-      on:change={(e) => patch({ coverField: e.currentTarget.value || undefined })}
+      on:change={(e) => patch({ coverField: e.currentTarget.value || null })}
     >
       <option value="">{$i18n.t("views.gallery.fields.none")}</option>
+      {#if options.coverField && !coverCandidates.some(field => field.name === options.coverField)}
+        <option value={options.coverField}>{options.coverField}</option>
+      {/if}
       {#each coverCandidates as field (field.name)}
         <option value={field.name}>{field.name}</option>
       {/each}

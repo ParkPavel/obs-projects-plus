@@ -153,6 +153,32 @@ beforeEach(() => {
   helpers.showMobileNavMenu.mockClear();
 });
 
+it("an empty embedded gallery config uses the conventional cover property", () => {
+  const m = mount({ config: {} });
+  try { expect(m.card(0).querySelector("img")?.getAttribute("src")).toBe(COVER); }
+  finally { m.component.$destroy(); }
+});
+
+it("an explicit no-property choice survives JSON reload instead of reverting to the default cover", () => {
+  const config = JSON.parse(JSON.stringify({ coverField: null }));
+  const m = mount({ config });
+  try { expect(m.card(0).querySelector("img")).toBeNull(); }
+  finally { m.component.$destroy(); }
+});
+
+it("a default cover wikilink resolves an SVG from the record's own path", () => {
+  const file = { path: "Cabinet/Covers/Portrait.svg", extension: "svg" };
+  const record = { id: "Cabinet/Client.md", values: { cover: "[[Covers/Portrait.svg|Portrait]]" } };
+  const destination = jest.fn((path: string, source: string) => path === "Covers/Portrait.svg" && source === record.id ? file : null);
+  const resource = jest.fn(() => "app://vault/Cabinet/Covers/Portrait.svg");
+  app.set({ metadataCache: { getFirstLinkpathDest: destination }, vault: { getResourcePath: resource } });
+  const m = mount({ config: {}, frame: { fields: [cover], records: [record] } });
+  try {
+    expect(m.card(0).querySelector("img")?.getAttribute("src")).toBe("app://vault/Cabinet/Covers/Portrait.svg");
+    expect(destination).toHaveBeenCalledWith("Covers/Portrait.svg", record.id); expect(resource).toHaveBeenCalledWith(file);
+  } finally { m.component.$destroy(); app.set({ metadataCache: { getFirstLinkpathDest: () => null }, vault: { getResourcePath: () => "" } }); }
+});
+
 afterEach(() => {
   document.body.innerHTML = "";
 });
@@ -216,6 +242,14 @@ describe("B9 — a tap on a gallery card opens the record in the peek", () => {
 });
 
 describe("B9 — the «Card» panel writes the view's config and the gallery follows", () => {
+  it("shows the configured cover name even when it is not in the current schema", async () => {
+    const m = mount({ config: { coverField: "missing-cover" } });
+    try {
+      await openPanel(m);
+      expect(document.querySelector<HTMLSelectElement>("[data-gcp-cover]")?.value).toBe("missing-cover");
+      expect(m.onConfigChange).not.toHaveBeenCalled();
+    } finally { m.component.$destroy(); }
+  });
   const openPanel = (m: ReturnType<typeof mount>) => {
     m.target.querySelector<HTMLElement>("[data-gallery-card-options]")?.dispatchEvent(click());
     return tick();
@@ -288,7 +322,10 @@ describe("B9 — the «Card» panel writes the view's config and the gallery fol
     select.value = "";
     select.dispatchEvent(new Event("change", { bubbles: true }));
     await tick();
-    expect(m.onConfigChange).toHaveBeenLastCalledWith(expect.objectContaining({ coverField: undefined }));
+    expect(m.onConfigChange).toHaveBeenLastCalledWith(expect.objectContaining({ coverField: null }));
+    const saved = JSON.parse(JSON.stringify(m.onConfigChange.mock.calls[m.onConfigChange.mock.calls.length - 1]![0]));
+    m.component.$set({ config: saved }); await tick();
+    expect(m.card(0).querySelector("img")).toBeNull();
     m.component.$destroy();
   });
 });

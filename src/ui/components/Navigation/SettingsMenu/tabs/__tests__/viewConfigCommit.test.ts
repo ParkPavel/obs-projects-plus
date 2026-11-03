@@ -84,6 +84,20 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
+it("gallery settings show the default cover and persist an explicit empty choice through JSON", async () => {
+  const m = mount("gallery");
+  try {
+    await tick();
+    const input = m.q<HTMLInputElement>("#fieldlist-cover-input");
+    expect(input.value).toBe("cover");
+    await edit(input, ""); enter(input); await tick();
+    expect(m.updates).toEqual([{ coverField: null }]);
+    const saved = JSON.parse(JSON.stringify(m.updates[0]));
+    m.component.$set({ view: viewOf("gallery", saved) }); await tick();
+    expect(m.q<HTMLInputElement>("#fieldlist-cover-input").value).toBe("");
+  } finally { m.destroy(); }
+});
+
 describe("settings-binds — a field picker (board cover field)", () => {
   const cover = (m: ReturnType<typeof mount>) => m.q<HTMLInputElement>("#fieldlist-cover-board-input");
 

@@ -567,9 +567,9 @@
           <FieldComboInput
             fields={stringFields}
             id="fieldlist-cover"
-            value={coverField}
+            value={gallery.coverField ?? ""}
             placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
-            on:change={(e) => emitUpdate({ coverField: e.detail || undefined })}
+            on:change={(e) => emitUpdate({ coverField: e.detail || null })}
           />
           <span class="hint">{$i18n.t("settings-menu.view-config.gallery.hints.cover-field")}</span>
         </label>
