@@ -4,7 +4,7 @@
   import type { ChartSeriesConfig } from "../../types";
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import type { ChartConfig, ChartData, ScatterChartConfig } from "../../types";
-  import { computeMultiSeriesChartData, computeScatterData, chartHeightPx } from "src/lib/dashboard-engine/chartDataPipeline";
+  import { computeMultiSeriesChartData, computeScatterData, chartHeightPx, chartDateGrouping } from "src/lib/dashboard-engine/chartDataPipeline";
   import BarChart from "./BarChart.svelte";
   import LineChart from "./LineChart.svelte";
   import PieChart from "./PieChart.svelte";
@@ -52,11 +52,13 @@
   }
 
   // Self-highlight only — receiver-style cross-widget dimming lands in #044.4/.5.
+  $: dateGrouping = chartDateGrouping(config, source.fields);
   $: selectedLabel = (() => {
     if (!selectionStore || !currentSelection || widgetId === "") return null;
     return getSelectedChartLabel(currentSelection, {
       widgetId,
       field: config.xAxis.property,
+      dateGrouping,
     });
   })();
 
@@ -64,13 +66,14 @@
     if (!selectionStore || widgetId === "") return;
     const next = computeChartSelectionToggle(
       currentSelection ?? { source: null, field: null, values: [], op: null },
-      { widgetId, field: config.xAxis.property, value: label },
+      { widgetId, field: config.xAxis.property, value: label, dateGrouping },
     );
     if (next.kind === "set") {
       selectionStore.setSelection({
         source: next.source,
         field: next.field,
         values: next.values,
+        ...(next.dateGrouping ? { dateGrouping: next.dateGrouping } : {}),
       });
     } else if (next.kind === "clear") {
       selectionStore.clearSelection();

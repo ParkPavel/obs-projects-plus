@@ -30,8 +30,7 @@ import { evaluateFormulaValue as evaluateCanonicalFormulaValue } from "src/lib/f
 import { evaluateVersionedFormula } from "src/lib/formula/version";
 import { compileSafeRegex } from "src/lib/helpers/regexSafety";
 import { joinKey } from "./joinKey";
-import dayjs from "dayjs";
-import { parseStoredDate } from "src/lib/helpers/dateShape";
+import { dateBucket as truncateDate } from "./dateBucket";
 
 /** Canonical step order for validation */
 const STEP_ORDER: Record<TransformStep["type"], number> = {
@@ -619,43 +618,6 @@ function executeFilter(
 }
 
 // ── GROUP BY ─────────────────────────────────────────────────
-
-/**
- * Truncate a date to the specified granularity.
- */
-function truncateDate(dateVal: DataValue | undefined | null, granularity: string): string {
-  if (dateVal == null) return "__empty__";
-
-  // The stored-date reading rule: written order, an impossible day is invalid.
-  const read = dateVal instanceof Date ? dateVal : parseStoredDate(String(dateVal));
-  const d = read === undefined ? dayjs(String(dateVal)).toDate() : read;
-  if (!d || isNaN(d.getTime())) return "__invalid__";
-
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-
-  switch (granularity) {
-    case "year":
-      return `${year}`;
-    case "quarter":
-      return `${year}-Q${Math.ceil((d.getMonth() + 1) / 3)}`;
-    case "month":
-      return `${year}-${month}`;
-    case "week": {
-      // ISO 8601 week: Thursday rule
-      const thu = new Date(d.getTime());
-      thu.setDate(thu.getDate() + 3 - ((thu.getDay() + 6) % 7));
-      const isoYear = thu.getFullYear();
-      const jan4 = new Date(isoYear, 0, 4);
-      const weekNum = 1 + Math.round(((thu.getTime() - jan4.getTime()) / 86400000 - 3 + ((jan4.getDay() + 6) % 7)) / 7);
-      return `${isoYear}-W${String(weekNum).padStart(2, "0")}`;
-    }
-    case "day":
-    default:
-      return `${year}-${month}-${day}`;
-  }
-}
 
 /**
  * Compute a group key for a record.

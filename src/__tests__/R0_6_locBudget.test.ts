@@ -100,6 +100,8 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   { file: "ui/views/Dashboard/widgets/DatabaseCall/tableRowOps.ts", maxLines: 155 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/tableCreation.ts", maxLines: 28 },
   { file: "ui/utils/creationContext.ts", maxLines: 20 },
+  { file: "lib/dashboard-engine/dateBucket.ts", maxLines: 33 },
+  { file: "ui/views/Dashboard/widgets/_shared/selectionDates.ts", maxLines: 12 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/tableNewRowDraft.ts", maxLines: 34 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/tableHeaderOps.ts", maxLines: 230 },
   { file: "ui/views/Dashboard/widgets/ViewTabBar.svelte", maxLines: 260 },

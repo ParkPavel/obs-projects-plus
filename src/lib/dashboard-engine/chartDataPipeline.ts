@@ -8,6 +8,7 @@ import type { TransformPipeline, TransformStep, GroupByStep, AggregationFunction
 import { executeTransformCached } from "./transformCache";
 import { toNumber } from "src/lib/engine/numeric";
 import { joinKey as scatterJoinKey } from "./joinKey";
+import type { DateGranularity } from "./dateBucket";
 import {
   bucketLabelForRaw,
   DEFAULT_SEMANTIC_LABELS,
@@ -33,6 +34,11 @@ function toAggFn(agg: ColumnAggregation): AggregationFunction {
   return map[agg] ?? "SUM";
 }
 
+/** The same explicit/default grouping is used to draw and select a date bucket. */
+export function chartDateGrouping(config: ChartConfig, fields?: readonly DataField[]): DateGranularity | undefined {
+  return config.xAxis.dateGranularity ?? (fields?.find(f => f.name === config.xAxis.property)?.type === DataFieldType.Date ? "month" : undefined);
+}
+
 /**
  * Build a TransformPipeline from a ChartConfig.
  * ChartConfig describes what the user wants to see.
@@ -48,17 +54,14 @@ export function buildChartPipeline(
   // field is a Date. When `fields` is absent (legacy test call-sites), only
   // bucket if dateGranularity is explicitly set.
   const xField = config.xAxis.property;
-  const xIsDate = fields
-    ? fields.find((f) => f.name === xField)?.type === DataFieldType.Date
-    : false;
-  const shouldBucket = xIsDate || config.xAxis.dateGranularity != null;
-  const groupStep: GroupByStep = shouldBucket
+  const dateGranularity = chartDateGrouping(config, fields);
+  const groupStep: GroupByStep = dateGranularity !== undefined
     ? {
         type: "group-by",
         fields: [xField],
         dateGrouping: {
           field: xField,
-          granularity: config.xAxis.dateGranularity ?? "month",
+          granularity: dateGranularity,
         },
       }
     : {

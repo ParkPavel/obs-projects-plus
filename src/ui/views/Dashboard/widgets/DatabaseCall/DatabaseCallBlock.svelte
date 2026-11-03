@@ -223,7 +223,7 @@
     hasSubFilter && !scopeApplied ? applyFilter(frame, subFilter as FilterDefinition) : frame;
 
   $: effectiveFrame = autoFilter
-    ? { ...subFiltered, records: filterByLinkedSelection(subFiltered.records, autoFilter, subFiltered.fields) }
+    ? { ...subFiltered, records: filterByLinkedSelection(subFiltered.records, autoFilter, subFiltered.fields, autoFilter.field === $canvasStore.field ? $canvasStore.dateGrouping : undefined) }
     : masterSelected && masterFrame && linkedSelection
       ? { ...subFiltered, records: filterByMasterSide(masterUniverse ?? frame, subFiltered.records, masterFrame, $canvasStore.values, linkedSelection.relationField) }
       : subFiltered;
