@@ -96,8 +96,10 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   { file: "ui/views/Dashboard/widgets/DatabaseCall/editedCellValue.ts", maxLines: 13 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/tableWindow.ts", maxLines: 121 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/CellChoiceDropdown.svelte", maxLines: 130 },
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/TableNewRow.svelte", maxLines: 100 },
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/tableRowOps.ts", maxLines: 170 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/TableNewRow.svelte", maxLines: 87 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/tableRowOps.ts", maxLines: 155 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/tableCreation.ts", maxLines: 30 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/tableNewRowDraft.ts", maxLines: 34 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/tableHeaderOps.ts", maxLines: 230 },
   { file: "ui/views/Dashboard/widgets/ViewTabBar.svelte", maxLines: 260 },
   // i3-final (B3/B4): linked-view tabs and the inherited field list enter at

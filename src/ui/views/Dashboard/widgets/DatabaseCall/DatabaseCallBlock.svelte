@@ -746,6 +746,7 @@
               sourceProjectId={sourceState.kind === "ready" ? sourceState.projectId : undefined}
               {widgetId}
               {newRowSignal}
+              {creationConditions}
               on:configChange={handleDataTableConfigChange}
               on:fieldPresetsChange={(e) => dispatch("fieldPresetsChange", e.detail)}
             />{/key}

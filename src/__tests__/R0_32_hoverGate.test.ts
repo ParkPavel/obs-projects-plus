@@ -77,7 +77,7 @@ import {
 // w4-filters 171: the agenda's own condition editor (FilterGroupEditor, FilterRow)
 // left for the shared FilterPanel, with its nine ungated rules.
 // The duplicate record palette was removed; its six hover rules cannot grow back.
-const UNGATED_HOVER_BUDGET = 163;
+const UNGATED_HOVER_BUDGET = 162;
 
 /**
  * Components ios-t1 migrated. Each must carry no ungated `:hover` at all: a

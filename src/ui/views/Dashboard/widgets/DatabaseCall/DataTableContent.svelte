@@ -2,17 +2,13 @@
   /**
    * DataTableContent — #074 (TABLE_V2_CANON): Table V2 orchestrator.
    *
-   * Zones: ControlBar → sticky Header → windowed Body (rows) → inline «+ New»
-   * → sticky aggregation Footer, sharing one CSS grid context through
-   * --ppp-dt-columns. Editing: a single in-place editor at a time, persisted
-   * through viewApi.updateRecord (§6.3 bidirectionality). Row menu and header
-   * menu both go through the canonical contextMenu; column sort/hide/calculate/
-   * width/group patches come from tableHeaderOps.
+   * Windowed rows share a grid with their controls, header and footer.
+   * Draft controllers own acknowledged writes; row/header menus use contextMenu.
    */
   import type { DataFrame, DataRecord, DataField } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
   import type { DataTableConfig, FieldPreset } from "../../types";
-  import type { ProjectDefinition } from "src/settings/settings";
+  import type { ProjectDefinition, FilterCondition } from "src/settings/settings";
   import { createEventDispatcher, getContext, onDestroy } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
@@ -34,7 +30,8 @@
   import { createTableSearch } from "./tableSearch";
   import { parseSearchQuery } from "./tableSearchQuery";
   import TableScrollFrame from "./TableScrollFrame.svelte";
-  import { createNamedRecord, isRowDriving } from "./tableRowOps";
+  import { isRowDriving } from "./tableRowOps";
+  import { bindTableCreation, tableCreationContext } from "./tableCreation";
   import { openTableRowMenu, setupTableRelation } from "./tableInteractions";
   import { applySortPatch, applyHidePatch, applyCalculatePatch, applyWidthPatch, applyGroupPatch, toggleGroupCollapsed, optionPools, applyFreezePatch } from "./tableHeaderOps";
   import {
@@ -62,6 +59,7 @@
   export let project: ProjectDefinition | undefined = undefined;
   /** This table's actual project, when it differs from `project` — see tableRowOps. */
   export let sourceProjectId: string | undefined = undefined;
+  export let creationConditions: FilterCondition[] = [];
   /** R3 — Selection Bus driver identity (canvas widget id). */
   export let widgetId: string | undefined = undefined;
   /**
@@ -95,6 +93,8 @@
   const editing = createTableEditing(() => api, () => fields, () => sourceProjectId ?? project?.id, () => readonly);
   onDestroy(editing.destroy);
   $: editing.refresh(api, fields, sourceProjectId ?? project?.id, readonly);
+  $: createRow = bindTableCreation(project, fields, api, creationConditions);
+  $: createContext = tableCreationContext(project, sourceProjectId, fields, creationConditions, readonly);
   $: columns = buildColumns(fields, config);
   // F2.4: live resize preview overrides one column width until commit.
   let liveWidth: { field: string; rem: number } | null = null;
@@ -232,7 +232,7 @@
         {/if}
       {/each}
       {#if !readonly && project}
-        <TableNewRow openSignal={newRowSignal} on:create={(e) => { if (project) createNamedRecord(e.detail, project, fields, api); }} />
+        <TableNewRow openSignal={newRowSignal} contextKey={createContext} save={createRow} />
       {/if}
       {#if showFooter}
         <span class="ppp-t2-footer-spacer" />

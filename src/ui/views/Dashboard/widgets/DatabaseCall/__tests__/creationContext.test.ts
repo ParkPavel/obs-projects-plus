@@ -19,7 +19,7 @@ jest.mock("src/lib/stores/i18n", () => ({ i18n: require("svelte/store").writable
 afterEach(cleanup);
 const condition = (field: string, value: string): FilterCondition => ({ field, value, operator: "is", enabled: true });
 
-it.each<ViewTab["viewType"]>(["board", "calendar", "gallery"])("%s receives required block and nested tab constraints for creation", async viewType => {
+it.each<ViewTab["viewType"]>(["table", "board", "calendar", "gallery"])("%s receives required block and nested tab constraints for creation", async viewType => {
   const tab = { id: "tab", label: viewType, viewType, config: {}, filter: { conjunction: "and", conditions: [condition("status", "open")], groups: [{ conjunction: "and", conditions: [condition("channel", "web")] }] } };
   const project = { ...DEFAULT_PROJECT, id: "own", name: "Own project", views: [] };
   settings.set({ ...DEFAULT_SETTINGS, projects: [project] });
