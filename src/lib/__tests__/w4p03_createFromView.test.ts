@@ -13,6 +13,14 @@ const cond = (field: string, operator: FilterCondition["operator"], value?: stri
   ({ field, operator, ...(value !== undefined ? { value } : {}), enabled }) as FilterCondition;
 
 describe("getFilterValuesFromConditions", () => {
+  it("does not choose one of conflicting required values or disabled conditions", () => {
+    expect(getFilterValuesFromConditions([cond("type", "is", "client"), cond("type", "is", "visit"), cond("type", "is", "visit"), cond("off", "is", "x", false), cond("paid", "is-not-checked")])).toEqual({ paid: false });
+  });
+  it("preserves exact case and unusual canonical property names", () => {
+    const values = getFilterValuesFromConditions([cond("Status", "is", "A"), cond("status", "is", "B"), cond("__proto__", "is", "literal")]);
+    expect(Object.entries(values)).toEqual([["Status", "A"], ["status", "B"], ["__proto__", "literal"]]);
+    expect(Object.getPrototypeOf(values)).toBe(Object.prototype);
+  });
   it("writes text, a number and a checkbox (old code: text only)", () => {
     expect(
       getFilterValuesFromConditions([
@@ -43,6 +51,15 @@ describe("getFilterValuesFromConditions", () => {
 });
 
 describe("prefillConditions", () => {
+  it("accepts a persisted group-only filter whose conditions array is absent", () => {
+    const nested = cond("paid", "is-not-checked");
+    const filter = { conjunction: "and", groups: [{ conjunction: "and", conditions: [nested] }] } as FilterDefinition;
+    expect(prefillConditions(filter)).toEqual([nested]);
+  });
+  it("treats a legacy condition without enabled as active, as the display filter does", () => {
+    const legacy = { field: "type", operator: "is", value: "visit" } as FilterCondition;
+    expect(prefillConditions({ conjunction: "and", conditions: [legacy] })).toEqual([legacy]);
+  });
   it("takes the enabled conditions of an «and», groups included", () => {
     const filter: FilterDefinition = {
       conjunction: "and",

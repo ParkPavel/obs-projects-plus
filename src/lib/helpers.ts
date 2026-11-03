@@ -194,21 +194,27 @@ export function getFilterValuesFromConditions(
   conditions: FilterCondition[],
   excludeField?: string
 ): Record<string, string | number | boolean> {
-  const values: Record<string, string | number | boolean> = {};
+  const values = new Map<string, string | number | boolean>();
+  const conflicts = new Set<string>();
   for (const c of conditions) {
-    if (c.field === excludeField) continue;
+    if (c.enabled === false || c.field === excludeField || conflicts.has(c.field)) continue;
     const n = c.operator === "eq" ? toNumber(c.value) : null;
+    let value: string | number | boolean | undefined;
     if (c.operator === "is" && c.value !== undefined) {
-      values[c.field] = c.value;
+      value = c.value;
     } else if (n !== null) {
-      values[c.field] = n;
+      value = n;
     } else if (c.operator === "is-checked") {
-      values[c.field] = true;
+      value = true;
     } else if (c.operator === "is-not-checked") {
-      values[c.field] = false;
+      value = false;
     }
+    if (value === undefined) continue;
+    if (values.has(c.field) && !Object.is(values.get(c.field), value)) {
+      values.delete(c.field); conflicts.add(c.field);
+    } else values.set(c.field, value);
   }
-  return values;
+  return Object.fromEntries(values);
 }
 
 /**
@@ -218,7 +224,7 @@ export function getFilterValuesFromConditions(
  */
 export function prefillConditions(filter: FilterDefinition | undefined): FilterCondition[] {
   if (!filter) return [];
-  const own = filter.conditions.filter((c) => c.enabled);
+  const own = (filter.conditions ?? []).filter((c) => c.enabled !== false);
   const groups = filter.groups ?? [];
   if (filter.conjunction === "or" && own.length + groups.length > 1) return [];
   return [...own, ...groups.flatMap(prefillConditions)];

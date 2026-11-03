@@ -14,6 +14,7 @@ import { applyFilter } from "src/lib/engine/filterEvaluator";
 import { hasFilterEffect } from "src/lib/engine/filterCompose";
 import type { FilterCondition, FilterDefinition, SortDefinition, ViewDefinition } from "src/settings/base/settings";
 import { sortRecords } from "src/ui/app/viewSort";
+import { prefillConditions } from "src/lib/helpers";
 import type { ViewTab } from "../../types";
 
 /** The tab types a block can render. Stored tabs of any other type get an empty state. */
@@ -92,11 +93,8 @@ export interface ScopedTabFrame {
   readonly filterConditions: FilterCondition[];
 }
 
-/**
- * The tab's own filter and sort, on top of the frame the block already
- * narrowed. `blockFiltered` says the frame was narrowed upstream (block filter,
- * canvas selection), which a board must know to keep manual order honest.
- */
+/** Apply tab filter/sort; creation uses only mandatory conditions.
+ * Upstream block/canvas filtering also prevents manual Board ordering. */
 export function scopeTabFrame(
   frame: DataFrame,
   resolved: Pick<ResolvedTabView, "sort" | "filter"> | undefined,
@@ -106,11 +104,11 @@ export function scopeTabFrame(
   const filtered = hasFilterEffect(filter) ? applyFilter(frame, filter) : frame;
   const sort = resolved?.sort;
   const sorted = enabledSort(sort) ? { ...filtered, records: sortTabRecords(filtered.records, sort) } : filtered;
-  const filterConditions = (filter?.conditions ?? []).filter((c) => c.enabled !== false);
+  const filterConditions = prefillConditions(filter);
   return {
     frame: sorted,
     hasSort: enabledSort(sort),
-    hasFilter: blockFiltered || filterConditions.length > 0 || (filter?.groups?.length ?? 0) > 0,
+    hasFilter: blockFiltered || (filter?.conditions ?? []).some(c => c.enabled !== false) || (filter?.groups?.length ?? 0) > 0,
     filterConditions,
   };
 }

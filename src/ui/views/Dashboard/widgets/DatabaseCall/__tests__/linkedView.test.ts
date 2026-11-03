@@ -126,6 +126,29 @@ describe("scopeTabFrame — the embedded board gets sort and filter", () => {
     expect(scopeTabFrame(frame(records), undefined, true).hasFilter).toBe(true);
   });
 
+  it("disabled flat conditions still permit manual Board order", () => {
+    const filter = { conjunction: "and" as const, conditions: [{ field: "status", operator: "is" as const, value: "open", enabled: false }] };
+    const scoped = scopeTabFrame(frame(records), { filter, sort: { criteria: [] } }, false);
+    expect(scoped.hasFilter).toBe(false); expect(scoped.filterConditions).toEqual([]);
+  });
+
+  it("an OR filter remains active without turning its alternatives into creation defaults", () => {
+    const filter = { conjunction: "or" as const, conditions: [
+      { field: "status", operator: "is" as const, value: "open", enabled: true },
+      { field: "status", operator: "is" as const, value: "done", enabled: true },
+    ] };
+    const scoped = scopeTabFrame(frame(records), { filter, sort: { criteria: [] } }, false);
+    expect(scoped.hasFilter).toBe(true); expect(scoped.filterConditions).toEqual([]);
+    expect(scoped.frame.records).toHaveLength(3);
+  });
+
+  it("passes required nested AND constraints to creation as well as top-level conditions", () => {
+    const filter = { conjunction: "and" as const, conditions: [{ field: "status", operator: "is" as const, value: "open", enabled: true }],
+      groups: [{ conjunction: "and" as const, conditions: [{ field: "paid", operator: "is-not-checked" as const, enabled: true }] }] };
+    const scoped = scopeTabFrame(frame(records), { filter, sort: { criteria: [] } }, false);
+    expect(scoped.filterConditions.map(condition => condition.field)).toEqual(["status", "paid"]);
+  });
+
   it("disabled sort criteria do not sort", () => {
     const sort = { criteria: [{ field: "rank", order: "desc" as const, enabled: false }] };
     expect(sortTabRecords(records, sort).map((r) => r.id)).toEqual(["a", "b", "c"]);

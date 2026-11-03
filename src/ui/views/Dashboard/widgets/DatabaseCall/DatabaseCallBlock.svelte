@@ -63,6 +63,7 @@
   import EmptyState from "src/ui/components/EmptyState/EmptyState.svelte";
   import NoteDraft from "src/ui/components/NoteDraft.svelte";
   import { createDataRecord } from "src/lib/dataApi";
+  import { getFilterValuesFromConditions, prefillConditions } from "src/lib/helpers";
   import { settings } from "src/lib/stores/settings";
   import type { ViewDefinition } from "src/settings/base/settings";
   import { isRenderableTab, linkTab, resolveTabView, scopeTabFrame, sortTabRecords, unlinkTab } from "./linkedView";
@@ -363,7 +364,7 @@
     templatePath: string,
     targetProject: ProjectDefinition
   ): Promise<void> {
-    await api.addRecord(createDataRecord(name, targetProject), fields, templatePath);
+    await api.addRecord(createDataRecord(name, targetProject, getFilterValuesFromConditions(creationConditions)), fields, templatePath);
     firstRecordDraftOpen = false;
   }
 
@@ -426,6 +427,7 @@
   // frame; the board learns that sort and filter are active, like a project
   // board does, instead of a fixed «no sort, no filter» and an identity sort.
   $: viewFrame = tabScope.frame;
+  $: creationConditions = [...prefillConditions(subFilter), ...tabScope.filterConditions];
   $: getRecord = (id: string) => viewFrame.records.find((r) => r.id === id);
   $: tabSort = resolvedTab?.sort;
   $: sortRecords = (records: ReadonlyArray<DataRecord>): DataRecord[] => sortTabRecords(records, tabSort);
@@ -764,7 +766,7 @@
             onConfigChange={handleBoardConfigChange}
             hasSort={tabScope.hasSort}
             hasFilter={tabScope.hasFilter}
-            filterConditions={tabScope.filterConditions}
+            filterConditions={creationConditions}
           />
           {/key}
         {:else if activeTab.viewType === "calendar" && project}
@@ -781,7 +783,7 @@
             {getRecordColor}
             config={calendarConfig}
             onConfigChange={handleCalendarConfigChange}
-            filterConditions={tabScope.filterConditions}
+            filterConditions={creationConditions}
             {dataVersion}
           />
           {/key}
@@ -795,6 +797,7 @@
             dataReadOnly={sourceReadOnly}
             {getRecordColor}
             config={galleryConfig}
+            filterConditions={creationConditions}
             onConfigChange={handleGalleryConfigChange}
           />
           {/key}

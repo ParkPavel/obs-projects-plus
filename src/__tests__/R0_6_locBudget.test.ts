@@ -102,7 +102,7 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   { file: "ui/views/Dashboard/widgets/ViewTabBar.svelte", maxLines: 260 },
   // i3-final (B3/B4): linked-view tabs and the inherited field list enter at
   // their measured sizes; the tab bar paid for its two lines inside its ceiling.
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/linkedView.ts", maxLines: 117 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/linkedView.ts", maxLines: 115 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/tabLinkMenu.ts", maxLines: 50 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/fieldLayout.ts", maxLines: 70 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TableGroupSection.svelte", maxLines: 100 },

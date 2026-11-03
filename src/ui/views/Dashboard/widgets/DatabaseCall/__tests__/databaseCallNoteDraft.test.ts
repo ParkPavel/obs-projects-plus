@@ -12,7 +12,6 @@ describe("first record creation in a database block", () => {
     expect(block).not.toContain("CreateNoteModal");
   });
 
-  it("keeps the existing record and template write path and waits for success", () => {
-    expect(block).toMatch(/async function saveFirstRecord\([\s\S]*?targetProject: ProjectDefinition[\s\S]*?\): Promise<void> \{\s*await api\.addRecord\(createDataRecord\(name, targetProject\), fields, templatePath\);\s*firstRecordDraftOpen = false;/);
-  });
+  // Persistence acknowledgement, failure/retry and create values are exercised
+  // through the actual form in creationContext.test.ts, not source spelling.
 });
