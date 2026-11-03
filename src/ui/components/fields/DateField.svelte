@@ -8,7 +8,7 @@
    * TextField. The calendar button opens the platform picker over a hidden
    * native input — the OS control is used, not imitated.
    */
-  import { createEventDispatcher, tick } from "svelte";
+  import { createEventDispatcher, tick, onDestroy } from "svelte";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { formatTypedDate, parseTypedDate } from "src/lib/helpers/typedDate";
@@ -18,6 +18,8 @@
   /** Date and time («14.10.2026 09:30») instead of a day. */
   export let withTime = false;
   export let disabled = false;
+  export let readOnly = false;
+  export let required = false;
   export let ariaLabel: string | undefined = undefined;
 
   const dispatch = createEventDispatcher<{ change: Date | null; input: Date | null; blur: void }>();
@@ -27,6 +29,10 @@
   $: text = shown ? formatTypedDate(shown, withTime) : "";
 
   let pickerEl: HTMLInputElement | null = null;
+  let textField: TextField | undefined, alive = true;
+  onDestroy(() => { alive = false; });
+  /** Explicit containing-form acceptance validates this original input first. */
+  export function commitDraft(): boolean { return disabled || (!readOnly && !!textField?.commitForNavigation()); }
   $: nativeValue = shown ? toNative(shown) : "";
 
   function toNative(d: Date): string {
@@ -36,7 +42,8 @@
   }
 
   function accepts(draft: string): boolean {
-    return parseTypedDate(draft).kind !== "invalid";
+    const parsed = parseTypedDate(draft);
+    return parsed.kind !== "invalid" && (!required || parsed.kind !== "empty");
   }
 
   function emit(next: Date | null): void {
@@ -46,6 +53,7 @@
   }
 
   function onCommit(e: CustomEvent<{ value: string; reason: "enter" | "blur" | "tab" }>): void {
+    if (!alive || disabled || readOnly) return;
     const parsed = parseTypedDate(e.detail.value);
     if (parsed.kind === "invalid") return;
     if (parsed.kind === "empty") { emit(null); return; }
@@ -59,8 +67,9 @@
   }
 
   async function openPicker(): Promise<void> {
-    if (disabled || !pickerEl) return;
+    if (!alive || disabled || readOnly || !pickerEl) return;
     await tick();
+    if (!alive || disabled || readOnly || !pickerEl?.isConnected) return;
     const el = pickerEl as HTMLInputElement & { showPicker?: () => void };
     try {
       if (typeof el.showPicker === "function") { el.showPicker(); return; }
@@ -76,10 +85,11 @@
     const next = e.relatedTarget as Node | null;
     if (next && rootEl?.contains(next)) return;
     await tick();
-    dispatch("blur");
+    if (alive && !rootEl?.contains(rootEl?.ownerDocument.activeElement ?? null)) dispatch("blur");
   }
 
   function onPicked(e: Event): void {
+    if (!alive || disabled || readOnly) return;
     const raw = (e.currentTarget as HTMLInputElement).value;
     if (!raw) { emit(null); return; }
     const parsed = parseTypedDate(raw.replace("T", " "));
@@ -90,8 +100,11 @@
 
 <span class="ppp-date-field" class:ppp-date-field--disabled={disabled} bind:this={rootEl} on:focusout={onFocusOut}>
   <TextField
+    bind:this={textField}
     value={text}
     {disabled}
+    {readOnly}
+    {required}
     {ariaLabel}
     inputMode="text"
     inputClass="ppp-date-field__text"
@@ -105,7 +118,7 @@
     class="ppp-date-field__calendar clickable-icon"
     aria-label={$i18n.t("common.select-date")}
     title={$i18n.t("common.select-date")}
-    {disabled}
+    disabled={disabled || readOnly}
     on:click={openPicker}
   >
     <Icon name="calendar" size="sm" />
@@ -118,7 +131,7 @@
     aria-hidden="true"
     value={nativeValue}
     max={withTime ? "9999-12-31T23:59" : "9999-12-31"}
-    {disabled}
+    disabled={disabled || readOnly}
     on:change={onPicked}
   />
 </span>

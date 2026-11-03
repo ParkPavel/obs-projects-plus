@@ -39,6 +39,8 @@
   const uid = `ppp-draft-sheet-${++instances}`;
   let rootEl: HTMLElement | null = null;
   let nameField: TextField | null = null;
+  let startField: DateField | null = null, endField: DateField | null = null;
+  let composing = false, alive = true;
   // The text in the name and icon fields; the draft takes it on commit, and ✓
   // takes it as well (a tap on a phone does not blur the field first).
   let typedName = "";
@@ -53,6 +55,7 @@
   function seed(d: CalendarDraft | null): void {
     if (!d || d.session === seeded) return;
     seeded = d.session;
+    composing = false;
     colorOpen = false;
     typedName = d.name;
     typedIcon = d.icon;
@@ -98,7 +101,9 @@
   }
 
   function confirm(): void {
-    if (!draft || state.saving || problem) return;
+    if (!alive || composing || !draft || state.saving || problem) return;
+    const startValid = startField?.commitDraft(), endValid = endField?.commitDraft();
+    if (!startValid || !endValid) return;
     controller.edit({
       ...(typedName !== draft.name ? { name: typedName } : {}),
       ...(typedIcon !== draft.icon ? { icon: typedIcon } : {}),
@@ -120,7 +125,7 @@
 
   function onKeydown(e: KeyboardEvent): void {
     // A field that restored its text has consumed this Escape already.
-    if (e.key !== "Escape" || isImeKey(e) || e.defaultPrevented) return;
+    if (e.key !== "Escape" || composing || isImeKey(e) || e.defaultPrevented) return;
     e.preventDefault();
     e.stopPropagation();
     if (!state.saving) controller.cancel();
@@ -133,15 +138,18 @@
   });
 
   onDestroy(() => {
+    alive = false;
     const doc = rootEl?.ownerDocument;
     const active = doc?.activeElement ?? null;
     // ✓ is disabled while the note is written, which drops its focus to the body.
     const inside = !active || active === doc?.body || !!rootEl?.contains(active);
     if (rootEl && inside && returnFocus?.isConnected) returnFocus.focus({ preventScroll: true });
   });
+  $: if (state.error && !state.saving) nameField?.retryCommit();
 </script>
 
 {#if draft}
+  {#key draft.session}
   <div
     bind:this={rootEl}
     class="ppp-draft-sheet"
@@ -151,7 +159,8 @@
     aria-busy={state.saving}
     data-draft-session={draft.session}
     on:keydown={onKeydown}
-    on:compositionend={recordImeCompositionEnd}
+    on:compositionstart={() => (composing = true)}
+    on:compositionend={(event) => { composing = false; recordImeCompositionEnd(event); }}
   >
     <div class="ppp-draft-sheet__bar">
       <button
@@ -160,6 +169,8 @@
         aria-label={$i18n.t("views.calendar.draft.discard")}
         title={$i18n.t("views.calendar.draft.discard")}
         disabled={state.saving}
+        on:pointerdown|preventDefault
+        on:mousedown|preventDefault
         on:click={() => { if (!state.saving) controller.cancel(); }}
       >
         <Icon name="x" />
@@ -171,6 +182,8 @@
         aria-label={state.saving ? $i18n.t("modals.note.create.creating") : $i18n.t("modals.note.create.create")}
         title={state.saving ? $i18n.t("modals.note.create.creating") : $i18n.t("modals.note.create.create")}
         disabled={state.saving || !!problem}
+        on:pointerdown|preventDefault
+        on:mousedown|preventDefault
         on:click={confirm}
       >
         <Icon name={state.saving ? "loader" : "check"} />
@@ -196,7 +209,7 @@
           value={draft.name}
           inputClass="ppp-draft-sheet__input"
           error={!!problem && !mappingProblem}
-          disabled={state.saving}
+          readOnly={state.saving}
           on:input={(e) => (typedName = e.detail)}
           on:commit={onNameCommit}
           on:cancel={() => (typedName = draft?.name ?? "")}
@@ -225,9 +238,11 @@
       <div class="ppp-draft-sheet__field">
         <span class="ppp-draft-sheet__caption">{$i18n.t("views.calendar.draft.start")}</span>
         <DateField
+          bind:this={startField}
+          required
           withTime={draft.hasTime}
           value={draft.start.toDate()}
-          disabled={state.saving || readonlyTime}
+          disabled={readonlyTime} readOnly={state.saving}
           ariaLabel={$i18n.t("views.calendar.draft.start")}
           on:change={(e) => { const next = at(e.detail); if (next) controller.setStart(next); }}
         />
@@ -236,9 +251,11 @@
       <div class="ppp-draft-sheet__field">
         <span class="ppp-draft-sheet__caption">{$i18n.t("views.calendar.draft.end")}</span>
         <DateField
+          bind:this={endField}
+          required
           withTime={draft.hasTime}
           value={draft.end.toDate()}
-          disabled={state.saving || readonlyTime}
+          disabled={readonlyTime} readOnly={state.saving}
           ariaLabel={$i18n.t("views.calendar.draft.end")}
           on:change={(e) => { const next = at(e.detail); if (next) controller.setEnd(next); }}
         />
@@ -253,7 +270,7 @@
             placeholder={draft.templatePath ? $i18n.t("views.calendar.draft.template-default") : ""}
             options={statusOptions}
             allowCustom
-            disabled={state.saving}
+            readOnly={state.saving}
             on:draftChange={(e) => (typedStatus = e.detail)}
             on:commit={(e) => { typedStatus = e.detail.value; controller.edit({ status: typedStatus }); }}
             on:cancel={() => (typedStatus = draft?.status ?? "")}
@@ -287,7 +304,7 @@
             value={draft.icon}
             placeholder={draft.templatePath ? $i18n.t("views.calendar.draft.template-default") : ""}
             inputClass="ppp-draft-sheet__input"
-            disabled={state.saving}
+            readOnly={state.saving}
             on:input={(e) => (typedIcon = e.detail)}
             on:commit={onIconCommit}
             on:cancel={() => (typedIcon = draft?.icon ?? "")}
@@ -334,6 +351,7 @@
       <p class="ppp-draft-sheet__hint">{$i18n.t("views.calendar.draft.computed", { fields: computed.join(", ") })}</p>
     {/if}
   </div>
+  {/key}
 {/if}
 
 <style>

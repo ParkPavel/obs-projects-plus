@@ -9,9 +9,13 @@ import { fireEvent, render } from "@testing-library/svelte";
 import dayjs from "dayjs";
 import { tick } from "svelte";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
+// The Svelte CJS test compiler reads .default; the browser build imports dayjs normally.
+jest.mock("dayjs", () => { const actual = jest.requireActual("dayjs"); return Object.assign(actual, { default: actual }); });
 
 import CalendarDraftSheet from "../CalendarDraftSheet.svelte";
-import { createCalendarDraft, draftMapping, type CalendarDraftController, type DraftBegin } from "../calendarDraft";
+import { createCalendarDraft, draftMapping } from "../calendarDraft";
+type CalendarDraftController = import("../calendarDraft").CalendarDraftController;
+type DraftBegin = import("../calendarDraft").DraftBegin;
 
 const mapping = draftMapping({
   config: { checkField: "done", eventColorField: "color", iconField: "icon" },
@@ -93,6 +97,42 @@ describe("CalendarDraftSheet — there at once, and not in the way", () => {
 });
 
 describe("CalendarDraftSheet — keys", () => {
+  it("the explicit confirm cannot accept an unfinished composition from any field", async () => {
+    const m = mount(); begin(m.ctl); await tick();
+    const input = m.container.querySelector<HTMLInputElement>('input[id$="-icon"]')!;
+    await fireEvent.compositionStart(input);
+    await fireEvent.input(input, { target: { value: "📞" } });
+    await fireEvent.click(m.confirmButton()); expect(m.onConfirm).not.toHaveBeenCalled();
+    await key(input, "Escape"); expect(m.ctl.getState().draft).not.toBeNull();
+    await fireEvent.compositionEnd(input); await fireEvent.click(m.confirmButton());
+    expect(m.onConfirm).toHaveBeenCalledTimes(1); expect(m.ctl.getState().draft?.icon).toBe("📞");
+  });
+
+  it.each(["not a date", ""])("a refused required date %j blocks create without discarding typed text", async text => {
+    const m = mount(); begin(m.ctl); await tick();
+    const input = m.container.querySelector<HTMLInputElement>(".ppp-date-field__text")!;
+    input.focus(); await fireEvent.input(input, { target: { value: text } });
+    await fireEvent.click(m.confirmButton());
+    expect(m.onConfirm).not.toHaveBeenCalled(); expect(input.value).toBe(text);
+    expect(input).toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("confirm commits the unblurred date and preserves the focused input through pending/rejection", async () => {
+    let fail!: (error: Error) => void;
+    const m = mount();
+    m.component.$set({ onConfirm: () => { void m.ctl.confirm(() => new Promise<void>((_, reject) => { fail = reject; }), dayjs(), "Untitled"); } });
+    begin(m.ctl); await tick();
+    const input = m.container.querySelector<HTMLInputElement>(".ppp-date-field__text")!;
+    input.focus(); await fireEvent.input(input, { target: { value: "03.11.2026 12:00" } });
+    input.setSelectionRange(0, 10);
+    await fireEvent.click(m.confirmButton()); await tick();
+    expect(m.ctl.getState().draft?.start.format("YYYY-MM-DD HH:mm")).toBe("2026-11-03 12:00");
+    expect(input.readOnly).toBe(true); expect(input.disabled).toBe(false);
+    expect(input.ownerDocument.activeElement).toBe(input); expect([input.selectionStart, input.selectionEnd]).toEqual([0, 10]);
+    fail(new Error("disk busy")); await tick(); await tick();
+    expect(m.container.querySelector(".ppp-date-field__text")).toBe(input); expect(input.value).toBe("03.11.2026 12:00");
+  });
+
   it("an IME composition neither confirms nor discards", async () => {
     const m = mount();
     begin(m.ctl);
@@ -176,6 +216,17 @@ describe("CalendarDraftSheet — writing", () => {
     expect(m.container.querySelector('[role="alert"]')).not.toBeNull();
     expect(m.nameInput().value).toBe("Kept");
     expect(m.confirmButton()).not.toBeDisabled();
+  });
+
+  it("Enter retries the same name after an asynchronous refusal without editing it again", async () => {
+    const m = mount(), save = jest.fn().mockRejectedValueOnce(new Error("disk busy")).mockResolvedValue(undefined);
+    const confirm = jest.fn(() => { void m.ctl.confirm(save, dayjs(), "Untitled"); });
+    m.component.$set({ onConfirm: confirm }); begin(m.ctl); await tick();
+    m.nameInput().focus(); await fireEvent.input(m.nameInput(), { target: { value: "Kept" } });
+    await key(m.nameInput(), "Enter"); await tick(); await tick();
+    expect(m.ctl.getState().error).toBe("disk busy"); expect(m.nameInput().value).toBe("Kept");
+    await key(m.nameInput(), "Enter"); await tick(); await tick();
+    expect(save).toHaveBeenCalledTimes(2); expect(m.ctl.getState().draft).toBeNull();
   });
 
   it("✓ is off while the note is written: a second press does nothing", async () => {

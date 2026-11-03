@@ -32,7 +32,7 @@
   /** Containing forms must honor the same composition guard as Enter and ✓. */
   export function isComposing(): boolean { return ctl.isComposing(); }
   /** A containing editor owns Tab navigation; commit through this field once. */
-  export function commitForNavigation(): void { emit("tab"); }
+  export function commitForNavigation(): boolean { return !ctl.isComposing() && emit("tab"); }
 
   const dispatch = createEventDispatcher<{
     input: string;
@@ -77,14 +77,15 @@
     return ok;
   }
 
-  function emit(reason: "enter" | "blur" | "tab"): void {
-    if (readOnly || disabled) return;
+  function emit(reason: "enter" | "blur" | "tab"): boolean {
+    if (readOnly || disabled) return false;
     const verdict = accepts(ctl.getState().draft);
     const result = reason === "blur" ? ctl.blur({ accept: verdict, unchanged: commitUnchanged }) : ctl.commit(reason, { accept: verdict, unchanged: commitUnchanged });
     pull();
     // A rejected draft left on blur was restored, so nothing is invalid any more.
     if (reason === "blur") invalid = false;
     if (result) dispatch("commit", { value: result.value, reason });
+    return verdict;
   }
 
   function onFocus(): void {

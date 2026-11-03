@@ -40,6 +40,14 @@ const key = (el: HTMLInputElement, k: string, extra: KeyboardEventInit = {}) =>
   el.dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true, cancelable: true, ...extra }));
 
 describe("DateInput — typed date with a calendar button (C4)", () => {
+  it("does not open a deferred picker or dispatch a queued blur after destruction", async () => {
+    const m = mount(DateInput, new Date(2026, 9, 14)); await tick();
+    const open = jest.fn(); Object.defineProperty(m.native(), "showPicker", { value: open });
+    m.button().click();
+    m.text().dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    m.destroy(); await tick(); await tick();
+    expect(open).not.toHaveBeenCalled(); expect(m.blurs()).toBe(0);
+  });
   it("renders a text field showing DD.MM.YYYY and a calendar button", async () => {
     const m = mount(DateInput, new Date(2026, 9, 14));
     await tick();
