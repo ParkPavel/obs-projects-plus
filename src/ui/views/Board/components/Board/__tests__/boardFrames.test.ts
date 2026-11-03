@@ -334,6 +334,11 @@ describe("column drag temporarily folds columns without changing saved state", (
     zone.dispatchEvent(new CustomEvent("consider",{detail:{items:columns.filter(c=>!c.pinned),info:{trigger:TRIGGERS.DRAG_STARTED,source:SOURCES.KEYBOARD,id:"Open"}}}));
     await tick();
     expect(target.querySelectorAll("section.projects--board--column.collapse")).toHaveLength(3);
+    for (const section of Array.from(target.querySelectorAll<HTMLElement>("section.projects--board--column.collapse"))) {
+      expect(section.ownerDocument.defaultView!.getComputedStyle(section).boxSizing).toBe("border-box");
+      expect(section.style.height).toBe("3rem");
+      expect(section.parentElement!.style.minHeight).toBe("16.875rem");
+    }
     expect(grip.isConnected).toBe(true);
     expect(columns.map(c=>c.collapse)).toEqual([false,false,true]);
     zone.dispatchEvent(new CustomEvent("finalize",{detail:{items:columns.filter(c=>!c.pinned),info:{trigger:TRIGGERS.DROPPED_INTO_ZONE,source:SOURCES.KEYBOARD,id:"Open"}}}));

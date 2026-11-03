@@ -19,7 +19,10 @@
 
   /** Column width in CSS pixels, as measured and stored; written back in rem. */
   export let width: number;
-  $: widthLength = toRem(width);
+  let columnEl: HTMLElement | null = null;
+  $: widthLength = toRem(width, columnEl?.ownerDocument);
+  $: stripLength = toRem(48, columnEl?.ownerDocument);
+  $: foldMargin = toRem(48 - width, columnEl?.ownerDocument);
 
   export let name: string;
   export let records: DataRecord[];
@@ -148,12 +151,13 @@
 </script>
 
 <section
+  bind:this={columnEl}
   data-id={name}
   class="projects--board--column"
   class:collapse={shownCollapsed}
   class:pinned
   class:persisted
-  style={`width: ${widthLength}; min-width: ${widthLength}; max-width: ${widthLength};${shownCollapsed ? ` margin-right: ${toRem(48 - width)};` : ''}`}
+  style={`width: ${widthLength}; min-width: ${widthLength}; max-width: ${widthLength};${shownCollapsed ? ` height: ${stripLength}; margin-right: ${foldMargin};` : ''}`}
 >
   <ColumnHeader
     value={name}
@@ -234,6 +238,7 @@
 </section>
 
 <style>
+  section { box-sizing: border-box; }
   .projects--board--column-footer {
     display: flex;
     align-items: center;

@@ -22,7 +22,8 @@
     type TouchCardDropDetail,
   } from "./touchCardDrag";
   import { ignoreHostSwipe } from "src/ui/actions/ignoreHostSwipe";
-  import { remAt, rootFontPx, toRem } from "src/ui/utils/cssLength";
+  import { toRem } from "src/ui/utils/cssLength";
+  import { compactDraggedColumn } from "./columnClone";
 
   import BoardColumn from "./BoardColumn.svelte";
   import NewColumn from "./NewColumn.svelte";
@@ -412,44 +413,7 @@
     onZoomChange(1);
   }
   function compactColumnClone(element: HTMLElement | undefined): void {
-  // i3-board: the library calls this first while its clone is not in the
-  // document yet; that clone measures 0×0, and pinning it to 0rem put
-  // the hit point (the clone's centre) at the column's top-left corner —
-  // half a column away from the finger, so an expanded column never
-  // landed anywhere (a collapsed one, 3rem wide, barely noticed). The
-  // library has already sized the clone from the real column in px.
-  if (!element || !element.isConnected) return;
-  const rect = element.getBoundingClientRect();
-  if (rect.width === 0 || rect.height === 0) return;
-  const root = rootFontPx(element.ownerDocument);
-  // w4-p08 (N6): on a zoomed board the column's rect is scaled, and the
-  // clone (outside the board's transform) holds unscaled content. As
-  // for cards (scaleDraggedClone): the logical size, drawn at the zoom.
-  // The scaled clone measures the same rect again, so this is stable.
-  const scale = zoom > 0 ? zoom : 1;
-  // Compact the visual copy only. The live column retains its handle
-  // and saved collapse flag; removing its handle used to strand drag.
-  const column = element.querySelector<HTMLElement>("section.projects--board--column");
-  if (column) {
-    column.classList.add("collapse");
-    column.style.marginRight = remAt(COLLAPSED_COLUMN_FOOTPRINT - columnWidth, root);
-    for (const child of Array.from(column.children)) {
-      if (!child.classList.contains("projects--board--column--header")) child.remove();
-    }
-  }
-  const width = remAt(COLLAPSED_COLUMN_FOOTPRINT, root);
-  const height = remAt(columnWidth, root);
-  if (scale !== 1) {
-    element.classList.add("ppp-board-scaled-clone");
-    element.style.scale = String(scale);
-  }
-  element.style.width = width;
-  element.style.minWidth = width;
-  element.style.maxWidth = width;
-  element.style.height = height;
-  element.style.minHeight = height;
-  element.style.boxSizing = "border-box";
-  element.style.zIndex = "30";
+    compactDraggedColumn(element, columnWidth, zoom, COLLAPSED_COLUMN_FOOTPRINT);
   }
 
 </script>
@@ -465,7 +429,7 @@
     {#if pinnedColumns.length > 0}
       <section class="projects--board projects--board--pinned">
         {#each pinnedColumns as column (column.id)}
-          <div class="projects--board--column--dndwrapper projects--board--column--pinned">
+          <div class="projects--board--column--dndwrapper projects--board--column--pinned" style:min-height={column.collapse || isDraggingColumns ? toRem(columnWidth, containerEl?.ownerDocument) : undefined}>
             <BoardColumn
               {readonly}
               {dataReadOnly}
@@ -539,6 +503,9 @@
         // Overwritten by `dragHandleZone`; `gateDisabledGrip` below enforces it.
         dragDisabled: dataReadOnly || columnZoneDisabled,
         morphDisabled: true,
+        // The library's drop tween ignores individual translate/scale on the compact clone.
+        // End the preview at release; the real columns restore in their own layout.
+        dropAnimationDisabled: true,
         // ios-d1: as for cards (CardList) — the column grip leads its header,
         // so on touch centre the clone on the finger for zone hit-tests.
         centreDraggedOnCursor: $isTouchDevice,
@@ -549,13 +516,13 @@
       on:finalize={handleDndFinalize}
     >
       {#each dndUnpinnedColumns as column (column.id)}
-        {@const footprint = toRem(getColumnFootprint(column, isDraggingColumns))}
+        {@const footprint = toRem(getColumnFootprint(column, isDraggingColumns), containerEl?.ownerDocument)}
         <div
           class="projects--board--column--dndwrapper"
           class:projects--board--column--dndwrapper--placeholder={isShadowPlaceholder(column)}
           class:projects--board--column--dndwrapper--collapsed={column.collapse || isDraggingColumns}
           data-dnd-width={footprint}
-          style={`width: ${footprint}; min-width: ${footprint}; max-width: ${footprint};`}
+          style={`width: ${footprint}; min-width: ${footprint}; max-width: ${footprint};${column.collapse || isDraggingColumns ? ` min-height: ${toRem(columnWidth, containerEl?.ownerDocument)};` : ""}`}
           aria-hidden={isShadowPlaceholder(column) ? "true" : undefined}
         >
           {#if isShadowPlaceholder(column)}
@@ -749,6 +716,9 @@
     box-sizing: border-box;
     transform-origin: top left;
   }
+  :global(.ppp-board-column-clone),
+  :global(.ppp-board-column-clone section.projects--board--column) { box-sizing: border-box; }
+  :global(.ppp-board-column-clone) { z-index: var(--ppp-z-overlay, 30); }
   @media (pointer: coarse) {
     .projects--board--viewport :global(.ppp-board-card-slot) {
       -webkit-touch-callout: none;
