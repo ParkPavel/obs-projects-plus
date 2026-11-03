@@ -30,6 +30,23 @@ describe("i3-final reorderedKeys", () => {
 });
 
 describe("i3-final usedValuesCache", () => {
+  it("retains every scoped non-template value for search instead of cutting off before the query", () => {
+    const notes: Record<string, Record<string, unknown>> = Object.fromEntries(Array.from({ length: 600 }, (_, id) => [`P/${id}.md`, { status: id === 599 ? "Ёлка" : `Value ${id}` }]));
+    notes["Q/other.md"] = { status: "wrong scope" }; notes["P/Templates/a.md"] = { status: "template only" };
+    const read = jest.fn((f: { path: string }) => notes[f.path]);
+    const c = createUsedValuesCache({ files: () => Object.keys(notes).map(path => ({ path })), frontmatterOf: read, templateFolders: () => ["P/Templates"] });
+    try {
+      const all = c.get("P/own.md", { status: "mine" }, "status", { folder: "P", recursive: true });
+      expect(all).toHaveLength(601); expect(all[0]).toBe("mine"); expect(all).toContain("Ёлка");
+      expect(all).not.toContain("wrong scope"); expect(all).not.toContain("template only");
+      c.get("P/own.md", { status: "new own" }, "status", { folder: "P", recursive: true });
+      expect(c.scans()).toBe(1); expect(read).toHaveBeenCalledTimes(600);
+    } finally { c.dispose(); }
+  });
+  it("does not drop values after the first200 items of the current note's list", () => {
+    const own = Array.from({ length: 400 }, (_, id) => `Own ${id}`), c = createUsedValuesCache({ files: () => [], frontmatterOf: () => null });
+    try { expect(c.get("own.md", { status: own }, "status", { folder: "", recursive: true })).toEqual(own); } finally { c.dispose(); }
+  });
   const files = [{ path: "P/a.md" }, { path: "P/b.md" }, { path: "P/c.md" }, { path: "Q/d.md" }];
   const fms: Record<string, Record<string, unknown>> = {
     "P/b.md": { status: "open", color: "#ff0000" },

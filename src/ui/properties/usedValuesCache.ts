@@ -38,8 +38,6 @@ export interface UsedValuesCache {
   scans(): number;
 }
 
-const LIMIT = 200;
-
 export function createUsedValuesCache(
   source: UsedValuesSource,
   debounceMs = 300,
@@ -60,7 +58,8 @@ export function createUsedValuesCache(
         .filter((f) => f.path !== path && inScope(f.path, scope) && !inTemplateFolder(f.path, templates))
         .map((f) => source.frontmatterOf(f)),
       key,
-      LIMIT,
+      // The shared combobox limits the rendered page after searching this pool.
+      Infinity,
     );
     memo.set(id, values);
     return values;
@@ -73,10 +72,9 @@ export function createUsedValuesCache(
 
   return {
     get(path, own, key, scope) {
-      const mine = valuesForKey([own], key, LIMIT);
+      const mine = valuesForKey([own], key, Infinity);
       const merged = new Set(mine);
       for (const v of others(path, key, scope)) {
-        if (merged.size >= LIMIT) break;
         merged.add(v);
       }
       return [...merged];

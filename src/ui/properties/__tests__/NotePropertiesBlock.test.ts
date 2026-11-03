@@ -113,6 +113,22 @@ afterEach(() => {
 });
 
 describe("i3-props NotePropertiesBlock", () => {
+  it("searches beyond the first200 observed values through the original property editor and writes the chosen value once", async () => {
+    const fm: Record<string, unknown> = { status: "mine", pp_types: { status: "status" } }, view = setup(fm);
+    const foreign = Array.from({ length: 600 }, (_, id) => new TFile(`Notes/${id}.md`));
+    view.getMarkdownFiles.mockReturnValue([view.file, ...foreign]);
+    view.app.metadataCache.getFileCache = candidate => ({ frontmatter: candidate.path === view.file.path ? fm : { status: candidate.path === "Notes/599.md" ? "Ёлка" : candidate.path } });
+    try {
+      await tick(); (row("status").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+      const input = editorOf("status")!; expect(input).toHaveAttribute("role", "combobox");
+      expect(document.querySelectorAll('[role="option"]')).toHaveLength(50);
+      type(input, "ёлк"); await flush();
+      const option = Array.from(document.querySelectorAll<HTMLElement>('[role="option"]')).find(item => item.textContent === "Ёлка");
+      expect(option).toBeDefined(); expect(editorOf("status")).toBe(input); expect(document.activeElement).toBe(input);
+      option!.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true })); await flush();
+      expect(fm["status"]).toBe("Ёлка"); expect(view.processFrontMatter).toHaveBeenCalledTimes(1);
+    } finally { view.unmount(); }
+  });
   it("retires an original draft when the next note has the same property key", async () => {
     const first = { title: "first" }, second = { title: "second" };
     const view = setup(first, second); await tick();
