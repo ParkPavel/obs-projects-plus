@@ -34,6 +34,19 @@ function mount(props: Record<string, unknown>) {
 }
 
 describe("FieldComboInput (#093 picker affordance)", () => {
+  test("retains the existing unambiguous case-correction behavior for field mappings", () => {
+    const m = mount({ value: "", fields: [{ name: "endDate", type: "date" }] }); const input = m.input!; input.focus(); input.value = "Enddate";
+    input.dispatchEvent(new Event("input", { bubbles: true })); input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(m.changes).toEqual(["endDate"]); m.destroy();
+  });
+  test.each([
+    [[{ name: "status", type: "string" }, { name: "Status", type: "string" }], "stAtus"],
+    [[{ name: " spaced ", type: "string" }], " spaced "],
+  ])("keeps the exact selected key and does not pick the first case-fold collision: %p", (fields, raw) => {
+    const m = mount({ value: "", fields }); const input = m.input!; input.focus(); input.value = raw as string;
+    input.dispatchEvent(new Event("input", { bubbles: true })); input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(m.changes).toEqual([raw]); m.destroy();
+  });
   test("existing field: shows caret, no new-field badge", () => {
     const m = mount({ value: "deadline" });
     expect(m.target.querySelector(".field-combo-caret")).not.toBeNull();

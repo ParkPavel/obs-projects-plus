@@ -47,7 +47,9 @@
     // i3-settings: «Enddate» typed where `endDate` exists is that field, not a
     // new empty property beside it the calendar would never read.
     const t = raw.trim();
-    const text = fields.find((f) => f.name === t)?.name ?? fields.find((f) => f.name.toLowerCase() === t.toLowerCase())?.name ?? t;
+    const exact = fields.find((f) => f.name === raw) ?? fields.find((f) => f.name === t);
+    const folded = fields.filter((f) => f.name.toLowerCase() === t.toLowerCase());
+    const text = exact?.name ?? (folded.length === 1 ? folded[0]!.name : t);
     typed = text;
     if (text === committed) return;
     committed = text;

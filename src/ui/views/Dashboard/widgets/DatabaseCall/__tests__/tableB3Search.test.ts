@@ -25,6 +25,15 @@ const fields = ["name", "status", "due", "price", "tags", "owner", "Due date"];
 const ids = (q: string) => applySearch(records, q, fields).map((r) => r.id.replace(/^notes\/|\.md$/g, ""));
 
 describe("search conditions (B3)", () => {
+  it("uses an exact YAML key before case folding and refuses an ambiguous folded prefix", () => {
+    const keys = ["status", "Status", "STATUS", "ёлка", "елка"];
+    const source = [{ id: "a.md", values: { status: "alpha", Status: "bravo", STATUS: "charlie", ёлка: "tree", елка: "other" } }];
+    expect(parseSearchQuery("Status:bravo", keys).terms[0]?.field).toBe("Status");
+    expect(applySearch(source, "Status:bravo", keys)).toEqual(source);
+    expect(searchSuggestions("Status:", keys, source).map(item => item.query)).toEqual(["Status:bravo "]);
+    expect(parseSearchQuery("stAtus:bravo", keys).terms[0]?.field).toBeUndefined();
+    expect(parseSearchQuery("ёлка:tree", keys).terms[0]?.field).toBe("ёлка");
+  });
   it("ignores case and treats ё as е both ways", () => {
     expect(ids("елка")).toEqual(["Ёлка"]);
     expect(ids("ЁЛКА")).toEqual(["Ёлка"]);

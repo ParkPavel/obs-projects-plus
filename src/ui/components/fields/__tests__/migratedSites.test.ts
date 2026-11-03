@@ -424,11 +424,17 @@ describe("TableControlBar search", () => {
     const list = document.body.querySelector(".ppp-t2-hints");
     expect(list).not.toBeNull();
     expect(target.querySelector(".ppp-t2-hints")).toBeNull();
-    const popup = list?.closest(".ppp-popup--floating");
+    const popup = list!.closest<HTMLElement>(".ppp-popup--floating")!;
     expect(popup).not.toBeNull();
     expect(popup).toHaveAttribute("role", "presentation");
     expect(popup).not.toHaveAttribute("aria-label");
     expect(document.activeElement).toBe(input);
+
+    // Keyboard selection belongs to a measured, visible list, not a zero-layout fixture.
+    jest.spyOn(input, "getBoundingClientRect").mockReturnValue({ top: 300, bottom: 328, left: 20, right: 220, width: 200, height: 28 } as DOMRect);
+    jest.spyOn(popup, "getBoundingClientRect").mockReturnValue({ top: 0, bottom: 160, left: 0, right: 240, width: 240, height: 160 } as DOMRect);
+    Object.defineProperty(popup, "scrollHeight", { configurable: true, value: 160 });
+    window.dispatchEvent(new Event("resize")); await settle();
 
     key(input, "ArrowDown");
     await tick();

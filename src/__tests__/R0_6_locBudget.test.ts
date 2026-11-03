@@ -83,6 +83,8 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   // November input fixes: persistence and typed drafts live outside renderers.
   { file: "ui/views/Dashboard/widgets/DatabaseCall/DataTableContent.svelte", maxLines: 274 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TableControlBar.svelte", maxLines: 200 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/TableSearch.svelte", maxLines: 168 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/SearchHints.svelte", maxLines: 72 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TableHeader.svelte", maxLines: 200 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TableRow.svelte", maxLines: 198 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TableFooter.svelte", maxLines: 120 },

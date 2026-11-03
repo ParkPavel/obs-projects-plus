@@ -20,6 +20,7 @@
   let searchOpen = false;
   let hintsDismissed = false;
   let searchEl: HTMLDivElement | null = null;
+  let inputEl: HTMLInputElement | null = null, searchField: SearchField | undefined, overlayVisible = false;
   let active = -1;
   const listId = `ppp-t2-hints-${Math.random().toString(36).slice(2, 8)}`;
   $: queryActive = !searchOpen && searchQuery.trim() !== "";
@@ -30,12 +31,14 @@
   function toggleSearch() {
     searchOpen = !searchOpen;
     hintsDismissed = false;
+    overlayVisible = false;
   }
 
   function closeAndClear() {
     searchOpen = false;
     searchQuery = "";
     hintsDismissed = false;
+    overlayVisible = false;
     dispatch("search", "");
   }
 
@@ -47,25 +50,43 @@
   }
 
   function onSearchKeydown(e: KeyboardEvent) {
-    const step = isImeKey(e) ? null : hintKey(e.key, suggestions.length, active);
-    if (!step) return;
-    if (e.key !== "Escape") e.preventDefault();
+    if (searchField?.isComposing() || isImeKey(e)) { e.stopPropagation(); return; }
+    if (e.key !== "Escape" && (!hintsOpen || !overlayVisible)) return;
+    const step = hintKey(e.key, suggestions.length, active);
+    if (!step) { if (e.key === "Tab") dismissHints(); return; }
+    if (e.key !== "Escape" && e.key !== "Tab") e.preventDefault();
     active = step.active;
     const chosen = step.choose === undefined ? undefined : suggestions[step.choose];
-    if (chosen) setQuery(chosen.query);
+    if (chosen) chooseSuggestion(chosen);
     if (step.close) closeAndClear();
+    if (e.key === "Tab") dismissHints();
   }
+
+  function chooseSuggestion(chosen: SearchSuggestion): void {
+    if (!hintsOpen || !overlayVisible || searchField?.isComposing()) return;
+    setQuery(chosen.query);
+    searchField?.reset(chosen.query);
+  }
+  function confirmSearch(): void {
+    const chosen = active >= 0 ? suggestions[active] : undefined;
+    if (chosen) chooseSuggestion(chosen);
+    dismissHints();
+  }
+  function dismissHints(): void { hintsDismissed = true; overlayVisible = false; }
 </script>
 
 {#if searchOpen}
   <div class="ppp-t2-cb-search" bind:this={searchEl}>
     <SearchField
+      bind:this={searchField} bind:inputEl
       query={searchQuery}
       focusOnMount
       placeholder={$i18n.t("views.dashboard.table-v2.search-placeholder", { defaultValue: "Search…" })}
       ariaLabel={$i18n.t("views.dashboard.table-v2.search", { defaultValue: "Search records" })}
       controls={suggestions.length ? listId : undefined}
-      activeDescendant={active >= 0 ? `${listId}-${active}` : undefined}
+      expanded={hintsOpen && overlayVisible}
+      activeDescendant={hintsOpen && overlayVisible && active >= 0 ? `${listId}-${active}` : undefined}
+      onConfirm={confirmSearch}
       on:queryChange={(e) => setQuery(e.detail)}
       on:keydown={onSearchKeydown}
     />
@@ -73,18 +94,20 @@
 {/if}
 <FloatingPopup
   open={hintsOpen}
-  triggerEl={searchEl}
+  triggerEl={inputEl} interactionEl={searchEl}
+  placement="above-field"
   mobilePresentation="anchored"
   role="presentation"
   autoFocus={false}
-  on:close={() => (hintsDismissed = true)}
+  on:position={(event) => { overlayVisible = event.detail.visible; if (!overlayVisible) active = -1; }}
+  on:close={dismissHints}
 >
   <SearchHints
     {suggestions}
     {active}
     {listId}
     showTip={searchQuery.trim() === ""}
-    on:choose={(e) => setQuery(e.detail.query)}
+    on:choose={(e) => chooseSuggestion(e.detail)}
   />
 </FloatingPopup>
 <button

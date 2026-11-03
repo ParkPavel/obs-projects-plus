@@ -41,6 +41,8 @@
   let alive = true, composing = false;
   onDestroy(() => { alive = false; });
   export function isComposing(): boolean { return composing; }
+  /** An explicit completion replaces the query; ordinary prop echoes still do not. */
+  export function reset(next: string): void { if (alive) text = next; }
   function confirm(): void { if (alive && !readOnly && !composing) onConfirm?.(); }
 
   // i3-input: the field shows its own text while it has focus. The input was

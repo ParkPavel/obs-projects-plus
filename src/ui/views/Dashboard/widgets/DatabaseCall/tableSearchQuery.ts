@@ -1,5 +1,6 @@
 import type { DataRecord } from "src/lib/dataframe/dataframe";
 import { toNumber } from "src/lib/engine/numeric";
+import { stepActive } from "src/ui/components/fields/comboOptions";
 
 const int = (s: string | undefined): number => toNumber(s ?? "") ?? NaN;
 
@@ -95,8 +96,10 @@ function isEmptyValue(v: unknown): boolean {
 }
 
 function resolveField(name: string, fieldNames: readonly string[]): string | undefined {
+  if (fieldNames.includes(name)) return name;
   const n = normalizeSearchText(name);
-  return fieldNames.find((f) => normalizeSearchText(f) === n);
+  const matches = fieldNames.filter((f) => normalizeSearchText(f) === n);
+  return matches.length === 1 ? matches[0] : undefined;
 }
 
 function plain(text: string): SearchTerm {
@@ -274,7 +277,7 @@ export function searchSuggestions(
 /** Arrow/Enter/Tab/Escape over the hint list: the next active index, or what to do. */
 export function hintKey(key: string, count: number, active: number): { active: number; choose?: number; close?: boolean } | null {
   if (count && (key === "ArrowDown" || key === "ArrowUp")) {
-    return { active: key === "ArrowDown" ? (active + 1) % count : (active - 1 + count) % count };
+    return { active: stepActive(active, key === "ArrowDown" ? 1 : -1, count) };
   }
   if (count && active >= 0 && (key === "Enter" || key === "Tab")) return { active: -1, choose: active };
   if (key === "Escape") return active >= 0 ? { active: -1 } : { active: -1, close: true };
