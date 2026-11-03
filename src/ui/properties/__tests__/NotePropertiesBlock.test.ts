@@ -9,6 +9,14 @@
  */
 
 const mockMenus: Array<Array<{ title?: string; onClick?: () => void }>> = [];
+const mockRelationPicks: Array<(file: { path: string }) => void> = [];
+jest.mock("src/ui/views/VisualizerPane/RelationPickerModal", () => ({
+  RelationPickerModal: class {
+    constructor(_app: unknown, choose: (file: { path: string }) => void) { mockRelationPicks.push(choose); }
+    open() {}
+  },
+  pathFromFile: (file: { path: string }) => file.path.replace(/\.md$/i, ""),
+}));
 jest.mock("src/lib/contextMenu", () => ({
   openContextMenu: (items: Array<{ title?: string; onClick?: () => void }>) => {
     mockMenus.push(items);
@@ -37,19 +45,19 @@ const NotePropertiesBlock = require("../NotePropertiesBlock.svelte").default;
 function setup(fm: Record<string, unknown>, other?: Record<string, unknown>, parentProjectId?: string) {
   const file = new TFile("Notes/a.md");
   const getMarkdownFiles = jest.fn(() => [file, new TFile("Notes/b.md")]);
-  const listeners: Array<(f: TFile) => void> = [];
-  const processFrontMatter = jest.fn(async (_f: unknown, fn: (f: Record<string, unknown>) => void) => {
-    fn(fm);
-    listeners.forEach((cb) => cb(file));
+  const listeners = new Set<(f: TFile) => void>();
+  const processFrontMatter = jest.fn(async (target: TFile, fn: (f: Record<string, unknown>) => void) => {
+    fn(target.path === file.path ? fm : other ?? fm);
+    listeners.forEach((cb) => cb(target));
   });
   const app = {
     metadataCache: {
       getFileCache: (candidate: TFile) => ({ frontmatter: { ...(candidate.path === file.path ? fm : other ?? fm) } }),
       on: (_name: string, cb: (f: TFile) => void) => {
-        listeners.push(cb);
-        return {};
+        listeners.add(cb);
+        return cb;
       },
-      offref: () => undefined,
+      offref: (cb: (f: TFile) => void) => { listeners.delete(cb); },
     },
     fileManager: { processFrontMatter },
     vault: { getMarkdownFiles, getAbstractFileByPath: () => null },
@@ -57,7 +65,7 @@ function setup(fm: Record<string, unknown>, other?: Record<string, unknown>, par
   };
   const Component = parentProjectId === undefined ? NotePropertiesBlock : require("./fixtures/PaletteNoteHost.svelte").default;
   const result = render(Component, { props: { app, file, ...(parentProjectId === undefined ? {} : { projectId: parentProjectId }) } });
-  return { ...result, processFrontMatter, getMarkdownFiles };
+  return { ...result, app, file, processFrontMatter, getMarkdownFiles };
 }
 
 function keyWith(el: HTMLElement, k: string, mods: KeyboardEventInit): void {
@@ -105,6 +113,104 @@ afterEach(() => {
 });
 
 describe("i3-props NotePropertiesBlock", () => {
+  it("retires an original draft when the next note has the same property key", async () => {
+    const first = { title: "first" }, second = { title: "second" };
+    const view = setup(first, second); await tick();
+    (row("title").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+    const original = editorOf("title")!; type(original, "private first draft"); original.setSelectionRange(1, 4);
+    view.component.$set({ file: new TFile("Notes/b.md") }); await flush();
+    expect(editorOf("title")).toBeNull(); expect(row("title")).toHaveTextContent("second");
+    key(original, "Enter"); original.dispatchEvent(new Event("blur")); await flush();
+    expect(view.processFrontMatter).not.toHaveBeenCalled(); expect(second.title).toBe("second");
+    (row("title").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+    const fresh = editorOf("title")!; type(fresh, "fresh edit"); key(fresh, "Enter"); await flush();
+    expect(view.processFrontMatter).toHaveBeenCalledTimes(1);
+    expect(view.processFrontMatter.mock.calls[0]![0].path).toBe("Notes/b.md");
+    expect(second.title).toBe("fresh edit"); expect(first.title).toBe("first");
+    view.unmount();
+  });
+  it("preserves the same draft and caret when the same note gets a fresh file prop", async () => {
+    const view = setup({ title: "first" }); await tick();
+    (row("title").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+    const original = editorOf("title")!; type(original, "private draft"); original.setSelectionRange(1, 4);
+    view.component.$set({ file: new TFile("Notes/a.md") }); await flush();
+    expect(editorOf("title")).toBe(original); expect(original.value).toBe("private draft");
+    expect([original.selectionStart, original.selectionEnd]).toEqual([1, 4]); expect(view.processFrontMatter).not.toHaveBeenCalled();
+    view.unmount();
+  });
+  it("an accepted old write drains without closing or writing the next note's fresh draft", async () => {
+    const first = { title: "first" }, second = { title: "second" };
+    const view = setup(first, second); await tick();
+    (row("title").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+    let release = () => {}; const blocked = new Promise<void>(resolve => { release = resolve; });
+    const write = view.processFrontMatter.getMockImplementation()!;
+    view.processFrontMatter.mockImplementationOnce(async (...args) => { await blocked; return write(...args); });
+    type(editorOf("title")!, "accepted first edit"); key(editorOf("title")!, "Enter"); await flush();
+    view.component.$set({ file: new TFile("Notes/b.md") }); await flush();
+    expect(editorOf("title")).toBeNull();
+    (row("title").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+    const fresh = editorOf("title")!; type(fresh, "pending second edit");
+    release(); await flush();
+    expect(first.title).toBe("accepted first edit"); expect(second.title).toBe("second");
+    expect(editorOf("title")).toBe(fresh); expect(fresh.value).toBe("pending second edit");
+    expect(view.processFrontMatter).toHaveBeenCalledTimes(1);
+    key(fresh, "Enter"); await flush(); expect(second.title).toBe("pending second edit");
+    view.unmount();
+  });
+  it("drains already accepted property writes after close", async () => {
+    const fm = { one: false, two: false }; const view = setup(fm); await tick();
+    for (const name of ["one", "two"]) {
+      const checkbox = editorOf(name)!; checkbox.checked = true; checkbox.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    view.unmount(); await flush();
+    expect(fm).toEqual({ one: true, two: true }); expect(view.processFrontMatter).toHaveBeenCalledTimes(2);
+    expect(view.processFrontMatter.mock.calls.every(call => call[0].path === "Notes/a.md")).toBe(true);
+  });
+  it("retires an old typed draft when the property's type changes in the same note", async () => {
+    const fm: Record<string, unknown> = { value: "old", pp_types: { value: "text" } };
+    const view = setup(fm); await tick();
+    (row("value").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+    const original = editorOf("value")!; type(original, "19");
+    fm["value"] = 42; fm["pp_types"] = { value: "number" };
+    view.component.$set({ file: new TFile("Notes/a.md") }); await flush();
+    expect(editorOf("value")).toBeNull(); expect(row("value")).toHaveTextContent("42");
+    key(original, "Enter"); original.dispatchEvent(new Event("blur")); await flush();
+    expect(fm["value"]).toBe(42); expect(view.processFrontMatter).not.toHaveBeenCalled(); view.unmount();
+  });
+  it("does not carry a draft or metadata subscription into another app with the same path", async () => {
+    const first = { title: "first app" }, second = { title: "second app" };
+    const view = setup(first), other = setup(second); other.unmount(); await tick();
+    (row("title").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+    type(editorOf("title")!, "private draft");
+    view.component.$set({ app: other.app, file: other.file }); await flush();
+    expect(editorOf("title")).toBeNull(); expect(row("title")).toHaveTextContent("second app");
+    (row("title").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+    type(editorOf("title")!, "second edit"); key(editorOf("title")!, "Enter"); await flush();
+    expect(other.processFrontMatter).toHaveBeenCalledTimes(1); expect(view.processFrontMatter).not.toHaveBeenCalled();
+    expect(first.title).toBe("first app"); expect(second.title).toBe("second edit"); view.unmount();
+  });
+  it.each(["file", "destroy"])("ignores an old row menu after %s retires its owner", async change => {
+    const first = { title: "first" }, second = { title: "second" };
+    const view = setup(first, second); await tick(); mockMenus.length = 0;
+    row("title").querySelector<HTMLButtonElement>("button.ppp-note-props__icon")!.click();
+    const remove = mockMenus[0]!.find(entry => entry.title === "Delete property")!.onClick!;
+    if (change === "file") view.component.$set({ file: new TFile("Notes/b.md") }); else view.unmount();
+    await flush(); remove(); await flush();
+    expect(view.processFrontMatter).not.toHaveBeenCalled(); expect(first.title).toBe("first"); expect(second.title).toBe("second");
+    if (change === "file") view.unmount();
+  });
+  it.each(["file", "destroy"])("ignores an old relation picker after %s retires its owner", async change => {
+    const first = { links: ["[[First]]"], pp_types: { links: "relation" } };
+    const second = { links: ["[[Second]]"], pp_types: { links: "relation" } };
+    const view = setup(first, second); await tick(); mockRelationPicks.length = 0;
+    (row("links").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+    row("links").querySelector<HTMLButtonElement>("[data-chips-pick]")!.click(); await flush();
+    const choose = mockRelationPicks[0]!; expect(choose).toBeDefined(); view.processFrontMatter.mockClear();
+    if (change === "file") view.component.$set({ file: new TFile("Notes/b.md") }); else view.unmount();
+    await flush(); choose({ path: "Notes/Picked.md" }); await flush();
+    expect(view.processFrontMatter).not.toHaveBeenCalled(); expect(first.links).toEqual(["[[First]]"]); expect(second.links).toEqual(["[[Second]]"]);
+    if (change === "file") view.unmount();
+  });
   it("Tab waits even when the input has another window's prototype", async () => {
     const fm: Record<string, unknown> = { one: "x", two: "y" };
     const { processFrontMatter } = setup(fm);
