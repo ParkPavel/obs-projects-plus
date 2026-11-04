@@ -10,6 +10,7 @@
  */
 
 import { DataFieldType, type DataRecord } from "src/lib/dataframe/dataframe";
+import { parseStoredDate } from "src/lib/helpers/dateShape";
 import {
   inTemplateFolder,
   isTemplateText,
@@ -30,6 +31,12 @@ const records: DataRecord[] = [
 ];
 
 describe("w4-p05 — what counts as a suggestion", () => {
+  test("edit dates preserve the written calendar day/time while filter labels keep UTC compatibility", () => {
+    const date = parseStoredDate("04.11.2026T00:30+08:00")!;
+    expect(suggestionTexts(date, true)).toEqual(["04.11.2026T00:30+08:00"]);
+    expect(suggestionTexts(date)).toEqual(["2026-11-03T16:30:00.000Z"]);
+    expect(suggestionTexts(new Date(NaN), true)).toEqual([]);
+  });
   test("template text is recognised in both engines' syntax", () => {
     expect(isTemplateText("<% tp.date.now() %>")).toBe(true);
     expect(isTemplateText("Due {{date:YYYY-MM-DD}}")).toBe(true);

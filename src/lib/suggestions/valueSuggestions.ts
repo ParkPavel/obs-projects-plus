@@ -11,6 +11,7 @@
 // delete, rename or source change is seen on the next ask.
 
 import { DataFieldType, type DataRecord } from "src/lib/dataframe/dataframe";
+import { dateAsText } from "src/lib/helpers/dateShape";
 
 const TEMPLATE_TEXT = /<%[\s\S]*?%>|\{\{[\s\S]*?\}\}/;
 
@@ -54,7 +55,10 @@ export function suggestionTexts(raw: unknown, preserve = false): string[] {
   if (raw === null || raw === undefined) return [];
   if (Array.isArray(raw)) return raw.flatMap((item) => (Array.isArray(item) ? [] : suggestionTexts(item, preserve)));
   let text: string;
-  if (raw instanceof Date) text = raw.toISOString();
+  if (raw instanceof Date) {
+    if (Number.isNaN(raw.getTime())) return [];
+    text = preserve ? dateAsText(raw) : raw.toISOString();
+  }
   else if (typeof raw === "string" || typeof raw === "number" || typeof raw === "boolean") text = String(raw);
   else return [];
   if (preserve) return text.trim() === "" || isTemplateText(text) ? [] : [text];
