@@ -97,9 +97,10 @@ test("reordering uses the current canonical values and preserves row identities"
 
 test("a real pointer placeholder is considered without persisting its synthetic identity", async () => {
   const m = mount(), before = [...m.zone.zoneOptions.items];
-  const shadow = { ...before[0], id: "id:dnd-shadow-placeholder-0000", isDndShadowItem: true };
-  m.zone.dispatchEvent(new CustomEvent("consider", { detail: { items: [shadow, before[1]], info: { id: before[0].id, trigger: "dragStarted", source: "pointer" } } })); await tick();
-  expect(m.zone.zoneOptions.items[0].id).toBe(shadow.id); expect(m.changes).toEqual([]);
+  const first = before[0]; if (!first) throw new Error("Expected an initial option");
+  const shadow = { ...first, id: "id:dnd-shadow-placeholder-0000", isDndShadowItem: true };
+  m.zone.dispatchEvent(new CustomEvent("consider", { detail: { items: [shadow, before[1]], info: { id: first.id, trigger: "dragStarted", source: "pointer" } } })); await tick();
+  expect(m.zone.zoneOptions.items[0]?.id).toBe(shadow.id); expect(m.changes).toEqual([]);
   m.zone.dispatchEvent(new CustomEvent("finalize", { detail: { items: [...before].reverse() } })); await tick();
   expect(m.changes).toEqual([["second", "first"]]);
 });
