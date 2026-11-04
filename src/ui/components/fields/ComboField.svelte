@@ -278,7 +278,9 @@
 
   // ── Commit paths ───────────────────────────────────────────
   function exactMatch(text: string): ComboOption | undefined {
-    return options.find((o) => (o.value ?? o.label) === text || o.label === text);
+    // Typed stored syntax must win over another option's display label.
+    return options.find((o) => (o.value ?? o.label) === text)
+      ?? options.find((o) => o.label === text);
   }
   /**
    * i3-input — the option a typed text plainly means: the same label in

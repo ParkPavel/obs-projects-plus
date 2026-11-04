@@ -13,6 +13,13 @@ test("a human path label commits the exact canonical path once",async()=>{
  expect(writes).toEqual([raw]);expect(view.container.querySelector("input")).toBe(input);expect(input.value).toBe(raw);
 });
 
+test.each(["blur","Tab"])("an exact canonical path wins over another file's label on %s",async action=>{
+ const view=render(PathField,{props:{value:"",files:[{path:"A.md"},{path:"B.md"}],getLabel:(file:{path:string})=>file.path==="A.md"?"B.md":"Other file"}}),write=jest.fn();
+ view.component.$on("change",write);const input=view.container.querySelector<HTMLInputElement>("input")!;await enter(input);typeInto(input,"B.md");await flush();
+ if(action==="blur")input.blur();else input.dispatchEvent(new KeyboardEvent("keydown",{key:"Tab",bubbles:true}));await flush();
+ expect(write).toHaveBeenCalledTimes(1);expect(write.mock.calls[0][0].detail).toBe("B.md");
+});
+
 test.each(["context","readonly","disabled"])("a %s transition retires an unfinished path without writing",async transition=>{
  const view=render(PathField,{props:{value:"original",files:[],contextKey:"first"}}),write=jest.fn();view.component.$on("change",write);
  const input=view.container.querySelector<HTMLInputElement>("input")!;input.focus();typeInto(input,"unfinished");await flush();
