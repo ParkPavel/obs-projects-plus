@@ -44,6 +44,7 @@
   import { settings } from "src/lib/stores/settings";
   import type { FilterCondition } from "src/settings/settings";
   import { getFilterValuesFromConditions } from "src/lib/helpers";
+  import { creationContextKey } from "src/ui/utils/creationContext";
 
   export let project: ProjectDefinition;
   export let frame: DataFrame;
@@ -72,6 +73,7 @@
   export let filterConditions: FilterCondition[] = [];
 
   $: ({ fields, records } = frame);
+  $: columnDragContext = creationContextKey(project, config?.groupByField, fields, [], dataReadOnly, api);
   $: orderSyncField =
     (config?.orderSyncField && getFieldByName(fields, config.orderSyncField)) ||
     undefined;
@@ -541,6 +543,7 @@
     onColumnPin={toggleColumnPin()}
     onColumnPersist={handleColumnPersist}
     onSortColumns={handleSortColumns(groupByField)}
+    dragContext={columnDragContext}
     {readonly}
     {dataReadOnly}
     validateStatusField={() => {

@@ -9,6 +9,7 @@
     SHADOW_ITEM_MARKER_PROPERTY_NAME,
     SHADOW_PLACEHOLDER_ITEM_ID,
     TRIGGERS,
+    SOURCES,
   } from "svelte-dnd-action";
   import { Icon } from "obsidian-svelte";
   import { onDestroy, onMount } from "svelte";
@@ -24,6 +25,7 @@
   import { ignoreHostSwipe } from "src/ui/actions/ignoreHostSwipe";
   import { toRem } from "src/ui/utils/cssLength";
   import { compactDraggedColumn } from "./columnClone";
+  import { provideBoardDragTypes } from "./boardDragTypes";
 
   import BoardColumn from "./BoardColumn.svelte";
   import NewColumn from "./NewColumn.svelte";
@@ -50,6 +52,9 @@
 
   export let columns: Column[];
   export let project: ProjectDefinition;
+  /** Live source/field ownership, separate from transient display columns. */
+  export let dragContext: string | undefined = undefined;
+  const dragTypes = provideBoardDragTypes();
 
   export let readonly: boolean;
   /** #C4 — see BoardView.svelte for what this covers and why it is separate from `readonly`. */
@@ -103,6 +108,11 @@
   let isDraggingColumns = false;
   let finalizeTimeout: ReturnType<typeof setTimeout> | undefined;
   let pendingColumnOrder: string[] | undefined;
+  let columnEpoch = 0;
+  let columnCancelled = false;
+  let columnSource: string | undefined;
+  let previousDragContext = dragContext;
+  let previousDragProject: string | undefined = project?.id;
   type DndColumn = Column & Record<string, unknown>;
 
   $: pinnedColumns = columns.filter((c) => c.pinned);
@@ -123,8 +133,7 @@
     items.length === order.length && items.every((item, index) => item.id === order[index]);
 
   $: if (pendingColumnOrder && hasMatchingOrder(columns, pendingColumnOrder)) {
-    pendingColumnOrder = undefined;
-    isDraggingColumns = false;
+    releaseColumnDrag();
   }
 
   function filterShadowColumns(items: DndColumn[]): Column[] {
@@ -136,13 +145,31 @@
   // the grips are gated (`gateDisabledGrip`) and, as a safeguard, a drag that
   // still starts while disabled is not committed: its finalize restores the order.
   $: columnZoneDisabled = isDragZoneDisabled({ editing: boardEditing, locked: dataReadOnly });
+  $: syncColumnOwner(dragContext, project?.id, columnZoneDisabled);
   let rejectedColumnDrag: DndColumn[] | undefined;
+  function syncColumnOwner(context: string | undefined, projectId: string | undefined, disabled: boolean) {
+    if (context !== previousDragContext || projectId !== previousDragProject || disabled) cancelColumnDrag();
+    previousDragContext = context;
+    previousDragProject = projectId;
+  }
 
   function handleDndConsider(e: CustomEvent<DndEvent<Column>>) {
     // The disarm signal is not a drag: it must not freeze the column order.
     if (isDisarmEvent(e)) return;
-    if (e.detail.info.trigger === TRIGGERS.DRAG_STARTED && columnZoneDisabled) {
-      rejectedColumnDrag = dndUnpinnedColumns;
+    if (e.detail.info.trigger === TRIGGERS.DRAG_STARTED) {
+      clearTimeout(finalizeTimeout);
+      pendingColumnOrder = undefined;
+      columnEpoch++;
+      columnCancelled = false;
+      columnSource = e.detail.info.source;
+      rejectedColumnDrag = undefined;
+      if (columnZoneDisabled) rejectedColumnDrag = dndUnpinnedColumns;
+    }
+    if (columnCancelled) return;
+    if (e.detail.info.trigger === TRIGGERS.DRAG_STOPPED) {
+      disarmDragWatchdog();
+      if (!pendingColumnOrder) releaseColumnDrag();
+      return;
     }
     isDraggingColumns = true;
     dndUnpinnedColumns = e.detail.items;
@@ -186,13 +213,16 @@
       watchActivity(null);
       if (!isDraggingColumns) return;
       // The library ends a drag on the window's mouseup and touchend alike.
-      view.dispatchEvent(new MouseEvent("mouseup"));
-      releaseColumnDrag();
+      cancelColumnDrag();
     }, DRAG_WATCHDOG_MS);
   }
 
   function handleDndFinalize(e: CustomEvent<DndEvent<Column>>) {
     disarmDragWatchdog();
+    if (columnCancelled || columnZoneDisabled || !isDraggingColumns) {
+      cancelColumnDrag();
+      return;
+    }
     if (rejectedColumnDrag) {
       dndUnpinnedColumns = rejectedColumnDrag;
       rejectedColumnDrag = undefined;
@@ -202,6 +232,11 @@
     dndUnpinnedColumns = e.detail.items;
     const newUnpinned = filterShadowColumns(dndUnpinnedColumns);
     const order = [...pinnedColumns, ...newUnpinned].map((col) => col.id);
+    const ownIds = new Set(columns.map(column => column.id));
+    if (order.length !== columns.length || new Set(order).size !== order.length || order.some(id => !ownIds.has(id))) {
+      cancelColumnDrag();
+      return;
+    }
     // i3-board: a column dropped where it was writes nothing. Every attempt
     // used to save the view and the field options and rebuild every column.
     if (hasMatchingOrder(columns, order)) {
@@ -211,7 +246,9 @@
     pendingColumnOrder = order;
     // Dispatch after flip animation completes to prevent reactive cascade mid-animation
     clearTimeout(finalizeTimeout);
+    const epoch = columnEpoch;
     finalizeTimeout = setTimeout(() => {
+      if (epoch !== columnEpoch || columnCancelled || columnZoneDisabled) return;
       if (pendingColumnOrder) {
         onSortColumns(pendingColumnOrder);
       }
@@ -224,8 +261,35 @@
 
   const COLUMN_ECHO_WAIT_MS = 1000;
   function releaseColumnDrag() {
+    clearTimeout(finalizeTimeout);
+    finalizeTimeout = undefined;
+    disarmDragWatchdog();
     pendingColumnOrder = undefined;
     isDraggingColumns = false;
+  }
+  function cancelColumnDrag() {
+    const wasDragging = isDraggingColumns;
+    columnCancelled = true;
+    columnEpoch++;
+    rejectedColumnDrag = undefined;
+    releaseColumnDrag();
+    dndUnpinnedColumns = columns.filter(column => !column.pinned);
+    const view = containerEl?.ownerDocument.defaultView;
+    if (wasDragging && view) {
+      if (columnSource === SOURCES.KEYBOARD) view.dispatchEvent(new view.KeyboardEvent("keydown", { key: "Escape" }));
+      else view.dispatchEvent(new view.MouseEvent("mouseup"));
+    }
+  }
+  function watchColumnLifecycle(node: HTMLElement) {
+    const doc = node.ownerDocument, view = doc.defaultView;
+    const hidden = () => { if (doc.hidden) cancelColumnDrag(); };
+    const events = ["blur", "pagehide", "pointercancel", "touchcancel"];
+    for (const event of events) view?.addEventListener(event, cancelColumnDrag);
+    doc.addEventListener("visibilitychange", hidden);
+    return { destroy() {
+      for (const event of events) view?.removeEventListener(event, cancelColumnDrag);
+      doc.removeEventListener("visibilitychange", hidden);
+    } };
   }
 
   /**
@@ -245,13 +309,7 @@
   $: unpinnedIds = columns.filter((c) => !c.pinned).map((c) => c.id);
 
   onDestroy(() => {
-    if (pendingColumnOrder) {
-      onSortColumns(pendingColumnOrder);
-      pendingColumnOrder = undefined;
-    }
-    clearTimeout(finalizeTimeout);
-    disarmDragWatchdog();
-    isDraggingColumns = false;
+    cancelColumnDrag();
   });
 
   /**
@@ -420,7 +478,7 @@
 
 <!-- ios-g1 G2: interior swipes pan the board instead of opening Obsidian's
      drawer at the board's scroll boundary; edge swipes still reach the host. -->
-<div class="projects--board--container" bind:this={containerEl} use:wheelZoom use:ignoreHostSwipe>
+<div class="projects--board--container" bind:this={containerEl} use:wheelZoom use:ignoreHostSwipe use:watchColumnLifecycle>
   <div
     bind:this={viewportEl}
     class="projects--board--viewport"
@@ -493,7 +551,7 @@
     <section
       class="projects--board"
       use:dragHandleZone={{
-        type: "columns",
+        type: dragTypes.columns,
         items: dndUnpinnedColumns,
         flipDurationMs,
         dropTargetStyle: {

@@ -153,6 +153,8 @@
 </script>
 
 <script lang="ts">
+  import { readCardDragType } from "./boardDragTypes";
+  const cardDragType = readCardDragType();
   // import { Checkbox, InternalLink} from "obsidian-svelte";
   import { Checkbox, Icon } from "obsidian-svelte";
   import IconButton from "src/ui/components/IconButton/IconButton.svelte";
@@ -332,7 +334,7 @@
   on:consider={handleDndConsider}
   on:finalize={handleDndFinalize}
   use:dragHandleZone={{
-    type: "card",
+    type: cardDragType,
     items,
     flipDurationMs,
     dropTargetStyle: {

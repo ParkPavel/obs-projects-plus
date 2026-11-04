@@ -13,6 +13,7 @@ const SRC = path.resolve(__dirname, "..");
 
 const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   { file: "lib/dashboard-engine/transformBudget.ts", maxLines: 27 },
+  { file: "ui/views/Board/components/Board/boardDragTypes.ts", maxLines: 12 },
   // 240 → 230 (#184): the frame math moved to `hostFrames.ts`, and a ceiling
   // that keeps the room the move freed is not a ceiling. Banked in the same
   // commit as the removal, which is the rule this ratchet exists to enforce.
