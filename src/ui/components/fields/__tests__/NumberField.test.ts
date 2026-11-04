@@ -32,6 +32,23 @@ afterEach(() => {
 });
 
 describe("NumberField", () => {
+  it("commits a completed outside tap even when the host keeps native focus, but scrolling or its own popup keeps the draft", async () => {
+    const m = mount({ suggestions: ["12"] }); const outside = document.createElement("div"); document.body.appendChild(outside);
+    const pointer = (target: HTMLElement, kind: string, y = 10) => {
+      const event = new Event(kind, { bubbles: true, cancelable: true });
+      Object.assign(event, { pointerId: 1, clientX: 10, clientY: y }); target.dispatchEvent(event);
+    };
+    try {
+      m.input.focus(); await type(m.input, "12"); await tick();
+      pointer(outside, "pointerdown", 100); pointer(outside, "pointerup", 200);
+      expect(document.activeElement).toBe(m.input); expect(m.commits).toEqual([]);
+      const row = document.querySelector<HTMLElement>('[role="option"]')!;
+      pointer(row, "pointerdown"); pointer(row, "pointerup");
+      expect(document.activeElement).toBe(m.input); expect(m.commits).toEqual([]);
+      pointer(outside, "pointerdown"); pointer(outside, "pointerup"); await tick();
+      expect(m.commits).toEqual([12]); expect(document.activeElement).not.toBe(m.input);
+    } finally { m.component.$destroy(); outside.remove(); }
+  });
   it("offers only valid numeric suggestions on its original input and commits a number once", async () => {
     const m = mount({ value: 5, suggestions: ["0", "12", "wrong", "Infinity"] });
     m.input.focus(); await tick(); await tick();

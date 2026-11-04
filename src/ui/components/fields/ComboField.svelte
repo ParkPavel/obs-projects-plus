@@ -39,6 +39,7 @@
   import { setIcon } from "obsidian";
   import { portal } from "src/ui/portal";
   import { keepInView } from "./keepInView";
+  import { releaseOnOutsideTap } from "./releaseOnOutsideTap";
   import { createDraftController, recordImeCompositionEnd, type CommitReason } from "./draftController";
   import { createOptionSearch, optionDomId, stepActive, type ComboOption } from "./comboOptions";
   import { onKeyboardChange, visibleViewport } from "src/ui/utils/visibleViewport";
@@ -464,6 +465,7 @@
   <input
     bind:this={inputEl}
     use:keepInView={{ confirm }}
+    use:releaseOnOutsideTap
     {id}
     class="ppp-combo-input {inputClass}"
     type="text"
