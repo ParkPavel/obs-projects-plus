@@ -1649,6 +1649,7 @@
   }
 
   // Agenda Logic
+  $: agendaDateMapping = { startDateField: config?.startDateField, endDateField: config?.endDateField, timezone: timezoneValue };
   $: effectiveAgendaProject = embedded
     ? { ...(agendaProject ?? project), ...(config?.localAgenda ? { agenda: config.localAgenda } : {}) }
     : project;
@@ -1984,6 +1985,7 @@
         currentDate={agendaDate}
         titleField={titleField?.name}
         dateField={dateField?.name}
+        dateMapping={agendaDateMapping}
         timeField={config?.startTimeField}
         {colorField}
         checkField={booleanField?.name}

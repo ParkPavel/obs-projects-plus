@@ -112,6 +112,7 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   { file: "ui/components/FilterPills/FilterSummary.svelte", maxLines: 26 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/tableControlsHost.ts", maxLines: 43 },
   { file: "ui/actions/moveToViewHeader.ts", maxLines: 152 },
+  { file: "ui/views/Calendar/calendarRecordDates.ts", maxLines: 39 },
   { file: "ui/views/Dashboard/widgets/ViewTabBar.svelte", maxLines: 260 },
   // i3-final (B3/B4): linked-view tabs and the inherited field list enter at
   // their measured sizes; the tab bar paid for its two lines inside its ceiling.

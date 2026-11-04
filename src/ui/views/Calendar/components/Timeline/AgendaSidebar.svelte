@@ -24,7 +24,8 @@
   import type { ProjectDefinition } from '../../../../../settings/settings';
   import type { AgendaCustomList } from '../../../../../settings/v3/settings';
   import { formatDateForDisplay } from '../../../../../lib/helpers';
-  import { extractTimeWithPriority, parseDateInTimezone } from '../../../Calendar/calendar';
+  import { extractTimeWithPriority } from '../../../Calendar/calendar';
+  import { calendarRecordDates, type CalendarDateMapping } from '../../calendarRecordDates';
   import { isMobileDevice } from '../../../../../lib/stores/ui';
   import AgendaCustomListComponent from '../../agenda/AgendaCustomList.svelte';
   import AgendaListName from '../../agenda/AgendaListName.svelte';
@@ -43,6 +44,8 @@
   export let currentDate: dayjs.Dayjs = dayjs();
   export let titleField: string | undefined = undefined;
   export let dateField: string | undefined = undefined;
+  export let endDateField: string | undefined = undefined;
+  export let dateMapping: CalendarDateMapping | undefined = undefined;
   export let timeField: string | undefined = undefined;
   export let colorField: string | undefined = undefined;
   export let checkField: string | undefined = undefined;
@@ -262,17 +265,12 @@
   }
   
   // DATA PROCESSING
-  function getRecordDate(record: DataRecord, writeFormat?: string): dayjs.Dayjs | null {
-    const fieldName = dateField ?? 'startDate';
-    const value = record.values[fieldName] ?? record.values['date'] ?? record.values['deadline'];
-    if (!value) return null;
-    return parseDateInTimezone(value, timezone, writeFormat);
-  }
-  
-  function getEndDate(record: DataRecord, writeFormat?: string): dayjs.Dayjs | null {
-    const value = record.values['endDate'] ?? record.values['end'];
-    if (!value) return null;
-    return parseDateInTimezone(value, timezone, writeFormat);
+  interface AgendaFields {
+    dates: CalendarDateMapping;
+    title: string | undefined;
+    time: string | undefined;
+    color: string | undefined;
+    check: string | undefined;
   }
   
   function categorize(
@@ -328,29 +326,29 @@
     });
   }
 
-  function buildAgenda(recs: DataRecord[], baseDate: dayjs.Dayjs, writeFormat?: string): AgendaEvent[] {
+  function buildAgenda(recs: DataRecord[], baseDate: dayjs.Dayjs, writeFormat: string | undefined, mapping: AgendaFields, allDayTime: string): AgendaEvent[] {
     const result: AgendaEvent[] = [];
     
     for (const record of recs) {
-      const rawTitle = titleField && record.values[titleField]
-        ? String(record.values[titleField])
+      const rawTitle = mapping.title && record.values[mapping.title]
+        ? String(record.values[mapping.title])
         : record.id.split('/').pop()?.replace('.md', '') ?? record.id;
       const title = stripWikilinks(rawTitle);
       
-      const date = getRecordDate(record, writeFormat);
-      const endDate = getEndDate(record, writeFormat);
+      const { startDate, endDate } = calendarRecordDates(record, mapping.dates, writeFormat);
+      const date = startDate ?? endDate;
       
       // Check if task is completed
-      const isCompleted = checkField 
-        ? record.values[checkField] === true 
+      const isCompleted = mapping.check
+        ? record.values[mapping.check] === true
         : false;
       
       let timeMinutes = -1;
-      let timeDisplay = labels.allDayTime;
+      let timeDisplay = allDayTime;
       let isAllDay = true;
       
-      if (timeField) {
-        const extracted = extractTimeWithPriority(record, timeField);
+      if (mapping.time) {
+        const extracted = extractTimeWithPriority(record, mapping.time);
         if (extracted) {
           const parts = extracted.split(':').map(Number);
           const h = parts[0];
@@ -364,7 +362,7 @@
       }
       
       const category = categorize(date, endDate, isAllDay, baseDate, isCompleted);
-      const color = colorField ? record.values[colorField] as string : undefined;
+      const color = mapping.color ? record.values[mapping.color] as string : undefined;
       
       let spanInfo: string | undefined;
       let dateStr: string | undefined;
@@ -412,7 +410,9 @@
     });
   }
   
-  $: agenda = buildAgenda(records, selectedDate, project.dateFormat?.writeFormat);
+  $: agendaDates = dateMapping ?? { startDateField: dateField, endDateField, timezone };
+  $: agenda = buildAgenda(records, selectedDate, project.dateFormat?.writeFormat,
+    { dates: agendaDates, title: titleField, time: timeField, color: colorField, check: checkField }, labels.allDayTime);
   // Custom lists are local views of the selected day, not independent vault
   // queries. Reuse the calendar's parsing/timezone and multi-day classification
   // before the list applies its own conditions (date AND list conditions).

@@ -75,6 +75,53 @@ test("the desktop header exposes one named create action and passes its selected
 });
 
 describe("custom agenda lists intersect the selected day with their conditions", () => {
+  it("an end-only event belongs to the same selected day the calendar renders", async () => {
+    const records = [{ id: "end-only.md", values: { title: "End only", finish: "2026-10-26" } }];
+    const view = render(Sidebar, { props: { project: { id: "p", name: "Project", agenda: { mode: "custom", custom: { lists: [list("all", "All", 0)] } } },
+      currentDate: dayjs("2026-10-26"), records, fields: [], titleField: "title", dateMapping: { startDateField: "visit", endDateField: "finish" } } });
+    try { await settle(); expect(Array.from(view.container.querySelectorAll(".item-title"), element => element.textContent)).toEqual(["End only"]); }
+    finally { view.unmount(); }
+  });
+  it("a mapping change reprojects the same source records without reloading or mixing the selected day", async () => {
+    const mapping = { startDateField: "visit" }, records = [
+      { id: "first.md", values: { title: "First", visit: "2026-10-26", alternate: "2026-10-27" } },
+      { id: "second.md", values: { title: "Second", visit: "2026-10-27", alternate: "2026-10-26" } },
+    ];
+    const view = render(Sidebar, { props: { project: { id: "p", name: "Project", agenda: { mode: "custom", custom: { lists: [list("all", "All", 0)] } } },
+      currentDate: dayjs("2026-10-26"), records, fields: [], titleField: "title", dateMapping: mapping } });
+    try {
+      await settle(); expect(Array.from(view.container.querySelectorAll(".item-title"), element => element.textContent)).toEqual(["First"]);
+      mapping.startDateField = "alternate"; view.component.$set({ dateMapping: mapping }); await settle();
+      expect(Array.from(view.container.querySelectorAll(".item-title"), element => element.textContent)).toEqual(["Second"]);
+    } finally { view.unmount(); }
+  });
+  it("an explicitly unconfigured calendar retains conventional/filename dates even when a preferred schema field was resolved", async () => {
+    const records = [{ id: "conventional.md", values: { title: "Conventional", date: "2026-10-26" } }, { id: "Daily/2026-10-26 Entry.md", values: { title: "Filename" } }];
+    const view = render(Sidebar, { props: { project: { id: "p", name: "Project", agenda: { mode: "custom", custom: { lists: [list("all", "All", 0)] } } },
+      currentDate: dayjs("2026-10-26"), records, fields: [], titleField: "title", dateField: "visit", dateMapping: {} } });
+    try { await settle(); expect(Array.from(view.container.querySelectorAll(".item-title"), element => element.textContent)).toEqual(["Conventional", "Filename"]); }
+    finally { view.unmount(); }
+  });
+  it("an explicit start mapping never admits a record using another date property", async () => {
+    const records = [
+      { id: "valid.md", values: { title: "Valid", visit: "2026-10-26" } },
+      ...[undefined, null, ""].map((visit, id) => ({ id: `foreign-${id}.md`, values: { title: `Foreign ${id}`, visit, date: "2026-10-26" } })),
+    ];
+    const view = render(Sidebar, { props: { project: { id: "p", name: "Project", agenda: { mode: "custom", custom: { lists: [list("all", "All", 0)] } } },
+      currentDate: dayjs("2026-10-26"), records, fields: [], titleField: "title", dateField: "visit" } });
+    try { await settle(); expect(Array.from(view.container.querySelectorAll(".item-title"), element => element.textContent)).toEqual(["Valid"]); }
+    finally { view.unmount(); }
+  });
+  it("a mapped end defines multi-day membership and an empty mapped end does not borrow a conventional end", async () => {
+    const records = [
+      { id: "span.md", values: { title: "Mapped span", visit: "2026-10-25", finish: "2026-10-27", endDate: "2026-10-24" } },
+      { id: "not-span.md", values: { title: "Not spanning", visit: "2026-10-25", finish: null, endDate: "2026-10-27" } },
+    ];
+    const view = render(Sidebar, { props: { project: { id: "p", name: "Project", agenda: { mode: "custom", custom: { lists: [list("all", "All", 0)] } } },
+      currentDate: dayjs("2026-10-26"), records, fields: [], titleField: "title", dateField: "visit", endDateField: "finish" } });
+    try { await settle(); expect(Array.from(view.container.querySelectorAll(".item-title"), element => element.textContent)).toEqual(["Mapped span"]); }
+    finally { view.unmount(); }
+  });
   it("scopes empty and filtered lists to the day, includes spanning events and follows date navigation", async () => {
     const todo = { ...list("todo", "Todo", 0), filterGroup: { id:"g",conjunction:"AND",groups:[],filters:[{id:"s",field:"status",operator:"is",value:"todo",enabled:true}] } };
     const records = [
