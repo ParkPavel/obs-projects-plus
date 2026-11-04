@@ -194,7 +194,9 @@ async function resolveBlockFrame(ref: string, deps: ResolverDeps, ctx: ResolveCo
       const rightFrame = await resolveExternalFrame(right, deps, next);
       if (rightFrame) rightFrames.set(right, rightFrame);
     }
-    frame = executeTransform(frame, pipeline, { rightFrames }).data;
+    const result = executeTransform(frame, pipeline, { rightFrames });
+    if (result.meta.stopped) return null;
+    frame = result.data;
   }
   return frame;
 }

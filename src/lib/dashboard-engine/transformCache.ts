@@ -50,6 +50,8 @@ export function executeTransformCached(
   pipeline: TransformPipeline,
   context?: TransformContext
 ): TransformResult {
+  // Runtime execution controls must never be answered from an uncontrolled hit.
+  if (context?.signal || context?.workLimit !== undefined || context?.budget) return executeTransform(source, pipeline, context);
   const key = computeCacheKey(source, pipeline, context);
   const now = Date.now();
 
@@ -59,6 +61,7 @@ export function executeTransformCached(
   }
 
   const result = executeTransform(source, pipeline, context);
+  if (result.meta.stopped) return result;
 
   // Evict if at capacity
   if (cache.size >= MAX_CACHE_ENTRIES) {

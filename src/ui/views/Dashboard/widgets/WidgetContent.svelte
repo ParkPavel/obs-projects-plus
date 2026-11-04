@@ -2,10 +2,8 @@
   /**
    * WidgetContent — what a block shows, and the reasons it shows something else.
    *
-   * Three fallbacks, in the order a reader meets them: a type that has content
-   * but is not configured yet (the wizard), a retired legacy type (the
-   * placeholder and its conversion), and a type with no content component at
-   * all. The host used to hold this chain inline.
+   * Source/processing failures precede content, then the setup wizard,
+   * retired-type conversion and unconfigured-type fallback.
    *
    * It moved out for the reason `hostFrames.ts` and `renderContext.ts` did, and
    * the reason is a measurement rather than taste: `WidgetHost.svelte` stood at
@@ -27,6 +25,7 @@
   import type { ContentEntry, WidgetRenderContext } from "./widgetComponentRegistry";
   import { convertLegacyWidget, isRetiredLegacyType } from "./legacyMigration";
   import { hostSourceNotice } from "./dataScope";
+  import { pipelineStopNotice } from "./pipelineStopNotice";
   import { otherProjectNotice } from "./linkedSourceState";
   import EmptyState from "src/ui/components/EmptyState/EmptyState.svelte";
   import WidgetSetupWizard from "./WidgetSetupWizard.svelte";
@@ -48,7 +47,7 @@
    * purpose: a broken source is a configuration fault, and "not configured yet"
    * would send the user to fix the wrong thing.
    */
-  $: sourceNotice = otherProjectNotice(ctx.otherProject) ?? hostSourceNotice(widget.type, ctx.namedSource);
+  $: sourceNotice = otherProjectNotice(ctx.otherProject) ?? hostSourceNotice(widget.type, ctx.namedSource) ?? pipelineStopNotice(ctx.pipelineStopped, key => $i18n.t(key));
 
   function handleConvert() {
     const patch = convertLegacyWidget(widget);

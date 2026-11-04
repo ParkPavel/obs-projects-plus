@@ -85,7 +85,7 @@
     activeFieldPresetId, availableSources: io.catalogue, availableWidgets: availableWidgets.filter((w) => w.id !== widget.id), project, tableConfig, isPrimaryDataTable,
     pipelineStepCount: currentPipeline.steps.length, pipelineInputRowCount, chartConfig,
     statsConfig, chartRightFrame, chartSeriesFrames, dbCall, scopeApplied: scope.applied, primaryActionSignal,
-    namedSource, otherProject,
+    namedSource, otherProject, pipelineStopped: dbCall.isExternal ? undefined : frames.pipelineStopped,
   });
 
   // #169: the block's own action, and NOT run here. Hidden for a linked project

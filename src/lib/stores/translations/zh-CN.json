@@ -1457,7 +1457,13 @@
                     "optional": "可选",
                     "keep-original": "保留原始数组字段",
                     "config-hint": "无法配置",
-                    "formula-placeholder": "例如 fieldA + fieldB * 2"
+                    "formula-placeholder": "例如 fieldA + fieldB * 2",
+                    "execution-stopped": "数据转换已停止",
+                    "execution": {
+                        "work-limit": "请减少输入数据或计算复杂度后重试。结果尚不完整。",
+                        "deadline": "已达到处理时限。请减少输入数据或拆分转换步骤。",
+                        "cancelled": "处理已取消。请重新运行转换以获取完整结果。"
+                    }
                 },
                 "database-call": {
                     "empty": "尚未配置视图",

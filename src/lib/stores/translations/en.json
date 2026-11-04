@@ -1480,7 +1480,13 @@
                     "disable-step": "Disable step",
                     "enable-step": "Enable step",
                     "source-not-ready": "The linked project is not loaded, so its fields are unavailable here.",
-                    "formula-placeholder": "e.g. fieldA + fieldB * 2"
+                    "formula-placeholder": "e.g. fieldA + fieldB * 2",
+                    "execution-stopped": "Data transformation stopped",
+                    "execution": {
+                        "work-limit": "Reduce the input data or calculation complexity, then try again. The result is incomplete.",
+                        "deadline": "The processing deadline was reached. Reduce the input data or split the transformation.",
+                        "cancelled": "Processing was cancelled. Run the transformation again to obtain a complete result."
+                    }
                 },
                 "group": {
                     "empty": "(empty)"

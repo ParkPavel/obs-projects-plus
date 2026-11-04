@@ -40,6 +40,7 @@
  */
 
 import type { FilterDefinition } from "src/settings/settings";
+import type { TransformBudget } from "./transformBudget";
 
 // ── Pipeline ─────────────────────────────────────────────────
 
@@ -279,6 +280,8 @@ export interface TransformResult {
  * proof the pipeline did what the user asked.
  */
 export interface TransformMeta {
+  /** Incomplete execution: do not treat the returned last complete step as final data. */
+  readonly stopped?: TransformStopReason;
   /** Steps actually run: disabled steps are excluded before counting. */
   readonly stepsExecuted: number;
   readonly executionTimeMs: number;
@@ -286,6 +289,8 @@ export interface TransformMeta {
   readonly outputRowCount: number;
   readonly warnings: readonly string[];
 }
+
+export type TransformStopReason = "cancelled" | "work-limit" | "deadline";
 
 // ── Execution context (Pillar 5) ─────────────────────────────
 
@@ -295,6 +300,8 @@ export interface TransformMeta {
  * datasource machinery.
  */
 export interface TransformContext {
+  /** Trusted caller-owned budget, for several executions in one preview/pass. */
+  readonly budget?: TransformBudget;
   /** Cooperative cancellation between units of synchronous work, not preemption. */
   readonly signal?: AbortSignal;
   /** May lower the default execution ceiling; cannot raise it. Runtime-only. */

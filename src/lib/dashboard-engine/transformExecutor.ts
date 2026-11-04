@@ -114,6 +114,7 @@ export function executeTransform(
     data: current,
     derivedFields,
     meta: {
+      ...(budget.stopped ? { stopped: budget.stopped } : {}),
       stepsExecuted,
       executionTimeMs: performance.now() - startTime,
       inputRowCount: source.records.length,

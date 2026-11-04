@@ -13,6 +13,7 @@ const SRC = path.resolve(__dirname, "..");
 
 const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   { file: "lib/dashboard-engine/transformBudget.ts", maxLines: 27 },
+  { file: "ui/views/Dashboard/widgets/pipelineStopNotice.ts", maxLines: 10 },
   { file: "ui/views/Board/components/Board/boardDragTypes.ts", maxLines: 12 },
   // 240 → 230 (#184): the frame math moved to `hostFrames.ts`, and a ceiling
   // that keeps the room the move freed is not a ceiling. Banked in the same
@@ -25,7 +26,7 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   // 120 → 106 (3.6.0): which records a widget starts from moved to
   // widgetInput.ts when a chart or stats block learned to read another
   // project; the room that move freed is not kept.
-  { file: "ui/views/Dashboard/widgets/hostFrames.ts", maxLines: 106 },
+  { file: "ui/views/Dashboard/widgets/hostFrames.ts", maxLines: 105 },
   { file: "ui/views/Dashboard/widgets/widgetInput.ts", maxLines: 64 },
   { file: "ui/views/Dashboard/widgets/_shared/DataProjectPicker.svelte", maxLines: 36 },
   { file: "ui/views/Dashboard/widgets/WidgetShell.svelte", maxLines: 350 },
@@ -44,7 +45,7 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   // needed about ten, so the content chain and the source selector each became
   // a component. `BUDGETS` covers `ui/views/Dashboard/**` by hand, so a new
   // component that is not listed here is a component with no ceiling at all.
-  { file: "ui/views/Dashboard/widgets/WidgetContent.svelte", maxLines: 95 },
+  { file: "ui/views/Dashboard/widgets/WidgetContent.svelte", maxLines: 94 },
   { file: "ui/views/Dashboard/widgets/DataScopeField.svelte", maxLines: 85 },
   { file: "ui/views/Dashboard/widgets/DataScopePanel.svelte", maxLines: 60 },
   { file: "ui/views/Dashboard/widgets/dataScope.ts", maxLines: 75 },

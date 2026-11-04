@@ -14,6 +14,10 @@
 
 import { readFileSync } from "fs";
 import { resolve } from "path";
+import ts from "typescript";
+import vm from "vm";
+import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
+import { createTransformBudget } from "src/lib/dashboard-engine/transformBudget";
 
 const WIDGETS = resolve(__dirname, "..");
 const read = (rel: string) => readFileSync(resolve(WIDGETS, rel), "utf8");
@@ -209,9 +213,19 @@ describe("#137 the pipeline editor reads the block's own source", () => {
     // live block sources (`io`), and the editor gets exactly those.
     expect(host).toMatch(/rightFrames: io\.rightFrames/);
     expect(host).toMatch(/<PipelineEditor[\s\S]*?rightFrames=\{io\.rightFrames\}/);
-    // i2-perf: one pass, each step on the previous output — still with the runtime's right-frames.
+    // Run the actual preview: dropping rightFrames would keep two rows instead of one.
     expect(editor).toMatch(/scheduleCounts\(source as DataFrame \| null, steps, rightFrames\)/);
-    expect(editor).toMatch(/executeTransform\(current, \{ steps: \[step\] \}, \{ rightFrames: right \}\)/);
+    const script = editor.slice(editor.indexOf(">") + 1, editor.indexOf("</script>"));
+    const ast = ts.createSourceFile("preview.ts", script, ts.ScriptTarget.Latest, true);
+    const node = ast.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "countSteps");
+    if (!node) throw new Error("Missing production countSteps");
+    const compiled = ts.transpileModule(node.getText(ast), { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText;
+    const frame = { fields: [{ name: "key" }], records: [{ id: "a.md", values: { key: "a" } }, { id: "b.md", values: { key: "b" } }] };
+    const right = new Map([["right", { fields: [{ name: "key" }, { name: "label" }], records: [{ id: "right.md", values: { key: "a", label: "A" } }] }]]);
+    const steps = [{ type: "join", rightSourceId: "right", on: { leftKey: "key", rightKey: "key" }, how: "inner" }];
+    const counts = vm.runInNewContext(`${compiled}; countSteps(frame, steps, right);`, { frame, steps, right,
+      executeTransform, createTransformBudget, performance, previewStopped: undefined }, { timeout: 1000 });
+    expect(counts).toEqual([{ rowsIn: 2, rowsOut: 1 }]);
   });
 
   it("the editor says so when there is no schema to configure against", () => {

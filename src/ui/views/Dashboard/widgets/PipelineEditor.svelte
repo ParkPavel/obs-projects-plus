@@ -9,6 +9,7 @@
     ComputeStep,
     UnpivotStep,
     JoinStep,
+    TransformStopReason,
   } from "src/lib/dashboard-engine/transformTypes";
   import type { DataField } from "src/lib/dataframe/dataframe";
   import type { BlockSource } from "./linkedSourceState";
@@ -23,6 +24,7 @@
   import { getOperatorsForField, getOperatorLabel } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
   import { operatorNeedsValue } from "src/settings/base/settings";
   import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
+  import { createTransformBudget } from "src/lib/dashboard-engine/transformBudget";
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import { detectArrayFields } from "./_shared/arrayFieldDetection";
   import type { PipelineIntent } from "./widgetMenu";
@@ -94,6 +96,7 @@
   // after a 250 ms pause in typing. Re-running every prefix on each keystroke
   // cost 107 / 527 ms per key at 1k / 5k records.
   let stepCounts: Array<{ rowsIn: number; rowsOut: number }> = [];
+  let previewStopped: TransformStopReason | undefined;
   let countsTimer: ReturnType<typeof setTimeout> | null = null;
   $: scheduleCounts(source as DataFrame | null, steps, rightFrames);
   function scheduleCounts(frame: DataFrame | null, list: typeof steps, right: typeof rightFrames): void {
@@ -101,11 +104,14 @@
     countsTimer = setTimeout(() => { stepCounts = countSteps(frame, list, right); }, 250);
   }
   function countSteps(frame: DataFrame | null, list: typeof steps, right: typeof rightFrames): Array<{ rowsIn: number; rowsOut: number }> {
+    previewStopped = undefined;
     if (!frame || list.length === 0) return [];
+    const budget = createTransformBudget(undefined, performance.now());
     const out: Array<{ rowsIn: number; rowsOut: number }> = [];
     let current = frame;
     for (const step of list) {
-      const result = executeTransform(current, { steps: [step] }, { rightFrames: right });
+      const result = executeTransform(current, { steps: [step] }, { rightFrames: right, budget });
+      if (result.meta.stopped) { previewStopped = result.meta.stopped; break; }
       out.push({ rowsIn: current.records.length, rowsOut: result.meta.outputRowCount });
       current = result.data;
     }
@@ -499,6 +505,9 @@
       {$i18n.t("views.dashboard.pipeline.live", { defaultValue: "Changes apply instantly" })}
     </span>
   </div>
+  {#if previewStopped}
+    <div class="ppp-pipeline-intent" role="alert"><p class="ppp-pipeline-intent-hint">{$i18n.t("views.dashboard.pipeline.execution-stopped")} {$i18n.t(`views.dashboard.pipeline.execution.${previewStopped}`)}</p></div>
+  {/if}
   {#if intentCopy}
     <div class="ppp-pipeline-intent" role="note">
       <p class="ppp-pipeline-intent-hint">{$i18n.t(intentCopy.hintKey, { defaultValue: intentCopy.hintDefault })}</p>

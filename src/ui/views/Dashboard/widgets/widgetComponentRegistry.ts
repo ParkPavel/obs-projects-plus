@@ -50,6 +50,7 @@ import DividerWidget from "./DividerWidget/DividerWidget.svelte";
 
 /** Everything a props builder may need; assembled reactively by WidgetHost. */
 export interface WidgetRenderContext {
+  readonly pipelineStopped?: import("src/lib/dashboard-engine/transformTypes").TransformMeta["stopped"];
   readonly widget: WidgetDefinition;
   readonly frame: DataFrame;
   readonly transformedFrame: DataFrame;
