@@ -687,7 +687,20 @@ describe("ComboField — the draft", () => {
     await tick();
     expect(m.input.value).toBe("Done");
     expect(m.commits).toEqual([]);
+    expect(m.drafts).toEqual([]);
     m.destroy();
+  });
+
+  test("an untouched close acknowledgement uses the refreshed value without reporting user input", async () => {
+    const m=mount({commitUnchanged:true});await open(m);m.component.$set({value:"Done"});await tick();
+    m.input.blur();await tick();expect(m.input.value).toBe("Done");
+    expect(m.commits).toEqual([{value:"Done",reason:"blur"}]);expect(m.drafts).toEqual([]);expect(m.selects).toEqual([]);m.destroy();
+  });
+
+  test("an untouched mapped label cannot select its old canonical value over a refreshed parent", async () => {
+    const m=mount({value:"Alpha label",options:[{id:"a",label:"Alpha label",value:"a"},{id:"b",label:"Beta label",value:"b"}]});
+    await open(m);m.component.$set({value:"Beta label"});await tick();m.input.blur();await tick();
+    expect(m.input.value).toBe("Beta label");expect(m.commits).toEqual([]);expect(m.selects).toEqual([]);expect(m.drafts).toEqual([]);m.destroy();
   });
 
   test("disabled never opens", async () => {

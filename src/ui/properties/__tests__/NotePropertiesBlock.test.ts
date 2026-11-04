@@ -113,6 +113,16 @@ afterEach(() => {
 });
 
 describe("i3-props NotePropertiesBlock", () => {
+  it("leaving an untouched property after an external metadata refresh cannot restore its old value", async () => {
+    const fm={value:"original"},view=setup(fm);
+    try {
+      await tick();(row("value").querySelector(".ppp-note-props__display") as HTMLElement).click();await flush();
+      const input=editorOf("value")!;fm.value="external";view.notifyChanged(view.file);await flush();
+      expect(input.value).toBe("original");input.blur();await flush();
+      expect(fm.value).toBe("external");expect(view.processFrontMatter).not.toHaveBeenCalled();expect(editorOf("value")).toBeNull();
+    }finally{view.unmount();}
+  });
+
   it("finishing an accepted scalar write preserves a newer draft in the same original input", async () => {
     const fm = { value: "original" }, view = setup(fm);
     try {

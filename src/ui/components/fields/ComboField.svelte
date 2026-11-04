@@ -116,10 +116,10 @@
   let unwatchKeyboard: (() => void) | null = null;
 
   /** Show the controller's text, and report it when it changed (an edit, a pick, a restore). */
-  function pull(): void {
+  function pull(notify = true): void {
     const next = ctl.getState().draft;
     draft = next;
-    if (!readOnly && !disabled && !ctl.isComposing() && next !== reportedDraft) { reportedDraft = next; dispatch("draftChange", next); }
+    if (!readOnly && !disabled && !ctl.isComposing() && next !== reportedDraft) { reportedDraft = next; if (notify) dispatch("draftChange", next); }
   }
   // A text the parent passed is not an edit of the user's: shown, not reported.
   function adopt(next: string): void {
@@ -302,16 +302,17 @@
    */
   function finish(reason: "enter" | "tab" | "blur" | "change"): boolean {
     if (readOnly || disabled || ctl.isComposing()) return false;
+    const before = ctl.getState();
     if (multi) {
       if (reason === "blur") {
         ctl.blur({ accept: false });
-        pull();
+        pull(before.draft !== before.baseline || ctl.getState().draft === before.draft);
       }
       return true;
     }
     const text = ctl.getState().draft;
     const exact = exactMatch(text);
-    if (exact?.value !== undefined && exact.value !== text) {
+    if (exact?.value !== undefined && exact.value !== text && (reason !== "blur" || dirty)) {
       const accepted = choose(exact);
       if (reason === "blur" && accepted) ctl.blur();
       return accepted;
@@ -329,10 +330,13 @@
     invalid = !accept && (reason !== "blur" || preserveInvalidOnBlur);
     const opts = { accept, unchanged: commitUnchanged, preserveDraft: preserveInvalidOnBlur };
     const result = reason === "blur" ? ctl.blur(opts) : ctl.commit(reason === "change" ? "blur" : reason, opts);
-    pull();
+    // A pending parent value adopted by an untouched blur is synchronization,
+    // not a user edit. Keep the notification baseline without triggering saves.
+    const adoptedParent = reason === "blur" && before.draft === before.baseline && ctl.getState().draft !== before.draft;
+    pull(!adoptedParent);
     dirty = false;
     if (!result) return accept;
-    if (exact) dispatch("select", exact);
+    if (exact && !adoptedParent && result.value === (exact.value ?? exact.label)) dispatch("select", exact);
     dispatch("commit", { value: result.value, reason: result.reason });
     return true;
   }

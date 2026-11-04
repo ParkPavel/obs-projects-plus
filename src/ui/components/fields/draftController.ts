@@ -267,18 +267,18 @@ export function createDraftController(initial = ""): DraftController {
       pendingBlur = false;
       compositionEndAt = -Infinity;
       let result: CommitResult | null = null;
+      if (pending !== null && !touched) {
+        // A close acknowledgement is not permission to restore stale text.
+        // Adopt before an unchanged commit can mark this focus as touched.
+        baseline = pending;
+        draft = pending;
+        committed = pending;
+      }
       retainingRejectedDraft = options.accept === false && options.preserveDraft === true;
       if (options.accept === false) {
         if (!options.preserveDraft) draft = baseline;
       } else {
         result = commit("blur", options);
-      }
-      if (pending !== null && !touched) {
-        // The parent changed the value while the field was focused and the
-        // user edited nothing: show the parent's value now.
-        baseline = pending;
-        draft = pending;
-        committed = pending;
       }
       pending = null;
       return result;

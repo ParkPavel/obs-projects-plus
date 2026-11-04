@@ -35,6 +35,12 @@ describe("draftController — seed", () => {
 });
 
 describe("draftController — prop refresh while focused", () => {
+  test("an untouched close acknowledgement uses the latest parent value", () => {
+    const c=createDraftController("a");c.focus("a");c.refresh("z");
+    expect(c.blur({unchanged:true})).toEqual({value:"z",reason:"blur"});
+    expect(c.getState()).toMatchObject({baseline:"z",draft:"z",committed:"z"});
+  });
+
   test("the draft is kept, and the edit wins on blur", () => {
     const c = createDraftController("a");
     c.focus("a");

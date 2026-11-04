@@ -81,6 +81,16 @@ afterEach(() => {
 });
 
 describe("FieldControl text entry on shared fields", () => {
+  it("accepting an untouched external value on blur cannot queue a live save or overwrite its successor", async () => {
+    const m = mount("title", "a");
+    try {
+      m.input.focus(); m.component.$set({ value: "b" }); await tick();
+      expect(m.input.value).toBe("a"); m.input.blur(); await tick(); expect(m.input.value).toBe("b");
+      m.component.$set({ value: "c" }); await tick(); jest.advanceTimersByTime(1000);
+      expect(m.input.value).toBe("c"); expect(m.onChange).not.toHaveBeenCalled();
+    } finally { m.component.$destroy(); }
+  });
+
   it("late suggestions preserve the original scalar input, draft, caret and focus", async () => {
     const m = mount("title", "a");
     try {
