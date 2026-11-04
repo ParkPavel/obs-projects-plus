@@ -32,6 +32,8 @@ jest.mock("src/ui/components/MultiTextInput/MultiTextInput.svelte", () => ({ __e
 jest.mock("src/ui/components/DateInput.svelte", () => ({ __esModule: true, default: mockNoop }), { virtual: true });
 jest.mock("src/ui/components/DatetimeInput.svelte", () => ({ __esModule: true, default: mockNoop }), { virtual: true });
 
+jest.mock("src/ui/components/fields/SelectField.svelte", () => ({ __esModule: true, default: require("./mocks/Select.mock.svelte").default }));
+
 import { tick } from "svelte";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
 type DataField = import("src/lib/dataframe/dataframe").DataField;
@@ -214,7 +216,7 @@ describe("B5 scenario — rollup from scratch in one dialog", () => {
     const selects = () => Array.from(target.querySelectorAll<HTMLSelectElement>("[data-testid='select']"));
 
     // 1 — name
-    const name = target.querySelector<HTMLInputElement>("[data-testid='text-input']")!;
+    const name = target.querySelector<HTMLInputElement>(".ppp-value-field input")!;
     name.value = "Сумма оплат клиента";
     name.dispatchEvent(new Event("input"));
     // 2 — type tile

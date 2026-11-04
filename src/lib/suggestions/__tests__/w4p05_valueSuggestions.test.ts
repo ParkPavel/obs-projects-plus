@@ -55,6 +55,11 @@ describe("w4-p05 — what counts as a suggestion", () => {
 });
 
 describe("w4-p05 — the list for a field", () => {
+  test("edit suggestions keep exact stored strings and wikilinks while filter labels keep their compatibility", () => {
+    const source = [{ id: "a.md", values: { name: "  Kept  " } }, { id: "b.md", values: { name: "[[People/Ann|Ann]]" } }];
+    expect(valueSuggestions(source, { name: "name", type: "string" }, { purpose: "edit" })).toEqual(["  Kept  ", "[[People/Ann|Ann]]"]);
+    expect(valueSuggestions(source, { name: "name", type: "string" })).toEqual(["Ann", "Kept"]);
+  });
   test("declared options first, then the project's values sorted; templates left out", () => {
     const list = valueSuggestions(records, status, { templateFolders: ["Templates"] });
     expect(list).toEqual(["Planned", "Done", "Arrived", "Waiting"]);

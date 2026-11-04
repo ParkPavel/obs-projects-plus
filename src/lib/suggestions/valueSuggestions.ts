@@ -50,13 +50,14 @@ export function templateFoldersOf(app: unknown): string[] {
  * One stored value as suggestion texts: list items one by one, a wikilink as
  * the text it shows, nothing for empty, object or template values.
  */
-export function suggestionTexts(raw: unknown): string[] {
+export function suggestionTexts(raw: unknown, preserve = false): string[] {
   if (raw === null || raw === undefined) return [];
-  if (Array.isArray(raw)) return raw.flatMap((item) => (Array.isArray(item) ? [] : suggestionTexts(item)));
+  if (Array.isArray(raw)) return raw.flatMap((item) => (Array.isArray(item) ? [] : suggestionTexts(item, preserve)));
   let text: string;
   if (raw instanceof Date) text = raw.toISOString();
   else if (typeof raw === "string" || typeof raw === "number" || typeof raw === "boolean") text = String(raw);
   else return [];
+  if (preserve) return text.trim() === "" || isTemplateText(text) ? [] : [text];
   const link = /^\[\[([^\]]+)\]\]$/.exec(text.trim());
   if (link?.[1]) {
     const pipe = link[1].indexOf("|");
@@ -75,18 +76,20 @@ export interface SuggestionField {
 }
 
 export interface SuggestionContext {
+  /** Editing retains exact stored text; filters keep their original presentation. */
+  readonly purpose?: "filter" | "edit";
   /** Folders whose notes are templates (see `templateFoldersOf`). */
   readonly templateFolders?: readonly string[];
 }
 
-function collect(records: readonly DataRecord[], field: SuggestionField, folders: readonly string[]): string[] {
+function collect(records: readonly DataRecord[], field: SuggestionField, folders: readonly string[], preserve: boolean): string[] {
   if (field.type === String(DataFieldType.Boolean)) return ["true", "false"];
   const declared: string[] = [];
-  for (const option of field.typeConfig?.options ?? []) declared.push(...suggestionTexts(option));
+  for (const option of field.typeConfig?.options ?? []) declared.push(...suggestionTexts(option, preserve));
   const used = new Set<string>();
   for (const record of records) {
     if (inTemplateFolder(record.id, folders)) continue;
-    for (const text of suggestionTexts(record.values[field.name])) used.add(text);
+    for (const text of suggestionTexts(record.values[field.name], preserve)) used.add(text);
   }
   const out = new Set(declared);
   for (const text of [...used].sort()) out.add(text);
@@ -106,7 +109,7 @@ export function valueSuggestions(
 ): string[] {
   if (!field) return [];
   const folders = context.templateFolders ?? [];
-  const id = JSON.stringify([field.name, field.type, field.typeConfig?.options ?? [], folders]);
+  const id = JSON.stringify([field.name, field.type, field.typeConfig?.options ?? [], folders, context.purpose]);
   let byField = memo.get(records);
   if (!byField) {
     byField = new Map();
@@ -115,7 +118,7 @@ export function valueSuggestions(
   let hit = byField.get(id);
   if (!hit) {
     collected += 1;
-    hit = collect(records, field, folders);
+    hit = collect(records, field, folders, context.purpose === "edit");
     byField.set(id, hit);
   }
   return hit;

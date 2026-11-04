@@ -9,7 +9,8 @@
    */
   import { createEventDispatcher } from "svelte";
   import { toNumber } from "src/lib/engine/numeric";
-  import TextField from "./TextField.svelte";
+  import ComboField from "./ComboField.svelte";
+  import { namesToOptions } from "./comboOptions";
 
   export let value: number | null | undefined = null;
   export let placeholder = "";
@@ -23,6 +24,8 @@
   export let id: string | undefined = undefined;
   export let ariaLabel: string | undefined = undefined;
   export let inputClass = "";
+  export let suggestions: string[] = [];
+  export let preserveInvalidOnBlur = false;
 
   /**
    * `input` reports each keystroke that reads as an acceptable number (a
@@ -30,12 +33,15 @@
    */
   const dispatch = createEventDispatcher<{ input: number | null; commit: number | null; cancel: void }>();
 
-  let field: TextField;
+  let field: ComboField;
+  export function commitForNavigation(): boolean { return field?.commitForNavigation() ?? false; }
+  export function isComposing(): boolean { return field?.isComposing() ?? false; }
   export function focus(): void {
     field?.focus();
   }
 
   $: text = value === null || value === undefined || !Number.isFinite(value) ? "" : String(value);
+  $: options = namesToOptions(suggestions.filter(draft => parse(draft) !== undefined && draft.trim() !== ""));
 
   function parse(draft: string): number | null | undefined {
     const s = draft.trim().replace(",", ".");
@@ -55,21 +61,27 @@
   }
 </script>
 
-<TextField
+<ComboField
   bind:this={field}
   value={text}
   {placeholder}
   {disabled}
   {id}
   {ariaLabel}
+  {options}
+  {preserveInvalidOnBlur}
+  allowCustom
+  commitOnDestroy={false}
   inputMode={integer && (min ?? 0) >= 0 ? "numeric" : "decimal"}
   inputClass="ppp-number-field {inputClass}"
   validate={(d) => parse(d) !== undefined}
-  on:input={(e) => {
+  on:draftChange={(e) => {
     const n = parse(e.detail);
     if (n !== undefined) dispatch("input", n);
   }}
   on:commit={onCommit}
   on:cancel={() => dispatch("cancel")}
+  on:keydown
+  on:focus
   {...$$restProps}
 />

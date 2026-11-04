@@ -32,6 +32,14 @@ afterEach(() => {
 });
 
 describe("NumberField", () => {
+  it("offers only valid numeric suggestions on its original input and commits a number once", async () => {
+    const m = mount({ value: 5, suggestions: ["0", "12", "wrong", "Infinity"] });
+    m.input.focus(); await tick(); await tick();
+    expect(m.input).toHaveAttribute("role", "combobox");
+    expect(Array.from(document.querySelectorAll('[role="option"]')).map(row => row.textContent)).toEqual(["0", "12"]);
+    (document.querySelectorAll<HTMLElement>('[role="option"]')[0])?.click(); await tick(); m.input.blur();
+    expect(m.commits).toEqual([0]); expect(document.querySelector('input')).toBe(m.input);
+  });
   it("is a text input with a decimal keyboard, showing the number", () => {
     const m = mount({ value: 2.5 });
     expect(m.input).toHaveAttribute("type", "text");

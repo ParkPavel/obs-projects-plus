@@ -70,7 +70,7 @@ function openModal(onCreate: jest.Mock) {
   return {
     modal,
     close,
-    nameInput: () => el.querySelector<HTMLInputElement>("[data-testid='text-input']")!,
+    nameInput: () => el.querySelector<HTMLInputElement>(".ppp-value-field input")!,
     button: () => el.querySelector<HTMLButtonElement>("[data-testid='modal-button-group'] button[data-variant='primary']")!,
     alert: () => el.querySelector<HTMLElement>("[role='alert']"),
     dispose: () => { modal.onClose(); el.remove(); },

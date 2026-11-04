@@ -12,33 +12,52 @@
    */
   import { createEventDispatcher } from "svelte";
   import ComboField from "./ComboField.svelte";
+  import type { ComboOption } from "./comboOptions";
 
   export let value = "";
   export let suggestions: string[] = [];
   export let placeholder = "";
   export let ariaLabel: string | undefined = undefined;
   export let disabled = false;
+  export let readOnly = false;
+  export let choices: ComboOption[] | undefined = undefined;
+  export let error = false;
+  export let helperText = "";
+  export let autoFocus = false;
+  export let inputMode: "text" | "numeric" | "decimal" = "text";
+  let field: ComboField;
+  export function focus(): void { field?.focus(); }
+  export function select(): void { field?.select(); }
+  export function isComposing(): boolean { return field?.isComposing() ?? false; }
 
   const dispatch = createEventDispatcher<{
     input: string;
     commit: string;
   }>();
 
-  $: options = suggestions.map((s) => ({ id: s, label: s }));
+  $: options = choices ?? suggestions.map((s) => ({ id: s, label: s }));
 </script>
 
 <div class="ppp-value-field">
   <ComboField
+    bind:this={field}
     {value}
     {options}
     allowCustom
     {placeholder}
     {ariaLabel}
     {disabled}
+    {readOnly}
+    focusOnMount={autoFocus}
+    commitOnDestroy={false}
+    {error}
+    {inputMode}
     inputClass="ppp-value-field-input"
     on:draftChange={(e) => dispatch("input", e.detail)}
     on:commit={(e) => dispatch("commit", e.detail.value)}
+    on:keydown
   />
+  {#if error && helperText}<span class="ppp-value-field-error" role="alert">{helperText}</span>{/if}
 </div>
 
 <style>
@@ -46,6 +65,7 @@
     min-width: 0;
     width: 100%;
   }
+  .ppp-value-field-error { color: var(--text-error); }
   .ppp-value-field :global(.ppp-value-field-input) {
     width: 100%;
     height: 1.625rem;

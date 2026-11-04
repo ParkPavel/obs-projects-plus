@@ -84,9 +84,9 @@
     const templateFolders = templateFoldersOf(obsidianApp);
     for (const field of list) {
       if (field.derived) continue;
-      if (![DataFieldType.String, DataFieldType.List, DataFieldType.Select, DataFieldType.Status].includes(field.type)) continue;
-      const values = valueSuggestions(source, field, { templateFolders });
-      if (values.length >= 2) suggestions[field.name] = values;
+      if (![DataFieldType.String, DataFieldType.List, DataFieldType.Select, DataFieldType.Status, DataFieldType.Number, DataFieldType.Date].includes(field.type)) continue;
+      const values = valueSuggestions(source, field, { templateFolders, purpose: "edit" });
+      if (values.length) suggestions[field.name] = values;
     }
     return suggestions;
   }

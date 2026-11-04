@@ -50,7 +50,7 @@ describe("w4-filters — the condition's value cell", () => {
     const value = { conjunction: "and", conditions: [cond("due", "is-before"), cond("title", "is")], groups: [] };
     const m = mountCollecting(FilterPanel, { value, fields, records }, "update");
     expect(formulaInputs(m.target)).toHaveLength(1);
-    expect(m.target.querySelectorAll('.value-area input[role="combobox"]')).toHaveLength(1);
+    expect(m.target.querySelectorAll('.value-area input[role="combobox"]')).toHaveLength(2);
     m.destroy();
   });
 

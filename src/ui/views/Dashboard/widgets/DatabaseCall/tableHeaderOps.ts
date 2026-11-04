@@ -36,13 +36,9 @@ export function optionPools(
 ): Map<string, string[]> {
   const map = new Map<string, string[]>();
   for (const f of fields) {
-    if (
-      f.type !== DataFieldType.String
-      && f.type !== DataFieldType.List
-      && f.type !== DataFieldType.Select
-      && f.type !== DataFieldType.Status
-    ) continue;
-    map.set(f.name, configuredChoiceOptions(f) ?? valueSuggestions(records, f, context));
+    if (![DataFieldType.String, DataFieldType.List, DataFieldType.Select,
+      DataFieldType.Status, DataFieldType.Number, DataFieldType.Date].includes(f.type)) continue;
+    map.set(f.name, configuredChoiceOptions(f) ?? valueSuggestions(records, f, { ...context, purpose: "edit" }));
   }
   return map;
 }

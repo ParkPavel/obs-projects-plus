@@ -9,6 +9,16 @@ import { createDraftController, isImeKey, recordImeCompositionEnd } from "../dra
 import { filterOptions, optionDomId, stepActive } from "../comboOptions";
 
 describe("draftController — seed", () => {
+  test("a rejected retained draft resumes its old baseline and can be corrected or cancelled", () => {
+    const c = createDraftController("12"); c.focus("12"); c.input("12bad");
+    expect(c.blur({ accept: false, preserveDraft: true })).toBeNull();
+    expect(c.refresh("24")).toBe(false);
+    expect(c.getState().draft).toBe("12bad");
+    c.focus("12bad", { resume: true });
+    expect(c.getState()).toMatchObject({ draft: "12bad", baseline: "12", focused: true });
+    expect(c.cancel()).toBe("12");
+    c.focus("12"); c.input("0"); expect(c.commit("enter")).toEqual({ value: "0", reason: "enter" });
+  });
   test("focus adopts the current text as baseline, draft and committed", () => {
     const c = createDraftController("a");
     c.input("scratch");

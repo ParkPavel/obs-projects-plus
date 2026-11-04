@@ -5,11 +5,11 @@
     ModalButtonGroup,
     ModalContent,
     ModalLayout,
-    Select,
     SettingItem,
     Switch,
-    TextInput,
   } from "obsidian-svelte";
+  import TextInput from "src/ui/components/fields/ValueSuggestField.svelte";
+  import Select from "src/ui/components/fields/SelectField.svelte";
   import MultiTextInput from "src/ui/components/MultiTextInput/MultiTextInput.svelte";
   import FormulaEditor from "src/ui/components/FormulaEditor/VersionedFormulaEditor.svelte";
   import { DataFieldType, type DataField } from "src/lib/dataframe/dataframe";
@@ -615,7 +615,8 @@
   <ModalContent>
     <SettingItem name={$i18n.t("modals.field.configure.name.name")}>
       <TextInput
-        readonly={!editable}
+        readOnly={!editable}
+        ariaLabel={$i18n.t("modals.field.configure.name.name")}
         value={field.name}
         error={!!fieldNameError}
         helperText={fieldNameError}
@@ -627,6 +628,8 @@
       description={$i18n.t("modals.field.configure.type.description")}
     >
       <Select
+        contextKey={currentProjectId}
+        tooltip={$i18n.t("modals.field.configure.type.name")}
         value={field.type}
         {options}
         on:change={handleTypeChange}
@@ -716,6 +719,7 @@
             <div class="ppp-status-groups-row">
               <span class="ppp-status-groups-label">{opt}</span>
               <Select
+                contextKey={currentProjectId}
                 value={bucket}
                 options={[
                   { label: "—", value: "" },
@@ -767,6 +771,7 @@
           />
         {:else}
           <Select
+            contextKey={currentProjectId}
             value={relationCfg?.targetProjectId ?? ""}
             options={projectOptions}
             allowEmpty
@@ -864,6 +869,7 @@
           </p>
         {:else}
           <Select
+            contextKey={currentProjectId}
             value={rollupSourceValue(rollupCfg)}
             options={rollupRelationOptions}
             allowEmpty
@@ -885,6 +891,7 @@
         >
           {#if rollupTargetFieldOptions.length > 1}
             <Select
+              contextKey={currentProjectId}
               value={rollupCfg?.targetField ?? ""}
               options={rollupTargetFieldOptions}
               allowEmpty
@@ -907,6 +914,7 @@
           )}
         >
           <Select
+            contextKey={currentProjectId}
             value={rollupCfg?.function ?? "count"}
             options={rollupFunctionOptions}
             on:change={handleRollupFunctionChange}
@@ -919,6 +927,7 @@
           >
             {#if !orderByCustom}
               <Select
+                contextKey={currentProjectId}
                 value={rollupCfg?.orderBy ?? ""}
                 options={rollupOrderByOptions}
                 allowEmpty

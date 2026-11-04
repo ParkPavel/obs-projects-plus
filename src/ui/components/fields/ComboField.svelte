@@ -7,13 +7,14 @@
   /** Re-arm an unchanged draft after the consumer reports a failed write. */
   export function retryCommit(): void { ctl.arm(); }
   /** A containing editor can own Tab while keeping the field's selected option. */
-  export function commitForNavigation(): void {
-    if (readOnly || disabled || ctl.isComposing()) return;
+  export function commitForNavigation(): boolean {
+    if (readOnly || disabled || ctl.isComposing()) return false;
     const pick = allowEmpty && ctl.getState().draft === "" && !userNav ? undefined : activeNow();
-    if (!multi && pick && (userNav || !allowCustom)) choose(pick);
-    else finish("tab");
+    const accepted = !multi && pick && (userNav || !allowCustom) ? choose(pick) : finish("tab");
     hide();
+    return accepted;
   }
+  export function isComposing(): boolean { return ctl.isComposing(); }
   /**
    * ComboField (stab-forms) — a text input with a suggestion listbox. DOM focus
    * stays on the input (role=combobox, aria-activedescendant names the active
@@ -61,6 +62,10 @@
   export let id: string | undefined = undefined;
   export let ariaLabel: string | undefined = undefined;
   export let inputClass = "";
+  export let inputMode: "text" | "numeric" | "decimal" | "search" | "email" | "url" | "tel" | "none" = "text";
+  export let validate: ((draft: string) => boolean) | undefined = undefined;
+  export let preserveInvalidOnBlur = false;
+  export let error = false;
   /** Class on each option row, for a consumer that styles or queries them. */
   export let optionClass = "";
   /** Open the list when the field gets focus (default), not only on typing or ArrowDown. */
@@ -132,6 +137,7 @@
   export function focus(): void {
     if (alive) inputEl?.focus();
   }
+  export function select(): void { focus(); inputEl?.select(); }
 
   export function reset(next = ""): void {
     ctl.reset(next);
@@ -250,12 +256,12 @@
   }
 
   function onFocus(): void {
-    ctl.focus(draft);
+    ctl.focus(draft, { resume: preserveInvalidOnBlur && invalid });
     reportedDraft = draft;
     dirty = false;
     userNav = false;
     pickedByPointer = null;
-    const at = visible().findIndex((o) => o.label === draft);
+    const at = visible().findIndex((o) => (o.value ?? o.label) === draft);
     active = at;
     if (openOnFocus) show();
   }
@@ -271,7 +277,7 @@
 
   // ── Commit paths ───────────────────────────────────────────
   function exactMatch(text: string): ComboOption | undefined {
-    return options.find((o) => o.label === text);
+    return options.find((o) => (o.value ?? o.label) === text || o.label === text);
   }
   /**
    * i3-input — the option a typed text plainly means: the same label in
@@ -293,50 +299,59 @@
    * accepted (autofill, assistive technology); it commits like a blur that
    * leaves the field where it is.
    */
-  function finish(reason: "enter" | "tab" | "blur" | "change"): void {
-    if (readOnly || disabled || ctl.isComposing()) return;
+  function finish(reason: "enter" | "tab" | "blur" | "change"): boolean {
+    if (readOnly || disabled || ctl.isComposing()) return false;
     if (multi) {
       if (reason === "blur") {
         ctl.blur({ accept: false });
         pull();
       }
-      return;
+      return true;
     }
     const text = ctl.getState().draft;
     const exact = exactMatch(text);
+    if (exact?.value !== undefined && exact.value !== text) {
+      const accepted = choose(exact);
+      if (reason === "blur" && accepted) ctl.blur();
+      return accepted;
+    }
     if (!allowCustom && exact === undefined && text !== ctl.getState().baseline) {
       const meant = plainMatch(text);
       if (meant) {
-        choose(meant);
-        if (reason === "blur") ctl.blur();
-        return;
+        const accepted = choose(meant);
+        if (reason === "blur" && accepted) ctl.blur();
+        return accepted;
       }
     }
-    const accept = allowCustom || exact !== undefined || allowEmpty && text === "" ||
-      allowUnlistedUnchanged && text === ctl.getState().baseline;
-    invalid = !accept && reason !== "blur";
-    const opts = { accept, unchanged: commitUnchanged };
+    const accept = (allowCustom || exact !== undefined || allowEmpty && text === "" ||
+      allowUnlistedUnchanged && text === ctl.getState().baseline) && (!validate || validate(text));
+    invalid = !accept && (reason !== "blur" || preserveInvalidOnBlur);
+    const opts = { accept, unchanged: commitUnchanged, preserveDraft: preserveInvalidOnBlur };
     const result = reason === "blur" ? ctl.blur(opts) : ctl.commit(reason === "change" ? "blur" : reason, opts);
     pull();
     dirty = false;
-    if (!result) return;
+    if (!result) return accept;
     if (exact) dispatch("select", exact);
     dispatch("commit", { value: result.value, reason: result.reason });
+    return true;
   }
-  function choose(opt: ComboOption): void {
-    if (readOnly || disabled || ctl.isComposing()) return;
+  function choose(opt: ComboOption): boolean {
+    if (readOnly || disabled || ctl.isComposing()) return false;
+    const next = opt.value ?? opt.label;
+    if (validate && !validate(next)) { invalid = true; return false; }
     invalid = false;
     if (multi) {
       dispatch("select", opt);
-      return;
+      return true;
     }
-    const result = ctl.commit("select", { value: opt.label });
-    if (!result) return;
+    const result = ctl.commit("select", { value: next });
+    if (!result) return true;
     pull();
     dirty = false;
     hide();
     dispatch("select", opt);
     dispatch("commit", { value: result.value, reason: "select" });
+    return true;
   }
   function pointerPick(opt: ComboOption): void {
     pickedByPointer = opt.id;
@@ -431,7 +446,7 @@
   });
 
   function isSelected(opt: ComboOption, chosen: string[], text: string): boolean {
-    return multi ? chosen.includes(opt.id) : opt.label === text;
+    return multi ? chosen.includes(opt.id) : (opt.value ?? opt.label) === text;
   }
 
   function iconAction(node: HTMLElement, icon: string) {
@@ -452,6 +467,7 @@
     {id}
     class="ppp-combo-input {inputClass}"
     type="text"
+    inputmode={inputMode}
     enterkeyhint="done"
     role="combobox"
     aria-autocomplete="list"
@@ -461,21 +477,26 @@
     aria-controls={expanded ? listId : undefined}
     aria-activedescendant={activeOpt ? optionDomId(listId, activeOpt.id) : undefined}
     aria-label={ariaLabel}
-    aria-invalid={invalid || undefined}
+    aria-invalid={invalid || error || undefined}
     autocomplete="off"
+    autocapitalize="off"
+    autocorrect="off"
     spellcheck="false"
     value={draft}
     {placeholder}
     {disabled}
     readonly={readOnly}
     on:focus={onFocus}
+    on:focus
     on:blur={onBlur}
     on:input={onInput}
     on:click={show}
     on:change={() => finish("change")}
     on:keydown={onKeydown}
+    on:keydown
     on:compositionstart={() => ctl.compositionStart()}
     on:compositionend={onCompositionEnd}
+    {...$$restProps}
   />
   {#if expanded}
     <div
@@ -534,7 +555,7 @@
   }
   .ppp-combo-popup {
     position: fixed;
-    z-index: var(--ppp-z-popover, 50);
+    z-index: max(var(--ppp-z-popover, 50), calc(var(--layer-modal, 50) + 1));
     box-sizing: border-box;
     max-width: var(--ppp-popup-max-w, 24rem);
     max-height: 12rem;

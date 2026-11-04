@@ -69,6 +69,8 @@ export interface CommitOptions {
   accept?: boolean;
   /** Report a commit even when the text equals the committed one (blur and Tab only). */
   unchanged?: boolean;
+  /** A typed cell may retain invalid text for correction after blur. */
+  preserveDraft?: boolean;
 }
 
 /**
@@ -118,7 +120,7 @@ export interface DraftController {
   /** A copy of the current state. */
   getState(): DraftState;
   /** The user entered the field (or the popup opened): seed the draft from the current text. */
-  focus(current: string): void;
+  focus(current: string, options?: { resume?: boolean }): void;
   /**
    * The parent passed a value. Returns true when the draft was replaced (not
    * focused); while focused the value is held back and false is returned.
@@ -167,6 +169,7 @@ export function createDraftController(initial = ""): DraftController {
   let composing = false;
   let compositionEndAt = -Infinity;
   let pendingBlur = false;
+  let retainingRejectedDraft = false;
   // The last prop seen, so only a real change is held back or adopted.
   let seenProp = initial;
   // A prop that changed while the user was in the field.
@@ -186,17 +189,20 @@ export function createDraftController(initial = ""): DraftController {
     baseline = value;
     done = true;
     touched = true;
+    retainingRejectedDraft = false;
     return { value, reason };
   }
 
   return {
     getState: () => ({ baseline, draft, committed, focused, composing }),
 
-    focus(current) {
+    focus(current, options) {
       pendingBlur = false;
       focused = true;
       composing = false;
       compositionEndAt = -Infinity;
+      if (options?.resume) return;
+      retainingRejectedDraft = false;
       baseline = current;
       draft = current;
       committed = current;
@@ -208,7 +214,7 @@ export function createDraftController(initial = ""): DraftController {
     refresh(next) {
       if (next === seenProp) return false;
       seenProp = next;
-      if (focused || composing) {
+      if (focused || composing || retainingRejectedDraft) {
         // Never pull the text from under the user's fingers.
         pending = next;
         return false;
@@ -247,6 +253,7 @@ export function createDraftController(initial = ""): DraftController {
 
     cancel() {
       if (composing) return null;
+      retainingRejectedDraft = false;
       draft = baseline;
       // Escape ends the interaction: the blur that follows reports nothing,
       // not even an unchanged blur a cell editor asked for. An edit re-arms.
@@ -260,8 +267,9 @@ export function createDraftController(initial = ""): DraftController {
       pendingBlur = false;
       compositionEndAt = -Infinity;
       let result: CommitResult | null = null;
+      retainingRejectedDraft = options.accept === false && options.preserveDraft === true;
       if (options.accept === false) {
-        draft = baseline;
+        if (!options.preserveDraft) draft = baseline;
       } else {
         result = commit("blur", options);
       }
@@ -278,6 +286,7 @@ export function createDraftController(initial = ""): DraftController {
 
     reset(next) {
       pendingBlur = false;
+      retainingRejectedDraft = false;
       baseline = next;
       draft = next;
       committed = next;

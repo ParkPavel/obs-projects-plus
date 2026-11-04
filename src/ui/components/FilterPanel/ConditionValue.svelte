@@ -31,13 +31,14 @@
 </script>
 
 {#if dateFormula}
-  <DateFormulaInput {value} {placeholder} on:input={(e) => dispatch("input", e.detail)} />
+  <DateFormulaInput {value} {placeholder} on:input={(e) => dispatch("input", e.detail)} on:commit={(e) => dispatch("commit", e.detail)} />
 {:else}
   <ValueSuggestField
     {value}
     {suggestions}
     {placeholder}
     {ariaLabel}
+    inputMode={getFilterOperatorType(operator) === "binary-number" ? "decimal" : "text"}
     on:input={(e) => dispatch("input", e.detail)}
     on:commit={(e) => dispatch("commit", e.detail)}
   />

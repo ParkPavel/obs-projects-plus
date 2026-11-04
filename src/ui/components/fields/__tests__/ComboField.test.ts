@@ -66,6 +66,37 @@ const open = async (m: ReturnType<typeof mount>) => {
   await tick(); await tick(); await tick();
 };
 
+test("a human label commits its canonical value once and a later blurred prop can replace it", async () => {
+  const m = mount({ value: "", options: [{ id: "today+1", value: "today+1", label: "Завтра" }] });
+  try {
+    await open(m); type(m.input, "Завтра"); await tick(); m.input.blur(); await tick();
+    expect(m.commits).toEqual([{ value: "today+1", reason: "select" }]);
+    expect(m.input.value).toBe("today+1");
+    m.component.$set({ value: "today+2" }); await tick(); expect(m.input.value).toBe("today+2");
+  } finally { m.destroy(); }
+});
+
+test("typed validation rejects Enter/Tab/selection without converting an invalid draft into a clear", async () => {
+  const m = mount({ value: "12", options: [{ id: "bad", label: "wrong" }, { id: "good", label: "24" }], validate: (text: string) => /^\d+$/.test(text), inputMode: "decimal" });
+  try {
+    await open(m); type(m.input, "-"); await tick(); key(m.input, "Enter"); await tick();
+    expect(m.commits).toEqual([]); expect(m.input).toHaveAttribute("aria-invalid", "true");
+    expect(m.component.commitForNavigation()).toBe(false); expect(m.input).toHaveAttribute("inputmode", "decimal");
+    m.component.reset("12"); m.input.blur(); await open(m);
+    options().find(row => row.textContent === "wrong")!.click(); expect(m.commits).toEqual([]);
+  } finally { m.destroy(); }
+});
+
+test("a table-style rejected blur keeps the draft and refocus/Escape restores its original baseline", async () => {
+  const m = mount({ value: "12", options: [], validate: (text: string) => /^\d+$/.test(text), preserveInvalidOnBlur: true });
+  try {
+    await open(m); type(m.input, "-"); await tick(); m.input.blur(); await tick();
+    expect(m.commits).toEqual([]); expect(m.input.value).toBe("-"); expect(m.input).toHaveAttribute("aria-invalid", "true");
+    await open(m); key(m.input, "Escape"); await tick(); key(m.input, "Escape"); await tick();
+    expect(m.input.value).toBe("12"); expect(m.commits).toEqual([]);
+  } finally { m.destroy(); }
+});
+
 afterEach(() => {
   document.body.innerHTML = "";
 });

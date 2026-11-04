@@ -14,6 +14,8 @@ import { revealInList } from "./revealInList";
 export interface ComboOption extends SearchText {
   id: string;
   label: string;
+  /** Text to commit when the human label differs from the stored syntax. */
+  value?: string;
   icon?: string;
 }
 

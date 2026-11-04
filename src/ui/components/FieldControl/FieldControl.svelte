@@ -374,6 +374,7 @@
         value={isNumber(value) ? value : null}
         placeholder="0"
         ariaLabel={field.name}
+        {suggestions}
         allowEmpty
         disabled={readonly}
         on:commit={({ detail }) => commitNumber(detail)}

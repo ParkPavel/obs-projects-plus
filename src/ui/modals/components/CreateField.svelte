@@ -4,13 +4,14 @@
     ModalButtonGroup,
     ModalContent,
     ModalLayout,
-    Select,
     SettingItem,
-    TextInput,
-    NumberInput,
     Switch,
     Icon,
   } from "obsidian-svelte";
+  import TextInput from "src/ui/components/fields/ValueSuggestField.svelte";
+  import NumberInput from "src/ui/components/fields/NumberField.svelte";
+  import Select from "src/ui/components/fields/SelectField.svelte";
+  import { isImeKey } from "src/ui/components/fields/draftController";
   import FormulaEditor from "src/ui/components/FormulaEditor/VersionedFormulaEditor.svelte";
   import { isEmptyFieldValue } from "src/lib/relations/declaredFieldTypes";
   import { sourceCatalogue } from "src/lib/relations/baseRef";
@@ -80,7 +81,9 @@
    * the rollup step offers only relations that already exist.
    */
   export let onCreateRelation: ((field: DataField) => Promise<boolean>) | undefined = undefined;
-  let inputRef: HTMLInputElement;
+  let nameInput: TextInput;
+  let defaultInput: TextInput;
+  let numberInput: NumberInput;
 
   export let field: DataField = {
     name: defaultName,
@@ -592,6 +595,7 @@
 
   async function submit(): Promise<void> {
     if (pending || fieldNameError) return;
+    if (nameInput?.isComposing() || defaultInput?.isComposing() || (field.type === DataFieldType.Number && !numberInput?.commitForNavigation())) return;
     pending = true;
     submitError = "";
     const [submittedField, submittedValue] = normalizedSubmission();
@@ -671,7 +675,7 @@
   }
 
   onMount(() => {
-    if (inputRef) inputRef.select();
+    nameInput?.select();
   });
 </script>
 
@@ -682,14 +686,15 @@
       description={$i18n.t("modals.field.create.name.description") ?? ""}
     >
       <TextInput
-        bind:ref={inputRef}
+        bind:this={nameInput}
+        ariaLabel={$i18n.t("modals.field.create.name.name")}
         value={field.name}
         on:input={(event) => (field = { ...field, name: event.detail })}
         autoFocus
         error={!!fieldNameError}
         helperText={fieldNameError}
         on:keydown={(ev) => {
-          if (ev.key === "Enter" && !fieldNameError) {
+          if (ev.key === "Enter" && !isImeKey(ev) && !nameInput?.isComposing() && !fieldNameError) {
             ev.preventDefault();
             void submit();
           }
@@ -763,10 +768,11 @@
         />
       {:else if field.type === DataFieldType.String}
         <TextInput
+          bind:this={defaultInput}
           value={value?.toString() ?? ""}
           on:input={(event) => (value = event.detail)}
           on:keydown={(ev) => {
-            if (ev.key === "Enter" && !fieldNameError) {
+            if (ev.key === "Enter" && !isImeKey(ev) && !defaultInput?.isComposing() && !fieldNameError) {
               ev.preventDefault();
               void submit();
             }
@@ -774,11 +780,12 @@
         />
       {:else if field.type === DataFieldType.Number}
         <NumberInput
-          bind:ref={inputRef}
+          bind:this={numberInput}
+          allowEmpty preserveInvalidOnBlur
           value={toNumber(value)}
           on:input={(event) => (value = event.detail)}
           on:keydown={(ev) => {
-            if (ev.key === "Enter" && !fieldNameError) {
+            if (ev.key === "Enter" && !isImeKey(ev) && !numberInput?.isComposing() && !fieldNameError) {
               ev.preventDefault();
               void submit();
             }
@@ -861,6 +868,7 @@
         )}
       >
         <Select
+          contextKey={currentProjectId}
           value={relationCfg?.targetProjectId ?? ""}
           options={projectOptions}
           on:change={(e) => patchRelation({ targetProjectId: e.detail })}
@@ -875,6 +883,7 @@
         >
           {#if targetFieldOptions.length > 0}
             <Select
+              contextKey={currentProjectId}
               value={relationCfg?.displayField ?? ""}
               options={targetFieldOptions}
               on:change={handleDisplayFieldChange}
@@ -911,6 +920,7 @@
           )}
         >
           <Select
+            contextKey={currentProjectId}
             value={rollupPickerValue}
             options={rollupRelationOptions}
             on:change={handleRollupSourceChange}
@@ -934,6 +944,7 @@
           >
             {#if targetFieldOptions.length > 0}
               <Select
+                contextKey={currentProjectId}
                 value={rollupCfg?.targetField ?? ""}
                 options={targetFieldOptions}
                 on:change={(e) => handleRollupTargetField(e.detail)}
@@ -955,6 +966,7 @@
             )}
           >
             <Select
+              contextKey={currentProjectId}
               value={rollupCfg?.function ?? "count"}
               options={rollupFunctionOptions}
               on:change={handleRollupFunctionChange}

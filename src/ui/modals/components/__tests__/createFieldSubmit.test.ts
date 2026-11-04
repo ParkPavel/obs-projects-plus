@@ -55,7 +55,7 @@ function mount(field: DataField) {
     target,
     props: { existingFields: [], defaultName: field.name, field, onCreate, recordCount: 3 },
   });
-  const nameInput = () => target.querySelector<HTMLInputElement>("[data-testid='text-input']")!;
+  const nameInput = () => target.querySelector<HTMLInputElement>(".ppp-value-field input")!;
   const createButton = () => target.querySelector<HTMLButtonElement>("[data-testid='modal-button-group'] button[data-variant='primary']")!;
   return { onCreate, nameInput, createButton, destroy: () => { component.$destroy(); target.remove(); } };
 }

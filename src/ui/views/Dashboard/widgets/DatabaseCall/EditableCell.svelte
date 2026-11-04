@@ -110,7 +110,7 @@
       on:commit={(e) => commitDraft(e.detail)}
       on:cancel />
   {:else if editing}
-    <TypedCellEditor {field} {value} {dateFormat} {saving} {retryVersion}
+    <TypedCellEditor {field} {value} {options} {dateFormat} {saving} {retryVersion}
       on:commit on:cancel on:invalid={(e) => { invalid = e.detail; }} />
   {:else if field.type === DataFieldType.Rollup || field.typeConfig?.rollup}
     <!-- #045.4: shown by its mode (percent bar, show chips, plain count); read-only like every derived field.

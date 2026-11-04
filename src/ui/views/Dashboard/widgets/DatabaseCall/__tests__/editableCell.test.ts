@@ -380,6 +380,10 @@ describe("safe typed input (feedback 01)", () => {
     await tick();
     const el = editor(container);
     await typeInto(el, "candidate");
+    if ("keyCode" in flags) {
+      el.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+      el.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true }));
+    }
     el.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, ...flags }));
     expect(commits).toEqual([]);
     key(el, "Enter");
