@@ -115,11 +115,11 @@
     },
     {
       "name": "read/upgrade-ru.html",
-      "sha256": "3902833314a3a5fe919b237fc6566dcf0ea8569e96a241e00a647b70b7256c7d"
+      "sha256": "06952a5882fe681e5c785e8aac9a8131cb114dbb8954def6ee2b7a09ed72ef8c"
     },
     {
       "name": "read/upgrade.html",
-      "sha256": "f2021fb3969d0955524597b294bc9e67774ea6766feb6704437ef00c80ecb050"
+      "sha256": "20fadb302896d8d644fc92f1e67ea592334ad00fc9d39e8d811bb00ac25200e8"
     },
     {
       "name": "read/user-guide-en.html",
@@ -159,7 +159,7 @@
     },
     {
       "name": "search-index.json",
-      "sha256": "8fade064f72e0f34927fe54525be15544dcc0286ee3c20d222a25f68977eefb1"
+      "sha256": "e58803745ca3075f8e13d51fce07ebb3589fe092a040c7f9acc4ab452e7b2711"
     },
     {
       "name": ".nojekyll",

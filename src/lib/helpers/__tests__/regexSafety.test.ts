@@ -124,4 +124,22 @@ describe("#126 the policy has exactly one implementation", () => {
   it("applies the pattern limit to user text, not the exact-match wrapper", () => {
     expect(compileSafeRegex("a".repeat(MAX_REGEX_PATTERN_LENGTH), "", { fullMatch: true }).ok).toBe(true);
   });
+  it.each([
+    ["foo", "i", "FOO foo"],
+    ["\\s", "g", "x\ufeff\u00a0 y"],
+    [".", "g", "😀x"],
+    ["^([a-z]+)-(\\d+)$", "i", "Item-42"],
+    ["\\q", "", "q"],
+    ["^\\d{1,2}:\\d{2}$", "", "09:30"],
+    ["(?<word>foo)", "g", "foo foo"],
+  ])("admitted %s /%s keeps native matching, captures and replacement", (pattern, flags, text) => {
+    const result = compileSafeRegex(pattern, flags);
+    expect(result.ok).toBe(true); if (!result.ok) return;
+    expect(text.match(result.regex)).toEqual(text.match(new RegExp(pattern, flags)));
+    const replacement = compileSafeRegex(pattern, flags); if (!replacement.ok) throw new Error("Admission changed");
+    expect(text.replace(replacement.regex, "<$&:$1>")).toBe(text.replace(new RegExp(pattern, flags), "<$&:$1>"));
+  });
+  it("does not execute Unicode set syntax without analysis support", () => {
+    expect(compileSafeRegex("alpha", "v").ok).toBe(false);
+  });
 });

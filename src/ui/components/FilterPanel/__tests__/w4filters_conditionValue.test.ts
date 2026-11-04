@@ -10,6 +10,14 @@
 
 import "@testing-library/jest-dom";
 import { mountCollecting } from "src/ui/components/fields/__tests__/support/comboKit";
+import { isSafePattern } from "redos-detector";
+import { get } from "svelte/store";
+import { i18n } from "src/lib/stores/i18n";
+
+jest.mock("redos-detector", () => {
+  const actual = jest.requireActual("redos-detector");
+  return { ...actual, isSafePattern: jest.fn(actual.isSafePattern) };
+});
 
 jest.mock("src/lib/stores/ui", () => {
   const { writable } = require("svelte/store");
@@ -24,12 +32,20 @@ const records = [{ id: "a", values: { title: "Alpha" } }];
 const cond = (field: string, operator: string) => ({ field, operator, value: "", enabled: true });
 
 afterEach(() => {
+  jest.restoreAllMocks();
   document.body.innerHTML = "";
 });
 
 const formulaInputs = (root: ParentNode) => root.querySelectorAll(".date-formula-input");
 
 describe("w4-filters — the condition's value cell", () => {
+  test("an inconclusive pattern has its own localized visible error", () => {
+    (isSafePattern as jest.Mock).mockReturnValueOnce({ safe: false, error: "hitMaxSteps", score: { infinite: false, value: 1 } });
+    const value = { conjunction: "and", conditions: [{ ...cond("title", "regex"), value: "[a-z]+unknownUI$" }], groups: [] };
+    const m = mountCollecting(FilterPanel, { value, fields, records }, "update");
+    expect(m.target.querySelector("[role='alert']")?.textContent).toBe(get(i18n).t("regex-errors.unverified"));
+    m.destroy();
+  });
   test("view filter: a date before a day takes a formula; text takes the suggestion box", () => {
     const value = { conjunction: "and", conditions: [cond("due", "is-before"), cond("title", "is")], groups: [] };
     const m = mountCollecting(FilterPanel, { value, fields, records }, "update");

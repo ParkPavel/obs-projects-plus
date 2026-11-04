@@ -22,6 +22,7 @@ jest.mock("src/lib/stores/i18n", () => {
     "formula-errors.frame": "Нет данных для вычисления столбца",
     "regex-errors.invalid": "Некорректный синтаксис регулярного выражения",
     "regex-errors.unsafe": "Регулярное выражение нельзя безопасно вычислить",
+    "regex-errors.unverified": "Сложность регулярного выражения не подтверждена",
     "regex-errors.too-long": "Регулярное выражение слишком длинное",
     "regex-errors.input-too-long": "Текст слишком длинный для регулярного выражения",
   };
@@ -37,6 +38,7 @@ it.each([
   ["Unknown string escape: q", "Неподдерживаемый символ после обратной косой черты"],
   ["Missing column name at position 0", "После @ укажите имя столбца"],
   ["Column reference requires a data frame", "Нет данных для вычисления столбца"],
+  ["Regex pattern unverified", "Сложность регулярного выражения не подтверждена"],
 ])("strict syntax error %s has an actionable localized message", (raw, expected) => {
   expect(humanFormulaError(raw)).toBe(expected);
 });

@@ -62,6 +62,7 @@
 </tr>
 </tbody></table>
 <p>Check formula results against a known example before changing evaluation rules. Existing formulas retain their compatibility profile unless you explicitly select the new rules. Excessive computations may return an error or a pipeline warning; check the warning before treating a transformed result as complete. A pipeline stopped by its work limit retains its last fully completed step.</p>
+<p>Regular expression checks apply to existing formulas and filters as well as new ones. A pattern with excessive or unconfirmed complexity is rejected before execution. If an existing expression reports this error, simplify its pattern; changing the formula compatibility profile does not disable the check. Admitted patterns keep native matching and replacement behaviour.</p>
 <h2 id="roll-back">Roll back</h2>
 <p>Disable the plugin and restore the previous <strong>matching set of three assets</strong>, then enable it again. Keep the current <code>data.json</code> only if it is compatible with that version; otherwise restore the settings backup made with the previous assets.</p>
 <p>Replacing plugin files does not undo edits already written to notes. If you need to undo those changes, restore the affected notes from your vault backup after reviewing changes made since the backup. Test the restored copy before replacing working data.</p>

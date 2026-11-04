@@ -1,3 +1,4 @@
+import { regexAdmission } from "./regexAdmission";
 type CharacterRange = readonly [number, number];
 
 interface FirstCharacters {
@@ -423,7 +424,7 @@ export function isUnsafePattern(pattern: string, flags = ""): boolean {
   return analyzePattern(pattern, flags);
 }
 
-export type RegexPatternIssue = "invalid" | "unsafe" | "too-long";
+export type RegexPatternIssue = "invalid" | "unsafe" | "too-long" | "unverified";
 
 export type SafeRegexResult =
   | { ok: true; regex: RegExp }
@@ -451,7 +452,8 @@ export function compileSafeRegex(
     throw error;
   }
 
-  if (isUnsafePattern(pattern, flags)) return { ok: false, issue: "unsafe" };
+  const issue = regexAdmission(regex.source, regex.flags, () => isUnsafePattern(pattern, flags));
+  if (issue) return { ok: false, issue };
   return { ok: true, regex };
 }
 

@@ -12,6 +12,7 @@ import * as path from "path";
 const SRC = path.resolve(__dirname, "..");
 
 const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
+  { file: "lib/helpers/regexAdmission.ts", maxLines: 50 },
   { file: "lib/dashboard-engine/transformBudget.ts", maxLines: 27 },
   { file: "ui/views/Dashboard/widgets/pipelineStopNotice.ts", maxLines: 10 },
   { file: "ui/views/Board/components/Board/boardDragTypes.ts", maxLines: 12 },

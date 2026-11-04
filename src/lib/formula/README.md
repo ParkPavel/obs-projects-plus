@@ -112,6 +112,11 @@ work limits also apply to the computed compatibility profile: ordinary results
 stay unchanged, while excessive or non-advancing loops return an error. Other
 compatibility bounds remain unchanged, including computed-list truncation. These are cooperative
 work limits, rather than a wall-clock timeout for native operations such as regex.
+User regex patterns in every profile also require bounded complexity admission.
+Analysis errors, unsupported syntax and exhausted analysis budgets return an
+unverified-pattern error; they do not permit native execution. Admitted patterns
+keep native matching and replacement semantics. Analysis facts are cached with
+a bounded entry count, while inconclusive results expire to allow a later retry.
 The financial fallback cap lives in the handlers themselves, so a direct catalog
 or handler call cannot disable it by supplying a different profile label. A managed
 evaluation shares its financial budget across nested calls. Large compositions

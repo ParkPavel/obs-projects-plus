@@ -16,7 +16,7 @@ export function humanFormulaError(raw: string, fields: readonly string[] = []): 
   if (raw === "Unsupported formula version") return t("version");
   if (raw === "Regex input too long") return t("regex-errors.input-too-long");
   let regexIssue: RegExpExecArray | null;
-  if ((regexIssue = /^Regex pattern (invalid|unsafe|too-long)$/.exec(raw))) {
+  if ((regexIssue = /^Regex pattern (invalid|unsafe|too-long|unverified)$/.exec(raw))) {
     return t(`regex-errors.${regexIssue[1]}`);
   }
   let m: RegExpExecArray | null;

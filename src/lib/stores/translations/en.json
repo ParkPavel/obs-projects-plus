@@ -55,7 +55,8 @@
             "invalid": "This regular expression has invalid syntax.",
             "unsafe": "This regular expression is not supported because its evaluation cost cannot be safely bounded.",
             "too-long": "This regular expression exceeds the supported pattern length.",
-            "input-too-long": "The text is longer than the regular-expression evaluation limit."
+            "input-too-long": "The text is longer than the regular-expression evaluation limit.",
+            "unverified": "The complexity of this regular expression could not be verified within the supported limits. Simplify the pattern."
         },
         "formula-docs": {
             "IS_EMPTY": "True for a missing value, empty text or empty list; zero and false are filled values.",
