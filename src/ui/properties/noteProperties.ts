@@ -206,12 +206,13 @@ export function valuesForKey(
   frontmatters: Iterable<Record<string, unknown> | null | undefined>,
   key: string,
   limit = 200,
+  purpose: "filter" | "edit" = "filter",
 ): string[] {
   const seen = new Set<string>();
   const add = (v: unknown): void => {
     if (typeof v !== "string" && typeof v !== "number" && typeof v !== "boolean") return;
-    const text = String(v).trim();
-    if (text !== "" && !isTemplateText(text)) seen.add(text);
+    const text = purpose === "edit" ? String(v) : String(v).trim();
+    if (text.trim() !== "" && !isTemplateText(text)) seen.add(text);
   };
   for (const fm of frontmatters) {
     if (seen.size >= limit) break;
@@ -244,10 +245,16 @@ export function planValueWrite(
   current: unknown,
   draft: string,
   type: CellEditType,
+  options: { preserveText?: boolean } = {},
 ): ValueWritePlan {
   const parsed = parseCellInput(draft, type);
   if (!parsed.ok) return { kind: "invalid", i18nKey: parsed.error.i18nKey };
   const before = asCellValue(current);
+  // A selected existing text is canonical storage, while manually created text
+  // keeps the established parser/trim contract. Typed adapters still validate.
+  if (options.preserveText && ["string", "select", "status", "url", "email", "phone"].includes(type) && typeof parsed.value === "string") {
+    return before === draft ? { kind: "skip" } : { kind: "write", value: draft };
+  }
   if (formatCellValue(parsed.value, type) === formatCellValue(before, type)) {
     return { kind: "skip" };
   }

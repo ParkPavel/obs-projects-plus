@@ -65,7 +65,7 @@ function setup(fm: Record<string, unknown>, other?: Record<string, unknown>, par
   };
   const Component = parentProjectId === undefined ? NotePropertiesBlock : require("./fixtures/PaletteNoteHost.svelte").default;
   const result = render(Component, { props: { app, file, ...(parentProjectId === undefined ? {} : { projectId: parentProjectId }) } });
-  return { ...result, app, file, processFrontMatter, getMarkdownFiles };
+  return { ...result, app, file, processFrontMatter, getMarkdownFiles, notifyChanged: (changed: TFile) => listeners.forEach(cb => cb(changed)) };
 }
 
 function keyWith(el: HTMLElement, k: string, mods: KeyboardEventInit): void {
@@ -113,6 +113,82 @@ afterEach(() => {
 });
 
 describe("i3-props NotePropertiesBlock", () => {
+  it("an open property source refresh keeps the same draft, caret and focus without a scan per keypress", async () => {
+    const fm = { value: "mine" }, other = { value: "before" }, view = setup(fm, other);
+    try {
+      await tick(); (row("value").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+      const input = editorOf("value")!; type(input, "draft"); input.setSelectionRange(1, 3);
+      other.value = "draft source"; view.notifyChanged(new TFile("Notes/b.md"));
+      await waitFor(() => expect(Array.from(document.querySelectorAll('[role="option"]')).some(item => item.textContent === "draft source")).toBe(true));
+      expect(editorOf("value")).toBe(input); expect(input.value).toBe("draft"); expect([input.selectionStart, input.selectionEnd]).toEqual([1, 3]); expect(document.activeElement).toBe(input);
+      expect(view.getMarkdownFiles).toHaveBeenCalledTimes(2); expect(view.processFrontMatter).not.toHaveBeenCalled();
+    } finally { view.unmount(); }
+  });
+
+  it("numeric invalid blur retains the draft and an explicit retry writes a number only once", async () => {
+    const fm = { value: 1 }, view = setup(fm, { value: 2 });
+    try {
+      await tick(); (row("value").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+      const input = editorOf("value")!; type(input, "1e-"); input.blur(); await flush();
+      expect(input.value).toBe("1e-"); expect(input).toHaveAttribute("aria-invalid", "true"); expect(view.processFrontMatter).not.toHaveBeenCalled();
+      input.focus(); type(input, "2,5"); key(input, "Enter"); await flush();
+      expect(view.processFrontMatter).not.toHaveBeenCalled(); // This writer's existing numeric grammar rejects decimal commas.
+      type(input, "2.5"); key(input, "Enter"); await flush();
+      expect(fm.value).toBe(2.5); expect(view.processFrontMatter).toHaveBeenCalledTimes(1);
+    } finally { view.unmount(); }
+  });
+
+  it("a highlighted numeric option commits through Tab and navigation waits for the writer", async () => {
+    const fm = { value: 1, after: "after" }, view = setup(fm, { value: 2.5 });
+    try {
+      await tick(); (row("value").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+      const input = editorOf("value")!; type(input, "2"); key(input, "ArrowDown"); await tick();
+      let release = () => {}; const blocked = new Promise<void>(resolve => { release = resolve; }); const write = view.processFrontMatter.getMockImplementation()!;
+      view.processFrontMatter.mockImplementationOnce(async (...args) => { await blocked; return write(...args); });
+      key(input, "Tab"); await flush(); expect(editorOf("value")).toBe(input); expect(editorOf("after")).toBeNull();
+      release(); await flush(); expect(fm.value).toBe(2.5); expect(document.activeElement).toBe(editorOf("after")); expect(view.processFrontMatter).toHaveBeenCalledTimes(1);
+    } finally { view.unmount(); }
+  });
+
+  it.each([
+    ["string", "mine", " [[People/A|A]] ", "text"],
+    ["number", 1, 2.5, "decimal"],
+    ["url", "old", "https://example.test/a?q=1", "url"],
+    ["email", "old", "person@example.test", "email"],
+    ["phone", "old", "+7 (900) 123-45-67", "tel"],
+  ])("%s offers scoped values in its original input and writes the selected YAML type once", async (kind, own, selected, inputMode) => {
+    const fm: Record<string, unknown> = { value: own, pp_types: { value: kind } };
+    const view = setup(fm, { value: selected });
+    try {
+      await tick(); (row("value").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+      const input = editorOf("value")!; expect(input).toHaveAttribute("role", "combobox"); expect(input).toHaveAttribute("inputmode", inputMode as string);
+      const option = Array.from(document.querySelectorAll<HTMLElement>('[role="option"]')).find(item => item.textContent === String(selected));
+      expect(option).toBeDefined(); expect(view.processFrontMatter).not.toHaveBeenCalled();
+      expect(editorOf("value")).toBe(input); expect(document.activeElement).toBe(input);
+      option!.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true })); await flush();
+      expect(fm["value"]).toBe(selected); expect(view.processFrontMatter).toHaveBeenCalledTimes(1);
+      const yaml = require("yaml"); expect(yaml.parse(yaml.stringify(fm))["value"]).toBe(selected);
+    } finally { view.unmount(); }
+  });
+
+  it("the ordinary property source excludes other folders, templates and invalid numeric values", async () => {
+    const fm: Record<string, unknown> = { value: 1, pp_types: { value: "number" } }, view = setup(fm);
+    const notes: Record<string, Record<string, unknown>> = {
+      "Notes/a.md": fm, "Notes/b.md": { value: 2 }, "Elsewhere/x.md": { value: 3 },
+      "Notes/template.md": { value: "{{value}}" }, "Notes/bad.md": { value: "not a number" },
+    };
+    view.getMarkdownFiles.mockReturnValue(Object.keys(notes).map(path => new TFile(path)));
+    view.app.metadataCache.getFileCache = candidate => ({ frontmatter: notes[candidate.path]! });
+    try {
+      await tick(); (row("value").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+      expect(editorOf("value")).toHaveAttribute("role", "combobox");
+      expect(Array.from(document.querySelectorAll('[role="option"]')).map(item => item.textContent)).toEqual(["1", "2"]);
+      const reads = view.getMarkdownFiles.mock.calls.length;
+      type(editorOf("value")!, "2"); await flush(); type(editorOf("value")!, ""); await flush();
+      expect(view.getMarkdownFiles).toHaveBeenCalledTimes(reads); expect(view.processFrontMatter).not.toHaveBeenCalled();
+    } finally { view.unmount(); }
+  });
+
   it("searches beyond the first200 observed values through the original property editor and writes the chosen value once", async () => {
     const fm: Record<string, unknown> = { status: "mine", pp_types: { status: "status" } }, view = setup(fm);
     const foreign = Array.from({ length: 600 }, (_, id) => new TFile(`Notes/${id}.md`));

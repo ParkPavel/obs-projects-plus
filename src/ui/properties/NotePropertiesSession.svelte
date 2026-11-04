@@ -124,7 +124,6 @@
   let addRevision = 0;
   let addError: string | null = null;
   let inverseIndex: InverseIndex = new Map();
-  let editField: TextField | null = null;
   let comboField: ComboField | null = null;
   let addField: TextField | null = null;
   let renameField: TextField | null = null;
@@ -153,7 +152,7 @@
     frontmatterOf: (f) =>
       app.metadataCache.getFileCache(f as TFile)?.frontmatter as Record<string, unknown> | undefined,
     templateFolders: () => templateFoldersOf(app),
-  });
+  }, 300, refreshChoiceOptions);
 
   $: t = $i18n.t.bind($i18n);
 
@@ -247,9 +246,19 @@
    * i3-props: the values `key` holds across this project's notes (the note's
    * folder when no project holds it), the note's own value first.
    */
-  function usedValues(key: string): string[] {
+  function usedValues(key: string, purpose: "filter" | "edit" = "filter"): string[] {
     const scope = noteScopeFor(file.path, get(settings).projects ?? []);
-    return usedCache.get(file.path, frontmatter, key, scope);
+    return usedCache.get(file.path, frontmatter, key, scope, purpose);
+  }
+
+  function optionsFor(entry: OverlayedEntry, type: CellEditType): ComboOption[] {
+    return namesToOptions(usedValues(entry.key, "edit").filter(value => planValueWrite(null, value, type).kind !== "invalid"));
+  }
+
+  function refreshChoiceOptions(): void {
+    if (!isCurrent() || !editingKey || !editingType || isListType(editingType)) return;
+    const entry = entries.find(item => item.key === editingKey);
+    if (entry && editable(entry, editingType)) choiceOptions = optionsFor(entry, editingType);
   }
 
   // ── Keyboard: rows ───────────────────────────────────────
@@ -296,8 +305,7 @@
       // A draft the type refuses stays open with its error, as Enter would.
       if (entry && type && editable(entry, type) && !isListType(type)) {
         if (!pendingValueWrite) {
-          if (type === "select" || type === "status") comboField?.commitForNavigation();
-          else editField?.commitForNavigation();
+          comboField?.commitForNavigation();
         }
         if (pendingValueWrite) await pendingValueWrite;
         await tick();
@@ -429,9 +437,7 @@
   // ── Value editing ────────────────────────────────────────
   async function startEdit(entry: OverlayedEntry, type: PropertyType): Promise<void> {
     if (!isCurrent() || !editable(entry, type) || type === "boolean" || type === "date" || type === "datetime") return;
-    if (type === "select" || type === "status") {
-      choiceOptions = namesToOptions(usedValues(entry.key));
-    }
+    choiceOptions = isListType(type) ? [] : optionsFor(entry, type);
     editSession += 1;
     editRevision = 0;
     pendingValueWrite = null;
@@ -441,7 +447,6 @@
     const session = editSession;
     await tick();
     if (!isCurrent() || session !== editSession || editingKey !== entry.key) return;
-    editField?.focus();
     comboField?.focus();
   }
 
@@ -464,7 +469,7 @@
     const session = editSession;
     const revision = editRevision;
     const targetPath = file.path;
-    const plan = planValueWrite(entry.value, draft, type);
+    const plan = planValueWrite(entry.value, draft, type, { preserveText: choiceOptions.some(option => option.id === draft) });
     if (plan.kind === "invalid") {
       editError = t(plan.i18nKey);
       return;
@@ -479,7 +484,6 @@
     if (!isCurrent() || editSession !== session || editRevision !== revision || file.path !== targetPath || editingKey !== entry.key) return;
     if (!saved) {
       editError = t("modals.note.edit.save-error");
-      editField?.retryCommit();
       comboField?.retryCommit();
       return;
     }
@@ -921,29 +925,20 @@
                 on:done={(e) => endEdit(e.detail)}
                 on:pick={(e) => pickRelationItem(entry, e.detail)}
               />
-            {:else if canEdit && editingKey === entry.key && (type === "select" || type === "status")}
+            {:else if canEdit && editingKey === entry.key}
               <ComboField
                 bind:this={comboField}
                 value={draftOf(entry.value, type)}
                 options={choiceOptions}
                 allowCustom
-                commitUnchanged
-                ariaLabel={entry.key}
-                on:commit={(e) => commitText(entry, type, e.detail.value, e.detail.reason)}
-                on:input={() => { editRevision += 1; editError = null; }}
-                on:cancel={() => endEdit(true)}
-              />
-              {#if editError}
-                <span class="ppp-note-props__error" role="alert">{editError}</span>
-              {/if}
-            {:else if canEdit && editingKey === entry.key}
-              <TextField
-                bind:this={editField}
-                value={draftOf(entry.value, type)}
-                ariaLabel={entry.key}
+                allowEmpty
+                commitOnDestroy={false}
+                preserveInvalidOnBlur
                 validate={validDraft(type)}
-                commitUnchanged
+                error={editError !== null}
                 inputMode={type === "number" ? "decimal" : type === "email" ? "email" : type === "url" ? "url" : type === "phone" ? "tel" : "text"}
+                commitUnchanged
+                ariaLabel={entry.key}
                 on:commit={(e) => commitText(entry, type, e.detail.value, e.detail.reason)}
                 on:input={() => { editRevision += 1; editError = null; }}
                 on:cancel={() => endEdit(true)}

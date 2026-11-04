@@ -30,6 +30,16 @@ describe("i3-final reorderedKeys", () => {
 });
 
 describe("i3-final usedValuesCache", () => {
+  it("keeps raw edit values distinct without changing the default presentation cache", () => {
+    const c = createUsedValuesCache({ files: () => [{ path: "P/b.md" }], frontmatterOf: () => ({ value: ["a", " a ", " [[People/A|A]] "] }) });
+    const scope = { folder: "P", recursive: false };
+    try {
+      expect(c.get("P/a.md", null, "value", scope)).toEqual(["a", "[[People/A|A]]"]);
+      expect(c.get("P/a.md", null, "value", scope, "edit")).toEqual(["a", " a ", " [[People/A|A]] "]);
+      expect(c.get("P/a.md", null, "value", scope)).toEqual(["a", "[[People/A|A]]"]);
+      expect(c.scans()).toBe(2);
+    } finally { c.dispose(); }
+  });
   it("retains every scoped non-template value for search instead of cutting off before the query", () => {
     const notes: Record<string, Record<string, unknown>> = Object.fromEntries(Array.from({ length: 600 }, (_, id) => [`P/${id}.md`, { status: id === 599 ? "Ёлка" : `Value ${id}` }]));
     notes["Q/other.md"] = { status: "wrong scope" }; notes["P/Templates/a.md"] = { status: "template only" };

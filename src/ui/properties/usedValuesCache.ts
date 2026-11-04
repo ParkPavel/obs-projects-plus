@@ -27,6 +27,7 @@ export interface UsedValuesCache {
     own: Record<string, unknown> | null | undefined,
     key: string,
     scope: NoteScope,
+    purpose?: "filter" | "edit",
   ): string[];
   /** Drop every memo now. */
   invalidate(): void;
@@ -41,13 +42,14 @@ export interface UsedValuesCache {
 export function createUsedValuesCache(
   source: UsedValuesSource,
   debounceMs = 300,
+  onInvalidated?: () => void,
 ): UsedValuesCache {
   const memo = new Map<string, string[]>();
   let timer: number | null = null;
   let scanCount = 0;
 
-  function others(path: string, key: string, scope: NoteScope): string[] {
-    const id = `${path}\u0000${scope.folder}\u0000${scope.recursive ? 1 : 0}\u0000${key}`;
+  function others(path: string, key: string, scope: NoteScope, purpose: "filter" | "edit"): string[] {
+    const id = `${path}\u0000${scope.folder}\u0000${scope.recursive ? 1 : 0}\u0000${key}\u0000${purpose}`;
     const hit = memo.get(id);
     if (hit) return hit;
     scanCount += 1;
@@ -60,6 +62,7 @@ export function createUsedValuesCache(
       key,
       // The shared combobox limits the rendered page after searching this pool.
       Infinity,
+      purpose,
     );
     memo.set(id, values);
     return values;
@@ -71,10 +74,10 @@ export function createUsedValuesCache(
   }
 
   return {
-    get(path, own, key, scope) {
-      const mine = valuesForKey([own], key, Infinity);
+    get(path, own, key, scope, purpose = "filter") {
+      const mine = valuesForKey([own], key, Infinity, purpose);
       const merged = new Set(mine);
-      for (const v of others(path, key, scope)) {
+      for (const v of others(path, key, scope, purpose)) {
         merged.add(v);
       }
       return [...merged];
@@ -82,12 +85,14 @@ export function createUsedValuesCache(
     invalidate() {
       cancel();
       memo.clear();
+      onInvalidated?.();
     },
     invalidateSoon() {
       cancel();
       timer = window.setTimeout(() => {
         timer = null;
         memo.clear();
+        onInvalidated?.();
       }, debounceMs);
     },
     dispose: cancel,
