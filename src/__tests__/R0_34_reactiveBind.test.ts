@@ -373,10 +373,11 @@ describe("R0.34 — the tree", () => {
   it("the old seed planted into the extracted scalar editor is still reported", () => {
     const text = readText(join(SRC_ROOT, "ui/views/Dashboard/widgets/DatabaseCall/TypedCellEditor.svelte"));
     expect(reactiveBinds(text)).toEqual([]);
-    const planted = text.replace("</script>", "$: draft = value == null ? \"\" : String(value);\n</script>");
+    expect(text).toContain("<ComboField");
+    const planted = text.replace("</script>", "let draft = \"\";\n$: draft = value == null ? \"\" : String(value);\n</script>\n<input bind:value={draft} />");
     expect(planted).not.toBe(text);
-    // 3.7.2 B1: dates are typed too, so one input serves every scalar type;
-    // that one binding must trip the zero budget.
+    // The shared editor owns its draft now. Reintroducing the old native
+    // reactive draft AND binding must still trip the unchanged zero budget.
     expect(reactiveBinds(planted).map((h) => `${h.kind}:${h.name}`)).toEqual(["value:draft"]);
   });
 });

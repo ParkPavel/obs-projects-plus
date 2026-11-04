@@ -38,7 +38,8 @@
 <ComboField bind:this={input} value={initial} options={choices} {validate}
   readOnly={saving} allowCustom allowEmpty commitUnchanged preserveInvalidOnBlur
   commitOnDestroy={false} focusOnMount
-  inputClass="ppp-t2-editor {field.type === DataFieldType.Number ? 'ppp-t2-editor--number' : ''}"
+  inputClass="ppp-t2-editor {field.type === DataFieldType.Number ? 'ppp-t2-editor--number' : field.type === DataFieldType.Date ? 'ppp-t2-editor--date' : ''}"
+  aria-busy={saving}
   inputMode={field.type === DataFieldType.Number ? "decimal" : "text"}
   ariaLabel={invalid ? `${field.name}: ${inputError}` : field.name}
   title={invalid ? inputError : undefined}

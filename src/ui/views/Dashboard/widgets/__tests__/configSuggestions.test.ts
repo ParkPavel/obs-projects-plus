@@ -53,9 +53,11 @@ describe("ChecklistConfig — field boxes", () => {
   const config = { field: "done", labelField: "name", sortField: "name" };
   const mount = () => mountCollecting<Record<string, unknown>>(ChecklistConfig, { config, fields: fieldsOf("done", "name", "due") }, "change");
 
-  test("three comboboxes and no native datalist", () => {
+  test("three field choosers and a shared numeric input, with no native datalist", () => {
     const m = mount();
-    expect(comboInputs(m.target)).toHaveLength(3);
+    expect(comboInputs(m.target)).toHaveLength(4);
+    expect(comboInputs(m.target).filter(input => !input.classList.contains("ppp-number-field"))).toHaveLength(3);
+    expect(m.target.querySelectorAll('input.ppp-number-field[inputmode="numeric"]')).toHaveLength(1);
     expect(m.target.querySelector("datalist")).toBeNull();
     expect(m.target.querySelector("input[list]")).toBeNull();
     m.destroy();
