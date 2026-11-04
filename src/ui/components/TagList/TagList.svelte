@@ -1,8 +1,8 @@
 <script lang="ts">
   /**
    * w4-input2: «+» opens a field at the end of the values, not a window with a
-   * name line. It is the kit TextField: Enter adds the item and leaves the
-   * field empty for the next one, leaving the field adds what is typed and
+   * name line. The kit ComboField keeps its input when options change. Enter
+   * adds the item and empties the field; leaving adds what is typed and
    * closes it, Escape closes it.
    */
   import { tick } from "svelte";
@@ -15,7 +15,6 @@
   } from "src/lib/dataframe/dataframe";
 
   import { i18n } from "src/lib/stores/i18n";
-  import TextField from "src/ui/components/fields/TextField.svelte";
   import ComboField from "src/ui/components/fields/ComboField.svelte";
   import { namesToOptions } from "src/ui/components/fields/comboOptions";
   import RichTextTag from "src/ui/components/TagList/RichTextTag.svelte";
@@ -27,30 +26,26 @@
 
   export let onChange: (values: Optional<DataValue>[]) => void = () => {};
 
-  $: stringValues = values.filter(isString);
+  $: stringValues = values.flatMap((value, index) => isString(value) ? [{ value, index }] : []);
   $: suggestionOptions = namesToOptions(suggestions);
 
   let adding = false;
-  let field: TextField | null = null;
   let suggestionField: ComboField | null = null;
   let addEl: HTMLElement | null = null;
   let suggestedDraft = "";
 
   async function startAdding(): Promise<void> {
+    suggestedDraft = "";
     adding = true;
     await tick();
-    field?.focus();
-  }
-
-  function add(e: CustomEvent<{ value: string; reason: "enter" | "blur" | "tab" }>): void {
-    const item = e.detail.value.trim();
-    if (item) onChange([...values, item]);
-    if (e.detail.reason === "enter" && item) field?.reset("");
+    suggestionField?.focus();
   }
 
   function addSuggested(e: CustomEvent<{ value: string; reason: string }>): void {
-    const item = e.detail.value.trim();
-    if (item) onChange([...values, item]);
+    if (!edit) return;
+    const selected = e.detail.reason === "select" || suggestionOptions.some(option => option.id === e.detail.value);
+    const item = selected ? e.detail.value : e.detail.value.trim();
+    if (item.trim()) onChange([...values, item]);
     if ((e.detail.reason === "enter" || e.detail.reason === "select") && item) {
       suggestedDraft = "";
       suggestionField?.reset("");
@@ -69,28 +64,29 @@
 
 <div class:edit>
   {#if edit}
-    {#each stringValues as value, i}
+    {#each stringValues as { value, index }}
       <Tag>
         {value}
         <IconButton
           icon="cross"
           size="xs"
           nopadding
+          tooltip={`${$i18n.t("common.remove")}: ${value}`}
           onClick={() => {
-            onChange(values.filter((_, j) => i !== j));
+            if (edit) onChange(values.filter((_, j) => index !== j));
           }}
         />
       </Tag>
     {/each}
     {#if adding}
       <span class="tag-list-add" bind:this={addEl} on:focusout={closeAfterBlur}>
-        {#if suggestionOptions.length > 0}
           <ComboField
             bind:this={suggestionField}
             value={suggestedDraft}
             options={suggestionOptions}
             allowCustom
             focusOnMount
+            commitOnDestroy={false}
             ariaLabel={$i18n.t("common.add-item")}
             placeholder={$i18n.t("common.add-item")}
             on:draftChange={(e) => (suggestedDraft = e.detail)}
@@ -100,15 +96,6 @@
               adding = false;
             }}
           />
-        {:else}
-          <TextField
-            bind:this={field}
-            ariaLabel={$i18n.t("common.add-item")}
-            placeholder={$i18n.t("common.add-item")}
-            on:commit={add}
-            on:cancel={() => (adding = false)}
-          />
-        {/if}
       </span>
     {:else}
       <IconButton
@@ -143,7 +130,8 @@
     min-width: 0;
   }
 
-  .tag-list-add :global(.ppp-text-field) {
+  .tag-list-add :global(.ppp-combo),
+  .tag-list-add :global(.ppp-combo-input) {
     width: 100%;
   }
 </style>

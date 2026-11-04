@@ -2,6 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import dayjs from 'dayjs';
   import { Icon } from 'obsidian-svelte';
+  import TextField from 'src/ui/components/fields/TextField.svelte';
   import { i18n } from 'src/lib/stores/i18n';
   import type { DataField, DataRecord } from 'src/lib/dataframe/dataframe';
   import type { AgendaCustomList, AgendaIcon, AgendaFilterGroup, AgendaFilterMode } from 'src/settings/v3/settings';
@@ -99,6 +100,7 @@
   };
   
   let nameError = '';
+  let nameField: TextField;
   
   $: {
     // Validate name
@@ -131,6 +133,7 @@
   }
   
   function handleSave() {
+    if (nameField?.isComposing()) return;
     if (!isValid) {
       calendarLogger.warn('[AgendaListEditor] Cannot save - validation failed: ' + nameError);
       return;
@@ -188,14 +191,14 @@
     <!-- Name Field -->
     <div class="field-group">
       <label class="field-label" for="list-name">{t('name-label')}</label>
-      <input
+      <TextField
+        bind:this={nameField}
         id="list-name"
-        type="text"
-        class="field-input"
-        class:has-error={nameError}
-        aria-invalid={!!nameError}
+        inputClass="field-input {nameError ? 'has-error' : ''}"
+        error={!!nameError}
         aria-describedby={nameError ? 'list-name-error' : undefined}
-        bind:value={formData.name}
+        value={formData.name}
+        on:input={(event) => formData.name = event.detail}
         placeholder={t('name-placeholder')}
       />
       {#if nameError}
@@ -555,7 +558,7 @@
     line-height: 1.4;
   }
   
-  .field-input {
+  :global(.agenda-list-editor .field-input) {
     width: 100%;
     padding: 0.35rem 0.6rem;
     min-height: 2rem;
@@ -567,12 +570,12 @@
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
   
-  .field-input:focus {
+  :global(.agenda-list-editor .field-input:focus) {
     border-color: var(--interactive-accent);
     box-shadow: 0 0 0 0.125rem color-mix(in srgb, var(--interactive-accent) 15%, transparent);
   }
   
-  .field-input.has-error {
+  :global(.agenda-list-editor .field-input.has-error) {
     border-color: var(--text-error);
   }
   
@@ -831,7 +834,7 @@
     
     .icon-trigger,
     .color-trigger,
-    .field-input {
+    :global(.agenda-list-editor .field-input) {
       min-height: 2.75rem;
     }
   }

@@ -236,6 +236,7 @@
     />
     
   {:else if (field.type === DataFieldType.List || field.repeated) && isOptionalList(value)}
+    {#key JSON.stringify([field.name, field.type, readonly])}
     <TagList
       edit={!readonly}
       values={value ?? []}
@@ -243,6 +244,7 @@
       suggestions={options.map((option) => option.label)}
       {onChange}
     />
+    {/key}
 
   {:else if field.type === DataFieldType.Select || field.type === DataFieldType.Status}
     <ComboField
