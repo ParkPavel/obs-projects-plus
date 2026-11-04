@@ -13,6 +13,7 @@ views. Choose the guide that matches your task — each one exists in both langu
 | Задача / Task | Русский | English |
 |---|---|---|
 | Установить и начать / Install and start | [Обзор](../README-RU.md) | [Overview](../README.md) |
+| Обновить и проверить / Update and verify | [Обновление и откат](upgrade-RU.md) | [Updating and rolling back](upgrade.md) |
 | Работать с проектами и заметками / Work with projects and notes | [Руководство](user-guide.md) | [User guide](user-guide-EN.md) |
 | Понять сообщение об ошибке / Understand an error | [Коды ошибок](ERROR_CODES.md) | [Error codes](ERROR_CODES.md) |
 | Попробовать на готовых данных / Try it on ready-made data | [Демо-хранилище](../demo-vault/README.md) | [Demo vault](../demo-vault/README.md) |

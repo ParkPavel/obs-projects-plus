@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Updating and rolling back"><meta name="color-scheme" content="light dark">
+<meta name="referrer" content="strict-origin-when-cross-origin"><title>Updating and rolling back · Projects Plus</title>
+<meta property="og:type" content="website"><meta property="og:title" content="Updating and rolling back"><meta property="og:description" content="Updating and rolling back"><meta property="og:url" content="https://parkpavel.github.io/obs-projects-plus/read/upgrade.html"><meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://parkpavel.github.io/obs-projects-plus/read/upgrade.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/site.css">
+<script type="module" src="../assets/site.js"></script></head>
+<body data-prefix="../" data-language="en"><a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header"><a class="wordmark" href="../en.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
+<nav aria-label="Main navigation"><a href="../en.html#ideas">Garden of ideas</a><a href="../read/user-guide-en.html">Documentation</a><a class="language" href="../read/upgrade-ru.html" hreflang="ru">Русский</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../en.html">← Explore the plugin</a><strong>On this page</strong><nav aria-label="On this page"><a href="#before-updating">Before updating</a><a href="#install-the-update">Install the update</a><a href="#check-your-workflows">Check your workflows</a><a href="#roll-back">Roll back</a><a href="#report-a-problem">Report a problem</a></nav></aside><article class="doc-article"><p class="doc-version">Documentation follows the source code; an installed release may differ.</p><h1 id="updating-and-rolling-back">Updating and rolling back</h1>
+<p><a href="../read/upgrade-ru.html">Русский</a> · <a href="../read/user-guide-en.html">User guide</a></p>
+<p>Use the three assets from <strong>one published release</strong>: <code>main.js</code>, <code>manifest.json</code> and <code>styles.css</code>. A development build or a successful automated test run does not establish that a version has passed testing on your device. Read that release&#39;s notes before installing it.</p>
+<h2 id="before-updating">Before updating</h2>
+<ol>
+<li>Back up the vault, including its hidden configuration folder. Keep the previous plugin assets and <code>.obsidian/plugins/obs-projects-plus/data.json</code> together; <code>data.json</code> holds your projects and view settings. Replace <code>.obsidian</code> with your custom configuration folder if applicable.</li>
+<li>Complete any pending edits. For a candidate build, start with a copy of the vault and check the workflows you use before updating your main vault.</li>
+<li>Record the plugin version, Obsidian version and device. Keep the build manifest or checksum if the candidate supplies one: two development builds can have the same displayed version.</li>
+</ol>
+<h2 id="install-the-update">Install the update</h2>
+<ol>
+<li>Disable Projects Plus in Obsidian&#39;s community plugin settings.</li>
+<li>Replace the three plugin assets in <code>.obsidian/plugins/obs-projects-plus/</code> with the matching release files. Keep your <code>data.json</code>.</li>
+<li>Enable the plugin again, or restart Obsidian. Reopen the project and confirm the installed version.</li>
+</ol>
+<h2 id="check-your-workflows">Check your workflows</h2>
+<table>
+<thead>
+<tr>
+<th>Workflow</th>
+<th>What to check</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Notes and typed values</td>
+<td>Edit text, a number, a date and a list. Confirm the edit, open the Markdown note, then reload the view. Check values and types, including an empty value.</td>
+</tr>
+<tr>
+<td>Input and suggestions</td>
+<td>Type in the original field, select a suggestion and confirm. With an IME, finish composition before confirming. Cancel another edit and check that it did not save.</td>
+</tr>
+<tr>
+<td>Calendar and Agenda</td>
+<td>Select a day and check that each list shows records for that day which also satisfy its conditions. Create an event and check the configured date, status and colour properties in the note.</td>
+</tr>
+<tr>
+<td>Embedded views</td>
+<td>Open two blocks with different local settings. Changing a block&#39;s view or filter should preserve the other block and its source configuration.</td>
+</tr>
+<tr>
+<td>Charts and linked blocks</td>
+<td>Select a chart bucket, check the records in its receiving blocks, then clear the selection. Include a grouped date bucket if your chart uses one.</td>
+</tr>
+<tr>
+<td>Board</td>
+<td>Move a card and a column; cancel another drag. Check the saved order and that each column returns to its previous collapsed or expanded state.</td>
+</tr>
+<tr>
+<td>Phone and tablet</td>
+<td>Repeat relevant checks with the keyboard open and closed, portrait and landscape, and your usual zoom. Check that the original field, confirmation action and suggestions stay reachable.</td>
+</tr>
+</tbody></table>
+<p>Check formula results against a known example before changing evaluation rules. Existing formulas retain their compatibility profile unless you explicitly select the new rules. Excessive computations may return an error or a pipeline warning; check the warning before treating a transformed result as complete. A pipeline stopped by its work limit retains its last fully completed step.</p>
+<h2 id="roll-back">Roll back</h2>
+<p>Disable the plugin and restore the previous <strong>matching set of three assets</strong>, then enable it again. Keep the current <code>data.json</code> only if it is compatible with that version; otherwise restore the settings backup made with the previous assets.</p>
+<p>Replacing plugin files does not undo edits already written to notes. If you need to undo those changes, restore the affected notes from your vault backup after reviewing changes made since the backup. Test the restored copy before replacing working data.</p>
+<h2 id="report-a-problem">Report a problem</h2>
+<p>Include the plugin and Obsidian versions, device, steps, expected result and actual result. For a candidate, include its commit or build checksum. A minimal example with renamed or synthetic notes helps reproduce the issue without sharing private vault data. Report through the <a href="https://github.com/ParkPavel/obs-projects-plus/issues">issue tracker</a>.</p>
+<p class="doc-source"><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/docs/upgrade.md">Page source ↗</a></p></article></main>
+<footer class="site-footer"><a class="wordmark" href="../en.html">Projects Plus</a><p>An open-source project by Park Pavel. Based on Obsidian Projects by Marcus Olsson.</p><div><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache-2.0</a><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE">Attribution</a><a href="https://github.com/ParkPavel/obs-projects-plus/issues">Feedback</a></div></footer>
+<aside class="search-panel" aria-label="Search documentation"><label for="doc-search">Search documentation</label><div class="search-input-wrap"><input id="doc-search" type="search" placeholder="Search…" autocomplete="off" aria-controls="search-results"><kbd>/</kbd></div><ul id="search-results" hidden></ul><p id="search-status" role="status" aria-live="polite" data-empty="No matches. Try “calendar”, “formula” or “source”."></p></aside>
+</body></html>

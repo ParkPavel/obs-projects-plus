@@ -23,6 +23,8 @@
     "docs/README.md",
     "docs/site-maintenance-RU.md",
     "docs/site-maintenance.md",
+    "docs/upgrade-RU.md",
+    "docs/upgrade.md",
     "docs/user-guide-EN.md",
     "docs/user-guide.md",
     "templates/README.md",
@@ -33,11 +35,11 @@
   "files": [
     {
       "name": "read/project-readme.html",
-      "sha256": "e9f94a320e478156de0c652d1f8fe2d37acca3cc1a561697e338be6b6cff7b3b"
+      "sha256": "9871872d4c2e4801926f82fca262717f276db5af742690cbab90beba2471d446"
     },
     {
       "name": "read/readme-ru.html",
-      "sha256": "712ce17418ce20988a129f8e7342b300ad77e3dbcb5860d498499c5d2cf6453c"
+      "sha256": "013468631d9696c939f1d82687d939ab2354461630b90924b2137c90daa35d29"
     },
     {
       "name": "read/changelog.html",
@@ -101,7 +103,7 @@
     },
     {
       "name": "read/readme.html",
-      "sha256": "94fdd6a8d2082c02f3e5ece81fb722dcf51ed2f623b51f042f0b84a60b443201"
+      "sha256": "b3ff8500419f50bcb4b604e6dcb8988326df1f8c3e9dd948d428da484bc26393"
     },
     {
       "name": "read/site-maintenance-ru.html",
@@ -110,6 +112,14 @@
     {
       "name": "read/site-maintenance.html",
       "sha256": "4c6157d75b9b06df2c753c5fa69f441ce211c56a8f5e56671e8e9bbed7781c8e"
+    },
+    {
+      "name": "read/upgrade-ru.html",
+      "sha256": "3902833314a3a5fe919b237fc6566dcf0ea8569e96a241e00a647b70b7256c7d"
+    },
+    {
+      "name": "read/upgrade.html",
+      "sha256": "f2021fb3969d0955524597b294bc9e67774ea6766feb6704437ef00c80ecb050"
     },
     {
       "name": "read/user-guide-en.html",
@@ -141,15 +151,15 @@
     },
     {
       "name": "index.html",
-      "sha256": "ab1c58621d24974ccaa7e5eff3188bbe05964e0b2e62de4fda2b562f145ee3e0"
+      "sha256": "0f8868a725cc84220f25c374f51e3c97c0953391aaa7df959c09afba27d26315"
     },
     {
       "name": "en.html",
-      "sha256": "865483664a482db6f8dc62a7d394b119cec7ceac57cb6c0fbd9da7d93ab9a08b"
+      "sha256": "b4c4abd387833da6fb4684195aceb769f3588020a12102b40376c7a0e903f63d"
     },
     {
       "name": "search-index.json",
-      "sha256": "f62ea5a51f6ca895a4912d38a5a6e30da19387011df697b3a57817f93a9ff3f2"
+      "sha256": "8fade064f72e0f34927fe54525be15544dcc0286ee3c20d222a25f68977eefb1"
     },
     {
       "name": ".nojekyll",

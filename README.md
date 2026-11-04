@@ -69,6 +69,7 @@ Projects Plus works with your vault through the Obsidian API. It has no separate
 ## Continue
 
 - [User guide](docs/user-guide-EN.md): sources, views, filters, templates, and troubleshooting.
+- [Updating and rolling back](docs/upgrade.md): installation, backups and workflow checks.
 - [Note templates](templates/README.md): examples for tasks, meetings, and reviews.
 - [Roadmap](ROADMAP.md): what comes next.
 - [Changelog](CHANGELOG.md) and [issue tracker](https://github.com/ParkPavel/obs-projects-plus/issues).
