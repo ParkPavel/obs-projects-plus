@@ -562,7 +562,7 @@
     line-height: 1.4;
   }
   
-  :global(.agenda-list-editor .field-input) {
+  .agenda-list-editor :global(.field-input) {
     width: 100%;
     padding: 0.35rem 0.6rem;
     min-height: 2rem;
@@ -574,12 +574,12 @@
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
   
-  :global(.agenda-list-editor .field-input:focus) {
+  .agenda-list-editor :global(.field-input:focus) {
     border-color: var(--interactive-accent);
     box-shadow: 0 0 0 0.125rem color-mix(in srgb, var(--interactive-accent) 15%, transparent);
   }
   
-  :global(.agenda-list-editor .field-input.has-error) {
+  .agenda-list-editor :global(.field-input.has-error) {
     border-color: var(--text-error);
   }
   
@@ -838,7 +838,7 @@
     
     .icon-trigger,
     .color-trigger,
-    :global(.agenda-list-editor .field-input) {
+    .agenda-list-editor :global(.field-input) {
       min-height: 2.75rem;
     }
   }
