@@ -85,6 +85,8 @@ import {
  * deliberately reads it differently.
  */
 export interface FilterOpts {
+  /** Optional caller-owned budget shared by nested groups and list values. */
+  chargeWork?: (steps: number) => void;
   /** When false, `is-upcoming` excludes the baseDate day (strictly future). Default true (Notion-style). */
   upcomingInclusive?: boolean;
 }
@@ -108,6 +110,7 @@ export function matchesCondition(
   const { operator } = cond;
 
   const value: Optional<DataValue> = record.values[cond.field];
+  opts?.chargeWork?.(1 + (Array.isArray(value) ? value.length : 0));
 
   if (operator === "is-empty" || operator === "is-not-empty") {
     return baseFns[operator](value);
@@ -255,6 +258,7 @@ export function matchesFilterConditions(
   opts?: FilterOpts,
   _depth = 0
 ): boolean {
+  opts?.chargeWork?.(1 + filter.conditions.length);
   if (_depth >= 20) return true; // safety: prevent infinite recursion
 
   const validConds = filter.conditions.filter((cond) => {

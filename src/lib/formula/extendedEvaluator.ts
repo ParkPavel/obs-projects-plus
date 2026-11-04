@@ -62,6 +62,8 @@ export interface FormulaPass {
   readonly frame: DataFrame | undefined;
   readonly semantics?: FormulaSemantics;
   readonly referenceTime?: number;
+  /** Caller-owned work accounting, shared across rows/columns of one execution. */
+  readonly chargeWork?: (steps: number) => void;
   readonly rawColumns: Map<string, readonly unknown[]>;
   readonly numericColumns: Map<string, readonly number[]>;
   readonly frameValues: Map<FormulaNode, Optional<DataValue>>;
@@ -72,8 +74,8 @@ interface RuntimePass extends FormulaPass {
   readonly referenceTime: number;
 }
 
-export function createFormulaPass(frame?: DataFrame, semantics: FormulaSemantics = "legacy-computed", referenceDate?: Date): RuntimePass {
-  return { frame, semantics, referenceTime: referenceDate?.getTime() ?? Date.now(), rawColumns: new Map(), numericColumns: new Map(), frameValues: new Map() };
+export function createFormulaPass(frame?: DataFrame, semantics: FormulaSemantics = "legacy-computed", referenceDate?: Date, chargeWork?: (steps: number) => void): RuntimePass {
+  return { frame, semantics, referenceTime: referenceDate?.getTime() ?? Date.now(), ...(chargeWork ? { chargeWork } : {}), rawColumns: new Map(), numericColumns: new Map(), frameValues: new Map() };
 }
 
 export interface FormulaEvaluationContext {
@@ -217,6 +219,7 @@ function evaluateNode(
     let col = pass.rawColumns.get(name);
     if (!col) {
       if (!dataFrame) return [];
+      pass.chargeWork?.(dataFrame.records.length + dataFrame.fields.length);
       const key = resolveFieldName(name, dataFrame.fields.map((f) => f.name)) ?? name;
       // Frozen: the pass's own snapshot, which lets criteria remember scans.
       col = Object.freeze(dataFrame.records.map((r) => pass.semantics === "unified-v1" && !Object.prototype.hasOwnProperty.call(r.values, key) ? undefined : r.values[key]));
@@ -243,6 +246,7 @@ function evaluateNode(
   }
 
   function evaluate(n: FormulaNode): Optional<DataValue> {
+    pass.chargeWork?.(1);
     if (pass.semantics === "unified-v1" && --budget.remaining < 0) throw new Error("Formula evaluation limit exceeded");
     switch (n.type) {
       case "literal":
@@ -378,7 +382,10 @@ function evaluateNode(
       } else {
         // evaluate() already charged the root. Every other operator is charged
         // once on entry; leaf/function evaluation uses the ordinary callback.
-        if (node !== root && --budget.remaining < 0) throw new Error("Formula evaluation limit exceeded");
+        if (node !== root) {
+          pass.chargeWork?.(1);
+          if (--budget.remaining < 0) throw new Error("Formula evaluation limit exceeded");
+        }
         pending.push({ node, finish: true }, { node: node.right, finish: false }, { node: node.left, finish: false });
       }
     }
@@ -515,6 +522,7 @@ function evaluateNode(
         semantics: pass.semantics,
         referenceTime: pass.referenceTime,
         chargeWork(steps) {
+          pass.chargeWork?.(steps);
           budget.remaining = consumeFinancialWork(budget.remaining, steps);
         },
       });

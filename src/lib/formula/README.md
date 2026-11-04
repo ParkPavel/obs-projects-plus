@@ -120,6 +120,11 @@ can therefore hit the same cap even when each individual financial call is small
 accounting and must not derive it from formula source or record data. Omitting it
 uses the standalone cap; supplying a no-op intentionally opts out of that cap.
 Direct iterative financial solvers keep one fallback budget for all iterations.
+Transform pipelines additionally share one execution budget across steps, rows,
+formula AST work and financial iterations. Budget exhaustion or observed
+cancellation keeps the last fully completed step and reports a warning; partial
+rows are discarded. These synchronous checks do not preempt a native regex call
+or process browser events during a running JavaScript task.
 The old computed profile charges internal-loop work only; the new profile also
 charges evaluated AST nodes against that same budget.
 New COUNT also charges its argument and list-item traversal. Binary operator

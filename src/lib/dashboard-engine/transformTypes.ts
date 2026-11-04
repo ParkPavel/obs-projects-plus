@@ -295,6 +295,10 @@ export interface TransformMeta {
  * datasource machinery.
  */
 export interface TransformContext {
+  /** Cooperative cancellation between units of synchronous work, not preemption. */
+  readonly signal?: AbortSignal;
+  /** May lower the default execution ceiling; cannot raise it. Runtime-only. */
+  readonly workLimit?: number;
   /** rightSourceId → pre-resolved DataFrame. Undefined entries trigger a warning in executeJoin. */
   readonly rightFrames?: ReadonlyMap<string, DataFrame>;
 }
