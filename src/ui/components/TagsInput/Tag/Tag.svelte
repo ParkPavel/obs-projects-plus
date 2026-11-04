@@ -11,7 +11,7 @@
   export let editing: boolean = false;
   export let duplicate: boolean = false;
 
-  let ref: HTMLDivElement;
+  let ref: { focus(): void };
 
   $: if (ref && selected) {
     ref.focus();
@@ -40,7 +40,7 @@
 
 {#if editing}
   <TagInput
-    bind:ref
+    bind:this={ref}
     value={tag?.toString() ?? ""}
     on:submit={(event) => {
       dispatch("update", event.detail);

@@ -158,9 +158,12 @@
   aria-label={ariaLabel}
   aria-invalid={invalid || error ? "true" : undefined}
   on:focus={onFocus}
+  on:focus
+  on:click
   on:blur={onBlur}
   on:input={onInput}
   on:keydown={onKeydown}
+  on:keydown
   on:compositionstart={() => ctl.compositionStart()}
   on:compositionend={onCompositionEnd}
   {...$$restProps}

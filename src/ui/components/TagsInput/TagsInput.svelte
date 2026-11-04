@@ -23,7 +23,7 @@
     " ", // ban unintentional nbsp
   ];
   export let value: DataValue[];
-  let inputRef: HTMLDivElement;
+  let inputRef: { focus(): void };
 
   let editing: boolean = false;
   let selectedTag: number = -1; // -1 indicates that no tag is selected
@@ -142,7 +142,7 @@
     {/each}
     <TagInput
       value=""
-      bind:ref={inputRef}
+      bind:this={inputRef}
       on:focus={() => {
         selectedTag = -1;
         activeInput = -1;
