@@ -104,6 +104,21 @@ afterEach(() => {
 });
 
 describe("FieldControl — suggestion box", () => {
+  test.each([
+    [DataFieldType.Select, "owner"], [DataFieldType.Status, "owner"],
+    [DataFieldType.Select, "destroy"], [DataFieldType.Status, "destroy"],
+  ])("%s retires an unconfirmed canonical draft on %s without writing it", async (type, retirement) => {
+    const m = mount({ field: { ...optionField, type } });
+    try {
+      const input = m.box(); await enter(input); typeInto(input, "Done"); await settle();
+      if (retirement === "destroy") m.destroy();
+      else { m.component.$set({ field: { ...optionField, name: "other", type }, value: "Todo" }); await settle(); }
+      press(input, "Enter"); input.dispatchEvent(new Event("blur")); await settle();
+      expect(m.onChange).not.toHaveBeenCalled();
+      if (retirement === "owner") { expect(m.box()).not.toBe(input); expect(m.box().value).toBe("Todo"); }
+    } finally { m.destroy(); }
+  });
+
   test.each([DataFieldType.Select, DataFieldType.Status])("configured %s neither offers nor writes undeclared observed values", async type => {
     const m = mount({ field: { ...optionField, type }, value: "Legacy", suggestions: ["Observed"] });
     await enter(m.box()); expect(optionLabels()).toEqual(["Todo", "Doing", "Done"]);

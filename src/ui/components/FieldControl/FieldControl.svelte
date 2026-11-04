@@ -119,6 +119,9 @@
   $: options = namesToOptions(declaredChoices ?? [
     ...new Set([...(field.typeConfig?.options ?? []), ...suggestions]),
   ]);
+  // Suggestions used the commit-only branch before; do not leave an old live
+  // timer running when its source arrives, or replace the field to switch it.
+  $: if (options.length > 0) clearTimer();
     
   // Field type detection (color heuristic shared via UT2026-C contract)
   const IMAGE_FIELDS = ['cover', 'banner', 'image', 'thumbnail', 'icon'];
@@ -247,18 +250,22 @@
     {/key}
 
   {:else if field.type === DataFieldType.Select || field.type === DataFieldType.Status}
+    {#key JSON.stringify([field.name, field.type, readonly])}
     <ComboField
       value={isString(value) ? value : ""}
       {options}
       allowCustom={declaredChoices === null}
+      commitOnDestroy={false}
       allowEmpty allowUnlistedUnchanged
       disabled={readonly}
       ariaLabel={field.name}
       inputClass="field-combo-input"
       on:commit={({ detail }) => commitSelection(detail.value)}
     />
+    {/key}
     
   {:else if field.type === DataFieldType.String}
+    {#key JSON.stringify([field.name, field.type, readonly])}
     {#if isColorField}
       <!-- COLOR FIELD v5.1.0: INLINE PICKER -->
       <div class="color-field-container">
@@ -344,31 +351,27 @@
         on:commit={handleTimeCommit}
       />
       
-    {:else if options.length > 0}
-      <!-- The text is the field's own draft (ComboField); a value typed outside the
-           list is kept, as before. One commit per Enter, pick or blur. -->
+    {:else}
+      <!-- One original input through source revisions. Plain text retains its
+           live debounce; suggestion-backed text commits on Enter/pick/blur. -->
       <ComboField
         value={isString(value) ? value : ""}
         {options}
         allowCustom
+        commitOnDestroy={false}
         disabled={readonly}
         ariaLabel={field.name}
-        inputClass="field-combo-input"
-        on:commit={({ detail }) => commitSelection(detail.value)}
+        inputClass="field-input field-combo-input"
+        placeholder={field.name}
+        on:draftChange={(event) => {
+          if (options.length === 0) onTextInput(event);
+          else clearTimer();
+        }}
+        on:commit={onTextCommit}
+        on:cancel={onTextCancel}
       />
-      
-    {:else}
-      <TextField
-            value={localDisplayValue}
-            placeholder={field.name}
-            inputClass="field-input"
-            disabled={readonly}
-            ariaLabel={field.name}
-            on:input={onTextInput}
-            on:commit={onTextCommit}
-            on:cancel={onTextCancel}
-          />
     {/if}
+    {/key}
     
   {:else if field.type === DataFieldType.Number}
     {#key JSON.stringify([field.name, field.type, readonly])}
@@ -384,6 +387,7 @@
     {/key}
 
   {:else if field.type === DataFieldType.Date}
+    {#key JSON.stringify([field.name, field.type, readonly, !!field.typeConfig?.time])}
     {#if field.typeConfig?.time}
       <DatetimeInput
         value={isDate(value) ? value : null}
@@ -410,6 +414,7 @@
         }}
       />
     {/if}
+    {/key}
   {/if}
 </div>
 

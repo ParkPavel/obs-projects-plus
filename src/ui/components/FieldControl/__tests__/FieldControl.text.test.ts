@@ -80,7 +80,50 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-describe("FieldControl text entry on TextField", () => {
+describe("FieldControl text entry on shared fields", () => {
+  it("late suggestions preserve the original scalar input, draft, caret and focus", async () => {
+    const m = mount("title", "a");
+    try {
+      m.input.focus(); await type(m.input, "private draft"); m.input.setSelectionRange(1, 5);
+      m.component.$set({ suggestions: ["private draft", "another"] }); await tick();
+      expect(m.target.querySelector("input")).toBe(m.input); expect(m.input.value).toBe("private draft");
+      expect([m.input.selectionStart, m.input.selectionEnd]).toEqual([1, 5]); expect(document.activeElement).toBe(m.input);
+      expect(m.onChange).not.toHaveBeenCalled();
+    } finally { m.component.$destroy(); }
+  });
+
+  it("suggestion-backed text remains commit-only and late options retire the old live timer", async () => {
+    const m = mount("title", "a");
+    try {
+      m.input.focus(); await type(m.input, "private draft");
+      m.component.$set({ suggestions: ["private draft"] }); await tick(); jest.advanceTimersByTime(1000);
+      expect(m.onChange).not.toHaveBeenCalled(); expect(m.target.querySelector("input")).toBe(m.input);
+      await type(m.input, "typed with source"); jest.advanceTimersByTime(1000); expect(m.onChange).not.toHaveBeenCalled();
+      key(m.input, "Enter"); await tick(); expect(m.onChange).toHaveBeenCalledTimes(1); expect(m.onChange).toHaveBeenCalledWith("typed with source");
+    } finally { m.component.$destroy(); }
+  });
+
+  it("changing the scalar owner retires its input and cannot commit the previous draft to the new field", async () => {
+    const m = mount("title", "a");
+    try {
+      m.input.focus(); await type(m.input, "private draft");
+      m.component.$set({ field: fieldNamed("other"), value: "b" }); await tick();
+      expect(m.target.querySelector("input")).not.toBe(m.input); expect(m.target.querySelector("input")?.value).toBe("b");
+      key(m.input, "Enter"); m.input.dispatchEvent(new Event("blur")); jest.advanceTimersByTime(1000);
+      expect(m.onChange).not.toHaveBeenCalled();
+    } finally { m.component.$destroy(); }
+  });
+
+  it("a retired scalar's keyboard callback cannot submit its draft after the field name changes", async () => {
+    const m = mount("title", "a");
+    try {
+      m.input.focus(); await type(m.input, "private draft");
+      m.component.$set({ field: fieldNamed("other"), value: "b" }); await tick();
+      key(m.input, "Enter"); m.input.dispatchEvent(new Event("blur")); jest.advanceTimersByTime(1000);
+      expect(m.onChange).not.toHaveBeenCalled();
+    } finally { m.component.$destroy(); }
+  });
+
   it("locking and unlocking a field cancels its pending live save", async () => {
     const m = mount("title", "a"); m.input.focus(); await type(m.input, "old draft");
     m.component.$set({ readonly: true }); await tick(); m.component.$set({ readonly: false }); await tick();
@@ -98,7 +141,7 @@ describe("FieldControl text entry on TextField", () => {
   });
   it("saves 500 ms after typing stops, and the blur after it writes nothing more", async () => {
     const m = mount("title", "a");
-    expect(m.input).toHaveClass("ppp-text-field");
+    expect(m.input).toHaveAttribute("role", "combobox");
     m.input.focus();
     await type(m.input, "ab");
     expect(m.onChange).not.toHaveBeenCalled();
