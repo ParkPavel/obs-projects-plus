@@ -39,6 +39,8 @@ describe("#126 isUnsafePattern", () => {
     ["duplicate alternatives in a repeated group", "^(a|a)+$"],
     ["duplicate multi-character alternatives in a repeated group", "^(ab|ab)+$"],
     ["overlapping repeated atoms", "^a*a*a*b$"],
+    ["overlapping repeats separated by their own literal", "^a+aa+$"],
+    ["escaped overlapping separator", "^a+\\x61a+$"],
     ["backreferences", "^(a+)\\1$"],
   ])("rejects %s", (_label, pattern) => {
     expect(isUnsafePattern(pattern)).toBe(true);
@@ -48,6 +50,7 @@ describe("#126 isUnsafePattern", () => {
     ["a plain literal", "hello"],
     ["a character class", "[a-z]+"],
     ["an anchored word", "^done$"],
+    ["repeats separated by a disjoint literal", "^a+ba+$"],
     ["a legitimate alternation", "(cat|dog)"],
     ["disjoint alternatives in a repeated group", "^(?:cat|dog)+$"],
     ["escaped regex syntax", String.raw`^\(\+\)\*$`],

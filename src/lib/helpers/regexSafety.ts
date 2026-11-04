@@ -382,7 +382,9 @@ function analyzePattern(pattern: string, flags: string): boolean {
       if (quantifier && quantifier.max > 1) {
         if (atom.hasRepeat || atom.ambiguous || atom.nullable) unsafe = true;
         activeRepeats.push(part.first);
-      } else if (!part.nullable) {
+      } else if (!part.nullable && activeRepeats.every((first) => !overlaps(first, part.first))) {
+        // A repeated character can also consume this literal: `a+aa+` still
+        // has competing partitions. Only a disjoint separator ends that risk.
         activeRepeats.length = 0;
       }
       parts.push(part);
