@@ -1,155 +1,106 @@
+<script context="module" lang="ts">
+  let nextEditor = 0;
+</script>
 <script lang="ts">
-  import { produce } from "immer";
-  import { Button, Icon, TextInput } from "obsidian-svelte";
+  import { Button, Icon } from "obsidian-svelte";
   import IconButton from "src/ui/components/IconButton/IconButton.svelte";
-  import { dndzone } from "svelte-dnd-action";
+  import TextField from "src/ui/components/fields/TextField.svelte";
+  import { isImeKey } from "src/ui/components/fields/draftController";
+  import { dndzone, TRIGGERS, SHADOW_ITEM_MARKER_PROPERTY_NAME, SHADOW_PLACEHOLDER_ITEM_ID } from "svelte-dnd-action";
   import { i18n } from "src/lib/stores/i18n";
-  import { tick, onMount } from "svelte";
+  import { tick, onDestroy } from "svelte";
 
   export let options: string[];
   export let onChange: (options: string[]) => void;
+  export let contextKey = "";
+  export let disabled = false;
+  type OptionItem = { id: number | string; value: string };
+  const zoneType = "ppp-options-" + ++nextEditor;
+  const flipDurationMs = 200;
+  let nextId = 0, revision = 0, alive = true;
+  let root: HTMLDivElement;
+  const composing = new Set<OptionItem["id"]>();
+  const makeItems = (values: string[]): OptionItem[] => values.map(value => ({ id: nextId++, value }));
+  const equal = (a: string[], b: string[]) => a.length === b.length && a.every((value, i) => value === b[i]);
+  let savedItems = makeItems(options), optionItems = savedItems;
+  let source = options, sourceValues = [...options], savedValues = [...options];
+  let owner = contextKey, writer = onChange, locked = disabled;
+  const isShadow = (item: OptionItem) => Boolean((item as Record<string, unknown>)[SHADOW_ITEM_MARKER_PROPERTY_NAME]) || item.id === SHADOW_PLACEHOLDER_ITEM_ID;
 
-  type OptionItem = { id: number; value: string };
-  
-  // Optimize: use stable IDs for better performance with large lists
-  let itemIdCounter = 0;
-  const itemIdMap = new Map<string, number>();
-  
-  function getStableId(value: string, index: number): number {
-    const key = `${index}:${value}`;
-    if (!itemIdMap.has(key)) {
-      itemIdMap.set(key, itemIdCounter++);
-    }
-    return itemIdMap.get(key)!;
+  // Acknowledged edits retain IDs/DOM; a different source or owner ends that draft.
+  function reset(next: string[]) {
+    source = next; sourceValues = [...next]; savedValues = [...next];
+    savedItems = makeItems(next); optionItems = savedItems;
+    composing.clear(); revision++;
   }
-  
-  $: optionItems = options.map((option, i) => ({
-    id: getStableId(option, i),
-    value: option,
-  }));
-
-  // Performance: debounce for real-time input changes
-  let inputDebounceTimers = new Map<number, NodeJS.Timeout>();
-  
+  function sync(next: string[], key: string, callback: typeof onChange, isLocked: boolean) {
+    if (owner !== key || writer !== callback || locked !== isLocked) reset(next);
+    else if (next !== source || !equal(next, sourceValues)) {
+      source = next; sourceValues = [...next];
+      if (!equal(next, savedValues)) reset(next);
+    }
+    owner = key; writer = callback; locked = isLocked;
+  }
+  $: sync(options, contextKey, onChange, disabled);
+  const refresh = () => sync(options, contextKey, onChange, disabled);
+  function publish(items: OptionItem[]) {
+    if (!alive || disabled) return;
+    savedItems = items; optionItems = items;
+    const next = items.map(item => item.value);
+    if (equal(next, savedValues)) return;
+    savedValues = [...next]; onChange(next);
+  }
+  function commit(id: OptionItem["id"], value: string) {
+    refresh();
+    if (!savedItems.some(item => item.id === id)) return;
+    publish(savedItems.map(item => item.id === id ? { ...item, value } : item));
+  }
   function handleOptionAdd() {
-    onChange(
-      produce(options, (draft) => {
-        draft.push("");
-      })
-    );
-    
-    // Auto-focus the new input after render
-    tick().then(() => {
-      const inputs = activeDocument.querySelectorAll<HTMLInputElement>('.multi-text-input');
-      const lastInput = inputs[inputs.length - 1];
-      if (lastInput) {
-        lastInput.focus();
+    refresh(); if (!alive || disabled) return;
+    const item = { id: nextId++, value: "" }, epoch = revision;
+    publish([...savedItems, item]);
+    void tick().then(() => {
+      if (alive && !disabled && epoch === revision && savedItems.some(current => current.id === item.id)) {
+        root?.querySelector<HTMLInputElement>('[data-option-id="' + item.id + '"] input')?.focus();
       }
     });
   }
-
-  function handleOptionRemove(i: number) {
-    return () => {
-      // Clear any pending debounce for this item
-      const timer = inputDebounceTimers.get(i);
-      if (timer) {
-        clearTimeout(timer);
-        inputDebounceTimers.delete(i);
-      }
-      
-      onChange(
-        produce(options, (draft) => {
-          draft.splice(i, 1);
-        })
-      );
-    };
+  function remove(id: OptionItem["id"]) {
+    refresh(); if (!savedItems.some(item => item.id === id)) return;
+    composing.delete(id); publish(savedItems.filter(item => item.id !== id));
   }
-
-  const flipDurationMs = 200;
-
-  // Optimize: use input event for instant feedback, blur for final save
-  function handleOptionInput(i: number) {
-    return (event: Event) => {
-      if (event.currentTarget instanceof HTMLInputElement) {
-        const value = event.currentTarget.value;
-        
-        // Clear previous debounce timer
-        const existingTimer = inputDebounceTimers.get(i);
-        if (existingTimer) {
-          clearTimeout(existingTimer);
-        }
-        
-        // Debounce onChange calls to improve performance
-        const timer = setTimeout(() => {
-          onChange(
-            produce(options, (draft) => {
-              draft.splice(i, 1, value);
-            })
-          );
-          inputDebounceTimers.delete(i);
-        }, 300); // 300ms debounce
-        
-        inputDebounceTimers.set(i, timer);
-      }
-    };
+  function handleKeyDown(id: OptionItem["id"], event: KeyboardEvent) {
+    refresh();
+    if (disabled || !savedItems.some(item => item.id === id) || composing.has(id) || isImeKey(event)) return;
+    if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); handleOptionAdd(); }
+    else if (event.key === "Delete" && event.ctrlKey) { event.preventDefault(); remove(id); }
   }
-
-  function handleOptionChange(i: number) {
-    return (event: FocusEvent) => {
-      // Clear debounce timer and apply immediately on blur
-      const timer = inputDebounceTimers.get(i);
-      if (timer) {
-        clearTimeout(timer);
-        inputDebounceTimers.delete(i);
-      }
-      
-      if (event.currentTarget instanceof HTMLInputElement) {
-        onChange(
-          produce(options, (draft) => {
-            if (event.currentTarget instanceof HTMLInputElement) {
-              draft.splice(i, 1, event.currentTarget.value);
-            }
-          })
-        );
-      }
-    };
+  function ownItems(items: OptionItem[], draggedId?: string | number): boolean {
+    const ids = items.map(item => item.id === SHADOW_PLACEHOLDER_ITEM_ID ? draggedId : item.id);
+    return ids.length === savedItems.length && new Set(ids).size === ids.length && ids.every(id => savedItems.some(item => item.id === id));
   }
-
-  function handleDndConsider(e: CustomEvent<DndEvent<OptionItem>>) {
-    optionItems = e.detail.items;
+  function handleDndConsider(event: CustomEvent<DndEvent<OptionItem>>) {
+    refresh();
+    if (disabled || !ownItems(event.detail.items, event.detail.info?.id)) return;
+    optionItems = event.detail.info?.trigger === TRIGGERS.DRAG_STOPPED ? savedItems : event.detail.items;
   }
-
-  function handleDndFinalize(e: CustomEvent<DndEvent<OptionItem>>) {
-    onChange(e.detail.items.map((item) => item.value));
+  function handleDndFinalize(event: CustomEvent<DndEvent<OptionItem>>) {
+    refresh();
+    const items = event.detail.items;
+    if (disabled || items.some(isShadow) || !ownItems(items)) { optionItems = savedItems; return; }
+    // Only identities come from the drag event; values come from the current owner.
+    publish(items.map(item => savedItems.find(saved => saved.id === item.id)!));
   }
-  
-  // Keyboard shortcuts
-  function handleKeyDown(i: number) {
-    return (event: KeyboardEvent) => {
-      if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        handleOptionAdd();
-      } else if (event.key === 'Delete' && event.ctrlKey) {
-        event.preventDefault();
-        handleOptionRemove(i)();
-      }
-    };
-  }
-  
-  // Cleanup debounce timers on unmount
-  onMount(() => {
-    return () => {
-      inputDebounceTimers.forEach(timer => clearTimeout(timer));
-      inputDebounceTimers.clear();
-    };
-  });
+  onDestroy(() => { alive = false; revision++; composing.clear(); });
 </script>
 
-<div class="multi-text-container">
+<div class="multi-text-container" bind:this={root}>
   <div
     class="multi-text-list"
     use:dndzone={{
-      type: "multi-text",
+      type: zoneType,
+      dropFromOthersDisabled: true,
+      dragDisabled: disabled,
       items: optionItems,
       flipDurationMs,
       dropTargetStyle: {
@@ -165,24 +116,27 @@
     aria-label={$i18n.t("components.multi-text-input.list")}
   >
     {#each optionItems as optionItem, i (optionItem.id)}
-      <div class="dnd-item-wrapper" role="listitem">
+      <div class="dnd-item-wrapper" role="listitem" data-option-id={optionItem.id}
+        on:compositionstart={() => composing.add(optionItem.id)}
+        on:compositionend={() => composing.delete(optionItem.id)}>
         <div class="dnd-item">
           <span class="drag-handle" role="button" tabindex="0" title={$i18n.t("common.drag-to-reorder")}>
             <Icon name="grip-vertical" />
           </span>
           <div class="input-wrapper">
-            <TextInput
-              width="100%"
+            <TextField
               value={optionItem.value}
+              disabled={disabled || isShadow(optionItem)}
               placeholder={$i18n.t("components.multi-text-input.option", { index: i + 1 })}
-              on:input={handleOptionInput(i)}
-              on:blur={handleOptionChange(i)}
-              on:keydown={handleKeyDown(i)}
+              ariaLabel={$i18n.t("components.multi-text-input.option", { index: i + 1 })}
+              on:commit={({ detail }) => commit(optionItem.id, detail.value)}
+              on:keydown={(event) => handleKeyDown(optionItem.id, event)}
             />
           </div>
           <IconButton 
             icon="cross" 
-            onClick={handleOptionRemove(i)}
+            onClick={() => remove(optionItem.id)}
+            {disabled}
             tooltip={$i18n.t("components.multi-text-input.remove-option", { index: i + 1 })}
           />
         </div>
@@ -192,6 +146,7 @@
   <Button 
     variant="plain" 
     on:click={handleOptionAdd}
+    {disabled}
     tooltip={$i18n.t("components.multi-text-input.add-option")}
   >
     <Icon name="plus" />

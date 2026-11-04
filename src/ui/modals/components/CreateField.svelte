@@ -816,6 +816,7 @@
         vertical
       >
         <MultiTextInput
+          contextKey={JSON.stringify([currentProjectId, field.name, field.type])}
           options={field.typeConfig?.options ?? []}
           onChange={handleOptionsChange}
         />
