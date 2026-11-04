@@ -111,10 +111,11 @@ describe("EditNote — saving another field leaves pp_overlay untouched (M03 C4)
 
   it("the saved record carries the overlay as read, and only the edited key changes", async () => {
     const { target, onSave, destroy } = mount();
-    const input = target.querySelector<HTMLInputElement>("[data-testid='number-input']");
+    const input = target.querySelector<HTMLInputElement>(".ppp-number-field");
     if (!input) throw new Error("number input not found");
     input.value = "8";
     input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     await jest.advanceTimersByTimeAsync(300);
 
     expect(onSave).toHaveBeenCalledTimes(1);

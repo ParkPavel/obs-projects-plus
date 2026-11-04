@@ -8,9 +8,9 @@
  * stale record pushed back into a peek/modal (#158) echoed its own stale
  * values back onto the file.
  *
- * The obsidian-svelte inputs are replaced by stand-ins that copy the ONE line
- * the defect lives in: `$: dispatch(<event>, <prop>)`. The contract: an
- * echoed prop must not reach `onChange`, and a real edit must.
+ * Switch/Date legacy echoes use stand-ins. Numbers exercise the actual shared
+ * NumberField/TextField: parent props never write, and only confirmed valid
+ * drafts reach onChange. Incomplete and composing drafts must remain private.
  */
 
 jest.mock(
@@ -50,7 +50,6 @@ jest.mock(
     // `$: dispatch(<event>, <prop>)`, and expose a test id. Loading the real
     // component through a deep import worked, and then nothing could find its
     // input — deterministic stand-ins here, the real control is checked live.
-    const NumberInput = require("./mocks/EchoNumberInput.mock.svelte").default;
     const Switch = require("./mocks/EchoSwitch.mock.svelte").default;
     // Svelte reads `$$.fragment` when it creates a child; null means "no DOM".
     const Noop = class {
@@ -59,7 +58,7 @@ jest.mock(
       $on() { return () => {}; }
       $destroy() {}
     };
-    return { Autocomplete: Noop, Icon: Noop, NumberInput, Switch };
+    return { Autocomplete: Noop, Icon: Noop, Switch };
   },
   { virtual: true },
 );
@@ -103,7 +102,53 @@ const booleanField: DataField = {
 };
 
 describe("FieldControl / echo (N1) — Number", () => {
-  it("ignores a prop change echoed back through NumberInput's reactive dispatch", async () => {
+  it.each(["-", "1e-"])("keeps incomplete %s as a draft and never clears the stored number", async draft => {
+    const m = mount(numberField, 9);
+    const input = m.target.querySelector("input")!;
+    input.focus(); input.value = draft; input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    await Promise.resolve();
+    expect(m.onChange).not.toHaveBeenCalled();
+    expect(input.value).toBe(draft);
+    input.blur(); await Promise.resolve();
+    expect(input.value).toBe("9"); expect(m.onChange).not.toHaveBeenCalled(); m.destroy();
+  });
+
+  it("holds a valid number until confirmation, and Escape cancels without writing", async () => {
+    const m = mount(numberField, 9), input = m.target.querySelector("input")!;
+    input.focus(); input.value = "12"; input.dispatchEvent(new Event("input", { bubbles: true }));
+    await Promise.resolve(); expect(m.onChange).not.toHaveBeenCalled();
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    input.blur(); await Promise.resolve();
+    expect(input.value).toBe("9"); expect(m.onChange).not.toHaveBeenCalled(); m.destroy();
+  });
+
+  it("does not save a composition candidate on its Enter", async () => {
+    const m = mount(numberField, 9), input = m.target.querySelector("input")!;
+    input.focus(); input.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+    input.value = "12"; input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", isComposing: true, bubbles: true }));
+    await Promise.resolve(); expect(m.onChange).not.toHaveBeenCalled();
+    input.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    input.blur(); await Promise.resolve(); expect(m.onChange.mock.calls).toEqual([[12]]); m.destroy();
+  });
+
+  it.each(["lock", "identity"])("discards a pending numeric draft after a %s change", async kind => {
+    const m = mount(numberField, 9), input = m.target.querySelector("input")!;
+    input.focus(); input.value = "12"; input.dispatchEvent(new Event("input", { bubbles: true }));
+    if (kind === "lock") {
+      m.component.$set({ readonly: true }); await Promise.resolve();
+      m.component.$set({ readonly: false }); await Promise.resolve();
+    } else {
+      m.component.$set({ field: { ...numberField, name: "other" }, value: 7 }); await Promise.resolve();
+    }
+    const next = m.target.querySelector("input")!;
+    next.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    next.blur(); await Promise.resolve();
+    expect(next.value).toBe(kind === "lock" ? "9" : "7"); expect(m.onChange).not.toHaveBeenCalled(); m.destroy();
+  });
+  it("does not write when a parent refreshes the numeric value", async () => {
     const { component, onChange, destroy } = mount(numberField, 9);
     component.$set({ value: 7 });
     await Promise.resolve();
@@ -111,12 +156,20 @@ describe("FieldControl / echo (N1) — Number", () => {
     destroy();
   });
 
+  it.each([["0", 0], ["1,5", 1.5], ["-2.5", -2.5]])("confirms %s with its numeric type and no duplicate blur write", async (draft, expected) => {
+    const m = mount(numberField, 9), input = m.target.querySelector("input")!;
+    input.focus(); input.value = String(draft); input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    input.blur(); await Promise.resolve(); expect(m.onChange.mock.calls).toEqual([[expected]]); m.destroy();
+  });
+
   it("commits a real DOM edit exactly once", async () => {
     const { target, onChange, destroy } = mount(numberField, 9);
-    const input = target.querySelector<HTMLInputElement>("[data-testid='number-input']");
+    const input = target.querySelector<HTMLInputElement>(".ppp-number-field");
     if (!input) throw new Error("number input not found");
     input.value = "12";
     input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     await Promise.resolve();
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith(12);
@@ -125,10 +178,11 @@ describe("FieldControl / echo (N1) — Number", () => {
 
   it("commits undefined, never NaN, when the input is cleared", async () => {
     const { target, onChange, destroy } = mount(numberField, 9);
-    const input = target.querySelector<HTMLInputElement>("[data-testid='number-input']");
+    const input = target.querySelector<HTMLInputElement>(".ppp-number-field");
     if (!input) throw new Error("number input not found");
     input.value = "";
     input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     await Promise.resolve();
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith(undefined);
@@ -137,10 +191,11 @@ describe("FieldControl / echo (N1) — Number", () => {
 
   it("readonly: a real DOM edit still commits nothing", async () => {
     const { target, onChange, destroy } = mount(numberField, 9, { readonly: true });
-    const input = target.querySelector<HTMLInputElement>("[data-testid='number-input']");
+    const input = target.querySelector<HTMLInputElement>(".ppp-number-field");
     if (!input) throw new Error("number input not found");
     input.value = "12";
     input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     await Promise.resolve();
     expect(onChange).not.toHaveBeenCalled();
     destroy();

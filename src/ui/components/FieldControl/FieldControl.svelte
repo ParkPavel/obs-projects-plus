@@ -1,11 +1,11 @@
 <script lang="ts">
   import {
-    NumberInput,
     Switch,
     Icon,
   } from "obsidian-svelte";
   import ComboField from "../fields/ComboField.svelte";
   import TextField from "../fields/TextField.svelte";
+  import NumberField from "../fields/NumberField.svelte";
   import { namesToOptions } from "../fields/comboOptions";
   import { configuredChoiceOptions, choiceValueAllowed } from "src/lib/suggestions/choiceOptions";
   import DateInput from "../DateInput.svelte";
@@ -61,15 +61,13 @@
     return Object.is(a, b);
   }
 
-  // A cleared NumberInput reports NaN (from `valueAsNumber`), which is not a
-  // value FieldControl ever passed down. #180a: "not a number" means the
-  // field is absent, i.e. `undefined`, not the JSON-illegal `NaN`.
+  // NumberField keeps incomplete/IME text private until a valid commit.
+  // An explicitly confirmed empty number retains #180a's absent/undefined contract.
   function commitNumber(detail: number | null) {
-    if (readonly) return;
+    if (readonly || (detail !== null && !Number.isFinite(detail))) return;
     const passedDown = isNumber(value) ? value : null;
-    const normalized = detail === null || Number.isNaN(detail) ? null : detail;
-    if (Object.is(normalized, passedDown)) return;
-    onChange(normalized === null ? undefined : normalized);
+    if (Object.is(detail, passedDown)) return;
+    onChange(detail === null ? undefined : detail);
   }
 
   function commitBoolean(detail: boolean) {
@@ -371,12 +369,16 @@
     {/if}
     
   {:else if field.type === DataFieldType.Number}
-    <NumberInput
-      value={isNumber(value) ? value : null}
-      placeholder="0"
-      readonly={readonly}
-      on:input={({ detail: val }) => commitNumber(val)}
-    />
+    {#key JSON.stringify([field.name, field.type, readonly])}
+      <NumberField
+        value={isNumber(value) ? value : null}
+        placeholder="0"
+        ariaLabel={field.name}
+        allowEmpty
+        disabled={readonly}
+        on:commit={({ detail }) => commitNumber(detail)}
+      />
+    {/key}
 
   {:else if field.type === DataFieldType.Date}
     {#if field.typeConfig?.time}
