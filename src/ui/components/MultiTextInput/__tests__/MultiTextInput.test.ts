@@ -105,6 +105,39 @@ test("a real pointer placeholder is considered without persisting its synthetic 
   expect(m.changes).toEqual([["second", "first"]]);
 });
 
+test("starting pointer drag confirms the focused draft before replacing it with a shadow", async () => {
+  const m = mount(), before = [...m.zone.zoneOptions.items], first = before[0];
+  if (!first) throw new Error("Expected an initial option");
+  const input = m.target.querySelector("input")!;
+  input.focus(); await type(input, "unconfirmed new text");
+  const shadow = { ...first, id: "id:dnd-shadow-placeholder-0000", isDndShadowItem: true };
+  m.zone.dispatchEvent(new CustomEvent("consider", { detail: { items: [shadow, before[1]], info: { id: first.id, trigger: "dragStarted", source: "pointer" } } })); await tick();
+  m.zone.dispatchEvent(new CustomEvent("finalize", { detail: { items: [...before].reverse() } })); await tick();
+  expect(m.changes.at(-1)).toEqual(["second", "unconfirmed new text"]);
+});
+
+test("composition disables drag and a queued shadow/finalize cannot consume that candidate", async () => {
+  const m = mount(), before = [...m.zone.zoneOptions.items], first = before[0];
+  if (!first) throw new Error("Expected an initial option");
+  const input = m.target.querySelector("input")!;
+  input.focus(); input.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+  await type(input, "候補");
+  expect((m.zone.zoneOptions as any).dragDisabled).toBe(true);
+  const shadow = { ...first, id: "id:dnd-shadow-placeholder-0000", isDndShadowItem: true };
+  m.zone.dispatchEvent(new CustomEvent("consider", { detail: { items: [shadow, before[1]], info: { id: first.id, trigger: "dragStarted", source: "pointer" } } })); await tick();
+  input.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true })); await tick();
+  m.zone.dispatchEvent(new CustomEvent("finalize", { detail: { items: [...before].reverse() } })); await tick();
+  expect(m.target.querySelector("input")).toBe(input); expect(input.value).toBe("候補");
+  expect(m.changes).toEqual([]);
+});
+
+test("a rejected foreign consider cannot confirm the focused draft", async () => {
+  const m = mount(), before = [...m.zone.zoneOptions.items], input = m.target.querySelector("input")!;
+  input.focus(); await type(input, "private draft");
+  m.zone.dispatchEvent(new CustomEvent("consider", { detail: { items: [{ id: 99999, value: "foreign" }, before[1]], info: { id: 99999, trigger: "dragStarted", source: "pointer" } } })); await tick();
+  expect(m.changes).toEqual([]); expect(input.value).toBe("private draft");
+});
+
 test("Escape cancels a draft, and locking cannot revive it on unlock", async () => {
   const m = mount(); let input = m.target.querySelector("input")!;
   input.focus(); await type(input, "cancelled"); key(input, "Escape"); input.blur(); await tick();

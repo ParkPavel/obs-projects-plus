@@ -19,19 +19,29 @@
   const flipDurationMs = 200;
   let nextId = 0, revision = 0, alive = true;
   let root: HTMLDivElement;
-  const composing = new Set<OptionItem["id"]>();
+  let composing = new Set<OptionItem["id"]>();
+  let inputFields: Record<string, TextField | null | undefined> = {};
+  let rejectedDrag = false, draggingId: OptionItem["id"] | undefined;
   const makeItems = (values: string[]): OptionItem[] => values.map(value => ({ id: nextId++, value }));
   const equal = (a: string[], b: string[]) => a.length === b.length && a.every((value, i) => value === b[i]);
   let savedItems = makeItems(options), optionItems = savedItems;
   let source = options, sourceValues = [...options], savedValues = [...options];
   let owner = contextKey, writer = onChange, locked = disabled;
   const isShadow = (item: OptionItem) => Boolean((item as Record<string, unknown>)[SHADOW_ITEM_MARKER_PROPERTY_NAME]) || item.id === SHADOW_PLACEHOLDER_ITEM_ID;
+  const displayValue = (item: OptionItem, saved: OptionItem[], dragged?: OptionItem["id"]) =>
+    saved.find(value => value.id === (item.id === SHADOW_PLACEHOLDER_ITEM_ID ? dragged : item.id))?.value ?? item.value;
+  $: dragDisabled = disabled || composing.size > 0;
+  function composition(id: OptionItem["id"], active: boolean) {
+    const next = new Set(composing);
+    if (active) next.add(id); else next.delete(id);
+    composing = next;
+  }
 
   // Acknowledged edits retain IDs/DOM; a different source or owner ends that draft.
   function reset(next: string[]) {
     source = next; sourceValues = [...next]; savedValues = [...next];
     savedItems = makeItems(next); optionItems = savedItems;
-    composing.clear(); revision++;
+    composing = new Set(); inputFields = {}; rejectedDrag = false; draggingId = undefined; revision++;
   }
   function sync(next: string[], key: string, callback: typeof onChange, isLocked: boolean) {
     if (owner !== key || writer !== callback || locked !== isLocked) reset(next);
@@ -67,7 +77,8 @@
   }
   function remove(id: OptionItem["id"]) {
     refresh(); if (!savedItems.some(item => item.id === id)) return;
-    composing.delete(id); publish(savedItems.filter(item => item.id !== id));
+    composition(id, false); publish(savedItems.filter(item => item.id !== id));
+    void tick().then(() => { delete inputFields[String(id)]; });
   }
   function handleKeyDown(id: OptionItem["id"], event: KeyboardEvent) {
     refresh();
@@ -82,16 +93,27 @@
   function handleDndConsider(event: CustomEvent<DndEvent<OptionItem>>) {
     refresh();
     if (disabled || !ownItems(event.detail.items, event.detail.info?.id)) return;
+    if (event.detail.info?.trigger === TRIGGERS.DRAG_STARTED) {
+      rejectedDrag = disabled || composing.size > 0;
+      if (!rejectedDrag) {
+        const focused = root?.ownerDocument.activeElement;
+        const row = focused && root?.contains(focused) ? focused.closest("[data-option-id]") : null;
+        const id = row?.getAttribute("data-option-id");
+        if (id && inputFields[id]?.commitForNavigation() === false) rejectedDrag = true;
+      }
+    }
+    if (rejectedDrag || composing.size > 0) return;
+    draggingId = event.detail.info?.id;
     optionItems = event.detail.info?.trigger === TRIGGERS.DRAG_STOPPED ? savedItems : event.detail.items;
   }
   function handleDndFinalize(event: CustomEvent<DndEvent<OptionItem>>) {
     refresh();
     const items = event.detail.items;
-    if (disabled || items.some(isShadow) || !ownItems(items)) { optionItems = savedItems; return; }
+    if (disabled || rejectedDrag || composing.size > 0 || items.some(isShadow) || !ownItems(items)) { optionItems = savedItems; return; }
     // Only identities come from the drag event; values come from the current owner.
     publish(items.map(item => savedItems.find(saved => saved.id === item.id)!));
   }
-  onDestroy(() => { alive = false; revision++; composing.clear(); });
+  onDestroy(() => { alive = false; revision++; composing.clear(); inputFields = {}; });
 </script>
 
 <div class="multi-text-container" bind:this={root}>
@@ -100,7 +122,7 @@
     use:dndzone={{
       type: zoneType,
       dropFromOthersDisabled: true,
-      dragDisabled: disabled,
+      dragDisabled,
       items: optionItems,
       flipDurationMs,
       dropTargetStyle: {
@@ -117,15 +139,16 @@
   >
     {#each optionItems as optionItem, i (optionItem.id)}
       <div class="dnd-item-wrapper" role="listitem" data-option-id={optionItem.id}
-        on:compositionstart={() => composing.add(optionItem.id)}
-        on:compositionend={() => composing.delete(optionItem.id)}>
+        on:compositionstart={() => composition(optionItem.id, true)}
+        on:compositionend={() => composition(optionItem.id, false)}>
         <div class="dnd-item">
           <span class="drag-handle" role="button" tabindex="0" title={$i18n.t("common.drag-to-reorder")}>
             <Icon name="grip-vertical" />
           </span>
           <div class="input-wrapper">
             <TextField
-              value={optionItem.value}
+              bind:this={inputFields[String(optionItem.id)]}
+              value={displayValue(optionItem, savedItems, draggingId)}
               disabled={disabled || isShadow(optionItem)}
               placeholder={$i18n.t("components.multi-text-input.option", { index: i + 1 })}
               ariaLabel={$i18n.t("components.multi-text-input.option", { index: i + 1 })}
