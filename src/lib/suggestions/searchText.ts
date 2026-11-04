@@ -10,7 +10,7 @@ const TRANSLIT: Record<string, string> = {
   х: "kh", ц: "ts", ч: "ch", ш: "sh", щ: "shch", ъ: "", ы: "y", ь: "", э: "e", ю: "yu", я: "ya",
 };
 export const foldSearch = (text: string): string => text.normalize("NFKC").toLowerCase().replace(/ё/g, "е");
-export const latinSearch = (text: string): string => Array.from(text, char => TRANSLIT[char] ?? char).join("");
+export const latinSearch = (text: string): string => text.replace(/[а-яё]/g, char => TRANSLIT[char] ?? char);
 export const searchWords = (text: string): string[] => foldSearch(text.replace(/([\p{Ll}\d])([\p{Lu}])/gu, "$1 $2")).match(/[\p{L}\p{N}]+/gu) ?? [];
 
 /** Convert the query before punctuation is tokenized (semicolon is Russian ж). */
