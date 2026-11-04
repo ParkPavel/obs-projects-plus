@@ -81,6 +81,21 @@ afterEach(() => {
 });
 
 describe("FieldControl text entry on TextField", () => {
+  it("locking and unlocking a field cancels its pending live save", async () => {
+    const m = mount("title", "a"); m.input.focus(); await type(m.input, "old draft");
+    m.component.$set({ readonly: true }); await tick(); m.component.$set({ readonly: false }); await tick();
+    jest.advanceTimersByTime(1000); expect(m.onChange).not.toHaveBeenCalled(); m.component.$destroy();
+  });
+  it("locking a field before the debounce never writes through its callback", async () => {
+    const m = mount("title", "a"); m.input.focus(); await type(m.input, "old draft");
+    m.component.$set({ readonly: true }); await tick(); jest.advanceTimersByTime(1000);
+    expect(m.onChange).not.toHaveBeenCalled(); m.component.$destroy();
+  });
+  it.each([fieldNamed("other"), { ...fieldNamed("title"), type: DataFieldType.Date }])("a schema change cancels the previous text field's pending live save: %p", async field => {
+    const m = mount("title", "a"); m.input.focus(); await type(m.input, "old draft");
+    m.component.$set({ field, value: null }); await tick(); jest.advanceTimersByTime(1000);
+    expect(m.onChange).not.toHaveBeenCalled(); m.component.$destroy();
+  });
   it("saves 500 ms after typing stops, and the blur after it writes nothing more", async () => {
     const m = mount("title", "a");
     expect(m.input).toHaveClass("ppp-text-field");

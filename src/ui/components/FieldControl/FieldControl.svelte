@@ -98,6 +98,16 @@
   // debounced write as well as the text.
   let entryValue: string | null = null;
   let typingTimer: ReturnType<typeof setTimeout> | null = null;
+  let textScope = JSON.stringify([field.name, field.type]);
+  $: syncTextScope(JSON.stringify([field.name, field.type]), readonly);
+  function syncTextScope(scope: string, locked: boolean): void {
+    if (scope !== textScope || locked) {
+      clearTimer();
+      entryValue = null;
+      showColorPicker = false;
+    }
+    textScope = scope;
+  }
 
   $: localDisplayValue = isString(value) ? value : '';
   
@@ -128,6 +138,7 @@
   // resolve. Invalid text is stored as-is — the user sees their typo
   // instead of a silently dropped color.
   function commitTextBuffer(raw: string) {
+    if (readonly) return;
     onChange(isColorField ? normalizeHexColor(raw) ?? raw : raw);
   }
 
@@ -137,6 +148,7 @@
   }
 
   function onTextInput(e: CustomEvent<string>) {
+    if (readonly) return;
     const text = e.detail;
     if (entryValue === null) entryValue = localDisplayValue;
     // Debounce: save after 500ms of no typing
@@ -157,7 +169,7 @@
   function onTextCancel() {
     clearTimer();
     // Escape restored the text; a debounced write is undone with it.
-    if (entryValue !== null && entryValue !== localDisplayValue) onChange(entryValue);
+    if (!readonly && entryValue !== null && entryValue !== localDisplayValue) onChange(entryValue);
     entryValue = null;
   }
 
@@ -179,10 +191,12 @@
   let showColorPicker = false;
   
   function toggleColorPicker() {
+    if (readonly) return;
     showColorPicker = !showColorPicker;
   }
   
   function handleColorChange(event: CustomEvent<string>) {
+    if (readonly) return;
     const newColor = event.detail;
     // v5.1.1: Just call onChange - localDisplayValue will update via $: reactivity
     onChange(newColor);
@@ -200,6 +214,7 @@
   // TIME INPUT
   // ========================================
   function handleTimeCommit(e: CustomEvent<{ value: string }>) {
+    if (readonly) return;
     const next = normalizeTime(e.detail.value);
     if (next !== localDisplayValue) onChange(next);
   }
