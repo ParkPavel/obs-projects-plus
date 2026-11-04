@@ -113,6 +113,21 @@ afterEach(() => {
 });
 
 describe("i3-props NotePropertiesBlock", () => {
+  it("finishing an accepted scalar write preserves a newer draft in the same original input", async () => {
+    const fm = { value: "original" }, view = setup(fm);
+    try {
+      await tick(); (row("value").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+      const input = editorOf("value")!; let release = () => {}; const blocked = new Promise<void>(resolve => { release = resolve; });
+      const write = view.processFrontMatter.getMockImplementation()!;
+      view.processFrontMatter.mockImplementationOnce(async (...args) => { await blocked; return write(...args); });
+      type(input, "accepted A"); key(input, "Enter"); await flush();
+      type(input, "pending B"); input.setSelectionRange(1, 4); await flush(); release(); await flush();
+      expect(fm.value).toBe("accepted A"); expect(editorOf("value")).toBe(input); expect(input.value).toBe("pending B");
+      expect([input.selectionStart, input.selectionEnd]).toEqual([1, 4]); expect(document.activeElement).toBe(input);
+      key(input, "Enter"); await flush(); expect(fm.value).toBe("pending B"); expect(view.processFrontMatter).toHaveBeenCalledTimes(2);
+    } finally { view.unmount(); }
+  });
+
   it("an open property source refresh keeps the same draft, caret and focus without a scan per keypress", async () => {
     const fm = { value: "mine" }, other = { value: "before" }, view = setup(fm, other);
     try {

@@ -940,7 +940,7 @@
                 commitUnchanged
                 ariaLabel={entry.key}
                 on:commit={(e) => commitText(entry, type, e.detail.value, e.detail.reason)}
-                on:input={() => { editRevision += 1; editError = null; }}
+                on:draftChange={() => { editRevision += 1; editError = null; }}
                 on:cancel={() => endEdit(true)}
               />
               {#if editError}
