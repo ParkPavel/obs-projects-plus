@@ -29,6 +29,7 @@
   export function focus(): void { field?.focus(); }
   export function select(): void { field?.select(); }
   export function isComposing(): boolean { return field?.isComposing() ?? false; }
+  export function commitForNavigation(): boolean { return field?.commitForNavigation() ?? false; }
 
   const dispatch = createEventDispatcher<{
     input: string;

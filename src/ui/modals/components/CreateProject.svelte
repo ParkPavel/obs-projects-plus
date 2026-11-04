@@ -4,7 +4,6 @@
   import {
     Button,
     Callout,
-    FileAutocomplete,
     Icon,
     ModalButtonGroup,
     ModalContent,
@@ -18,10 +17,15 @@
   } from "obsidian-svelte";
 
   import { FileListInput } from "src/ui/components/FileListInput";
+  import ValueSuggestField from "src/ui/components/fields/ValueSuggestField.svelte";
+  import SelectField from "src/ui/components/fields/SelectField.svelte";
+  import NumberField from "src/ui/components/fields/NumberField.svelte";
+  import PathSuggestField from "src/ui/components/fields/PathSuggestField.svelte";
+  import { vaultPathSource } from "src/lib/suggestions/vaultPaths";
   import { Accordion, AccordionItem } from "src/ui/components/Accordion";
   import DateFormatSelector from "./DateFormatSelector.svelte";
   import { notEmpty } from "src/lib/helpers";
-  import { getFoldersInFolder, isValidPath } from "src/lib/obsidian";
+  import { isValidPath } from "src/lib/obsidian";
   import { capabilities } from "src/lib/stores/capabilities";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
@@ -47,6 +51,36 @@
   export let project: ProjectDefinition;
 
   let originalName = project.name;
+  let projectOwner = project.id;
+  let formEl: HTMLDivElement;
+  let limitField: NumberField | undefined;
+  let folderField: PathSuggestField | undefined;
+  let newNotesFolderField: PathSuggestField | undefined;
+  let templateFields: FileListInput | undefined;
+  let excludedFields: FileListInput | undefined;
+  const composing = new Set<Node>();
+  $: if (project.id !== projectOwner) {
+    projectOwner = project.id;
+    originalName = project.name;
+    composing.clear();
+  }
+  $: pathSource = vaultPathSource($app);
+
+  function trackComposition(event: CompositionEvent, active: boolean) {
+    const target = event.target as Node | null;
+    if (!target) return;
+    if (active) composing.add(target); else composing.delete(target);
+  }
+
+  function submit() {
+    for (const target of composing) {
+      if (!target.isConnected || !formEl?.contains(target)) composing.delete(target);
+    }
+    if (composing.size || nameError) return;
+    if (project.dataSource.kind === "native-query" && !limitField?.commitForNavigation()) return;
+    if ([folderField, newNotesFolderField, templateFields, excludedFields].some(field => field && !field.commitForNavigation())) return;
+    onSave({ ...project, templates: project.templates?.filter(notEmpty) ?? [] });
+  }
 
   $: projects = $settings.projects;
 
@@ -56,7 +90,7 @@
   });
 
   $: ({ name } = project);
-  $: nameError = validateName(name);
+  $: nameError = validateName(name, originalName, projects);
 
   const dataSourceOptions = [
     { label: $i18n.t("datasources.folder"), value: "folder" },
@@ -257,12 +291,10 @@
     nqSetConditions(conditions);
   }
 
-  function nqSetLimit(raw: string) {
+  function nqSetLimit(parsed: number | null) {
     if (project.dataSource.kind !== "native-query") return;
     const config = project.dataSource.config;
-    // coercion-exempt: Class C - plugin/widget configuration from a form control, not record data
-    const parsed = parseInt(raw, 10);
-    if (Number.isFinite(parsed) && parsed > 0) {
+    if (parsed !== null && parsed > 0) {
       nqSetConfig({ ...config, limit: parsed });
     } else {
       const { limit, ...rest } = config;
@@ -270,16 +302,16 @@
     }
   }
 
-  function validateName(name: string) {
-    if (name === originalName) {
-      return "";
-    }
-
+  function validateName(name: string, baseline: string, available: readonly ProjectDefinition[]) {
     if (name.trim() === "") {
       return $i18n.t("modals.project.create.empty-name-error");
     }
 
-    if (projects.find((project) => project.name === name)) {
+    if (name === baseline) {
+      return "";
+    }
+
+    if (available.find((project) => project.name === name)) {
       return $i18n.t("modals.project.create.existing-name-error");
     }
 
@@ -528,14 +560,17 @@
   }
 </script>
 
+{#key project.id}
 <ModalLayout {title}>
   <ModalContent>
+    <div bind:this={formEl} on:compositionstart|capture={(event) => trackComposition(event, true)} on:compositionend|capture={(event) => trackComposition(event, false)}>
     <SettingItem
       name={$i18n.t("modals.project.name.name")}
       description={$i18n.t("modals.project.name.description") ?? ""}
     >
-      <TextInput
+      <ValueSuggestField
         value={project.name}
+        ariaLabel={$i18n.t("modals.project.name.name")}
         on:input={({ detail: name }) => (project = { ...project, name })}
         autoFocus
         error={!!nameError}
@@ -557,8 +592,10 @@
       name={$i18n.t("modals.project.datasource.name")}
       description={$i18n.t("modals.project.datasource.description")}
     >
-      <Select
+      <SelectField
         value={project.dataSource.kind}
+        contextKey={`${project.id}:primary-kind`}
+        tooltip={$i18n.t("modals.project.datasource.name")}
         options={primaryDataSourceOptions}
         on:change={handleDataSourceChange}
       />
@@ -570,8 +607,11 @@
         description={$i18n.t("modals.project.path.description") ?? ""}
         vertical
       >
-        <FileAutocomplete
-          files={getFoldersInFolder($app.vault.getRoot())}
+        <PathSuggestField
+          bind:this={folderField}
+          files={$pathSource.folders}
+          contextKey={`${project.id}:primary-folder`}
+          ariaLabel={$i18n.t("modals.project.path.name")}
           value={project.dataSource.config.path}
           on:change={({ detail: path }) => {
             if (project.dataSource.kind === "folder") patchPrimaryConfig({ path });
@@ -615,8 +655,9 @@
         description={$i18n.t("modals.project.tag.description") ?? ""}
         vertical
       >
-        <TextInput
+        <ValueSuggestField
           placeholder="#tag"
+          ariaLabel={$i18n.t("modals.project.tag.name")}
           value={project.dataSource.config.tag ?? ""}
           on:input={({ detail: rawTag }) => {
             if (project.dataSource.kind === "tag") {
@@ -627,7 +668,6 @@
               patchPrimaryConfig({ tag });
             }
           }}
-          width="100%"
         />
       </SettingItem>
 
@@ -702,8 +742,10 @@
         description={$i18n.t("modals.project.native-query.from.description") ??
           ""}
       >
-        <Select
+        <SelectField
           value={project.dataSource.config.from.kind}
+          contextKey={`${project.id}:query-from-kind`}
+          tooltip={$i18n.t("modals.project.native-query.from.name")}
           options={[
             { label: $i18n.t("datasources.folder"), value: "folder" },
             { label: $i18n.t("datasources.tag"), value: "tag" },
@@ -718,8 +760,11 @@
           description={$i18n.t("modals.project.path.description") ?? ""}
           vertical
         >
-          <FileAutocomplete
-            files={getFoldersInFolder($app.vault.getRoot())}
+          <PathSuggestField
+            bind:this={folderField}
+            files={$pathSource.folders}
+            contextKey={`${project.id}:query-folder`}
+            ariaLabel={$i18n.t("modals.project.path.name")}
             value={project.dataSource.config.from.path}
             on:change={({ detail: path }) => nqUpdateFrom({ path })}
             getLabel={(file) => file.path}
@@ -742,8 +787,9 @@
           description={$i18n.t("modals.project.tag.description") ?? ""}
           vertical
         >
-          <TextInput
+          <ValueSuggestField
             placeholder="#tag"
+            ariaLabel={$i18n.t("modals.project.tag.name")}
             value={project.dataSource.config.from.tag ?? ""}
             on:input={({ detail: rawTag }) => {
               const tag = rawTag.trim()
@@ -753,7 +799,6 @@
                 : "";
               nqUpdateFrom({ tag });
             }}
-            width="100%"
           />
         </SettingItem>
         <SettingItem
@@ -818,10 +863,13 @@
         description={$i18n.t("modals.project.native-query.limit.description") ??
           ""}
       >
-        <TextInput
-          value={project.dataSource.config.limit?.toString() ?? ""}
+        <NumberField
+          bind:this={limitField}
+          value={project.dataSource.config.limit ?? null}
+          ariaLabel={$i18n.t("modals.project.native-query.limit.name")}
+          allowEmpty integer min={0} preserveInvalidOnBlur
           placeholder="∞"
-          on:input={({ detail: raw }) => nqSetLimit(raw)}
+          on:commit={({ detail }) => nqSetLimit(detail)}
         />
       </SettingItem>
     {/if}
@@ -892,8 +940,11 @@
           description={$i18n.t("modals.project.newNotesFolder.description") ??
             ""}
         >
-          <FileAutocomplete
-            files={getFoldersInFolder($app.vault.getRoot())}
+          <PathSuggestField
+            bind:this={newNotesFolderField}
+            files={$pathSource.folders}
+            contextKey={`${project.id}:new-notes-folder`}
+            ariaLabel={$i18n.t("modals.project.newNotesFolder.name")}
             value={project.newNotesFolder}
             placeholder={project.dataSource.kind === "folder"
               ? project.dataSource.config.path
@@ -913,11 +964,11 @@
           description={$i18n.t("modals.project.defaultName.description") ?? ""}
           vertical
         >
-          <TextInput
+          <ValueSuggestField
             value={project.defaultName ?? ""}
+            ariaLabel={$i18n.t("modals.project.defaultName.name")}
             on:input={({ detail: defaultName }) =>
               (project = { ...project, defaultName })}
-            width="100%"
           />
           <small>
             {defaultName}
@@ -935,6 +986,8 @@
           vertical
         >
           <FileListInput
+            bind:this={templateFields}
+            contextKey={`${project.id}:templates`}
             buttonText={$i18n.t("modals.project.templates.add")}
             paths={project.templates ?? []}
             onPathsChange={(templates) => (project = { ...project, templates })}
@@ -947,6 +1000,8 @@
           vertical
         >
           <FileListInput
+            bind:this={excludedFields}
+            contextKey={`${project.id}:excluded-notes`}
             buttonText={$i18n.t("modals.project.exclude.add")}
             paths={project.excludedNotes ?? []}
             onPathsChange={(excludedNotes) =>
@@ -970,8 +1025,10 @@
           name={$i18n.t("modals.project.agenda.name")}
           description={$i18n.t("modals.project.agenda.description") ?? ""}
         >
-          <Select
+          <SelectField
             value={project.agenda?.mode ?? "standard"}
+            contextKey={`${project.id}:agenda-mode`}
+            tooltip={$i18n.t("modals.project.agenda.name")}
             options={[
               { label: $i18n.t("modals.project.agenda.modes.standard"), value: "standard" },
               { label: $i18n.t("modals.project.agenda.modes.custom"), value: "custom" }
@@ -1063,20 +1120,17 @@
         />
       </AccordionItem>
     </Accordion>
+    </div>
   </ModalContent>
   <ModalButtonGroup>
     <Button
       variant="primary"
       disabled={!!nameError}
-      on:click={() => {
-        onSave({
-          ...project,
-          templates: project.templates?.filter(notEmpty) ?? [],
-        });
-      }}>{cta}</Button
+      on:click={submit}>{cta}</Button
     >
   </ModalButtonGroup>
 </ModalLayout>
+{/key}
 
 <style>
   .ppp-create-project-consequence {

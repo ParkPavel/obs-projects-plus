@@ -20,6 +20,10 @@
   let rows=makeRows(paths),saved=[...paths],source=paths,sourceValues=[...paths];
   let owner=contextKey,writer=onPathsChange,locked=disabled,ownerApp:App|undefined=$app;
   let fields:Record<string,PathSuggestField|null|undefined>={};
+  export function commitForNavigation():boolean {
+    if(!alive||disabled||Object.values(fields).some(field=>field?.isComposing()))return false;
+    return Object.values(fields).every(field=>!field||field.commitForNavigation());
+  }
   $: pathSource=vaultPathSource($app);
   function sync(values:string[],key:string,callback:typeof onPathsChange,isLocked:boolean,nextApp:App|undefined){
     if(owner!==key||writer!==callback||locked!==isLocked||ownerApp!==nextApp){rows=makeRows(values);saved=[...values];}
