@@ -101,6 +101,7 @@
   
   let nameError = '';
   let nameField: TextField;
+  let nameBaseline = formData.name;
   
   $: {
     // Validate name
@@ -198,6 +199,9 @@
         error={!!nameError}
         aria-describedby={nameError ? 'list-name-error' : undefined}
         value={formData.name}
+        on:focus={() => nameBaseline = formData.name}
+        on:commit={(event) => nameBaseline = event.detail.value}
+        on:cancel={() => formData.name = nameBaseline}
         on:input={(event) => formData.name = event.detail}
         placeholder={t('name-placeholder')}
       />
