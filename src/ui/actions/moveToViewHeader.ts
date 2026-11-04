@@ -27,57 +27,75 @@ function hidden(el: Element | null): boolean {
   if (!el) return true;
   const view = el.ownerDocument.defaultView;
   const style = view?.getComputedStyle(el);
-  return style?.display === "none";
+  return style?.display === "none" || style?.visibility === "hidden" || style?.opacity === "0";
 }
 
 export function moveToViewHeader(node: HTMLElement, enabled: boolean) {
+  const view = node.ownerDocument.defaultView;
   let placeholder: Comment | null = null;
   let leaf: HTMLElement | null = null;
   let observer: MutationObserver | null = null;
+  let headerObserver: MutationObserver | null = null;
+  let watchedHeader: Element | null = null;
   let on = false;
+  let alive = true, epoch = 0;
 
   // i3-final: a view can mount before its leaf is in the document; then the
   // header is not there yet. A few frames later it is — a bounded retry.
-  let retry = 0;
+  let retry: number | null = null;
   let tries = 0;
   // Changes come in bursts (a header rebuilt node by node): one placement per frame.
-  let frame = 0;
+  let frame: number | null = null;
 
   function home(): void {
     if (placeholder?.parentNode && node.previousSibling !== placeholder) placeholder.after(node);
-    leaf?.classList.remove("ppp-tabs-in-header");
+    if (leaf?.classList.contains("ppp-tabs-in-header")) leaf.classList.remove("ppp-tabs-in-header");
   }
 
   /** Puts the strip where it belongs now: the current title container, or home. */
   function place(): void {
-    frame = 0;
-    if (!on || !leaf) return;
+    if (!alive || !on || !leaf) return;
     const title = leaf.querySelector<HTMLElement>(".view-header-title-container");
     const header = title?.closest(".view-header") ?? null;
+    if (watchedHeader !== header) {
+      headerObserver?.disconnect();
+      watchedHeader = header;
+      if (header) headerObserver?.observe(header, { attributes: true, subtree: true, attributeFilter: ["style", "class", "hidden"] });
+    }
     if (!title || hidden(header)) {
       home();
       return;
     }
+    if (!leaf.classList.contains("ppp-tabs-in-header")) leaf.classList.add("ppp-tabs-in-header");
+    if (hidden(title)) { home(); return; }
     if (node.parentElement !== title) title.appendChild(node);
-    leaf.classList.add("ppp-tabs-in-header");
   }
 
   function schedule(): void {
-    const view = node.ownerDocument.defaultView;
-    if (frame || !view) return;
-    if (view.requestAnimationFrame) frame = view.requestAnimationFrame(place);
+    if (!alive || !on || frame !== null || !view) return;
+    const ownEpoch = epoch;
+    if (view.requestAnimationFrame) frame = view.requestAnimationFrame(() => {
+      if (!alive || !on || epoch !== ownEpoch) return;
+      frame = null;
+      place();
+    });
     else place();
   }
 
   function attach(): void {
+    if (!alive) return;
     on = true;
     if (!placeholder) {
       leaf = node.closest<HTMLElement>(".workspace-leaf-content");
       if (!leaf) {
-        const view = node.ownerDocument.defaultView;
-        if (tries < 10 && view?.requestAnimationFrame) {
+        if (retry === null && tries < 10 && view?.requestAnimationFrame) {
           tries += 1;
-          retry = view.requestAnimationFrame(() => { retry = 0; attach(); });
+          const ownEpoch = epoch;
+          retry = view.requestAnimationFrame(() => {
+            if (!alive || !on || epoch !== ownEpoch) return;
+            retry = null;
+            attach();
+          });
         }
         return;
       }
@@ -86,24 +104,30 @@ export function moveToViewHeader(node: HTMLElement, enabled: boolean) {
       const View = node.ownerDocument.defaultView?.MutationObserver;
       if (View) {
         observer = new View(schedule);
+        headerObserver = new View(schedule);
         observer.observe(leaf, { childList: true, subtree: true });
         // A theme switches its options by body classes (Minimal's "hide tab title").
         observer.observe(node.ownerDocument.body, { attributes: true, attributeFilter: ["class"] });
       }
+      view?.addEventListener("resize", schedule);
     }
     place();
   }
 
   function detach(): void {
     on = false;
-    const view = node.ownerDocument.defaultView;
-    if (retry) view?.cancelAnimationFrame(retry);
-    if (frame) view?.cancelAnimationFrame(frame);
-    retry = 0;
-    frame = 0;
+    epoch++;
+    if (retry !== null) view?.cancelAnimationFrame(retry);
+    if (frame !== null) view?.cancelAnimationFrame(frame);
+    retry = null;
+    frame = null;
+    view?.removeEventListener("resize", schedule);
     tries = 0;
     observer?.disconnect();
     observer = null;
+    headerObserver?.disconnect();
+    headerObserver = null;
+    watchedHeader = null;
     if (!placeholder) return;
     if (placeholder.parentNode) placeholder.replaceWith(node);
     else node.remove();
@@ -120,6 +144,7 @@ export function moveToViewHeader(node: HTMLElement, enabled: boolean) {
       else detach();
     },
     destroy(): void {
+      alive = false;
       detach();
     },
   };

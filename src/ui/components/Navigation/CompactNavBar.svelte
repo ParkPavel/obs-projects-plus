@@ -117,6 +117,21 @@
   :global(.ppp-tabs-in-header .view-header-title) {
     display: none;
   }
+  :global(.ppp-tabs-in-header .view-header) {
+    min-height: var(--ppp-touch-target-min);
+    height: auto;
+  }
+  :global(.ppp-tabs-in-header .compact-navbar-tabs .view-item) {
+    flex-direction: row;
+    min-width: var(--ppp-touch-target-min);
+    min-height: var(--ppp-touch-target-min);
+    box-sizing: border-box;
+    padding: 0.25em 0.5em;
+    gap: 0.375em;
+  }
+  :global(.ppp-tabs-in-header .compact-navbar-tabs .view-item span) {
+    white-space: nowrap;
+  }
   /* w4-p09 (N1): a theme may style the header, not hide the strip in it.
      Things shows the title container only on hover (a phone has none);
      Minimal hides it with "hide tab title" and in focus mode. */

@@ -21,10 +21,17 @@ import { join } from "path";
 import { moveToViewHeader } from "../moveToViewHeader";
 
 const raf = window.requestAnimationFrame;
+const nativeStyle = window.getComputedStyle.bind(window);
 beforeEach(() => {
-  window.requestAnimationFrame = (cb: FrameRequestCallback) => { cb(0); return 0; };
+  // Only the theme's computed display is simulated; browser probes cover actual CSS.
+  jest.spyOn(window, "getComputedStyle").mockImplementation(element => new Proxy(nativeStyle(element), {
+    get(target, property) { return property === "display" && element.classList.contains("theme-title-hidden") ? "none" : Reflect.get(target, property, target); },
+  }));
+  let nextFrame = 0;
+  window.requestAnimationFrame = (cb: FrameRequestCallback) => { queueMicrotask(() => cb(0)); return nextFrame++; };
 });
 afterEach(() => {
+  jest.restoreAllMocks();
   window.requestAnimationFrame = raf;
   document.body.innerHTML = "";
 });
@@ -55,6 +62,21 @@ function leafWithStrip() {
 const flush = () => new Promise<void>((r) => setTimeout(r, 0));
 
 describe("w4-p09 — the tabs follow the header", () => {
+  test("a title container hidden by the theme returns the original strip home and can restore it", async () => {
+    const { head, bar, strip } = leafWithStrip(), action = moveToViewHeader(strip, true);
+    try {
+      const title = head.querySelector<HTMLElement>(".view-header-title-container")!;
+      title.classList.add("theme-title-hidden"); await flush(); expect(bar.contains(strip)).toBe(true);
+      title.classList.remove("theme-title-hidden"); await flush(); expect(head.contains(strip)).toBe(true);
+    } finally { action.destroy(); }
+  });
+  test("style changes in view content do not schedule header placement", async () => {
+    const { bar, strip } = leafWithStrip(), content = document.createElement("div"); bar.append(content);
+    const request = jest.spyOn(window, "requestAnimationFrame"), action = moveToViewHeader(strip, true);
+    try {
+      await flush(); request.mockClear(); content.classList.add("view-content-animating"); await flush(); expect(request).not.toHaveBeenCalled();
+    } finally { action.destroy(); request.mockRestore(); }
+  });
   test("F07: the header replaced after the move — update(true) puts the strip into the new one", () => {
     const { leaf, head, strip } = leafWithStrip();
     const action = moveToViewHeader(strip, true);
