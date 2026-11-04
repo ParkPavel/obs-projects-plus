@@ -71,6 +71,8 @@
   import { tabLinkMenu } from "./tabLinkMenu";
   import { detachInherited, inheritFieldLayout } from "./fieldLayout";
   import EmbeddedViewSettings from "./EmbeddedViewSettings.svelte";
+  import { provideTableControlsHost } from "./tableControlsHost";
+  const tableControlsHost = provideTableControlsHost();
   import { initialEmbeddedConfig, embeddedViewDefinition, localTabWithConfig } from "./embeddedView";
 
   export let frame: DataFrame;
@@ -579,6 +581,7 @@
         {readonly}
         on:change={handleSubFilterChange}
       />
+      <div class="ppp-dbc-table-controls" use:tableControlsHost></div>
       {#if $isMobileDevice && project && activeTab?.viewType === "calendar"}
         <button type="button" class="clickable-icon" data-embedded-agenda-toggle
           aria-label={$i18n.t("views.calendar.agenda.title")}
@@ -911,13 +914,17 @@
   /* w4-p10a (N8): views and filter in one row; the strip scrolls, the filter stays. */
   .ppp-dbc-head {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     min-width: 0;
     border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
   }
   .ppp-dbc-head :global(.ppp-view-tab-bar) {
-    flex: 1 1 0;
+    flex: 1 1 8em;
     min-width: 0;
     border-bottom: none;
   }
+  .ppp-dbc-table-controls { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+  .ppp-dbc-table-controls:empty { display: none; }
+  .ppp-dbc-table-controls :global(.ppp-t2-controlbar) { padding: 0; border-bottom: none; }
 </style>

@@ -7,6 +7,8 @@
   import TableSearch from "./TableSearch.svelte";
   import type { DataTableSortCriteria } from "../../types";
   import type { DataRecord } from "src/lib/dataframe/dataframe";
+  import { readTableControlsHost, moveTableControls } from "./tableControlsHost";
+  const controlsHost = readTableControlsHost();
 
   export let sortCriteria: DataTableSortCriteria[] = [];
   export let recordCount = 0;
@@ -27,7 +29,7 @@
   // marked); the field's clear (×) or Escape ends the search.
 </script>
 
-<div class="ppp-t2-controlbar" role="toolbar" aria-label={$i18n.t("views.dashboard.table-v2.controls", { defaultValue: "Table controls" })}>
+<div class="ppp-t2-controlbar" use:moveTableControls={$controlsHost} role="toolbar" aria-label={$i18n.t("views.dashboard.table-v2.controls", { defaultValue: "Table controls" })}>
   {#each sortCriteria as crit (crit.field)}
     <span class="ppp-t2-cb-pill" class:ppp-t2-cb-pill--static={readonly}>
       <Icon name={crit.order === "asc" ? "arrow-up" : "arrow-down"} size="sm" />
@@ -57,6 +59,8 @@
 <style>
   .ppp-t2-controlbar {
     display: flex;
+    flex-wrap: wrap;
+    min-width: 0;
     align-items: center;
     gap: 0.25rem;
     min-height: 2rem;
@@ -66,6 +70,8 @@
 
   .ppp-t2-cb-pill {
     display: inline-flex;
+    min-width: 0;
+    max-width: 100%;
     align-items: center;
     gap: 0.1875rem;
     height: 1.75rem;
@@ -78,6 +84,7 @@
   }
 
   .ppp-t2-cb-pill-label {
+    min-width: 0;
     max-width: 8rem;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -100,6 +107,15 @@
 
   .ppp-t2-cb-spacer {
     flex: 1;
+  }
+
+  @media (pointer: coarse) {
+    .ppp-t2-controlbar :global(.ppp-t2-cb-btn), .ppp-t2-cb-pill-x {
+      min-width: var(--ppp-touch-target-min);
+      min-height: var(--ppp-touch-target-min);
+      flex-shrink: 0;
+    }
+    .ppp-t2-cb-pill { height: auto; }
   }
 
   /* #169/#166: in a narrow widget the label yields space in the widget's own
