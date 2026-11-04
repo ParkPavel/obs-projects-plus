@@ -17,7 +17,7 @@ function filenameDate(id: string, timezone: string): Dayjs | null {
 }
 
 /** Explicit mappings are authoritative. Unconfigured views retain conventional/filename discovery. */
-export function calendarRecordDates(record: DataRecord, mapping: CalendarDateMapping = {}, writeFormat?: string) {
+export function calendarRecordDates(record: DataRecord, mapping: CalendarDateMapping = {}, writeFormat?: string, fallbackStartField = "") {
   const timezone = mapping.timezone ?? "local";
   const parse = (value: unknown): Dayjs | null => parseDateInTimezone(value, timezone, writeFormat);
   function first(names: string[]): Dayjs | null {
@@ -30,7 +30,7 @@ export function calendarRecordDates(record: DataRecord, mapping: CalendarDateMap
   }
   const startDate = mapping.startDateField
     ? parse(record.values[mapping.startDateField])
-    : first(["startDate", "date", "deadline", "dueDate", "scheduled"]) ?? filenameDate(record.id, timezone);
+    : first(["startDate", "date", "deadline", "dueDate", "scheduled", fallbackStartField]) ?? filenameDate(record.id, timezone);
   const endDate = mapping.endDateField
     ? parse(record.values[mapping.endDateField])
     : record.values["endDate"] !== undefined ? parse(record.values["endDate"]) : first(["endDate", "end", "due"]);

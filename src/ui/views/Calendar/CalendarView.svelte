@@ -1293,6 +1293,8 @@
   let cachedProcessedData: ProcessedCalendarData | null = null;
   let lastProcessedKey = '';
   let lastProcessedConfigKey = '';
+  let lastProcessedRecords: typeof records | null = null;
+  let lastProcessedColor: typeof getRecordColor | null = null;
   
   // CRITICAL: Use function-call pattern to break Svelte's self-referential dependency tracking.
   // A $: block that reads lastProcessedVersion/lastProcessedConfigKey as dependencies AND
@@ -1316,21 +1318,25 @@
     if (startField && cfg && recs && fr.records.length > 0) {
       // Cheap change detection: dataVersion increments on every data update,
       // configKey only includes fields that affect processing
-      const configKey = `${cfg.startDateField}|${cfg.endDateField}|${cfg.startTimeField}|${cfg.endTimeField}|${cfg.eventColorField}|${cfg.timezone}|${cfg.startHour}|${cfg.endHour}|${writeFormat}`;
+      const configKey = `${startField}|${cfg.startDateField}|${cfg.endDateField}|${cfg.startTimeField}|${cfg.endTimeField}|${cfg.eventColorField}|${cfg.timezone}|${cfg.startHour}|${cfg.endHour}|${writeFormat}`;
       // The draft's session and revision join the data version as text: a sum
       // of two counters could repeat a key already processed.
       const versionKey = `${dv}|${dk}`;
 
-      if (versionKey !== lastProcessedKey || configKey !== lastProcessedConfigKey) {
+      if (versionKey !== lastProcessedKey || configKey !== lastProcessedConfigKey || fr.records !== lastProcessedRecords || getColor !== lastProcessedColor) {
         lastProcessedKey = versionKey;
         lastProcessedConfigKey = configKey;
-        cachedProcessedData = processCalendarData(fr, cfg, getColor, writeFormat);
+        lastProcessedRecords = fr.records;
+        lastProcessedColor = getColor;
+        cachedProcessedData = processCalendarData(fr, cfg, getColor, writeFormat, startField);
         calendarLogger.debug('[Perf] processCalendarData called', { data: { dataVersion: dv, records: fr.records.length } });
       }
     } else {
       cachedProcessedData = null;
       lastProcessedKey = '';
       lastProcessedConfigKey = '';
+      lastProcessedRecords = null;
+      lastProcessedColor = null;
     }
   }
   
@@ -1847,6 +1853,7 @@
   <div 
     bind:this={calendarRootEl}
     class="calendar-zoom-container"
+    class:calendar-zoom-container--embedded={embedded}
     use:gestureAction={{ handlers: _gestureHandlers }}
     use:ignoreHostSwipe
     on:wheel={handleZoomWheel}
@@ -1991,7 +1998,7 @@
         checkField={booleanField?.name}
         timezone={timezoneValue}
         onRecordClick={handleAgendaRecordClick}
-        onCreateRecord={(date) => handleRecordAdd(date)}
+        onCreateRecord={!readonly && !dataReadOnly ? (date) => handleRecordAdd(date) : undefined}
         visible={agendaVisible}
         collapsed={isAgendaCollapsed(isMobile, config?.agendaOpen)}
         on:toggle={handleAgendaToggle}
@@ -2120,6 +2127,10 @@
 
 
 <style>
+  .calendar-zoom-container--embedded {
+    --ppp-calendar-bottom-spacing: 0rem;
+  }
+
   .calendar-zoom-container {
     display: flex;
     flex-direction: row;

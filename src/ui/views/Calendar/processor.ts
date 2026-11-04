@@ -48,7 +48,8 @@ export class CalendarDataProcessor {
   constructor(
     config: CalendarConfig,
     getRecordColor?: (record: DataRecord) => string | null,
-    private readonly writeFormat?: string
+    private readonly writeFormat?: string,
+    private readonly fallbackStartField?: string
   ) {
     this.config = config;
     this.getRecordColor = getRecordColor ?? null;
@@ -138,7 +139,7 @@ export class CalendarDataProcessor {
   }
   /** Shared with Agenda so mapped dates and selected-day membership agree. */
   private extractDates(record: DataRecord) {
-    return calendarRecordDates(record, this.config, this.writeFormat);
+    return calendarRecordDates(record, this.config, this.writeFormat, this.fallbackStartField);
   }
 
   /**
@@ -463,9 +464,10 @@ export function processCalendarData(
   frame: DataFrame,
   config: CalendarConfig,
   getRecordColor?: (record: DataRecord) => string | null,
-  writeFormat?: string
+  writeFormat?: string,
+  fallbackStartField?: string
 ): ProcessedCalendarData {
-  const processor = new CalendarDataProcessor(config, getRecordColor, writeFormat);
+  const processor = new CalendarDataProcessor(config, getRecordColor, writeFormat, fallbackStartField);
   return processor.process(frame);
 }
 

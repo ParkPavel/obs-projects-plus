@@ -267,6 +267,7 @@
   // DATA PROCESSING
   interface AgendaFields {
     dates: CalendarDateMapping;
+    preferredDate: string | undefined;
     title: string | undefined;
     time: string | undefined;
     color: string | undefined;
@@ -335,7 +336,7 @@
         : record.id.split('/').pop()?.replace('.md', '') ?? record.id;
       const title = stripWikilinks(rawTitle);
       
-      const { startDate, endDate } = calendarRecordDates(record, mapping.dates, writeFormat);
+      const { startDate, endDate } = calendarRecordDates(record, mapping.dates, writeFormat, mapping.preferredDate);
       const date = startDate ?? endDate;
       
       // Check if task is completed
@@ -412,7 +413,7 @@
   
   $: agendaDates = dateMapping ?? { startDateField: dateField, endDateField, timezone };
   $: agenda = buildAgenda(records, selectedDate, project.dateFormat?.writeFormat,
-    { dates: agendaDates, title: titleField, time: timeField, color: colorField, check: checkField }, labels.allDayTime);
+    { dates: agendaDates, preferredDate: dateField, title: titleField, time: timeField, color: colorField, check: checkField }, labels.allDayTime);
   // Custom lists are local views of the selected day, not independent vault
   // queries. Reuse the calendar's parsing/timezone and multi-day classification
   // before the list applies its own conditions (date AND list conditions).
@@ -1020,13 +1021,10 @@
     position: absolute;
     top: 0;
     right: 0;
-    /* ios-s1: the drawer stops where Obsidian's floating navbar begins, so its
-       own bottom controls stay tappable. The host's `--view-bottom-spacing`
-       (Obsidian app.css, `.is-phone`; 0 by default, navbar + home-indicator
-       inset with the floating nav — what Bases reserves) is the obstruction;
-       0/unset on desktop and tablets. Because the box itself is bounded, the
-       list inside no longer pads for the bar (see `.agenda.mobile .content`). */
-    bottom: var(--view-bottom-spacing, 0);
+    /* Embedded calendars reserve the host bar once, outside the widget.
+       A negative host inset during keyboard animation must not grow this box. */
+    bottom: var(--ppp-calendar-bottom-spacing, var(--view-bottom-spacing, 0));
+    max-height: 100%;
     width: 85%;
     max-width: 20rem;
     min-width: auto;
@@ -1052,7 +1050,8 @@
     inset: 0;
     /* ios-s1: level with the drawer's bottom — the strip under Obsidian's bar
        belongs to the host, a tap there must not be read as "outside". */
-    bottom: var(--view-bottom-spacing, 0);
+    bottom: var(--ppp-calendar-bottom-spacing, var(--view-bottom-spacing, 0));
+    max-height: 100%;
     /* Layer scale, not a raw number: --agenda-z-overlay is declared on .agenda and the
        scrim is its sibling, so read the global token (30) directly; still below the drawer (50) */
     z-index: var(--ppp-z-overlay, 30);
@@ -1068,7 +1067,6 @@
   /* Landscape orientation: narrower sidebar on mobile */
   @media (max-width: 48rem) and (orientation: landscape) { /* 768 at 16 base */
     .agenda.mobile {
-      width: 50vw;
       max-width: 16rem;
     }
   }
@@ -1076,7 +1074,6 @@
   /* Portrait orientation: wider sidebar for better touch targets */
   @media (max-width: 48rem) and (orientation: portrait) { /* 768 at 16 base */
     .agenda.mobile {
-      width: 85vw;
       max-width: 22rem;
     }
   }
@@ -1322,7 +1319,7 @@
   .content::after {
     content: "";
     display: block;
-    height: var(--view-bottom-spacing, 0);
+    height: var(--ppp-calendar-bottom-spacing, var(--view-bottom-spacing, 0));
   }
 
   /* Categories */

@@ -656,7 +656,7 @@
   .projects-main :global(.view-layer--month.view-layer--active),
   .projects-main :global(.view-layer--year.view-layer--active) {
     box-sizing: border-box;
-    padding-bottom: var(--view-bottom-spacing, 0);
+    padding-bottom: var(--ppp-calendar-bottom-spacing, var(--view-bottom-spacing, 0));
   }
 
   /* ios-s1: on touch the settings panel is capped at the window below the

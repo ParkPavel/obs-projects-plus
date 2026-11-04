@@ -1071,7 +1071,7 @@
        fit, and scroll past it by exactly that much when they do not.
        0/unset on desktop and tablets. */
     box-sizing: border-box;
-    padding-bottom: var(--view-bottom-spacing, 0);
+    padding-bottom: var(--ppp-calendar-bottom-spacing, var(--view-bottom-spacing, 0));
   }
   
   .infinite-horizontal-calendar-wrapper.with-timeline {

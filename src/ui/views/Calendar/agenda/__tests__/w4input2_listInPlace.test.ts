@@ -75,6 +75,13 @@ test("the desktop header exposes one named create action and passes its selected
 });
 
 describe("custom agenda lists intersect the selected day with their conditions", () => {
+  it("uses an inferred custom schema date while keeping unconfigured discovery available", async () => {
+    const records = [{ id: "custom.md", values: { title: "Custom", visit: "2026-10-26" } }];
+    const view = render(Sidebar, { props: { project: { id: "p", name: "Project", agenda: { mode: "custom", custom: { lists: [list("all", "All", 0)] } } },
+      currentDate: dayjs("2026-10-26"), records, fields: [], titleField: "title", dateField: "visit", dateMapping: {} } });
+    try { await settle(); expect(Array.from(view.container.querySelectorAll(".item-title"), element => element.textContent)).toEqual(["Custom"]); }
+    finally { view.unmount(); }
+  });
   it("an end-only event belongs to the same selected day the calendar renders", async () => {
     const records = [{ id: "end-only.md", values: { title: "End only", finish: "2026-10-26" } }];
     const view = render(Sidebar, { props: { project: { id: "p", name: "Project", agenda: { mode: "custom", custom: { lists: [list("all", "All", 0)] } } },
