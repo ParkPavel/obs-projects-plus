@@ -2,21 +2,25 @@ import { getContext, setContext } from "svelte";
 import { readable, writable, type Readable } from "svelte/store";
 
 export const TABLE_CONTROLS_HOST = Symbol("table-controls-host");
+const BLOCK_HEADER_CONTROLS_HOST = Symbol("block-header-controls-host");
 
 /** Each block provides its own header; standalone tables keep their local toolbar. */
-export function provideTableControlsHost() {
+export function provideTableControlsHost(key = TABLE_CONTROLS_HOST) {
   const host = writable<HTMLElement | null>(null);
   let current: HTMLElement | null = null;
-  setContext(TABLE_CONTROLS_HOST, host);
+  setContext(key, host);
   return (node: HTMLElement) => {
     current = node; host.set(node);
     return { destroy() { if (current === node) { current = null; host.set(null); } } };
   };
 }
 
-export function readTableControlsHost(): Readable<HTMLElement | null> {
-  return getContext<Readable<HTMLElement | null>>(TABLE_CONTROLS_HOST) ?? readable(null);
+export function readTableControlsHost(key = TABLE_CONTROLS_HOST): Readable<HTMLElement | null> {
+  return getContext<Readable<HTMLElement | null>>(key) ?? readable(null);
 }
+
+export const provideBlockHeaderControlsHost = () => provideTableControlsHost(BLOCK_HEADER_CONTROLS_HOST);
+export const readBlockHeaderControlsHost = () => readTableControlsHost(BLOCK_HEADER_CONTROLS_HOST);
 
 /** Move the original controls without copying their input or their table's search state. */
 export function moveTableControls(node: HTMLElement, initial: HTMLElement | null) {

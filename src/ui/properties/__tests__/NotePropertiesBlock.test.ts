@@ -113,6 +113,96 @@ afterEach(() => {
 });
 
 describe("i3-props NotePropertiesBlock", () => {
+  it("adding a list item preserves primitive types, null and commas through the actual writer and YAML", async () => {
+    const fm = { mixed: [0, false, null, "0", "Smith, John"] }, view = setup(fm);
+    try {
+      await tick(); (row("mixed").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+      const input = editorOf("mixed")!; type(input, "new, item"); key(input, "Enter"); await flush();
+      const expected = [0, false, null, "0", "Smith, John", "new, item"];
+      expect(fm.mixed).toEqual(expected);
+      const yaml = jest.requireActual("../../../../node_modules/yaml/dist/index.js"); expect(yaml.parse(yaml.stringify(fm)).mixed).toEqual(expected);
+      expect(view.processFrontMatter).toHaveBeenCalledTimes(1);
+    } finally { view.unmount(); }
+  });
+
+  it("a list shows and removes null by position without conflating numeric zero and text zero", async () => {
+    const fm = { mixed: [0, false, null, "0"] }, view = setup(fm);
+    try {
+      await tick(); (row("mixed").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+      const buttons = row("mixed").querySelectorAll<HTMLButtonElement>(".ppp-chips__remove");
+      expect(buttons).toHaveLength(4); buttons[2]!.click(); await flush();
+      expect(fm.mixed).toEqual([0, false, "0"]);
+    } finally { view.unmount(); }
+  });
+
+  it("list suggestions use the original input and preserve a selected raw value", async () => {
+    const raw = " [[People/A|A]] ", fm = { mixed: ["own"] }, view = setup(fm, { mixed: [raw] });
+    try {
+      await tick(); (row("mixed").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+      const input = editorOf("mixed")!; expect(input).toHaveAttribute("role", "combobox");
+      const option = Array.from(document.querySelectorAll<HTMLElement>('[role="option"]')).find(item => item.textContent === raw)!;
+      expect(option).toBeDefined(); option.click(); await flush();
+      expect(fm.mixed).toEqual(["own", raw]); expect(editorOf("mixed")).toBe(input);
+      expect(document.activeElement).toBe(input);
+    } finally { view.unmount(); }
+  });
+
+  it("leaving a composing list editor does not write or close before composition ends", async () => {
+    const fm = { mixed: ["own"] }, view = setup(fm);
+    try {
+      await tick(); (row("mixed").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+      const input = editorOf("mixed")!;
+      input.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true })); type(input, "途中");
+      input.blur(); await flush();
+      expect(view.processFrontMatter).not.toHaveBeenCalled(); expect(editorOf("mixed")).toBe(input);
+      input.value = "最終"; input.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true })); await flush();
+      expect(fm.mixed).toEqual(["own", "最終"]); expect(view.processFrontMatter).toHaveBeenCalledTimes(1);
+      expect(editorOf("mixed")).toBeNull();
+    } finally { view.unmount(); }
+  });
+
+  it("an earlier queued list acknowledgement cannot erase later accepted chips", async () => {
+    const fm = { mixed: ["own"] }, view = setup(fm);
+    let first = () => {}, second = () => {};
+    const blockedFirst = new Promise<void>(resolve => { first = resolve; });
+    const blockedSecond = new Promise<void>(resolve => { second = resolve; });
+    try {
+      await tick(); (row("mixed").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+      const write = view.processFrontMatter.getMockImplementation()!;
+      view.processFrontMatter.mockImplementationOnce(async (...args) => { await blockedFirst; return write(...args); });
+      view.processFrontMatter.mockImplementationOnce(async (...args) => { await blockedSecond; return write(...args); });
+      const input = editorOf("mixed")!;
+      type(input, "A"); key(input, "Enter"); await flush(); type(input, "B"); key(input, "Enter"); await flush();
+      first(); await flush(); type(input, "C"); key(input, "Enter"); await flush(); second(); await flush();
+      expect(fm.mixed).toEqual(["own", "A", "B", "C"]);
+    } finally { first(); second(); await flush(); view.unmount(); }
+  });
+
+  it("removing a just-added chip queues the return to the original list", async () => {
+    const fm = { mixed: ["own"] }, view = setup(fm); let release = () => {};
+    const blocked = new Promise<void>(resolve => { release = resolve; });
+    try {
+      await tick(); (row("mixed").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+      const write = view.processFrontMatter.getMockImplementation()!;
+      view.processFrontMatter.mockImplementationOnce(async (...args) => { await blocked; return write(...args); });
+      const input = editorOf("mixed")!; type(input, "A"); key(input, "Enter"); await flush();
+      row("mixed").querySelectorAll<HTMLButtonElement>(".ppp-chips__remove")[1]!.click(); await flush();
+      release(); await flush(); expect(fm.mixed).toEqual(["own"]);
+    } finally { release(); await flush(); view.unmount(); }
+  });
+
+  it("a list source refresh preserves its original input, private draft and caret", async () => {
+    const fm = { mixed: ["own"] }, other = { mixed: ["before"] }, view = setup(fm, other);
+    try {
+      await tick(); (row("mixed").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+      const input = editorOf("mixed")!; type(input, "draft"); input.setSelectionRange(1, 3);
+      other.mixed = ["draft source"]; view.notifyChanged(new TFile("Notes/b.md"));
+      await waitFor(() => expect(Array.from(document.querySelectorAll('[role="option"]')).some(item => item.textContent === "draft source")).toBe(true));
+      expect(editorOf("mixed")).toBe(input); expect(input.value).toBe("draft");
+      expect([input.selectionStart, input.selectionEnd]).toEqual([1, 3]); expect(document.activeElement).toBe(input);
+      expect(view.getMarkdownFiles).toHaveBeenCalledTimes(2); expect(view.processFrontMatter).not.toHaveBeenCalled();
+    } finally { view.unmount(); }
+  });
   it("leaving an untouched property after an external metadata refresh cannot restore its old value", async () => {
     const fm={value:"original"},view=setup(fm);
     try {

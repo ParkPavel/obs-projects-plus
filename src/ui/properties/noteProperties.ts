@@ -18,6 +18,7 @@ import {
   parseCellInput,
   type CellEditType,
   type CellValue,
+  type CellListItem,
 } from "src/lib/database/cellEditor";
 import { parseTypedDate } from "src/lib/helpers/typedDate";
 import { formatWikilink, parseWikilink } from "src/lib/engine/wikilink";
@@ -122,10 +123,10 @@ export function chipItem(raw: string, type: ListType): string | null {
  * `[[path]]` (vault path without `.md`). A note the list already links to —
  * by any alias or spelling of the same path — leaves the list unchanged.
  */
-export function withPickedRelation(items: readonly string[], path: string): string[] {
+export function withPickedRelation(items: readonly CellListItem[], path: string): CellListItem[] {
   const target = path.trim();
   if (target === "") return [...items];
-  const present = items.some((item) => parseWikilink(item)?.path === target || item.trim() === target);
+  const present = items.some((item) => typeof item === "string" && (parseWikilink(item)?.path === target || item.trim() === target));
   return present ? [...items] : [...items, formatWikilink({ path: target })];
 }
 
@@ -138,16 +139,21 @@ export function listItems(value: unknown): string[] {
   return [];
 }
 
+/** The editor retains the actual flat YAML members; display text is not storage. */
+export function editableListItems(value: unknown): CellListItem[] {
+  if (Array.isArray(value)) return value.filter((item): item is CellListItem => item === null || ["string", "number", "boolean"].includes(typeof item));
+  return value !== "" && (typeof value === "string" || typeof value === "number" || typeof value === "boolean") ? [value] : [];
+}
+
 /**
  * i3-props: what a chip edit writes. The array goes to the parser as an
  * array, so no item is re-split on commas; an unchanged list writes nothing.
  */
-export function planListWrite(current: unknown, next: readonly string[], type: ListType): ValueWritePlan {
-  const parsed = parseCellInput(next, type);
-  if (!parsed.ok) return { kind: "invalid", i18nKey: parsed.error.i18nKey };
-  const before = parseCellInput(listItems(current), type);
-  if (before.ok && JSON.stringify(before.value) === JSON.stringify(parsed.value)) return { kind: "skip" };
-  return { kind: "write", value: parsed.value };
+export function planListWrite(current: unknown, next: readonly CellListItem[], _type: ListType): ValueWritePlan {
+  // Chips are already individual canonical items, never CSV input. Re-parsing
+  // the entire array would stringify untouched numbers and discard nulls.
+  if (JSON.stringify(editableListItems(current)) === JSON.stringify(next)) return { kind: "skip" };
+  return { kind: "write", value: [...next] };
 }
 
 /** i3-props: the folder whose notes count as "this project's notes" for a file. */

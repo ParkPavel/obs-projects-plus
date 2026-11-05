@@ -12,7 +12,7 @@
   import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { formatTypedDate, parseTypedDate } from "src/lib/helpers/typedDate";
-  import TextField from "./TextField.svelte";
+  import ComboField from "./ComboField.svelte";
 
   export let value: Date | null = null;
   /** Date and time («14.10.2026 09:30») instead of a day. */
@@ -21,6 +21,8 @@
   export let readOnly = false;
   export let required = false;
   export let ariaLabel: string | undefined = undefined;
+  export let preserveInvalidOnBlur = false;
+  export let suggestions: string[] = [];
 
   const dispatch = createEventDispatcher<{ change: Date | null; input: Date | null; blur: void }>();
 
@@ -29,11 +31,21 @@
   $: text = shown ? formatTypedDate(shown, withTime) : "";
 
   let pickerEl: HTMLInputElement | null = null;
-  let textField: TextField | undefined, alive = true;
+  let textField: ComboField | undefined, alive = true;
   onDestroy(() => { alive = false; });
   /** Explicit containing-form acceptance validates this original input first. */
   export function commitDraft(): boolean { return disabled || (!readOnly && !!textField?.commitForNavigation()); }
+  export function focus(): void { textField?.focus(); }
+  export function isComposing(): boolean { return textField?.isComposing() ?? false; }
+  export function reset(next: Date | null = null): void {
+    shown = next;
+    textField?.reset(next ? formatTypedDate(next, withTime) : "");
+  }
   $: nativeValue = shown ? toNative(shown) : "";
+  $: options = [...new Set(suggestions)].flatMap(raw => {
+    const parsed = parseTypedDate(raw);
+    return parsed.kind === "date" ? [{ id: raw, label: formatTypedDate(parsed.date, withTime), value: raw }] : [];
+  });
 
   function toNative(d: Date): string {
     const p = (n: number) => String(n).padStart(2, "0");
@@ -52,7 +64,7 @@
     dispatch("input", next);
   }
 
-  function onCommit(e: CustomEvent<{ value: string; reason: "enter" | "blur" | "tab" }>): void {
+  function onCommit(e: CustomEvent<{ value: string }>): void {
     if (!alive || disabled || readOnly) return;
     const parsed = parseTypedDate(e.detail.value);
     if (parsed.kind === "invalid") return;
@@ -99,12 +111,17 @@
 </script>
 
 <span class="ppp-date-field" class:ppp-date-field--disabled={disabled} bind:this={rootEl} on:focusout={onFocusOut}>
-  <TextField
+  <ComboField
     bind:this={textField}
     value={text}
     {disabled}
     {readOnly}
     {required}
+    {preserveInvalidOnBlur}
+    {options}
+    allowCustom
+    allowEmpty={!required}
+    commitOnDestroy={false}
     {ariaLabel}
     inputMode="text"
     inputClass="ppp-date-field__text"

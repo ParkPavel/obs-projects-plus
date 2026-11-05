@@ -1,12 +1,10 @@
 ﻿import dayjs from "dayjs";
-import { produce } from "immer";
 
 
 import { get } from "svelte/store";
 import { v4 as uuidv4 } from "uuid";
 
 import {
-  isDate,
   DataFieldType,
   type DataField,
   type DataRecord,
@@ -316,28 +314,7 @@ export function doUpdateRecord(
     E.map((frontmatter) => {
       return Object.fromEntries(
         Object.entries(keys ? written : { ...defaults, ...frontmatter, ...written })
-          .map((entry) => {
-            const value = entry[1];
-            if (value instanceof Date) {
-              const isDatetime = fields.find(
-                (field) =>
-                  field.name === entry[0] &&
-                  field.type === DataFieldType.Date &&
-                  (field.typeConfig?.time ||
-                    value.getHours() ||
-                    value.getMinutes() ||
-                    value.getSeconds() ||
-                    value.getMilliseconds())
-              );
-
-              return produce(entry, (draft) => {
-                draft[1] = dayjs(value).format(
-                  isDatetime ? "YYYY-MM-DDTHH:mm" : "YYYY-MM-DD"
-                );
-              });
-            }
-            return entry;
-          })
+          .map(([key, value]) => [key, encodeRecordValue(value, fields.find(field => field.name === key))] as const)
           .filter(
             (entry) =>
               !fields.find((field) => field.name === entry[0] && field.derived)
@@ -370,21 +347,17 @@ export function applyRecordToFrontmatter(
     const field = fields.find((f) => f.name === key);
     if (field?.derived) continue;
 
-    if (isDate(value)) {
-      const isDatetime =
-        field?.type === DataFieldType.Date &&
-        (field.typeConfig?.["time"] ||
-          value.getHours() ||
-          value.getMinutes() ||
-          value.getSeconds() ||
-          value.getMilliseconds());
-      frontmatter[key] = dayjs(value).format(
-        isDatetime ? "YYYY-MM-DDTHH:mm" : "YYYY-MM-DD",
-      );
-    } else {
-      frontmatter[key] = value;
-    }
+    frontmatter[key] = encodeRecordValue(value, field);
   }
+}
+
+/** Repeated members use exactly the same local date/time policy as scalars. */
+function encodeRecordValue(value: unknown, field?: DataField): unknown {
+  if (Array.isArray(value)) return value.map(item => encodeRecordValue(item, field));
+  if (!(value instanceof Date)) return value;
+  const withTime = field?.type === DataFieldType.Date && (field.typeConfig?.time ||
+    value.getHours() || value.getMinutes() || value.getSeconds() || value.getMilliseconds());
+  return dayjs(value).format(withTime ? "YYYY-MM-DDTHH:mm" : "YYYY-MM-DD");
 }
 
 export function doAddField(

@@ -5,109 +5,92 @@
    * adds the item and empties the field; leaving adds what is typed and
    * closes it, Escape closes it.
    */
-  import { tick } from "svelte";
   import { Tag } from "obsidian-svelte";
   import IconButton from "src/ui/components/IconButton/IconButton.svelte";
   import {
-    isString,
+    DataFieldType,
     type DataValue,
     type Optional,
   } from "src/lib/dataframe/dataframe";
 
   import { i18n } from "src/lib/stores/i18n";
-  import ComboField from "src/ui/components/fields/ComboField.svelte";
-  import { namesToOptions } from "src/ui/components/fields/comboOptions";
+  import { formatTypedDate } from "src/lib/helpers/typedDate";
+  import TagListAdd from "./TagListAdd.svelte";
   import RichTextTag from "src/ui/components/TagList/RichTextTag.svelte";
 
   export let values: Optional<DataValue>[];
   export let richText: boolean = false;
   export let edit: boolean = false;
   export let suggestions: string[] = [];
+  export let type: DataFieldType = DataFieldType.String;
+  export let withTime = false;
+  export let allowCustom = true;
 
   export let onChange: (values: Optional<DataValue>[]) => void = () => {};
 
-  $: stringValues = values.flatMap((value, index) => isString(value) ? [{ value, index }] : []);
-  $: suggestionOptions = namesToOptions(suggestions);
+  let list = [...values], parent = values;
+  const keyOf = (next: Optional<DataValue>[]): string => JSON.stringify(next.map(item => item instanceof Date ? ["date", item.getTime()] : ["value", item]));
+  let parentKey = keyOf(values);
+  let pending: string[] = [];
+  function adopt(next: Optional<DataValue>[]): void {
+    if (next === parent) return;
+    parent = next;
+    const key = keyOf(next);
+    if (key === parentKey) return;
+    parentKey = key;
+    const acknowledgement = pending.indexOf(key);
+    if (acknowledgement >= 0) {
+      pending.splice(0, acknowledgement + 1);
+      if (pending.length) return;
+    } else pending = [];
+    list = [...next];
+  }
+  $: adopt(values);
+  function change(next: Optional<DataValue>[]): void {
+    if (!edit) return;
+    list = next;
+    pending.push(keyOf(next));
+    onChange(next);
+  }
+
+  function label(value: Optional<DataValue>): string {
+    return value instanceof Date ? formatTypedDate(value, withTime) : value == null ? "—" : String(value);
+  }
 
   let adding = false;
-  let suggestionField: ComboField | null = null;
-  let addEl: HTMLElement | null = null;
-  let suggestedDraft = "";
-
-  async function startAdding(): Promise<void> {
-    suggestedDraft = "";
-    adding = true;
-    await tick();
-    suggestionField?.focus();
-  }
-
-  function addSuggested(e: CustomEvent<{ value: string; reason: string }>): void {
-    if (!edit) return;
-    const selected = e.detail.reason === "select" || suggestionOptions.some(option => option.id === e.detail.value);
-    const item = selected ? e.detail.value : e.detail.value.trim();
-    if (item.trim()) onChange([...values, item]);
-    if ((e.detail.reason === "enter" || e.detail.reason === "select") && item) {
-      suggestedDraft = "";
-      suggestionField?.reset("");
-    } else if (e.detail.reason !== "enter" && e.detail.reason !== "select") {
-      adding = false;
-    }
-  }
-
-  // The blur commit runs first; the field closes once the focus has left it.
-  function closeAfterBlur(): void {
-    void Promise.resolve().then(() => {
-      if (!addEl?.contains(addEl.ownerDocument.activeElement)) adding = false;
-    });
-  }
 </script>
 
 <div class:edit>
   {#if edit}
-    {#each stringValues as { value, index }}
+    {#each list as value, index}
       <Tag>
-        {value}
+        {label(value)}
         <IconButton
           icon="cross"
           size="xs"
           nopadding
-          tooltip={`${$i18n.t("common.remove")}: ${value}`}
+          tooltip={`${$i18n.t("common.remove")}: ${label(value)}`}
           onClick={() => {
-            if (edit) onChange(values.filter((_, j) => index !== j));
+            change(list.filter((_, j) => index !== j));
           }}
         />
       </Tag>
     {/each}
     {#if adding}
-      <span class="tag-list-add" bind:this={addEl} on:focusout={closeAfterBlur}>
-          <ComboField
-            bind:this={suggestionField}
-            value={suggestedDraft}
-            options={suggestionOptions}
-            allowCustom
-            focusOnMount
-            commitOnDestroy={false}
-            ariaLabel={$i18n.t("common.add-item")}
-            placeholder={$i18n.t("common.add-item")}
-            on:draftChange={(e) => (suggestedDraft = e.detail)}
-            on:commit={addSuggested}
-            on:cancel={() => {
-              suggestedDraft = "";
-              adding = false;
-            }}
-          />
-      </span>
+      <TagListAdd {type} {withTime} {suggestions} {allowCustom}
+        on:add={event => change([...list, event.detail])}
+        on:close={() => (adding = false)} />
     {:else}
       <IconButton
         icon="plus"
         nopadding
         tooltip={$i18n.t("common.add-item")}
-        onClick={() => void startAdding()}
+        onClick={() => (adding = true)}
       />
     {/if}
   {:else}
     {#each values as value}
-      <RichTextTag {richText} value={value?.toString() ?? ""} />
+      <RichTextTag {richText} value={label(value)} />
     {/each}
   {/if}
 </div>
@@ -125,13 +108,4 @@
     flex-wrap: wrap;
   }
 
-  .tag-list-add {
-    flex: 1 1 8rem;
-    min-width: 0;
-  }
-
-  .tag-list-add :global(.ppp-combo),
-  .tag-list-add :global(.ppp-combo-input) {
-    width: 100%;
-  }
 </style>

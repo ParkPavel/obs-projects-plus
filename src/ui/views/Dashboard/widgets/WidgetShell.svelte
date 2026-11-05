@@ -188,6 +188,11 @@
   }
 
   .ppp-widget-host--collapsed { min-height: auto; }
+  .ppp-widget-header :global(.ppp-widget-view-controls) {
+    display: flex; flex: 1 1 12em; min-width: 0; max-width: 100%;
+  }
+  .ppp-widget-header :global(.ppp-widget-view-controls:empty) { display: none; }
+  .ppp-widget-header :global(.ppp-dbc-head) { flex: 1; width: 100%; }
 
   /* ios-l1 L2: badges yield, the title keeps a floor, then wrap — never overflow. */
   .ppp-widget-header {

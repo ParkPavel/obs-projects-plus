@@ -71,8 +71,9 @@
   import { tabLinkMenu } from "./tabLinkMenu";
   import { detachInherited, inheritFieldLayout } from "./fieldLayout";
   import EmbeddedViewSettings from "./EmbeddedViewSettings.svelte";
-  import { provideTableControlsHost } from "./tableControlsHost";
+  import { provideTableControlsHost, readBlockHeaderControlsHost, moveTableControls } from "./tableControlsHost";
   const tableControlsHost = provideTableControlsHost();
+  const blockHeaderControlsHost = readBlockHeaderControlsHost();
   import { initialEmbeddedConfig, embeddedViewDefinition, localTabWithConfig } from "./embeddedView";
 
   export let frame: DataFrame;
@@ -563,7 +564,7 @@
     </EmptyState>
   {:else}
     <!-- w4-p10a (N8): the block's views and its filter share one row. -->
-    <div class="ppp-dbc-head">
+    <div class="ppp-dbc-head" class:ppp-dbc-head--docked={!!$blockHeaderControlsHost} use:moveTableControls={$blockHeaderControlsHost}>
       <ViewTabBar
         {tabs}
         {activeTabId}
@@ -924,6 +925,7 @@
     min-width: 0;
     border-bottom: none;
   }
+  .ppp-dbc-head--docked { border-bottom: none; }
   .ppp-dbc-table-controls { flex: 0 1 auto; min-width: 0; max-width: 100%; }
   .ppp-dbc-table-controls:empty { display: none; }
   .ppp-dbc-table-controls :global(.ppp-t2-controlbar) { padding: 0; border-bottom: none; }

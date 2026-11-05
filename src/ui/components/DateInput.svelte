@@ -15,10 +15,11 @@
    * (#158 C1/C3) has no other way to stop a date picker from writing.
    */
   export let disabled: boolean = false;
+  export let suggestions: string[] = [];
 </script>
 
 <span class="ppp-date-input" class:embed>
-  <DateField {value} {disabled} on:change on:input on:blur />
+  <DateField {value} {disabled} {suggestions} on:change on:input on:blur />
 </span>
 
 <style>

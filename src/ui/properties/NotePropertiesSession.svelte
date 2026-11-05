@@ -50,7 +50,7 @@
   import { reorderKeysIn } from "src/lib/visualizer/propertyKeys";
   import { buildLinkHref } from "src/lib/visualizer/linkRender";
   import { openContextMenu, type ContextMenuEntry } from "src/lib/contextMenu";
-  import type { CellEditType, CellValue } from "src/lib/database/cellEditor";
+  import type { CellEditType, CellValue, CellListItem } from "src/lib/database/cellEditor";
   import { writeCellValue } from "src/lib/database/cellEditorWriter";
   import { isWikilink, stripToDisplay, stripToPath } from "src/lib/engine/wikilink";
   import { lookupInverse, type InverseIndex } from "src/lib/relations/inverseIndex";
@@ -73,6 +73,7 @@
     isNestedValue,
     isReservedPropertyKey,
     listItems,
+    editableListItems,
     noteScopeFor,
     parseStoredDate,
     planListWrite,
@@ -143,7 +144,10 @@
   let dropIndex: number | null = null;
 
   // i3-props: one queue for every write of this block, in the order asked.
-  const queue = createWriteQueue(undefined, () => {
+  let writesPending = false;
+  const acceptedLists = new Map<string, CellListItem[]>();
+  let suggestionRevision = 0;
+  const queue = createWriteQueue(busy => (writesPending = busy), () => {
     new Notice(get(i18n).t("modals.note.edit.save-error"));
   });
   // i3-final: other notes' values, kept until the metadata cache reports a change.
@@ -252,14 +256,21 @@
   }
 
   function optionsFor(entry: OverlayedEntry, type: CellEditType): ComboOption[] {
+    if (isListType(type)) return namesToOptions(usedValues(entry.key, "edit"));
     return namesToOptions(usedValues(entry.key, "edit").filter(value => planValueWrite(null, value, type).kind !== "invalid"));
   }
 
   function refreshChoiceOptions(): void {
-    if (!isCurrent() || !editingKey || !editingType || isListType(editingType)) return;
+    suggestionRevision += 1;
+    if (!isCurrent() || !editingKey || !editingType) return;
     const entry = entries.find(item => item.key === editingKey);
     if (entry && editable(entry, editingType)) choiceOptions = optionsFor(entry, editingType);
   }
+  function dateSources(current: OverlayedEntry[], types: Record<string, PropertyType>, _revision: number): Record<string, string[]> {
+    return Object.fromEntries(current.filter(entry => ["date", "datetime"].includes(resolveType(entry.key, entry.value, types)))
+      .map(entry => [entry.key, usedValues(entry.key, "edit")]));
+  }
+  $: dateSuggestions = dateSources(entries, typeOverrides, suggestionRevision);
 
   // ── Keyboard: rows ───────────────────────────────────────
   async function focusRow(key: string, grip = false): Promise<void> {
@@ -437,7 +448,7 @@
   // ── Value editing ────────────────────────────────────────
   async function startEdit(entry: OverlayedEntry, type: PropertyType): Promise<void> {
     if (!isCurrent() || !editable(entry, type) || type === "boolean" || type === "date" || type === "datetime") return;
-    choiceOptions = isListType(type) ? [] : optionsFor(entry, type);
+    choiceOptions = optionsFor(entry, type);
     editSession += 1;
     editRevision = 0;
     pendingValueWrite = null;
@@ -494,9 +505,12 @@
     return (draft) => planValueWrite(null, draft, type).kind !== "invalid";
   }
 
-  async function commitList(entry: OverlayedEntry, type: ListType, next: string[]): Promise<void> {
-    const plan = planListWrite(entry.value, next, type);
-    if (plan.kind === "write") await writeKey(entry.key, plan.value);
+  async function commitList(entry: OverlayedEntry, type: ListType, next: CellListItem[]): Promise<void> {
+    const plan = planListWrite(acceptedLists.get(entry.key) ?? entry.value, next, type);
+    if (plan.kind !== "write") return;
+    acceptedLists.set(entry.key, next);
+    await writeKey(entry.key, plan.value);
+    if (acceptedLists.get(entry.key) === next) acceptedLists.delete(entry.key);
   }
 
   /**
@@ -505,7 +519,7 @@
    * the chip edit; the chosen note is written to this property and the edit
    * resumes on it, so several notes can be added in a row.
    */
-  function pickRelationItem(entry: OverlayedEntry, current: string[]): void {
+  function pickRelationItem(entry: OverlayedEntry, current: CellListItem[]): void {
     if (!isCurrent()) return;
     const key = entry.key;
     new RelationPickerModal(
@@ -910,6 +924,7 @@
               >
                 <DateField
                   value={parseStoredDate(entry.value)}
+                  suggestions={dateSuggestions[entry.key] ?? []}
                   withTime={type === "datetime"}
                   ariaLabel={entry.key}
                   on:change={(e) => commitDate(entry, type, e.detail)}
@@ -917,7 +932,9 @@
               </div>
             {:else if canEdit && editingKey === entry.key && isListType(type)}
               <ChipsEditor
-                items={listItems(entry.value)}
+                items={editableListItems(entry.value)}
+                suggestions={choiceOptions.map(option => option.value ?? option.label)}
+                {writesPending}
                 {type}
                 ariaLabel={entry.key}
                 pickable={type === "relation"}

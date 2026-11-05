@@ -231,7 +231,7 @@
 <div class="field-control-wrapper">
   {#if field.derived || field.type === DataFieldType.Formula || field.type === DataFieldType.Rollup || field.type === DataFieldType.AutoTime || !!field.typeConfig?.rollup}
     <span class="field-computed-value">{formatDisplayValue(value) || "—"}</span>
-  {:else if field.type === DataFieldType.Boolean}
+  {:else if field.type === DataFieldType.Boolean && !field.repeated}
     <Switch
       checked={isBoolean(value) ? value : false}
       disabled={readonly}
@@ -239,12 +239,15 @@
     />
     
   {:else if (field.type === DataFieldType.List || field.repeated) && isOptionalList(value)}
-    {#key JSON.stringify([field.name, field.type, readonly])}
+    {#key JSON.stringify([field.name, field.type, readonly, !!field.typeConfig?.time])}
     <TagList
       edit={!readonly}
       values={value ?? []}
       richText={field.typeConfig?.richText ?? false}
       suggestions={options.map((option) => option.label)}
+      type={field.type}
+      withTime={!!field.typeConfig?.time}
+      allowCustom={declaredChoices === null}
       {onChange}
     />
     {/key}
@@ -391,6 +394,7 @@
     {#if field.typeConfig?.time}
       <DatetimeInput
         value={isDate(value) ? value : null}
+        {suggestions}
         disabled={readonly}
         on:input={({ detail: v }) => (cachedValue = v)}
         on:blur={() => commitDate(cachedValue)}
@@ -398,6 +402,7 @@
     {:else}
       <DateInput
         value={isDate(value) ? value : null}
+        {suggestions}
         disabled={readonly}
         on:change={({ detail: v }) => (cachedValue = v)}
         on:blur={() => {

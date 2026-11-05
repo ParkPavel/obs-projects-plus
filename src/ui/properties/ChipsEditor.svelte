@@ -19,14 +19,20 @@
    * typed is added first); the consumer opens the picker and writes the
    * chosen note. Typing a name stays the fallback.
    */
-  import { createEventDispatcher, onMount } from "svelte";
+  import { createEventDispatcher, onMount, onDestroy } from "svelte";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { stripToDisplay } from "src/lib/engine/wikilink";
-  import TextField from "src/ui/components/fields/TextField.svelte";
+  import ComboField from "src/ui/components/fields/ComboField.svelte";
+  import { namesToOptions } from "src/ui/components/fields/comboOptions";
+  import { isImeKey } from "src/ui/components/fields/draftController";
+  import type { CellListItem } from "src/lib/database/cellEditor";
   import { chipItem, type ListType } from "./noteProperties";
 
-  export let items: string[] = [];
+  export let items: CellListItem[] = [];
+  export let suggestions: string[] = [];
+  /** Keep accepted local chips while older queued writes acknowledge. */
+  export let writesPending = false;
   export let type: ListType = "list";
   export let ariaLabel = "";
   /** i3-close: offer the note picker beside the text entry (relations only). */
@@ -34,23 +40,29 @@
 
   // `done` carries whether the row takes focus back: a key ended the edit
   // (true), or focus already went elsewhere and must stay there (false).
-  const dispatch = createEventDispatcher<{ change: string[]; done: boolean; pick: string[] }>();
+  const dispatch = createEventDispatcher<{ change: CellListItem[]; done: boolean; pick: CellListItem[] }>();
 
-  let field: TextField | null = null;
+  let field: ComboField | null = null;
   let rootEl: HTMLDivElement | null = null;
   let text = "";
+  let alive = true;
+  onDestroy(() => (alive = false));
   // i3-props: the list as the user has edited it. A second add made before
   // the first write reached the note must build on the first, not on the
   // stored value, or the first item is lost. A new stored value replaces it.
-  let list: string[] = [...items];
+  let list: CellListItem[] = [...items];
   let adopted = JSON.stringify(items);
-  function adopt(next: string[]): void {
+  let adoptionDeferred = false;
+  function adopt(next: CellListItem[], pending: boolean): void {
+    if (pending) { adoptionDeferred = true; return; }
     const key = JSON.stringify(next);
-    if (key === adopted) return;
+    if (key === adopted && !adoptionDeferred) return;
+    adoptionDeferred = false;
     adopted = key;
     list = [...next];
   }
-  $: adopt(items);
+  $: adopt(items, writesPending);
+  $: options = namesToOptions(suggestions);
 
   $: t = $i18n.t.bind($i18n);
 
@@ -59,12 +71,13 @@
   }
   onMount(focus);
 
-  function label(item: string): string {
-    if (type === "tags") return `#${item.replace(/^#+/, "")}`;
-    return type === "relation" ? stripToDisplay(item) : item;
+  function label(item: CellListItem): string {
+    const text = item === null ? "—" : String(item);
+    if (type === "tags") return `#${text.replace(/^#+/, "")}`;
+    return type === "relation" ? stripToDisplay(text) : text;
   }
 
-  function emit(next: string[]): void {
+  function emit(next: CellListItem[]): void {
     list = next;
     dispatch("change", next);
   }
@@ -75,8 +88,8 @@
   }
 
   /** Add the typed text as one chip; true when something was added. */
-  function addTyped(): boolean {
-    const item = chipItem(text, type);
+  function addTyped(raw = text, selected = false): boolean {
+    const item = selected ? raw : chipItem(raw, type);
     clearText();
     if (item === null || list.includes(item)) return false;
     emit([...list, item]);
@@ -85,6 +98,7 @@
 
   /** i3-close: the typed text first, then the list as it stands to the picker. */
   function pick(): void {
+    if (field?.isComposing()) return;
     addTyped();
     dispatch("pick", [...list]);
   }
@@ -95,12 +109,12 @@
   }
 
   function onKeydownCapture(e: KeyboardEvent): void {
-    if (e.isComposing) return;
+    if (isImeKey(e) || field?.isComposing()) return;
     const swallow = (): void => {
       e.preventDefault();
       e.stopPropagation();
     };
-    if (e.key === "Enter" || e.key === ",") {
+    if (e.key === "," || e.key === "Enter" && text.trim() === "") {
       swallow();
       if (e.key === "Enter" && text.trim() === "") dispatch("done", true);
       else addTyped();
@@ -114,11 +128,13 @@
     }
   }
 
-  function onFocusOut(e: FocusEvent): void {
-    const next = e.relatedTarget as Node | null;
+  function onFocusOut(e?: FocusEvent): void {
+    const next = e?.relatedTarget as Node | null;
     if (next && rootEl?.contains(next)) return;
-    addTyped();
-    dispatch("done", false);
+    void Promise.resolve().then(() => {
+      if (!alive || field?.isComposing() || rootEl?.contains(rootEl.ownerDocument.activeElement)) return;
+      dispatch("done", false);
+    });
   }
 </script>
 
@@ -128,6 +144,7 @@
   class="ppp-chips"
   bind:this={rootEl}
   on:focusout={onFocusOut}
+  on:compositionend={() => onFocusOut()}
   on:keydown|capture={onKeydownCapture}
   on:click={focus}
 >
@@ -143,12 +160,18 @@
       ><Icon name="x" size="xs" /></button>
     </span>
   {/each}
-  <TextField
+  <ComboField
     bind:this={field}
     inputClass="ppp-chips__input"
     ariaLabel={ariaLabel}
+    {options}
+    allowCustom
+    commitOnDestroy={false}
     placeholder={t("views.visualizer.block.chips.add", { defaultValue: "Add item" })}
-    on:input={(e) => (text = e.detail)}
+    on:draftChange={(e) => (text = e.detail)}
+    on:commit={(e) => {
+      addTyped(e.detail.value, e.detail.reason === "select" || options.some(option => option.id === e.detail.value));
+    }}
   />
   {#if pickable && type === "relation"}
     <button

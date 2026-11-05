@@ -35,6 +35,8 @@
   import DataScopePanel from "./DataScopePanel.svelte";
   import PipelineEditor from "./PipelineEditor.svelte";
   import DatabaseCallSettings from "./DatabaseCall/DatabaseCallSettings.svelte";
+  import { provideBlockHeaderControlsHost } from "./DatabaseCall/tableControlsHost";
+  const headerControlsHost = provideBlockHeaderControlsHost();
 
   export let widget: WidgetDefinition;
   export let frame: DataFrame;
@@ -143,6 +145,7 @@
 >
   <svelte:fragment slot="badges"><WidgetHeaderBadges {widget} frame={ctx.transformedFrame} tableConfig={ctx.effectiveTableConfig} /></svelte:fragment>
   <svelte:fragment slot="actions">
+    {#if widget.type === "database-call" || widget.type === "data-table"}<div class="ppp-widget-view-controls" use:headerControlsHost></div>{/if}
     <WidgetPrimaryAction action={primaryAction} on:primaryAction={handlePrimaryAction} />
     <!-- B7: one «⋯» menu. #194: `hasCog` stays false for `data-table`; data scope is the second reason. -->
     <WidgetHeaderActions {readonly} {collapsed} {widget} isDatabase={widget.type === "database-call"}

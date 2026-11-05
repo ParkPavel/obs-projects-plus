@@ -40,6 +40,7 @@
   export function focus(): void {
     field?.focus();
   }
+  export function reset(next: number | null = null): void { field?.reset(next === null ? "" : String(next)); }
 
   $: text = value === null || value === undefined || !Number.isFinite(value) ? "" : String(value);
   $: options = namesToOptions(suggestions.filter(draft => parse(draft) !== undefined && draft.trim() !== ""));
