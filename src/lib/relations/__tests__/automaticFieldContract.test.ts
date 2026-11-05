@@ -214,6 +214,18 @@ test("a broken note in an acquired source cannot be mistaken for an empty ID set
   } finally { settings.set(previous); }
 });
 
+test.each(["Template body", "---\ntags: [work]\n---\nTemplate body"])("a folder's automatic tags ID stays a scalar when applying template %s", async template => {
+  const previous = get(settings), project = { ...DEFAULT_PROJECT, id: "template-tag-id", name: "Template tag ID",
+    dataSource: { kind: "folder", config: { path: "Notes", recursive: true } }, fieldConfig: { tags: { type: "unique_id", uniqueIdPrefix: "T-" } } };
+  settings.set({ ...previous, projects: [project as never] });
+  try {
+    const files = new InMemFileSystem({}); await files.create("Templates/base.md", template);
+    await new DataApi(files).createNote(createDataRecord("new", project as never), [], "Templates/base.md");
+    expect((await files.getFile("Notes/new.md")!.readValues())["tags"]).toBe("T-1");
+    expect(await files.getFile("Notes/new.md")!.read()).toContain("Template body");
+  } finally { settings.set(previous); }
+});
+
 test("a source read completing after project switch cannot add its row to the new frame", async () => {
   const previous = get(settings), previousSource = get(dataSource), project = { ...DEFAULT_PROJECT, id: "slow-create", name: "Slow",
     dataSource: { kind: "folder", config: { path: "Notes", recursive: true } }, fieldConfig: { Ticket: { type: "unique_id" } } };

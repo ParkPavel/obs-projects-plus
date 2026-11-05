@@ -8,6 +8,7 @@ const reservations = new WeakMap<DataRecord, Reservation>();
 
 /** Creation context stays outside frontmatter and travels only with this new record. */
 export function automaticIdProject(record: DataRecord): string | undefined { return reservations.get(record)?.projectId; }
+export function isAutomaticIdField(record: DataRecord, key: string): boolean { return reservations.get(record)?.fields.some(field => field.key === key) ?? false; }
 
 function assigned(record: DataRecord, reservation: Reservation): DataRecord {
   const next = { ...record, values: { ...record.values, ...Object.fromEntries(reservation.fields.map(field => [field.key, `${field.prefix}${reservation.sequence}`])) } };

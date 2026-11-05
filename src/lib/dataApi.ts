@@ -2,7 +2,7 @@
 
 
 import { get } from "svelte/store";
-import { reserveAutomaticIds, automaticIdProject, reconcileAutomaticIds } from "src/lib/record/automaticIds";
+import { reserveAutomaticIds, automaticIdProject, reconcileAutomaticIds, isAutomaticIdField } from "src/lib/record/automaticIds";
 import { queryProjectRecords } from "src/lib/datasources/queryProjectRecords";
 import { getAPI, isPluginEnabled } from "src/lib/datasources/dataview/host";
 import { app } from "src/lib/stores/obsidian";
@@ -241,7 +241,7 @@ export class DataApi {
           time: (format) => dayjs().format(format || "HH:mm"),
 
         });
-        if (record.values["tags"]) {
+        if (record.values["tags"] && !isAutomaticIdField(record, "tags")) {
           const templateTags = F.pipe(
             content,
             decodeFrontMatter,
