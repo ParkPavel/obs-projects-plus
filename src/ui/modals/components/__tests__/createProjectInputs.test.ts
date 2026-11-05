@@ -264,3 +264,14 @@ test("an untouched date input cannot authorize saving a newly invalid parent val
  const project={...makeProject(),dateFormat:{preset:'custom',writeFormat:'YYYY-MM-DD',includeTime:true}},view=mount(project as any);await flush();const input=inputFor(view.container,'modals.date-format.custom.name');await enter(input);
  view.component.$set({project:{...project,dateFormat:{...project.dateFormat,writeFormat:''}}});await flush();await fireEvent.click(save(view.container));expect(view.onSave).not.toHaveBeenCalled();
 });
+
+test("a legacy name keeps its draft and row through an older immutable parent snapshot",async()=>{
+ const project={...makeProject(),additionalSources:[{name:'Legacy',kind:'folder',config:{path:'Notes',recursive:false}}]},view=mount(project as any);await flush();const input=view.container.querySelector<HTMLInputElement>('.ppp-additional-source-row input')!;await enter(input);typeInto(input,'Private');await flush();
+ view.component.$set({project:{...project,additionalSources:[{config:{recursive:false,path:'Notes'},kind:'folder',name:'Legacy'}]}});await flush();expect(view.container.querySelector('.ppp-additional-source-row input')).toBe(input);expect(input.value).toBe('Private');
+ view.component.$set({project:{...project,additionalSources:[{name:'Private',kind:'folder',config:{path:'Notes',recursive:false}}]}});await flush();expect(view.container.querySelector('.ppp-additional-source-row input')).toBe(input);await fireEvent.click(save(view.container));expect(view.onSave.mock.calls[0][0].additionalSources[0].name).toBe('Private');
+});
+
+test("a condition keeps its edited field through an older immutable parent snapshot",async()=>{
+ const project={...makeProject(),dataSource:{id:'source-id',kind:'native-query',config:{from:{kind:'folder',path:'Notes',recursive:false},where:{conjunction:'and',conditions:[{field:'original',operator:'is',enabled:true,value:'a'}]}}}},view=mount(project as any);await flush();const input=view.container.querySelector<HTMLInputElement>('.ppp-nq-condition-row input')!;await enter(input);typeInto(input,'Private');await flush();
+ view.component.$set({project:JSON.parse(JSON.stringify(project))});await flush();expect(view.container.querySelector('.ppp-nq-condition-row input')).toBe(input);expect(input.value).toBe('Private');await fireEvent.click(save(view.container));expect(view.onSave.mock.calls[0][0].dataSource.config.where.conditions[0].field).toBe('Private');
+});
