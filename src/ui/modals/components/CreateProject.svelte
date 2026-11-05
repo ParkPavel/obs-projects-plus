@@ -51,6 +51,11 @@
 
   let originalName = project.name;
   let projectOwner = project.id;
+  let primarySourceId = project.dataSource.id, primarySourceEpoch = 0;
+  $: if (project.dataSource.id !== primarySourceId) {
+    primarySourceId = project.dataSource.id;
+    primarySourceEpoch++;
+  }
   let formEl: HTMLDivElement;
   let limitField: NumberField | undefined;
   let folderField: PathSuggestField | undefined;
@@ -65,7 +70,7 @@
   const sourceRows = new ProjectRows<DataSourceConfig>(source => source.id);
   const conditionRows = new ProjectRows<FilterCondition>();
   $: additionalRows = sourceRows.sync(project.id, project.additionalSources ?? []);
-  $: conditionEntries = conditionRows.sync(project.id, project.dataSource.kind === "native-query" ? project.dataSource.config.where?.conditions ?? [] : []);
+  $: conditionEntries = conditionRows.sync(JSON.stringify([project.id, primarySourceEpoch]), project.dataSource.kind === "native-query" ? project.dataSource.config.where?.conditions ?? [] : []);
   const composing = new Set<Node>();
   $: if (project.id !== projectOwner) {
     projectOwner = project.id;
@@ -133,16 +138,20 @@
    * additional sources: a block pointing here means "this project's primary
    * source", and swapping a folder for a tag has not made it a different one.
    */
+  function assignPrimarySource(dataSource: DataSource) {
+    // A locally minted id acknowledges this editor; a different incoming id
+    // retires it through primarySourceEpoch instead.
+    primarySourceId = dataSource.id;
+    project = {...project, dataSource};
+  }
+
   function setPrimarySource(next: DataSource) {
     const previous = project.dataSource as { id?: string; name?: string } | undefined;
-    project = {
-      ...project,
-      dataSource: {
+    assignPrimarySource({
         ...next,
         id: previous?.id ?? uuidv4(),
         ...(previous?.name ? { name: previous.name } : {}),
-      } as DataSource,
-    };
+    } as DataSource);
   }
 
   /**
@@ -160,14 +169,11 @@
    */
   function patchPrimaryConfig(config: Record<string, unknown>) {
     const current = project.dataSource as DataSource & { id?: string };
-    project = {
-      ...project,
-      dataSource: {
+    assignPrimarySource({
         ...current,
         id: current.id ?? uuidv4(),
         config: { ...current.config, ...config },
-      } as DataSource,
-    };
+    } as DataSource);
   }
 
   function handleDataSourceChange({ detail: value }: CustomEvent<string>) {
@@ -222,10 +228,7 @@
 
   function nqSetConfig(config: NativeQueryConfig) {
     const current = project.dataSource as DataSource & { id?: string };
-    project = {
-      ...project,
-      dataSource: { ...current, kind: "native-query", id: current.id ?? uuidv4(), config } as DataSource,
-    };
+    assignPrimarySource({ ...current, kind: "native-query", id: current.id ?? uuidv4(), config } as DataSource);
   }
 
   function nqSetFromKind(kind: string) {
@@ -275,7 +278,7 @@
     const conditions = [
       ...(project.dataSource.config.where?.conditions ?? []),
     ];
-    const index = conditionRows.index(project.id, conditions, rowId);
+    const index = conditionRows.index(JSON.stringify([project.id, primarySourceEpoch]), conditions, rowId);
     const current = conditions[index];
     if (!current) return;
     const next = { ...current, ...patch };
@@ -298,7 +301,7 @@
     const conditions = [
       ...(project.dataSource.config.where?.conditions ?? []),
     ];
-    const index = conditionRows.index(project.id, conditions, rowId);
+    const index = conditionRows.index(JSON.stringify([project.id, primarySourceEpoch]), conditions, rowId);
     if (index < 0) return;
     conditions.splice(index, 1);
     nqSetConditions(conditions);
@@ -342,18 +345,18 @@
   let dvPreviewMessage = "";
   let dvPreviewTimer: number | undefined;
   let previewVersion = 0, alive = true;
-  let previewContext = {id: project.id, kind: project.dataSource.kind, query: project.dataSource.kind === "dataview" ? project.dataSource.config.query ?? "" : "", owner: $app};
-  $: syncPreviewContext(project.id, project.dataSource.kind, project.dataSource.kind === "dataview" ? project.dataSource.config.query ?? "" : "", $app);
+  let previewContext = {id: project.id, sourceId: project.dataSource.id, kind: project.dataSource.kind, query: project.dataSource.kind === "dataview" ? project.dataSource.config.query ?? "" : "", owner: $app};
+  $: syncPreviewContext(project.id, project.dataSource.kind, project.dataSource.kind === "dataview" ? project.dataSource.config.query ?? "" : "", $app, project.dataSource.id);
 
-  function syncPreviewContext(id: string, kind: DataSource["kind"], query: string, owner: typeof previewContext.owner) {
-    if (previewContext.id === id && previewContext.kind === kind && previewContext.query === query && previewContext.owner === owner) return;
-    previewContext = {id, kind, query, owner};
+  function syncPreviewContext(id: string, kind: DataSource["kind"], query: string, owner: typeof previewContext.owner, sourceId: string | undefined) {
+    if (previewContext.id === id && previewContext.sourceId === sourceId && previewContext.kind === kind && previewContext.query === query && previewContext.owner === owner) return;
+    previewContext = {id, sourceId, kind, query, owner};
     window.clearTimeout(dvPreviewTimer); previewVersion++;
     dvPreviewStatus = "idle"; dvPreviewMessage = "";
   }
 
   function validateDataviewQuery(query: string) {
-    syncPreviewContext(project.id, project.dataSource.kind, query, $app);
+    syncPreviewContext(project.id, project.dataSource.kind, query, $app, project.dataSource.id);
     window.clearTimeout(dvPreviewTimer);
     const version = ++previewVersion, context = previewContext;
     if (!query.trim()) {
@@ -367,7 +370,7 @@
   }
 
   async function runDataviewPreview(query: string, version: number, context: typeof previewContext) {
-    const current = () => alive && version === previewVersion && project.id === context.id && $app === context.owner && project.dataSource.kind === "dataview" && project.dataSource.config.query === query;
+    const current = () => alive && version === previewVersion && project.id === context.id && project.dataSource.id === context.sourceId && $app === context.owner && project.dataSource.kind === "dataview" && project.dataSource.config.query === query;
     if (!current()) return;
     try {
       if (!isPluginEnabled(context.owner)) {
@@ -634,6 +637,7 @@
       />
     </SettingItem>
 
+    {#key primarySourceEpoch}
     <SettingItem
       name={$i18n.t("modals.project.datasource.name")}
       description={$i18n.t("modals.project.datasource.description")}
@@ -927,6 +931,7 @@
       </SettingItem>
     {/if}
 
+    {/key}
     <Accordion>
       <AccordionItem>
         <div slot="header" class="setting-item-info" style:margin-top="0.5rem">

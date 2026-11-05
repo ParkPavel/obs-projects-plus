@@ -275,3 +275,15 @@ test("a condition keeps its edited field through an older immutable parent snaps
  const project={...makeProject(),dataSource:{id:'source-id',kind:'native-query',config:{from:{kind:'folder',path:'Notes',recursive:false},where:{conjunction:'and',conditions:[{field:'original',operator:'is',enabled:true,value:'a'}]}}}},view=mount(project as any);await flush();const input=view.container.querySelector<HTMLInputElement>('.ppp-nq-condition-row input')!;await enter(input);typeInto(input,'Private');await flush();
  view.component.$set({project:JSON.parse(JSON.stringify(project))});await flush();expect(view.container.querySelector('.ppp-nq-condition-row input')).toBe(input);expect(input.value).toBe('Private');await fireEvent.click(save(view.container));expect(view.onSave.mock.calls[0][0].dataSource.config.where.conditions[0].field).toBe('Private');
 });
+
+test("a replacement Dataview source with the same query retires the old source's preview",async()=>{
+ jest.useFakeTimers();require('src/lib/stores/capabilities').capabilities.set({dataview:true});const pending:Array<(value:unknown)=>void>=[];mockDataview.query.mockImplementation(()=>new Promise(resolve=>pending.push(resolve)));
+ const project=dqlProject(),view=mount(project as any);await flush();const input=view.container.querySelector('textarea')!;input.focus();typeQuery(input,'LIST FROM #pending');await flush();jest.advanceTimersByTime(650);await flush();expect(pending).toHaveLength(1);
+ view.component.$set({project:{...project,dataSource:{...project.dataSource,id:'replacement-source',config:{query:'LIST FROM #pending'}}}});await flush();pending[0]!({successful:false});await flush();expect(view.container.querySelector('.ppp-dv-preview')).toBeNull();
+});
+
+test("replacing a source retires its textarea draft while minting a legacy id retains the original input",async()=>{
+ require('src/lib/stores/capabilities').capabilities.set({dataview:true});const project=dqlProject(),view=mount(project as any);await flush();const old=view.container.querySelector('textarea')!;old.focus();typeQuery(old,'LIST FROM #private');await flush();
+ view.component.$set({project:{...project,dataSource:{...project.dataSource,id:'replacement',config:{query:'LIST FROM #replacement'}}}});await flush();const current=view.container.querySelector('textarea')!;expect(current).not.toBe(old);expect(current.value).toBe('LIST FROM #replacement');old.dispatchEvent(new CompositionEvent('compositionend',{bubbles:true}));await fireEvent.click(save(view.container));expect(view.onSave.mock.calls[0][0].dataSource.config.query).toBe('LIST FROM #replacement');view.unmount();
+ const {id:_id,...source}=project.dataSource,legacy=mount({...project,dataSource:source} as any);await flush();const input=legacy.container.querySelector('textarea')!;input.focus();typeQuery(input,'LIST FROM #mint');await flush();expect(legacy.container.querySelector('textarea')).toBe(input);await fireEvent.click(save(legacy.container));expect(legacy.onSave.mock.calls[0][0].dataSource.id).toEqual(expect.any(String));
+});
