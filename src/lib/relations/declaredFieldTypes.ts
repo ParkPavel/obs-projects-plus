@@ -90,7 +90,10 @@ export function applyDeclaredStoredTypes(fields: DataField[], config: DeclaredRe
   if (!config) return fields;
   let changed = false;
   const result = fields.map(field => {
-    const cfg = config[field.name], type = cfg?.type ? STORED_TYPES[cfg.type as PropertyType] : undefined;
+    const cfg = config[field.name];
+    // IDs are opaque stored values, even when their prefix makes one look
+    // like a date. Parsing it first would hide it from collision checking.
+    const type = cfg?.type === "unique_id" ? DataFieldType.UniqueId : cfg?.type ? STORED_TYPES[cfg.type as PropertyType] : undefined;
     if (!type || field.identifier || [DataFieldType.AutoTime, DataFieldType.Formula, DataFieldType.Rollup].includes(field.type) ||
       (field.derived && (field.name === "name" || field.name === "path"))) return field;
     const typeConfig = { ...field.typeConfig, ...cfg, ...(cfg?.type === "datetime" ? { time: true } : {}) };

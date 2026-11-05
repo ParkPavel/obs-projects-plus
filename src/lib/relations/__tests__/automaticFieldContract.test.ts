@@ -9,6 +9,7 @@ import { ViewApi } from "src/lib/viewApi";
 import { settings } from "src/lib/stores/settings";
 import { dataFrame, dataSource } from "src/lib/stores/dataframe";
 import { DEFAULT_PROJECT, DEFAULT_SETTINGS } from "src/settings/settings";
+import { queryProjectRecords } from "src/lib/datasources/queryProjectRecords";
 import { applyDeclaredFieldTypes, declaredPropertyType } from "../declaredFieldTypes";
 
 jest.mock("yaml", () => jest.requireActual(process.cwd() + "/node_modules/yaml/dist/index.js"));
@@ -168,6 +169,48 @@ test("the general command's direct DataApi creation reconciles existing automati
     const files = new InMemFileSystem({}); await files.create("Notes/old.md", "---\nTicket: T-8\n---");
     await new DataApi(files).createNote(createDataRecord("new", project as never), [], "");
     expect((await files.getFile("Notes/new.md")!.readValues())["Ticket"]).toBe("T-9");
+  } finally { settings.set(previous); }
+});
+
+test.each(["2026-11-", "2026/11/", "T-", ""])("a restored ID counter preserves raw source IDs with prefix %s", async prefix => {
+  const previous = get(settings), project = { ...DEFAULT_PROJECT, id: "raw-ids", name: "Raw", uniqueIdCounter: 9,
+    dataSource: { kind: "folder", config: { path: "Notes", recursive: true } }, fieldConfig: { Ticket: { type: "unique_id", uniqueIdPrefix: prefix } } };
+  settings.set({ ...previous, projects: [project as never] });
+  try {
+    const files = new InMemFileSystem({}); await files.create("Notes/old.md", `---\nTicket: "${prefix}10"\n---`);
+    const source = new FolderDataSource(files, project as never, DEFAULT_SETTINGS.preferences);
+    expect((await source.queryAll()).records[0]?.values["Ticket"]).toBe(`${prefix}10`);
+    await new DataApi(files).createNote(createDataRecord("new", project as never), [], "");
+    expect((await files.getFile("Notes/new.md")!.readValues())["Ticket"]).toBe(`${prefix}11`);
+  } finally { settings.set(previous); }
+});
+
+test("a Dataview alias cannot hide an existing stored ID from reconciliation", async () => {
+  const { app } = require("src/lib/stores/obsidian"), previousApp = get(app);
+  const previous = get(settings), project = { ...DEFAULT_PROJECT, id: "aliased-ids", name: "Aliased", uniqueIdCounter: 9, newNotesFolder: "Notes",
+    dataSource: { kind: "dataview", config: { query: "TABLE Ticket AS Alias" } }, fieldConfig: { Ticket: { type: "unique_id", uniqueIdPrefix: "T-" } } };
+  settings.set({ ...previous, projects: [project as never] });
+  try {
+    const files = new InMemFileSystem({}); await files.create("Notes/old.md", "---\nTicket: T-10\n---");
+    const api = { settings: { tableIdColumnName: "File" }, query: async () => ({ successful: true,
+      value: { type: "table", headers: ["File", "Alias"], values: [[{ path: "Notes/old.md", display: "old" }, "T-10"]] } }) };
+    const records = await queryProjectRecords(project as never, { fileSystem: files, preferences: DEFAULT_SETTINGS.preferences, dataviewApi: api as never });
+    expect(records[0]?.values["Ticket"]).toBe("T-10");
+    app.set({ plugins: { enabledPlugins: new Set(["dataview"]), plugins: { dataview: { api } } } });
+    await new DataApi(files).createNote(createDataRecord("new", project as never), [], "");
+    expect((await files.getFile("Notes/new.md")!.readValues())["Ticket"]).toBe("T-11");
+  } finally { settings.set(previous); app.set(previousApp); }
+});
+
+test("a broken note in an acquired source cannot be mistaken for an empty ID set", async () => {
+  const previous = get(settings), project = { ...DEFAULT_PROJECT, id: "unreadable-ids", name: "Unreadable",
+    dataSource: { kind: "folder", config: { path: "Notes", recursive: true } }, fieldConfig: { Ticket: { type: "unique_id", uniqueIdPrefix: "T-" } } };
+  settings.set({ ...previous, projects: [project as never] });
+  try {
+    const files = new InMemFileSystem({}); await files.create("Notes/broken.md", "---\nTicket: [broken\n---");
+    const create = jest.spyOn(files, "create");
+    await expect(new DataApi(files).createNote(createDataRecord("new", project as never), [], "")).rejects.toThrow();
+    expect(create).not.toHaveBeenCalled();
   } finally { settings.set(previous); }
 });
 
