@@ -24,6 +24,10 @@
     if(!alive||disabled||Object.values(fields).some(field=>field?.isComposing()))return false;
     return Object.values(fields).every(field=>!field||field.commitForNavigation());
   }
+  export function syncForSubmit():boolean {
+    if(!alive||disabled||Object.values(fields).some(field=>field?.isComposing()))return false;
+    return Object.values(fields).every(field=>!field||field.syncForSubmit());
+  }
   $: pathSource=vaultPathSource($app);
   function sync(values:string[],key:string,callback:typeof onPathsChange,isLocked:boolean,nextApp:App|undefined){
     if(owner!==key||writer!==callback||locked!==isLocked||ownerApp!==nextApp){rows=makeRows(values);saved=[...values];}

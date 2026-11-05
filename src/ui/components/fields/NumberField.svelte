@@ -35,6 +35,7 @@
 
   let field: ComboField;
   export function commitForNavigation(): boolean { return field?.commitForNavigation() ?? false; }
+  export function syncForSubmit(): boolean { return field?.syncForSubmit() ?? false; }
   export function isComposing(): boolean { return field?.isComposing() ?? false; }
   export function focus(): void {
     field?.focus();

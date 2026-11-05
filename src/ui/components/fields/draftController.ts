@@ -119,6 +119,8 @@ if (typeof document !== "undefined") {
 export interface DraftController {
   /** A copy of the current state. */
   getState(): DraftState;
+  /** Read the effective form value without rearming a one-shot interaction. */
+  valueForSubmit(): string;
   /** The user entered the field (or the popup opened): seed the draft from the current text. */
   focus(current: string, options?: { resume?: boolean }): void;
   /**
@@ -195,6 +197,7 @@ export function createDraftController(initial = ""): DraftController {
 
   return {
     getState: () => ({ baseline, draft, committed, focused, composing }),
+    valueForSubmit: () => pending !== null && !touched ? pending : draft,
 
     focus(current, options) {
       pendingBlur = false;

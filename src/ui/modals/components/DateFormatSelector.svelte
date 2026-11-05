@@ -17,8 +17,14 @@
   export let onChange: (config: DateFormatConfig | undefined) => void;
   let customField: ValueSuggestField | undefined;
   export function commitForNavigation(): boolean {
+    return settleCustom(false);
+  }
+  export function syncForSubmit(): boolean {
+    return settleCustom(true);
+  }
+  function settleCustom(submit: boolean): boolean {
     if (!dateFormat || currentPreset !== "custom") return true;
-    const accepted = customField?.commitForNavigation() ?? isValidFormat;
+    const accepted = customField ? submit ? customField.syncForSubmit() : customField.commitForNavigation() : isValidFormat;
     return accepted && validFormat(dateFormat?.writeFormat ?? "");
   }
 

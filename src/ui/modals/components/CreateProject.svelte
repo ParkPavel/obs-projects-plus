@@ -90,8 +90,8 @@
       if (!target.isConnected || !formEl?.contains(target)) composing.delete(target);
     }
     if (composing.size) return;
-    if (project.dataSource.kind === "native-query" && !limitField?.commitForNavigation()) return;
-    if ([folderField, newNotesFolderField, templateFields, excludedFields, queryField, dateFormatField, ...Object.values(additionalPathFields), ...Object.values(textFields)].some(field => field && !field.commitForNavigation())) return;
+    if (project.dataSource.kind === "native-query" && !limitField?.syncForSubmit()) return;
+    if ([folderField, newNotesFolderField, templateFields, excludedFields, queryField, dateFormatField, ...Object.values(additionalPathFields), ...Object.values(textFields)].some(field => field && !field.syncForSubmit())) return;
     if (validateName(project.name, originalName, projects)) return;
     onSave({ ...project, templates: project.templates?.filter(notEmpty) ?? [] });
   }

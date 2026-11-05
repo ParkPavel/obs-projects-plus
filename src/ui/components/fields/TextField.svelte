@@ -36,6 +36,20 @@
   export function isComposing(): boolean { return ctl.isComposing(); }
   /** A containing editor owns Tab navigation; commit through this field once. */
   export function commitForNavigation(): boolean { return !ctl.isComposing() && emit("tab"); }
+  /** Explicit form submission, separate from ordinary one-shot navigation. */
+  export function syncForSubmit(): boolean {
+    if (!alive || readOnly || disabled || ctl.isComposing()) return false;
+    const effective = ctl.valueForSubmit();
+    if (effective !== ctl.getState().draft) { ctl.reset(effective); pull(); reportedInput = draft; }
+    const before = commits, accepted = commitForNavigation();
+    if (!accepted || commits !== before || ctl.valueForSubmit() === value) return accepted;
+    ctl.arm();
+    const result = ctl.commit("tab", {value: ctl.valueForSubmit(), unchanged: true});
+    if (!result) return false;
+    commits++;
+    dispatch("commit", {value: result.value, reason: "tab"});
+    return true;
+  }
 
   const dispatch = createEventDispatcher<{
     input: string;
@@ -48,6 +62,7 @@
   let invalid = false;
   let inputEl: HTMLInputElement | HTMLTextAreaElement | null = null;
   let alive = true, reportedInput = value;
+  let commits = 0;
   onDestroy(() => { alive = false; });
 
   function pull(): void {
@@ -91,7 +106,7 @@
     reportedInput = draft;
     // A rejected draft left on blur was restored, so nothing is invalid any more.
     if (reason === "blur") invalid = false;
-    if (result) dispatch("commit", { value: result.value, reason });
+    if (result) { commits++; dispatch("commit", { value: result.value, reason }); }
     return verdict;
   }
 

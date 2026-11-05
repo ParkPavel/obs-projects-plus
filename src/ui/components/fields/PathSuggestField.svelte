@@ -17,6 +17,7 @@
  export function focus():void{field?.focus();}
  export function isComposing():boolean{return field?.isComposing()??false;}
  export function commitForNavigation():boolean{return field?.commitForNavigation()??false;}
+ export function syncForSubmit():boolean{return field?.syncForSubmit()??false;}
  const dispatch=createEventDispatcher<{change:string}>();
  $: choices=files.map(file=>({id:file.path,label:getLabel(file),value:file.path}));
  $: change=forOwner(contextKey);

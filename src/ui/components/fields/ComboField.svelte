@@ -14,6 +14,23 @@
     hide();
     return accepted;
   }
+  /** Forms may reconcile an accepted draft with an older parent snapshot. */
+  export function syncForSubmit(): boolean {
+    if (!alive || readOnly || disabled || ctl.isComposing()) return false;
+    if (multi) return commitForNavigation();
+    const effective = ctl.valueForSubmit();
+    if (effective !== ctl.getState().draft) { ctl.reset(effective); pull(false); }
+    const before = commits, accepted = commitForNavigation();
+    if (!accepted || commits !== before || ctl.valueForSubmit() === value) return accepted;
+    const submitted = ctl.valueForSubmit(), exact = exactMatch(submitted);
+    ctl.arm();
+    const result = ctl.commit("tab", {value: submitted, unchanged: true});
+    if (!result) return false;
+    if (exact && submitted === (exact.value ?? exact.label)) dispatch("select", exact);
+    commits++;
+    dispatch("commit", result);
+    return true;
+  }
   export function isComposing(): boolean { return ctl.isComposing(); }
   /**
    * ComboField (stab-forms) — a text input with a suggestion listbox. DOM focus
@@ -94,6 +111,7 @@
   let draft = value;
   let reportedDraft = value;
   let invalid = false, alive = true;
+  let commits = 0;
   onDestroy(() => { alive = false; });
   let open = false;
   let active = -1;
@@ -339,6 +357,7 @@
     dirty = false;
     if (!result) return accept;
     if (exact && !adoptedParent && result.value === (exact.value ?? exact.label)) dispatch("select", exact);
+    commits++;
     dispatch("commit", { value: result.value, reason: result.reason });
     return true;
   }
@@ -357,6 +376,7 @@
     dirty = false;
     hide();
     dispatch("select", opt);
+    commits++;
     dispatch("commit", { value: result.value, reason: "select" });
     return true;
   }

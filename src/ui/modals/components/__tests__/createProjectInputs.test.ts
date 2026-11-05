@@ -287,3 +287,17 @@ test("replacing a source retires its textarea draft while minting a legacy id re
  view.component.$set({project:{...project,dataSource:{...project.dataSource,id:'replacement',config:{query:'LIST FROM #replacement'}}}});await flush();const current=view.container.querySelector('textarea')!;expect(current).not.toBe(old);expect(current.value).toBe('LIST FROM #replacement');old.dispatchEvent(new CompositionEvent('compositionend',{bubbles:true}));await fireEvent.click(save(view.container));expect(view.onSave.mock.calls[0][0].dataSource.config.query).toBe('LIST FROM #replacement');view.unmount();
  const {id:_id,...source}=project.dataSource,legacy=mount({...project,dataSource:source} as any);await flush();const input=legacy.container.querySelector('textarea')!;input.focus();typeQuery(input,'LIST FROM #mint');await flush();expect(legacy.container.querySelector('textarea')).toBe(input);await fireEvent.click(save(legacy.container));expect(legacy.onSave.mock.calls[0][0].dataSource.id).toEqual(expect.any(String));
 });
+
+test.each(['name','query','limit'])('Save retains the accepted %s after an older parent echo without a second edit',async part=>{
+ require('src/lib/stores/capabilities').capabilities.set({dataview:true});const project=part==='query'?dqlProject():part==='limit'?{...makeProject(),dataSource:{id:'source-id',kind:'native-query',config:{from:{kind:'folder',path:'Notes',recursive:false},limit:100}}}:makeProject(),view=mount(project as any);await flush();
+ const input=part==='query'?view.container.querySelector('textarea')!:inputFor(view.container,part==='name'?'modals.project.name.name':'modals.project.native-query.limit.name'),accepted=part==='query'?'LIST FROM #accepted':part==='name'?'Accepted name':'500';input.focus();if(input instanceof HTMLTextAreaElement)typeQuery(input,accepted);else typeInto(input,accepted);await flush();input.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:part==='query',bubbles:true,cancelable:true}));await flush();view.component.$set({project:JSON.parse(JSON.stringify(project))});await flush();expect(input.value).toBe(accepted);await fireEvent.click(save(view.container));const saved=view.onSave.mock.calls[0][0];expect(part==='query'?saved.dataSource.config.query:part==='limit'?String(saved.dataSource.config.limit):saved.name).toBe(accepted);
+});
+
+test("Save adopts and validates an untouched pending limit instead of authorizing it through the old input",async()=>{
+ const project={...makeProject(),dataSource:{id:'source-id',kind:'native-query',config:{from:{kind:'folder',path:'Notes',recursive:false},limit:100}}},view=mount(project as any);await flush();const input=inputFor(view.container,'modals.project.native-query.limit.name');await enter(input);
+ view.component.$set({project:{...project,dataSource:{...project.dataSource,config:{...project.dataSource.config,limit:-5}}}});await flush();await fireEvent.click(save(view.container));expect(view.onSave).not.toHaveBeenCalled();expect(input.value).toBe('-5');expect(input).toHaveAttribute('aria-invalid','true');
+});
+
+test("Save adopts an untouched new name rather than replaying the previous baseline",async()=>{
+ const project=makeProject(),view=mount(project);await flush();const input=inputFor(view.container,'modals.project.name.name');await enter(input);view.component.$set({project:{...project,name:'Fresh external'}});await flush();await fireEvent.click(save(view.container));expect(view.onSave).toHaveBeenCalledTimes(1);expect(view.onSave.mock.calls[0][0].name).toBe('Fresh external');
+});
