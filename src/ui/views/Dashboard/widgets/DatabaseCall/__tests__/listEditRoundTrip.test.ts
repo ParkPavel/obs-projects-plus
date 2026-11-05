@@ -29,11 +29,11 @@ const { isMobile } = require("src/lib/stores/ui");
 type DataField = import("src/lib/dataframe/dataframe").DataField;
 type FieldType = import("src/lib/dataframe/dataframe").DataFieldType;
 
-async function mount(type: FieldType, initial: Array<string | number | boolean | null> = ["alpha, beta", "quote \"inside\"", "plain"]) {
+async function mount(type: FieldType, initial: Array<string | number | boolean | null> = ["alpha, beta", "quote \"inside\"", "plain"], withTime = false) {
   const body = "\nKeep the body.\n";
   const fs = new InMemFileSystem({});
   await fs.create("A.md", `---\ntags: ${JSON.stringify(initial)}\nother: untouched\n---${body}`);
-  const field: DataField = { name: "tags", type, repeated: type !== DataFieldType.List, identifier: false, derived: false };
+  const field: DataField = { name: "tags", type, repeated: type !== DataFieldType.List, identifier: false, derived: false, ...(withTime ? { typeConfig: { time: true } } : {}) };
   const nameField: DataField = { ...field, name: "name", type: DataFieldType.String, repeated: false, identifier: true, derived: true };
   const project = { ...DEFAULT_PROJECT, id: "lists", name: "Lists" };
   const source = new FolderDataSource(fs, project, DEFAULT_SETTINGS.preferences);
@@ -156,6 +156,16 @@ it.each([
   expect(input).toBeDefined(); input.value = draft as string; input.dispatchEvent(new Event("input", { bubbles: true })); await tick();
   button("Apply").click(); await tick(); expect(writes).toHaveLength(1); await writes[0];
   expect((await source.queryFiles(files, [field])).records[0]?.values["tags"]).toEqual([...(initial as unknown[]), expected]);
+});
+
+it("a repeated datetime preserves the original row and writes an explicit new clock", async () => {
+  const { files, source, field, writes } = await mount(DataFieldType.Date, ["2026-11-05T15:45", null], true);
+  const input = document.querySelector<HTMLInputElement>(".ppp-t2-list-editor input")!;
+  expect(input.value).toBe("05.11.2026 15:45");
+  input.value = "07.11.2026 00:30"; input.dispatchEvent(new Event("input", { bubbles: true })); await tick();
+  button("Apply").click(); await tick(); expect(writes).toHaveLength(1); await writes[0];
+  // DEFAULT_PROJECT explicitly selects YYYY-MM-DD; its datetime suffix uses a space.
+  expect((await source.queryFiles(files, [field])).records[0]?.values["tags"]).toEqual(["2026-11-07 00:30", null]);
 });
 
 it("an incomplete typed list member or active composition blocks Apply without a write", async () => {

@@ -102,7 +102,7 @@ test("concurrent creations reconcile an old counter without duplicating IDs or m
   } finally { settings.set(previous); }
 });
 
-test("an embedded creation checks the target project's IDs through its resolver", async () => {
+test("an embedded creation checks fresh target records without using cached display frames", async () => {
   const previous = get(settings), target = { ...DEFAULT_PROJECT, id: "target-ids", dataSource: { kind: "folder", config: { path: "Notes", recursive: true } },
     fieldConfig: { Ticket: { type: "unique_id", uniqueIdPrefix: "T-" } } };
   settings.set({ ...previous, projects: [target as never] });
@@ -112,8 +112,28 @@ test("an embedded creation checks the target project's IDs through its resolver"
     const wrongQuery = jest.fn(), resolve = jest.fn(async () => source.queryAll());
     const api = new ViewApi({ project: { id: "parent" }, includes: () => false, queryAll: wrongQuery } as never, new DataApi(files), resolve);
     await api.addRecord(createDataRecord("new", target as never), [field(DataFieldType.UniqueId)], "");
-    expect(resolve).toHaveBeenCalledWith(target.id); expect(wrongQuery).not.toHaveBeenCalled();
+    expect(resolve).not.toHaveBeenCalled(); expect(wrongQuery).not.toHaveBeenCalled();
     expect((await files.getFile("Notes/new.md")!.readValues())["Ticket"]).toBe("T-9");
+  } finally { settings.set(previous); }
+});
+
+test.each([false, true])("automatic IDs include additional acquired sources (embedded=%s)", async embedded => {
+  const previous = get(settings), project = { ...DEFAULT_PROJECT, id: "additional-ids", uniqueIdCounter: 0,
+    dataSource: { kind: "folder", config: { path: "Primary", recursive: true } },
+    additionalSources: [
+      { id: "extra", kind: "folder", config: { path: "Extra", recursive: true } },
+      { id: "selection", kind: "derived", config: { from: "project", where: { conditions: [] } } },
+    ], fieldConfig: { Ticket: { type: "unique_id", uniqueIdPrefix: "T-" } } };
+  settings.set({ ...previous, projects: [project as never] });
+  try {
+    const files = new InMemFileSystem({}); await files.create("Extra/old.md", "---\nTicket: T-8\n---");
+    await files.create("Other/foreign.md", "---\nTicket: T-500\n---");
+    const source = new FolderDataSource(files, project as never, DEFAULT_SETTINGS.preferences);
+    const cached = jest.fn(async () => ({ fields: [], records: [] }));
+    const api = new ViewApi(embedded ? { project: { id: "parent" }, includes: () => false } as never : source, new DataApi(files), cached);
+    await api.addRecord(createDataRecord("new", project as never), [field(DataFieldType.UniqueId)], "");
+    expect((await files.getFile("Primary/new.md")!.readValues())["Ticket"]).toBe("T-9");
+    expect(cached).not.toHaveBeenCalled();
   } finally { settings.set(previous); }
 });
 
@@ -123,4 +143,19 @@ test("an automatic ID cannot overwrite the tag required for membership in a tag 
   settings.set({ ...previous, projects: [project as never] });
   try { expect(() => createDataRecord("new", project as never)).toThrow(/tags/); expect(get(settings).projects[0]?.uniqueIdCounter).toBeUndefined(); }
   finally { settings.set(previous); }
+});
+
+test("an unavailable additional source refuses automatic-ID creation before any file or optimistic row", async () => {
+  const previous = get(settings), project = { ...DEFAULT_PROJECT, id: "unavailable-id-source",
+    dataSource: { kind: "folder", config: { path: "Primary", recursive: true } },
+    additionalSources: [{ id: "dv", kind: "dataview", config: { query: "FROM #work" } }],
+    fieldConfig: { Ticket: { type: "unique_id", uniqueIdPrefix: "T-" } } };
+  settings.set({ ...previous, projects: [project as never] });
+  try {
+    const files = new InMemFileSystem({}), create = jest.spyOn(files, "create");
+    const api = new ViewApi(new FolderDataSource(files, project as never, DEFAULT_SETTINGS.preferences), new DataApi(files));
+    const record = createDataRecord("new", project as never), before = get(dataFrame);
+    await expect(api.addRecord(record, [field(DataFieldType.UniqueId)], "")).rejects.toThrow(/dataview-unavailable/);
+    expect(create).not.toHaveBeenCalled(); expect(get(dataFrame)).toBe(before);
+  } finally { settings.set(previous); }
 });

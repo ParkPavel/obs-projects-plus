@@ -2,6 +2,9 @@ import { Notice } from "obsidian";
 import { isEmptyFieldValue } from "src/lib/relations/declaredFieldTypes";
 import { get } from "svelte/store";
 import { automaticIdProject, reconcileAutomaticIds } from "src/lib/record/automaticIds";
+import { settings } from "src/lib/stores/settings";
+import { queryProjectRecords } from "src/lib/datasources/queryProjectRecords";
+import { getAPI, isPluginEnabled } from "src/lib/datasources/dataview/host";
 
 import type {
   DataField,
@@ -94,9 +97,15 @@ export class ViewApi {
   async addRecord(record: DataRecord, fields: DataField[], templatePath: string, body?: string, defaults?: Record<string, Optional<DataValue>>): Promise<void> {
     const projectId = automaticIdProject(record);
     if (projectId) {
-      const source = this.dataSource.project?.id === projectId ? await this.dataSource.queryAll() : await this.resolveExternalFrame?.(projectId);
-      if (!source) throw new Error("Cannot check the project's existing unique IDs");
-      record = reconcileAutomaticIds(record, source.records);
+      const currentSettings = get(settings), project = currentSettings.projects.find(item => item.id === projectId);
+      if (!project) throw new Error("Cannot check automatic IDs: project source unavailable");
+      const currentApp = get(app);
+      const records = await queryProjectRecords(project, {
+        fileSystem: this.dataApi.fileSystem,
+        preferences: currentSettings.preferences,
+        dataviewApi: currentApp && isPluginEnabled(currentApp) ? getAPI(currentApp) : undefined,
+      });
+      record = reconcileAutomaticIds(record, records);
     }
     // w4-p02 (F19): the row is shown while the note is written and taken back
     // if the create is refused — before, a refused create left a phantom row.
