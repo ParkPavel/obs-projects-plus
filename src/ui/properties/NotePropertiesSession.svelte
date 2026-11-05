@@ -144,10 +144,9 @@
   let dropIndex: number | null = null;
 
   // i3-props: one queue for every write of this block, in the order asked.
-  let writesPending = false;
-  const acceptedLists = new Map<string, CellListItem[]>();
+  let acceptedLists = new Map<string, { value: CellListItem[]; echoes: Set<string> }>();
   let suggestionRevision = 0;
-  const queue = createWriteQueue(busy => (writesPending = busy), () => {
+  const queue = createWriteQueue(undefined, () => {
     new Notice(get(i18n).t("modals.note.edit.save-error"));
   });
   // i3-final: other notes' values, kept until the metadata cache reports a change.
@@ -163,6 +162,15 @@
   function refresh(target: TFile): void {
     const cache = app.metadataCache.getFileCache(target);
     frontmatter = (cache?.frontmatter as Record<string, unknown> | undefined) ?? null;
+    for (const [key, accepted] of acceptedLists) {
+      const snapshot = JSON.stringify(editableListItems(frontmatter?.[key]));
+      // A latest ACK retires the optimistic value. An unknown snapshot is an
+      // external change; earlier known metadata echoes do not erase accepted edits.
+      if (snapshot === JSON.stringify(accepted.value) || !accepted.echoes.has(snapshot)) {
+        acceptedLists = new Map(acceptedLists);
+        acceptedLists.delete(key);
+      }
+    }
     overlay = readOverlay(frontmatter);
   }
   $: refresh(file);
@@ -506,11 +514,16 @@
   }
 
   async function commitList(entry: OverlayedEntry, type: ListType, next: CellListItem[]): Promise<void> {
-    const plan = planListWrite(acceptedLists.get(entry.key) ?? entry.value, next, type);
+    const previous = acceptedLists.get(entry.key);
+    const plan = planListWrite(previous?.value ?? entry.value, next, type);
     if (plan.kind !== "write") return;
-    acceptedLists.set(entry.key, next);
-    await writeKey(entry.key, plan.value);
-    if (acceptedLists.get(entry.key) === next) acceptedLists.delete(entry.key);
+    const echoes = new Set(previous?.echoes ?? [JSON.stringify(editableListItems(entry.value))]);
+    echoes.add(JSON.stringify(next));
+    acceptedLists = new Map(acceptedLists).set(entry.key, { value: next, echoes });
+    const saved = await writeKey(entry.key, plan.value);
+    if (!saved && acceptedLists.get(entry.key)?.value === next) {
+      acceptedLists = new Map(acceptedLists); acceptedLists.delete(entry.key);
+    }
   }
 
   /**
@@ -932,9 +945,8 @@
               </div>
             {:else if canEdit && editingKey === entry.key && isListType(type)}
               <ChipsEditor
-                items={editableListItems(entry.value)}
+                items={acceptedLists.get(entry.key)?.value ?? editableListItems(entry.value)}
                 suggestions={choiceOptions.map(option => option.value ?? option.label)}
-                {writesPending}
                 {type}
                 ariaLabel={entry.key}
                 pickable={type === "relation"}

@@ -32,6 +32,7 @@
     return true;
   }
   export function isComposing(): boolean { return ctl.isComposing(); }
+  export function hasActiveOption(): boolean { return activeNow() !== undefined; }
   /**
    * ComboField (stab-forms) — a text input with a suggestion listbox. DOM focus
    * stays on the input (role=combobox, aria-activedescendant names the active

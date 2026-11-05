@@ -191,6 +191,33 @@ describe("i3-props NotePropertiesBlock", () => {
     } finally { release(); await flush(); view.unmount(); }
   });
 
+  it("a successful list write retains accepted chips until the delayed metadata acknowledgement", async () => {
+    const fm = { mixed: ["own"] }, view = setup(fm);
+    let cached = { mixed: [...fm.mixed] };
+    view.app.metadataCache.getFileCache = () => ({ frontmatter: cached });
+    view.processFrontMatter.mockImplementation(async (_file, change) => { change(fm); });
+    try {
+      await tick(); (row("mixed").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+      const input = editorOf("mixed")!; type(input, "A"); key(input, "Enter"); await flush();
+      expect(fm.mixed).toEqual(["own", "A"]);
+      type(input, "B"); key(input, "Enter"); await flush(); expect(fm.mixed).toEqual(["own", "A", "B"]);
+      cached = { mixed: ["own", "A"] }; view.notifyChanged(view.file); await flush();
+      type(input, "C"); key(input, "Enter"); await flush(); expect(fm.mixed).toEqual(["own", "A", "B", "C"]);
+      cached = { mixed: [...fm.mixed] }; view.notifyChanged(view.file); await flush();
+      cached = { mixed: ["external"] }; view.notifyChanged(view.file); await flush();
+      type(input, "D"); key(input, "Enter"); await flush(); expect(fm.mixed).toEqual(["external", "D"]);
+    } finally { view.unmount(); }
+  });
+
+  it("empty-list ArrowDown then Enter adds the highlighted suggestion instead of ending the edit", async () => {
+    const fm = { mixed: ["own"] }, view = setup(fm, { mixed: ["candidate"] });
+    try {
+      await tick(); (row("mixed").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+      const input = editorOf("mixed")!; key(input, "ArrowDown"); await flush(); key(input, "Enter"); await flush();
+      expect(fm.mixed).toEqual(["own", "candidate"]); expect(editorOf("mixed")).toBe(input);
+    } finally { view.unmount(); }
+  });
+
   it("a list source refresh preserves its original input, private draft and caret", async () => {
     const fm = { mixed: ["own"] }, other = { mixed: ["before"] }, view = setup(fm, other);
     try {

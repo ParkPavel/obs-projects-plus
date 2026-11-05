@@ -31,8 +31,6 @@
 
   export let items: CellListItem[] = [];
   export let suggestions: string[] = [];
-  /** Keep accepted local chips while older queued writes acknowledge. */
-  export let writesPending = false;
   export let type: ListType = "list";
   export let ariaLabel = "";
   /** i3-close: offer the note picker beside the text entry (relations only). */
@@ -52,17 +50,14 @@
   // stored value, or the first item is lost. A new stored value replaces it.
   let list: CellListItem[] = [...items];
   let adopted = JSON.stringify(items);
-  let adoptionDeferred = false;
-  function adopt(next: CellListItem[], pending: boolean): void {
-    if (pending) { adoptionDeferred = true; return; }
+  function adopt(next: CellListItem[]): void {
     const key = JSON.stringify(next);
-    if (key === adopted && !adoptionDeferred) return;
-    adoptionDeferred = false;
+    if (key === adopted) return;
     adopted = key;
     list = [...next];
   }
-  $: adopt(items, writesPending);
-  $: options = namesToOptions(suggestions);
+  $: adopt(items);
+  $: options = namesToOptions(suggestions.filter(item => !list.includes(item)));
 
   $: t = $i18n.t.bind($i18n);
 
@@ -114,7 +109,7 @@
       e.preventDefault();
       e.stopPropagation();
     };
-    if (e.key === "," || e.key === "Enter" && text.trim() === "") {
+    if (e.key === "," || e.key === "Enter" && text.trim() === "" && !field?.hasActiveOption()) {
       swallow();
       if (e.key === "Enter" && text.trim() === "") dispatch("done", true);
       else addTyped();
