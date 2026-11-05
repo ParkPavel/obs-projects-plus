@@ -651,6 +651,7 @@
                 "read-only-fields": "只读字段"
             },
             "date-format": {
+                "invalid": "请输入有效的日期格式",
                 "name": "日期格式",
                 "desc": "创建或编辑笔记时日期的格式",
                 "preset": {

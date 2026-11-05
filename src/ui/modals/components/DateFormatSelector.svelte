@@ -7,21 +7,28 @@
    * Provides preset dropdown, custom format input, live preview, and time toggle.
    */
   import dayjs from "dayjs";
-  import { Select, TextInput, Switch, SettingItem } from "obsidian-svelte";
+  import { Switch, SettingItem } from "obsidian-svelte";
+  import SelectField from "src/ui/components/fields/SelectField.svelte";
+  import ValueSuggestField from "src/ui/components/fields/ValueSuggestField.svelte";
   import type { DateFormatConfig, DateFormatPreset } from "src/settings/v3/settings";
   import { DATE_FORMAT_PRESETS } from "src/settings/v3/settings";
 
   export let dateFormat: DateFormatConfig | undefined = undefined;
   export let onChange: (config: DateFormatConfig | undefined) => void;
+  let customField: ValueSuggestField | undefined;
+  export function commitForNavigation(): boolean {
+    if (!dateFormat || currentPreset !== "custom") return true;
+    return isValidFormat && (customField?.commitForNavigation() ?? true);
+  }
 
   // Preset options
-  const presetOptions = [
+  $: presetOptions = [
     { label: "ISO 8601 (YYYY-MM-DD)", value: "iso" },
     { label: "US (MM/DD/YYYY)", value: "us" },
     { label: "EU (DD.MM.YYYY)", value: "eu" },
     { label: "UK (DD/MM/YYYY)", value: "uk" },
     { label: "Japan (YYYY年MM月DD日)", value: "japan" },
-    { label: "Custom", value: "custom" },
+    { label: $i18n.t("modals.date-format.custom.name"), value: "custom" },
   ];
 
   // Current state
@@ -42,7 +49,7 @@
       }
       return result;
     } catch (e) {
-      return "Invalid format";
+      return $i18n.t("modals.date-format.invalid");
     }
   })();
 
@@ -128,7 +135,8 @@
     name={$i18n.t("modals.date-format.preset.name")}
     description={$i18n.t("modals.date-format.preset.desc")}
   >
-    <Select
+    <SelectField
+      tooltip={$i18n.t("modals.date-format.preset.name")}
       value={currentPreset}
       options={presetOptions}
       on:change={handlePresetChange}
@@ -141,13 +149,14 @@
       description={$i18n.t("modals.date-format.custom.desc")}
       vertical
     >
-      <TextInput
+      <ValueSuggestField
+        bind:this={customField}
+        ariaLabel={$i18n.t("modals.date-format.custom.name")}
         value={customFormat}
         on:input={handleCustomFormatChange}
         error={!isValidFormat}
-        helperText={!isValidFormat ? "Invalid format string" : ""}
+        helperText={!isValidFormat ? $i18n.t("modals.date-format.invalid") : ""}
         placeholder="YYYY-MM-DD"
-        width="100%"
       />
     </SettingItem>
   {/if}

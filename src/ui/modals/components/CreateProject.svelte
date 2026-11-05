@@ -8,20 +8,19 @@
     ModalButtonGroup,
     ModalContent,
     ModalLayout,
-    Select,
     SettingItem,
     Switch,
-    TextArea,
-    TextInput,
     Typography,
   } from "obsidian-svelte";
 
   import { FileListInput } from "src/ui/components/FileListInput";
   import ValueSuggestField from "src/ui/components/fields/ValueSuggestField.svelte";
+  import TextField from "src/ui/components/fields/TextField.svelte";
   import SelectField from "src/ui/components/fields/SelectField.svelte";
   import NumberField from "src/ui/components/fields/NumberField.svelte";
   import PathSuggestField from "src/ui/components/fields/PathSuggestField.svelte";
   import { vaultPathSource } from "src/lib/suggestions/vaultPaths";
+  import { ProjectRows } from "./projectRows";
   import { Accordion, AccordionItem } from "src/ui/components/Accordion";
   import DateFormatSelector from "./DateFormatSelector.svelte";
   import { notEmpty } from "src/lib/helpers";
@@ -58,6 +57,14 @@
   let newNotesFolderField: PathSuggestField | undefined;
   let templateFields: FileListInput | undefined;
   let excludedFields: FileListInput | undefined;
+  let queryField: TextField | undefined;
+  let dateFormatField: DateFormatSelector | undefined;
+  let queryBaseline = "";
+  let additionalPathFields: Record<string, PathSuggestField | null | undefined> = {};
+  const sourceRows = new ProjectRows<DataSourceConfig>();
+  const conditionRows = new ProjectRows<FilterCondition>();
+  $: additionalRows = sourceRows.sync(project.id, project.additionalSources ?? []);
+  $: conditionEntries = conditionRows.sync(project.id, project.dataSource.kind === "native-query" ? project.dataSource.config.where?.conditions ?? [] : []);
   const composing = new Set<Node>();
   $: if (project.id !== projectOwner) {
     projectOwner = project.id;
@@ -78,7 +85,7 @@
     }
     if (composing.size || nameError) return;
     if (project.dataSource.kind === "native-query" && !limitField?.commitForNavigation()) return;
-    if ([folderField, newNotesFolderField, templateFields, excludedFields].some(field => field && !field.commitForNavigation())) return;
+    if ([folderField, newNotesFolderField, templateFields, excludedFields, queryField, dateFormatField, ...Object.values(additionalPathFields)].some(field => field && !field.commitForNavigation())) return;
     onSave({ ...project, templates: project.templates?.filter(notEmpty) ?? [] });
   }
 
@@ -261,11 +268,12 @@
     ]);
   }
 
-  function nqUpdateCondition(index: number, patch: Partial<FilterCondition>) {
+  function nqUpdateCondition(rowId: number, patch: Partial<FilterCondition>) {
     if (project.dataSource.kind !== "native-query") return;
     const conditions = [
       ...(project.dataSource.config.where?.conditions ?? []),
     ];
+    const index = conditionRows.index(project.id, conditions, rowId);
     const current = conditions[index];
     if (!current) return;
     const next = { ...current, ...patch };
@@ -273,20 +281,23 @@
       delete next.value;
     }
     conditions[index] = next;
+    conditionRows.replace(rowId, next);
     nqSetConditions(conditions);
   }
 
-  function nqSetConditionOperator(index: number, op: string) {
+  function nqSetConditionOperator(rowId: number, op: string) {
     if ((NQ_OPERATORS as string[]).includes(op)) {
-      nqUpdateCondition(index, { operator: op as FilterOperator });
+      nqUpdateCondition(rowId, { operator: op as FilterOperator });
     }
   }
 
-  function nqRemoveCondition(index: number) {
+  function nqRemoveCondition(rowId: number) {
     if (project.dataSource.kind !== "native-query") return;
     const conditions = [
       ...(project.dataSource.config.where?.conditions ?? []),
     ];
+    const index = conditionRows.index(project.id, conditions, rowId);
+    if (index < 0) return;
     conditions.splice(index, 1);
     nqSetConditions(conditions);
   }
@@ -321,10 +332,22 @@
   // ── Dataview query validation ──────────────────────────────
   let dvPreviewStatus: "idle" | "loading" | "success" | "error" = "idle";
   let dvPreviewMessage = "";
-  let dvPreviewTimer: ReturnType<typeof setTimeout> | undefined;
+  let dvPreviewTimer: number | undefined;
+  let previewVersion = 0, alive = true;
+  let previewContext = {id: project.id, kind: project.dataSource.kind, query: project.dataSource.kind === "dataview" ? project.dataSource.config.query ?? "" : "", owner: $app};
+  $: syncPreviewContext(project.id, project.dataSource.kind, project.dataSource.kind === "dataview" ? project.dataSource.config.query ?? "" : "", $app);
+
+  function syncPreviewContext(id: string, kind: DataSource["kind"], query: string, owner: typeof previewContext.owner) {
+    if (previewContext.id === id && previewContext.kind === kind && previewContext.query === query && previewContext.owner === owner) return;
+    previewContext = {id, kind, query, owner};
+    window.clearTimeout(dvPreviewTimer); previewVersion++;
+    dvPreviewStatus = "idle"; dvPreviewMessage = "";
+  }
 
   function validateDataviewQuery(query: string) {
-    clearTimeout(dvPreviewTimer);
+    syncPreviewContext(project.id, project.dataSource.kind, query, $app);
+    window.clearTimeout(dvPreviewTimer);
+    const version = ++previewVersion, context = previewContext;
     if (!query.trim()) {
       dvPreviewStatus = "idle";
       dvPreviewMessage = "";
@@ -332,23 +355,26 @@
     }
     dvPreviewStatus = "loading";
     dvPreviewMessage = $i18n.t("modals.project.dataview.validating");
-    dvPreviewTimer = setTimeout(() => runDataviewPreview(query), 600);
+    dvPreviewTimer = window.setTimeout(() => runDataviewPreview(query, version, context), 600);
   }
 
-  async function runDataviewPreview(query: string) {
+  async function runDataviewPreview(query: string, version: number, context: typeof previewContext) {
+    const current = () => alive && version === previewVersion && project.id === context.id && $app === context.owner && project.dataSource.kind === "dataview" && project.dataSource.config.query === query;
+    if (!current()) return;
     try {
-      if (!isPluginEnabled($app)) {
+      if (!isPluginEnabled(context.owner)) {
         dvPreviewStatus = "error";
         dvPreviewMessage = $i18n.t("errors.missingDataview.message");
         return;
       }
-      const api = getAPI($app);
+      const api = getAPI(context.owner);
       if (!api) {
         dvPreviewStatus = "error";
         dvPreviewMessage = $i18n.t("errors.missingDataview.message");
         return;
       }
       const result = await api.query(query, undefined, { forceId: true });
+      if (!current()) return;
       if (!result?.successful) {
         dvPreviewStatus = "error";
         dvPreviewMessage = $i18n.t("modals.project.dataview.query-error");
@@ -372,6 +398,7 @@
         dvPreviewMessage = $i18n.t("modals.project.dataview.unsupported-type", { type });
       }
     } catch {
+      if (!current()) return;
       dvPreviewStatus = "error";
       dvPreviewMessage = $i18n.t("modals.project.dataview.query-error");
     }
@@ -379,7 +406,7 @@
 
   import { onDestroy } from "svelte";
   import type { DataSource as DataSourceConfig } from "src/settings/v3/settings";
-  onDestroy(() => clearTimeout(dvPreviewTimer));
+  onDestroy(() => { alive = false; previewVersion++; window.clearTimeout(dvPreviewTimer); });
 
   // ── Multi-source management ────────────────────────────────
   /**
@@ -397,23 +424,29 @@
   }
 
   /** The label, which is the user's and may change freely. */
-  function renameAdditionalSource(index: number, name: string) {
+  function renameAdditionalSource(rowId: number, name: string) {
     const sources = [...(project.additionalSources ?? [])];
+    const index = sourceRows.index(project.id, sources, rowId);
     const current = sources[index];
     if (!current) return;
     const trimmed = name.trim();
     sources[index] = (trimmed ? { ...current, name: trimmed } : (({ name: _drop, ...rest }) => rest)(current)) as DataSourceConfig;
+    sourceRows.replace(rowId, sources[index]!);
     project = { ...project, additionalSources: sources };
   }
 
-  function removeAdditionalSource(index: number) {
+  function removeAdditionalSource(rowId: number) {
     const sources = [...(project.additionalSources ?? [])];
+    const index = sourceRows.index(project.id, sources, rowId);
+    if (index < 0) return;
     sources.splice(index, 1);
     project = { ...project, additionalSources: sources };
   }
 
-  function updateAdditionalSource(index: number, kind: string) {
+  function updateAdditionalSource(rowId: number, kind: string) {
     const sources = [...(project.additionalSources ?? [])];
+    const index = sourceRows.index(project.id, sources, rowId);
+    if (index < 0) return;
     let newSrc: DataSourceConfig;
     switch (kind) {
       case "tag":
@@ -434,14 +467,17 @@
       id: previous?.id ?? uuidv4(),
       ...(previous?.name ? { name: previous.name } : {}),
     } as DataSourceConfig;
+    sourceRows.replace(rowId, sources[index]!);
     project = { ...project, additionalSources: sources };
   }
 
-  function updateAdditionalSourceConfig(index: number, config: Record<string, unknown>) {
+  function updateAdditionalSourceConfig(rowId: number, config: Record<string, unknown>) {
     const sources = [...(project.additionalSources ?? [])];
+    const index = sourceRows.index(project.id, sources, rowId);
     const current = sources[index];
     if (!current) return;
     sources[index] = { ...current, config: { ...current.config, ...config } } as DataSourceConfig;
+    sourceRows.replace(rowId, sources[index]!);
     project = { ...project, additionalSources: sources };
   }
 
@@ -693,9 +729,15 @@
           description={$i18n.t("modals.project.query.description") ?? ""}
           vertical
         >
-          <TextArea
+          <TextField
+            bind:this={queryField}
+            multiline
+            ariaLabel={$i18n.t("modals.project.query.name")}
             placeholder={`TABLE status AS "Status" FROM "Work"`}
             value={project.dataSource.config.query ?? ""}
+            on:focus={() => { if (project.dataSource.kind === "dataview") queryBaseline = project.dataSource.config.query ?? ""; }}
+            on:commit={({detail}) => { queryBaseline = detail.value; }}
+            on:cancel={() => { if (project.dataSource.kind === "dataview") { patchPrimaryConfig({query: queryBaseline}); validateDataviewQuery(queryBaseline); } }}
             on:input={({ detail: query }) => {
               if (project.dataSource.kind === "dataview") {
                 patchPrimaryConfig({ query });
@@ -703,7 +745,6 @@
               }
             }}
             rows={6}
-            width="100%"
           />
           {#if dvPreviewStatus !== "idle"}
             <div
@@ -820,33 +861,37 @@
         vertical
       >
         <div class="ppp-nq-conditions">
-          {#each project.dataSource.config.where?.conditions ?? [] as condition, i}
+          {#each conditionEntries as {id: rowId, value: condition} (rowId)}
             <div class="ppp-nq-condition-row">
-              <TextInput
+              <ValueSuggestField
                 value={condition.field}
+                ariaLabel={$i18n.t("modals.project.native-query.where.field-placeholder")}
                 placeholder={$i18n.t(
                   "modals.project.native-query.where.field-placeholder"
                 )}
                 on:input={({ detail: field }) =>
-                  nqUpdateCondition(i, { field })}
+                  nqUpdateCondition(rowId, { field })}
               />
-              <Select
+              <SelectField
+                contextKey={`${project.id}:condition:${rowId}`}
+                tooltip={$i18n.t(`modals.project.native-query.operators.${condition.operator}`)}
                 value={condition.operator}
                 options={nqOperatorOptions}
                 on:change={({ detail: operator }) =>
-                  nqSetConditionOperator(i, operator)}
+                  nqSetConditionOperator(rowId, operator)}
               />
               {#if getFilterOperatorType(condition.operator) !== "unary"}
-                <TextInput
+                <ValueSuggestField
                   value={condition.value ?? ""}
+                  ariaLabel={$i18n.t("modals.project.native-query.where.value-placeholder")}
                   placeholder={$i18n.t(
                     "modals.project.native-query.where.value-placeholder"
                   )}
                   on:input={({ detail: value }) =>
-                    nqUpdateCondition(i, { value })}
+                    nqUpdateCondition(rowId, { value })}
                 />
               {/if}
-              <Button variant="plain" on:click={() => nqRemoveCondition(i)}>
+              <Button variant="plain" on:click={() => nqRemoveCondition(rowId)}>
                 <Icon name="x" />
               </Button>
             </div>
@@ -882,40 +927,49 @@
           </div>
         </div>
         <div class="ppp-additional-sources">
-          {#each project.additionalSources ?? [] as src, i}
+          {#each additionalRows as {id: rowId, value: src} (rowId)}
             <div class="ppp-additional-source-row">
-              <TextInput
+              <ValueSuggestField
                 value={src.name ?? ""}
+                ariaLabel={$i18n.t("modals.project.additional-sources.name")}
                 placeholder={$i18n.t("modals.project.additional-sources.name-placeholder", {
                   defaultValue: "Name (optional)",
                 })}
-                on:input={({ detail: name }) => renameAdditionalSource(i, name)}
+                on:input={({ detail: name }) => renameAdditionalSource(rowId, name)}
               />
-              <Select
+              <SelectField
+                contextKey={`${project.id}:source:${rowId}`}
+                tooltip={$i18n.t("modals.project.datasource.name")}
                 value={src.kind}
                 options={dataSourceOptions}
-                on:change={({ detail: kind }) => updateAdditionalSource(i, kind)}
+                on:change={({ detail: kind }) => updateAdditionalSource(rowId, kind)}
               />
               {#if src.kind === "folder"}
-                <TextInput
+                <PathSuggestField
+                  bind:this={additionalPathFields[String(rowId)]}
+                  ariaLabel={$i18n.t("modals.project.path.name")}
+                  files={$pathSource.folders}
+                  contextKey={`${project.id}:additional-folder:${rowId}`}
                   value={src.config.path}
                   placeholder="folder/path"
-                  on:input={({ detail: path }) => updateAdditionalSourceConfig(i, { path, recursive: src.config.recursive ?? false })}
+                  on:change={({ detail: path }) => updateAdditionalSourceConfig(rowId, { path, recursive: src.config.recursive ?? false })}
                 />
               {:else if src.kind === "tag"}
-                <TextInput
+                <ValueSuggestField
                   value={src.config.tag}
+                  ariaLabel={$i18n.t("modals.project.tag.name")}
                   placeholder="#tag"
-                  on:input={({ detail: tag }) => updateAdditionalSourceConfig(i, { tag, hierarchy: src.config.hierarchy ?? false })}
+                  on:input={({ detail: tag }) => updateAdditionalSourceConfig(rowId, { tag, hierarchy: src.config.hierarchy ?? false })}
                 />
               {:else if src.kind === "dataview"}
-                <TextInput
+                <ValueSuggestField
                   value={src.config.query}
+                  ariaLabel={$i18n.t("modals.project.query.name")}
                   placeholder="TABLE ..."
-                  on:input={({ detail: query }) => updateAdditionalSourceConfig(i, { query })}
+                  on:input={({ detail: query }) => updateAdditionalSourceConfig(rowId, { query })}
                 />
               {/if}
-              <Button variant="plain" on:click={() => removeAdditionalSource(i)}>
+              <Button variant="plain" on:click={() => removeAdditionalSource(rowId)}>
                 <Icon name="x" />
               </Button>
             </div>
@@ -1107,6 +1161,7 @@
         {/if}
 
         <DateFormatSelector
+          bind:this={dateFormatField}
           dateFormat={project.dateFormat}
           onChange={(newDateFormat) => {
             if (newDateFormat === undefined) {

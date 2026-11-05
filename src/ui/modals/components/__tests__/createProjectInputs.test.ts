@@ -22,6 +22,7 @@ jest.mock("obsidian-svelte",()=>({
  FileAutocomplete:require("../../../../../node_modules/obsidian-svelte/Autocomplete/FileAutocomplete.svelte").default,
  Select:require("../../../../../node_modules/obsidian-svelte/Select/Select.svelte").default,
  TextArea:require("../../../../../node_modules/obsidian-svelte/TextArea/TextArea.svelte").default,
+ Switch:require("../../../../../node_modules/obsidian-svelte/Switch/Switch.svelte").default,
  Button:require("./mocks/Button.mock.svelte").default,
  SettingItem:require("./mocks/ProjectChrome.mock.svelte").default,
  ModalLayout:require("./mocks/ProjectChrome.mock.svelte").default,
@@ -33,6 +34,8 @@ jest.mock("src/ui/components/FileListInput",()=>({FileListInput:require("src/ui/
 const mockFolders:Array<{path:string;name:string}>=[];
 jest.mock("src/lib/obsidian",()=>({...jest.requireActual("src/lib/obsidian"),getFoldersInFolder:()=>mockFolders}));
 jest.mock("src/lib/stores/capabilities",()=>({capabilities:require("svelte/store").writable({dataview:false})}));
+const mockDataview={query:jest.fn()};
+jest.mock("src/lib/datasources/dataview/host",()=>({getAPI:()=>mockDataview,isPluginEnabled:()=>true}));
 const {app}=require("src/lib/stores/obsidian"),{settings}=require("src/lib/stores/settings");
 const {DEFAULT_PROJECT,DEFAULT_SETTINGS}=require("src/settings/settings"),{TFolder}=require("obsidian");
 const {i18n}=require("src/lib/stores/i18n"),{get}=require("svelte/store");
@@ -42,13 +45,14 @@ const makeProject=(id="p1",name="Current")=>({...DEFAULT_PROJECT,id,name,templat
 const legacyContains=Object.getOwnPropertyDescriptor(String.prototype,"contains");
 let mockOwner:any;
 beforeEach(()=>{
+ require("src/lib/stores/capabilities").capabilities.set({dataview:false});mockDataview.query.mockReset().mockResolvedValue({successful:true,value:{type:"list",values:[]}});
  Object.defineProperty(String.prototype,"contains",{value:String.prototype.includes,configurable:true});
  mockFolders.splice(0,mockFolders.length,...Array.from({length:600},(_,id)=>new TFolder(id===599?"Projects/Ёлка":`Folders/Item ${id}`)));
  const root=new TFolder("/");
  mockOwner={vault:{getRoot:()=>root,getAllLoadedFiles:jest.fn(()=>[root,...mockFolders]),on:jest.fn(()=>({})),offref:jest.fn()}};
  app.set(mockOwner);settings.set({...DEFAULT_SETTINGS,projects:[makeProject(),makeProject("p2","Other")]});
 });
-afterEach(()=>{cleanup();if(legacyContains)Object.defineProperty(String.prototype,"contains",legacyContains);else Reflect.deleteProperty(String.prototype,"contains");});
+afterEach(()=>{cleanup();jest.useRealTimers();if(legacyContains)Object.defineProperty(String.prototype,"contains",legacyContains);else Reflect.deleteProperty(String.prototype,"contains");});
 const t=(key:string)=>get(i18n).t(key);
 const inputFor=(target:HTMLElement,key:string)=>Array.from(target.querySelectorAll<HTMLElement>('[data-testid="setting-item"]')).find(row=>row.dataset['name']===t(key))!.querySelector<HTMLInputElement>("input")!;
 const save=(target:HTMLElement)=>target.querySelector<HTMLButtonElement>('[data-variant="primary"]')!;
@@ -141,4 +145,95 @@ test("retiring a composing source does not leave the replacement form permanentl
 
 test("an originally empty project name cannot bypass required-name validation",async()=>{
  const view=mount(makeProject("new",""));await flush();await fireEvent.click(save(view.container));expect(view.onSave).not.toHaveBeenCalled();expect(save(view.container)).toBeDisabled();
+});
+
+test("additional sources retain the edited row when a preceding source is removed",async()=>{
+ const project={...makeProject(),additionalSources:[{id:"one",name:"One",kind:"folder",config:{path:"One",recursive:false}},{id:"two",name:"Two",kind:"folder",config:{path:"Two",recursive:false}}]},view=mount(project as any);await flush();
+ const rows=view.container.querySelectorAll('.ppp-additional-source-row'),input=rows[1]!.querySelector<HTMLInputElement>('input')!;await enter(input);typeInto(input,"private draft");input.setSelectionRange(1,4);await flush();
+ await fireEvent.click(rows[0]!.querySelector('button')!);await flush();
+ expect(view.container.querySelector('.ppp-additional-source-row input')).toBe(input);expect(input.value).toBe("private draft");expect([input.selectionStart,input.selectionEnd]).toEqual([1,4]);
+ typeInto(input,"Final");await flush();await fireEvent.click(save(view.container));
+ expect(view.onSave.mock.calls[0][0].additionalSources).toEqual([{id:"two",name:"Final",kind:"folder",config:{path:"Two",recursive:false}}]);
+});
+
+test("query conditions retain the edited row when a preceding condition is removed",async()=>{
+ const project={...makeProject(),dataSource:{id:"source-id",kind:"native-query",config:{from:{kind:"folder",path:"Notes",recursive:false},where:{conjunction:"and",conditions:[{field:"first",operator:"is",enabled:true,value:"a"},{field:"second",operator:"is",enabled:true,value:"b"}]}}}},view=mount(project as any);await flush();
+ const rows=view.container.querySelectorAll('.ppp-nq-condition-row'),input=rows[1]!.querySelector<HTMLInputElement>('input')!;await enter(input);typeInto(input,"private draft");input.setSelectionRange(1,4);await flush();
+ await fireEvent.click(rows[0]!.querySelector('button')!);await flush();
+ expect(view.container.querySelector('.ppp-nq-condition-row input')).toBe(input);expect(input.value).toBe("private draft");expect([input.selectionStart,input.selectionEnd]).toEqual([1,4]);
+ typeInto(input,"Final");await flush();await fireEvent.click(save(view.container));
+ expect(view.onSave.mock.calls[0][0].dataSource.config.where.conditions).toEqual([{field:"Final",operator:"is",enabled:true,value:"b"}]);
+});
+
+test("a legacy source without an id retains its name input through a kind change",async()=>{
+ const project={...makeProject(),additionalSources:[{name:"Legacy",kind:"folder",config:{path:"Notes",recursive:false}}]},view=mount(project as any);await flush();
+ const row=view.container.querySelector('.ppp-additional-source-row')!,name=row.querySelector<HTMLInputElement>('input')!;
+ expect(name).toHaveAttribute('role','combobox');const choice=row.querySelector<HTMLInputElement>('.ppp-option-field input')!;await enter(choice);tap(optionRows().find(option=>option.textContent===t('datasources.tag'))!);await flush();
+ expect(row.querySelector('input')).toBe(name);await fireEvent.click(save(view.container));const source=view.onSave.mock.calls[0][0].additionalSources[0];expect(source.id).toEqual(expect.any(String));expect(source.name).toBe('Legacy');expect(source.kind).toBe('tag');
+});
+
+const dqlProject=()=>({...makeProject(),dataSource:{id:"dql-source",kind:"dataview",config:{query:"LIST FROM #first"}}});
+const typeQuery=(input:HTMLTextAreaElement,text:string)=>{input.value=text;input.dispatchEvent(new Event('input',{bubbles:true}));};
+
+test("a late Dataview result cannot replace the current query's preview",async()=>{
+ jest.useFakeTimers();require("src/lib/stores/capabilities").capabilities.set({dataview:true});
+ const pending:Array<(value:unknown)=>void>=[];mockDataview.query.mockImplementation(()=>new Promise(resolve=>pending.push(resolve)));
+ const view=mount(dqlProject() as any);await flush();const input=view.container.querySelector('textarea')!;input.focus();typeQuery(input,"LIST FROM #old");await flush();jest.advanceTimersByTime(650);await flush();expect(pending).toHaveLength(1);
+ typeQuery(input,"LIST FROM #second");await flush();jest.advanceTimersByTime(650);await flush();expect(pending).toHaveLength(2);
+ pending[1]!({successful:true,value:{type:"list",values:[1,2]}});await flush();const current=view.container.querySelector('.ppp-dv-preview')!.textContent;
+ pending[0]!({successful:false});await flush();expect(view.container.querySelector('.ppp-dv-preview')!.textContent).toBe(current);expect(view.container.querySelector('.ppp-dv-preview')).toHaveClass('ppp-dv-preview--success');
+});
+
+test("Dataview preview waits for the final IME query",async()=>{
+ jest.useFakeTimers();require("src/lib/stores/capabilities").capabilities.set({dataview:true});const view=mount(dqlProject() as any);await flush();jest.advanceTimersByTime(650);await flush();mockDataview.query.mockClear();
+ const input=view.container.querySelector('textarea')!;input.focus();input.dispatchEvent(new CompositionEvent('compositionstart',{bubbles:true}));typeQuery(input,"LIST FROM #候");await flush();jest.advanceTimersByTime(650);await flush();expect(mockDataview.query).not.toHaveBeenCalled();
+ input.value="LIST FROM #候補";input.dispatchEvent(new CompositionEvent('compositionend',{bubbles:true}));await flush();jest.advanceTimersByTime(650);await flush();expect(mockDataview.query).toHaveBeenCalledTimes(1);expect(mockDataview.query.mock.calls[0][0]).toBe("LIST FROM #候補");
+});
+
+test("Escape restores both the multiline query and the project value saved later",async()=>{
+ require("src/lib/stores/capabilities").capabilities.set({dataview:true});const view=mount(dqlProject() as any);await flush();const input=view.container.querySelector('textarea')!;input.focus();typeQuery(input,"LIST\nFROM #draft");await flush();
+ const enterEvent=new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true});input.dispatchEvent(enterEvent);expect(enterEvent.defaultPrevented).toBe(false);
+ input.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));await flush();expect(input.value).toBe('LIST FROM #first');await fireEvent.click(save(view.container));expect(view.onSave.mock.calls[0][0].dataSource.config.query).toBe('LIST FROM #first');
+});
+
+test("date format presets use the common input and preserve the configuration codes",async()=>{
+ const view=mount();await flush();const row=Array.from(view.container.querySelectorAll<HTMLElement>('[data-testid="setting-item"]')).find(item=>item.dataset['name']===t('modals.date-format.preset.name'))!,input=row.querySelector<HTMLInputElement>('input[role="combobox"]');expect(input).not.toBeNull();
+ await enter(input!);tap(optionRows().find(option=>option.textContent==='EU (DD.MM.YYYY)')!);await flush();await fireEvent.click(save(view.container));
+ expect(view.onSave.mock.calls[0][0].dateFormat).toEqual(expect.objectContaining({preset:'eu',writeFormat:'DD.MM.YYYY',includeTime:false}));
+});
+
+test("Escape restores the custom date syntax in the actual project saved later",async()=>{
+ const view=mount({...makeProject(),dateFormat:{preset:'custom',writeFormat:'YYYY-MM-DD',includeTime:true}} as any);await flush();const input=inputFor(view.container,'modals.date-format.custom.name');await enter(input);typeInto(input,'DD.MM.YYYY');await flush();input.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));await flush();
+ expect(input.value).toBe('YYYY-MM-DD');await fireEvent.click(save(view.container));expect(view.onSave.mock.calls[0][0].dateFormat).toEqual({preset:'custom',writeFormat:'YYYY-MM-DD',includeTime:true});
+});
+
+test("an empty custom date draft blocks Save until restored or corrected",async()=>{
+ const view=mount({...makeProject(),dateFormat:{preset:'custom',writeFormat:'YYYY-MM-DD',includeTime:true}} as any);await flush();const input=inputFor(view.container,'modals.date-format.custom.name');await enter(input);typeInto(input,'');await flush();await fireEvent.click(save(view.container));expect(view.onSave).not.toHaveBeenCalled();
+ typeInto(input,'DD.MM.YYYY');await flush();await fireEvent.click(save(view.container));expect(view.onSave.mock.calls[0][0].dateFormat.writeFormat).toBe('DD.MM.YYYY');
+});
+
+test("Save settles an additional source path and never persists its UI row key",async()=>{
+ const view=mount({...makeProject(),additionalSources:[{id:'extra',name:'Extra',kind:'folder',config:{path:'Notes',recursive:false}}]} as any);await flush();
+ const input=view.container.querySelector<HTMLInputElement>('.ppp-additional-source-row .ppp-path-field input')!;await enter(input);typeInto(input,'Projects/Ёлка');await flush();await fireEvent.click(save(view.container));
+ expect(view.onSave.mock.calls[0][0].additionalSources).toEqual([{id:'extra',name:'Extra',kind:'folder',config:{path:'Projects/Ёлка',recursive:false}}]);
+});
+
+test("a unary condition selection keeps the row but removes its stored operand",async()=>{
+ const project={...makeProject(),dataSource:{id:'source-id',kind:'native-query',config:{from:{kind:'folder',path:'Notes',recursive:false},where:{conjunction:'and',conditions:[{field:'status',operator:'is',enabled:true,value:'old'}]}}}},view=mount(project as any);await flush();
+ const row=view.container.querySelector('.ppp-nq-condition-row')!,field=row.querySelector('input'),operator=row.querySelector<HTMLInputElement>('.ppp-option-field input')!;await enter(operator);
+ tap(optionRows().find(option=>option.textContent===t('modals.project.native-query.operators.is-empty'))!);await flush();expect(row.querySelector('input')).toBe(field);await fireEvent.click(save(view.container));
+ expect(view.onSave.mock.calls[0][0].dataSource.config.where.conditions).toEqual([{field:'status',operator:'is-empty',enabled:true}]);
+});
+
+test("Ctrl+Enter accepts a multiline query and the next Escape restores that accepted baseline",async()=>{
+ require('src/lib/stores/capabilities').capabilities.set({dataview:true});const view=mount(dqlProject() as any);await flush();const input=view.container.querySelector('textarea')!;input.focus();typeQuery(input,'LIST\nFROM #accepted');await flush();
+ const event=new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true});input.dispatchEvent(event);await flush();expect(event.defaultPrevented).toBe(true);
+ typeQuery(input,'LIST FROM #cancelled');await flush();input.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));await flush();expect(input.value).toBe('LIST\nFROM #accepted');await fireEvent.click(save(view.container));expect(view.onSave.mock.calls[0][0].dataSource.config.query).toBe('LIST\nFROM #accepted');
+});
+
+test("changing the project retires a pending preview and the old textarea's late events",async()=>{
+ jest.useFakeTimers();require('src/lib/stores/capabilities').capabilities.set({dataview:true});const pending:Array<(value:unknown)=>void>=[];mockDataview.query.mockImplementation(()=>new Promise(resolve=>pending.push(resolve)));
+ const view=mount(dqlProject() as any);await flush();const old=view.container.querySelector('textarea')!;old.focus();typeQuery(old,'LIST FROM #old');await flush();jest.advanceTimersByTime(650);await flush();
+ view.component.$set({project:{...dqlProject(),id:'p2',name:'Other'}});await flush();const current=view.container.querySelector('textarea')!;expect(current).not.toBe(old);expect(view.container.querySelector('.ppp-dv-preview')).toBeNull();
+ old.value='retired';old.dispatchEvent(new CompositionEvent('compositionend',{bubbles:true}));pending[0]!({successful:false});await flush();expect(view.container.querySelector('.ppp-dv-preview')).toBeNull();await fireEvent.click(save(view.container));expect(view.onSave.mock.calls[0][0].dataSource.config.query).toBe('LIST FROM #first');
 });

@@ -622,6 +622,7 @@
                 "read-only-fields": "Read-only fields"
             },
             "date-format": {
+                "invalid": "Enter a valid date format",
                 "name": "Date format",
                 "desc": "Choose how dates are formatted when creating or editing notes",
                 "preset": {

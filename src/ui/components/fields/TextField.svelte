@@ -26,6 +26,9 @@
   /** Report a blur that changed nothing (a cell editor that must leave edit mode). */
   export let commitUnchanged = false;
   export let readOnly = false;
+  /** Multiline keeps native Enter; Ctrl/Cmd+Enter confirms the draft. */
+  export let multiline = false;
+  export let rows = 6;
 
   /** A consumer whose persistence failed can keep the draft and permit retry. */
   export function retryCommit(): void { ctl.arm(); }
@@ -43,7 +46,7 @@
   const ctl = createDraftController(value);
   let draft = value;
   let invalid = false;
-  let inputEl: HTMLInputElement | null = null;
+  let inputEl: HTMLInputElement | HTMLTextAreaElement | null = null;
   let alive = true, reportedInput = value;
   onDestroy(() => { alive = false; });
 
@@ -101,7 +104,7 @@
   }
   function onInput(e: Event): void {
     if (readOnly || disabled) return;
-    ctl.input((e.currentTarget as HTMLInputElement).value);
+    ctl.input((e.currentTarget as HTMLInputElement | HTMLTextAreaElement).value);
     pull();
     invalid = false;
     reportInput();
@@ -124,6 +127,7 @@
   function onKeydown(e: KeyboardEvent): void {
     if (readOnly || disabled || ctl.isComposing(e)) return;
     if (e.key === "Enter") {
+      if (multiline && !e.ctrlKey && !e.metaKey) return;
       e.preventDefault();
       emit("enter");
     } else if (e.key === "Escape") {
@@ -139,6 +143,25 @@
   }
 </script>
 
+{#if multiline}
+<textarea
+  bind:this={inputEl}
+  use:keepInView={{ confirm }}
+  use:releaseOnOutsideTap
+  {id} {rows}
+  class="ppp-text-field ppp-text-field--multiline {inputClass}"
+  class:ppp-text-field--invalid={invalid || error}
+  inputmode={inputMode}
+  enterkeyhint="enter"
+  autocapitalize="off" autocorrect="off" spellcheck="false"
+  value={draft} {placeholder} {disabled} readonly={readOnly}
+  aria-label={ariaLabel} aria-invalid={invalid || error ? "true" : undefined}
+  on:focus={onFocus} on:focus on:click on:blur={onBlur} on:input={onInput}
+  on:keydown={onKeydown} on:keydown
+  on:compositionstart={() => ctl.compositionStart()} on:compositionend={onCompositionEnd}
+  {...$$restProps}
+/>
+{:else}
 <input
   bind:this={inputEl}
   use:keepInView={{ confirm }}
@@ -168,6 +191,7 @@
   on:compositionend={onCompositionEnd}
   {...$$restProps}
 />
+{/if}
 
 <style>
   .ppp-text-field {
@@ -180,4 +204,5 @@
   .ppp-text-field--invalid {
     border-color: var(--text-error);
   }
+  .ppp-text-field--multiline { width: 100%; box-sizing: border-box; resize: vertical; }
 </style>
