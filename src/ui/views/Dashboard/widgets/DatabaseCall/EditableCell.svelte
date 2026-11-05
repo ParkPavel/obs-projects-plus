@@ -72,7 +72,7 @@
     if (saving) return;
     if (!editable) reasonOpen = true;
     if (!editable || editing) return;
-    if (field.type === DataFieldType.Boolean) {
+    if (field.type === DataFieldType.Boolean && !field.repeated && !Array.isArray(value)) {
       dispatch("commit", value !== true);
       return;
     }
@@ -103,8 +103,8 @@
       {saving}
       on:commit on:cancel
       on:setupRelation={() => dispatch("setupRelation", field)} />
-  {:else if editing && (field.type === DataFieldType.List || (field.type === DataFieldType.String && (field.repeated || Array.isArray(value))))}
-    <ListCellEditor {field} {value} {options} {saving} {retryVersion} on:commit on:cancel />
+  {:else if editing && (field.repeated || field.type === DataFieldType.List || field.type === DataFieldType.String && Array.isArray(value))}
+    <ListCellEditor {field} {value} {options} {dateFormat} {saving} {retryVersion} on:commit on:cancel />
   {:else if editing && (isChoice || (field.type === DataFieldType.String && options.length > 0))}
     <CellChoiceDropdown bind:draft {field} {options} {saving} {retryVersion}
       on:commit={(e) => commitDraft(e.detail)}

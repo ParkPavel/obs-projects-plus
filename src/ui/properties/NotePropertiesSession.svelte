@@ -145,6 +145,7 @@
 
   // i3-props: one queue for every write of this block, in the order asked.
   let acceptedLists = new Map<string, { value: CellListItem[]; echoes: Set<string> }>();
+  const pendingListWrites = new Map<string, number>();
   let suggestionRevision = 0;
   const queue = createWriteQueue(undefined, () => {
     new Notice(get(i18n).t("modals.note.edit.save-error"));
@@ -166,7 +167,7 @@
       const snapshot = JSON.stringify(editableListItems(frontmatter?.[key]));
       // A latest ACK retires the optimistic value. An unknown snapshot is an
       // external change; earlier known metadata echoes do not erase accepted edits.
-      if (snapshot === JSON.stringify(accepted.value) || !accepted.echoes.has(snapshot)) {
+      if (snapshot === JSON.stringify(accepted.value) && !pendingListWrites.get(key) || !accepted.echoes.has(snapshot)) {
         acceptedLists = new Map(acceptedLists);
         acceptedLists.delete(key);
       }
@@ -520,7 +521,10 @@
     const echoes = new Set(previous?.echoes ?? [JSON.stringify(editableListItems(entry.value))]);
     echoes.add(JSON.stringify(next));
     acceptedLists = new Map(acceptedLists).set(entry.key, { value: next, echoes });
+    pendingListWrites.set(entry.key, (pendingListWrites.get(entry.key) ?? 0) + 1);
     const saved = await writeKey(entry.key, plan.value);
+    const pending = (pendingListWrites.get(entry.key) ?? 1) - 1;
+    if (pending) pendingListWrites.set(entry.key, pending); else pendingListWrites.delete(entry.key);
     if (!saved && acceptedLists.get(entry.key)?.value === next) {
       acceptedLists = new Map(acceptedLists); acceptedLists.delete(entry.key);
     }

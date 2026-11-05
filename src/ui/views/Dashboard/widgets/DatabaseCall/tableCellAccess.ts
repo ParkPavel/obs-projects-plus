@@ -33,7 +33,8 @@ export function cellAccess(field: DataField, value: Optional<DataValue>, readonl
   if (readonly) {
     return { editable: false, reason: { key: `${R}.source`, defaultValue: "This source is read only" } };
   }
-  if (Array.isArray(value) && field.type !== DataFieldType.String && field.type !== DataFieldType.List && field.type !== DataFieldType.Relation) {
+  const typedRepeated = field.repeated && [DataFieldType.Number, DataFieldType.Date, DataFieldType.Boolean].includes(field.type);
+  if (Array.isArray(value) && !typedRepeated && field.type !== DataFieldType.String && field.type !== DataFieldType.List && field.type !== DataFieldType.Relation) {
     return { editable: false, reason: { key: `${R}.list`, defaultValue: "A list of values is not edited here yet — open the note" } };
   }
   return { editable: true };

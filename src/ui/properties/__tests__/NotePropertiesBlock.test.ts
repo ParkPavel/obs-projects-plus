@@ -218,6 +218,24 @@ describe("i3-props NotePropertiesBlock", () => {
     } finally { view.unmount(); }
   });
 
+  it("a pre-write metadata echo during add-remove cannot acknowledge the queued return to the original list", async () => {
+    const fm = { mixed: ["own"], other: "before" }, view = setup(fm);
+    let first = () => {}, second = () => {};
+    const firstGate = new Promise<void>(resolve => { first = resolve; });
+    const secondGate = new Promise<void>(resolve => { second = resolve; });
+    try {
+      await tick(); (row("mixed").querySelector(".ppp-note-props__display") as HTMLElement).click(); await flush();
+      const write = view.processFrontMatter.getMockImplementation()!;
+      view.processFrontMatter.mockImplementationOnce(async (...args) => { await firstGate; return write(...args); });
+      view.processFrontMatter.mockImplementationOnce(async (...args) => { await secondGate; return write(...args); });
+      const input = editorOf("mixed")!; type(input, "A"); key(input, "Enter"); await flush();
+      row("mixed").querySelectorAll<HTMLButtonElement>(".ppp-chips__remove")[1]!.click(); await flush();
+      fm.other = "external"; view.notifyChanged(view.file); await flush(); first(); await flush();
+      type(input, "C"); key(input, "Enter"); await flush(); second(); await flush();
+      expect(fm.mixed).toEqual(["own", "C"]); expect(fm.other).toBe("external");
+    } finally { first(); second(); await flush(); view.unmount(); }
+  });
+
   it("a list source refresh preserves its original input, private draft and caret", async () => {
     const fm = { mixed: ["own"] }, other = { mixed: ["before"] }, view = setup(fm, other);
     try {

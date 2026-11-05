@@ -40,6 +40,13 @@ function mount(expression: string) {
 }
 
 describe("FormulaEditor — the typed formula", () => {
+  it("compositionend and Apply use the final native expression even when the last input event was omitted", async () => {
+    const { container, commits } = mount("1"); const input = textarea(container); input.focus();
+    input.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true })); await typeInto(input, "1 +");
+    input.value = "1 + 2"; input.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true })); await tick();
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", ctrlKey: true, bubbles: true }));
+    expect(commits).toEqual(["1 + 2"]);
+  });
   it("survives a flush and is what change and commit carry", async () => {
     const { container, changes, commits } = mount("1");
     const el = textarea(container);

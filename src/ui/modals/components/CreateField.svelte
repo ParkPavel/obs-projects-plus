@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { provideFormFields } from "src/ui/components/fields/formFields";
+  const formFields = provideFormFields();
   import {
     Button,
     ModalButtonGroup,
@@ -594,7 +596,9 @@
   let submitError = "";
 
   async function submit(): Promise<void> {
-    if (pending || fieldNameError) return;
+    if (pending || !formFields.syncForSubmit()) return;
+    fieldNameError = validateFieldName(field.name);
+    if (fieldNameError) return;
     if (nameInput?.isComposing() || defaultInput?.isComposing() || (field.type === DataFieldType.Number && !numberInput?.commitForNavigation())) return;
     pending = true;
     submitError = "";

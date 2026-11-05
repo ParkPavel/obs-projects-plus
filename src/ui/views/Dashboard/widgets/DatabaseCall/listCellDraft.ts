@@ -8,7 +8,7 @@ export function createListCellDraft(value: Optional<DataValue>) {
   const items = writable<Array<{ id: number; value: Optional<DataValue> }>>(initial.map((value, id) => ({ id, value })));
   return {
     subscribe: items.subscribe,
-    add: () => items.update(items => [...items, { id: nextId++, value: "" }]),
+    add: (value: Optional<DataValue> = "") => items.update(items => [...items, { id: nextId++, value }]),
     change: (id: number, value: Optional<DataValue>) => items.update(items => items.map(item => item.id === id ? { id, value } : item)),
     remove: (id: number) => items.update(items => items.filter(item => item.id !== id)),
     value(): Optional<DataValue> {

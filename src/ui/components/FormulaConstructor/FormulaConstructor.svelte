@@ -50,6 +50,7 @@
   import { optionDomId } from "src/ui/components/fields/comboOptions";
   import { revealInList } from "src/ui/components/fields/revealInList";
   import { createOwnerFrames } from "src/ui/utils/ownerFrames";
+  import { registerFormField } from "src/ui/components/fields/formFields";
 
   // ── Snippets catalog (default) ──────────────────────────────
   // Small built-in catalog for empty-state Ctrl+Space discovery. Each surface
@@ -110,6 +111,9 @@
   let highlightEl: HTMLDivElement | null = null;
   let suggestionListEl: HTMLDivElement | null = null;
   let composing = false;
+  let alive = true;
+  onDestroy(() => (alive = false));
+  registerFormField({ isComposing: () => !disabled && composing, syncForSubmit: () => disabled || syncForSubmit() });
   const listId = `ppp-fc-list-${++sequence}`;
   const frames = createOwnerFrames(); onDestroy(frames.destroy);
   let suggestionsVisible = false;
@@ -239,9 +243,20 @@
     validation.flush();
   }
 
+  /** A containing form validates and adopts the final original draft without applying it separately. */
+  export function syncForSubmit(): boolean {
+    if (!alive || disabled || composing) return false;
+    readNativeDraft();
+    validateNow();
+    if (errors.length) return false;
+    dispatch("change", value);
+    return true;
+  }
+
   /** Buttons and keyboard shortcuts commit the same currently visible native draft. */
   export function commitCurrent(): void {
-    if (disabled || composing) return;
+    if (!alive || disabled || composing) return;
+    readNativeDraft();
     validateNow();
     if (errors.length === 0 && value.trim()) dispatch("commit");
   }
@@ -282,10 +297,25 @@
 
   // ── Event handlers ──────────────────────────────────────────
   function handleInput(e: Event) {
+    if (!alive || disabled) return;
     const target = e.target as HTMLTextAreaElement;
     value = target.value;
     dispatch("change", value);
     updateCursor(target);
+  }
+
+  function readNativeDraft(): void {
+    if (textareaEl && textareaEl.value !== value) {
+      value = textareaEl.value;
+      dispatch("change", value);
+    }
+  }
+  function finishComposition(event: CompositionEvent): void {
+    if (!alive || disabled) return;
+    recordImeCompositionEnd(event);
+    composing = false;
+    readNativeDraft();
+    handleCursorMove(event);
   }
 
   function handleCursorMove(e: Event) {
@@ -460,7 +490,7 @@
         on:scroll={syncScroll}
         on:blur={frames.clear}
         on:compositionstart={() => { composing = true; showSuggestions = false; }}
-        on:compositionend={(event) => { recordImeCompositionEnd(event); composing = false; handleCursorMove(event); }}
+        on:compositionend={finishComposition}
         spellcheck="false"
       ></textarea>
     </div>

@@ -4,10 +4,11 @@
     Icon,
   } from "obsidian-svelte";
   import ComboField from "../fields/ComboField.svelte";
-  import TextField from "../fields/TextField.svelte";
   import NumberField from "../fields/NumberField.svelte";
   import { namesToOptions } from "../fields/comboOptions";
   import { configuredChoiceOptions, choiceValueAllowed } from "src/lib/suggestions/choiceOptions";
+  import { vaultPathSource } from "src/lib/suggestions/vaultPaths";
+  import { app } from "src/lib/stores/obsidian";
   import DateInput from "../DateInput.svelte";
   import DatetimeInput from "../DatetimeInput.svelte";
   import { ColorPicker } from "src/ui/components/ColorPicker";
@@ -130,6 +131,12 @@
   $: isColorField = isColorFieldName(field.name);
   $: isImageField = IMAGE_FIELDS.some(img => field.name.toLowerCase().includes(img));
   $: isTimeField = TIME_FIELDS.some(tf => field.name.toLowerCase().includes(tf));
+  $: imagePaths = vaultPathSource(field.type === DataFieldType.String && isImageField && !readonly &&
+    typeof $app?.vault?.getAllLoadedFiles === "function" ? $app : undefined);
+  $: imageOptions = namesToOptions([...new Set([...suggestions, ...$imagePaths.files
+    .filter(file => /\.(?:avif|bmp|gif|ico|jpe?g|png|svg|tiff?|webp)$/i.test(file.path)).map(file => file.path)])]);
+  $: colorOptions = options.filter(option => normalizeHexColor(option.id) !== null);
+  $: timeOptions = options.filter(option => !!option.id.trim() && validTime(option.id));
   
   // ========================================
   // TEXT INPUT HANDLERS (with typing buffer)
@@ -279,13 +286,15 @@
             style:background-color={localDisplayValue || '#888'}
           ></div>
           
-          <TextField
+          <ComboField
             value={localDisplayValue}
+            options={colorOptions}
+            allowCustom commitOnDestroy={false}
             placeholder="#RRGGBB"
             inputClass="color-hex-input"
             disabled={readonly}
             ariaLabel={field.name}
-            on:input={onTextInput}
+            on:draftChange={onTextInput}
             on:commit={onTextCommit}
             on:cancel={onTextCancel}
           />
@@ -324,13 +333,15 @@
       </div>
       
     {:else if isImageField}
-      <TextField
+      <ComboField
             value={localDisplayValue}
+            options={imageOptions}
+            allowCustom commitOnDestroy={false}
             placeholder={$i18n.t("components.field-control.image-placeholder")}
             inputClass="field-input"
             disabled={readonly}
             ariaLabel={field.name}
-            on:input={onTextInput}
+            on:draftChange={onTextInput}
             on:commit={onTextCommit}
             on:cancel={onTextCancel}
           />
@@ -344,8 +355,10 @@
       {/if}
       
     {:else if isTimeField}
-      <TextField
+      <ComboField
         value={localDisplayValue}
+        options={timeOptions}
+        allowCustom commitOnDestroy={false}
         placeholder="HH:MM"
         inputClass="field-input time-input"
         disabled={readonly}
@@ -495,6 +508,7 @@
     width: 100%;
     box-sizing: border-box;
   }
+  .color-field-row :global(.ppp-combo) { flex: 1; min-width: 0; }
   
   /* === LEVEL 3: Color swatch === */
   .color-swatch {

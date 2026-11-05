@@ -15,6 +15,7 @@
   export let retryVersion = 0;
   const dispatch = createEventDispatcher<{ commit: Optional<DataValue>; cancel: void; invalid: boolean }>();
   let input: ComboField;
+  export function syncForSubmit(): boolean { return input?.syncForSubmit() ?? false; }
   let invalid = false;
   const initial = cellDraftText(field, value, dateFormat);
   const retry = onCellRetry(() => input?.retryCommit());

@@ -29,11 +29,11 @@ const { isMobile } = require("src/lib/stores/ui");
 type DataField = import("src/lib/dataframe/dataframe").DataField;
 type FieldType = import("src/lib/dataframe/dataframe").DataFieldType;
 
-async function mount(type: FieldType, initial: Array<string | number | null> = ["alpha, beta", "quote \"inside\"", "plain"]) {
+async function mount(type: FieldType, initial: Array<string | number | boolean | null> = ["alpha, beta", "quote \"inside\"", "plain"]) {
   const body = "\nKeep the body.\n";
   const fs = new InMemFileSystem({});
   await fs.create("A.md", `---\ntags: ${JSON.stringify(initial)}\nother: untouched\n---${body}`);
-  const field: DataField = { name: "tags", type, repeated: type === DataFieldType.String, identifier: false, derived: false };
+  const field: DataField = { name: "tags", type, repeated: type !== DataFieldType.List, identifier: false, derived: false };
   const nameField: DataField = { ...field, name: "name", type: DataFieldType.String, repeated: false, identifier: true, derived: true };
   const project = { ...DEFAULT_PROJECT, id: "lists", name: "Lists" };
   const source = new FolderDataSource(fs, project, DEFAULT_SETTINGS.preferences);
@@ -142,6 +142,31 @@ it("removing every item writes an empty array, not null or a string", async () =
 it("the writer tracks a list-only patch", () => {
   const patch = updateRecordValues({ id: "A.md", values: { tags: ["old"], other: "keep" } }, { tags: ["new"] });
   expect(patch.values).toEqual({ tags: ["new"], other: "keep" });
+});
+
+it.each([
+  [DataFieldType.Number, [0, 2, null], "3", 3],
+  [DataFieldType.Boolean, [true, false, null], "false", false],
+  [DataFieldType.Date, ["2026-11-05", null], "07.11.2026", "2026-11-07"],
+])("a repeated %s table cell adds a typed member through the real writer", async (type, initial, draft, expected) => {
+  const { files, source, field, writes } = await mount(type as FieldType, initial as Array<string | number | boolean | null>);
+  button("Add item").click(); await tick(); await tick();
+  const inputs = document.querySelectorAll<HTMLInputElement>(".ppp-t2-list-editor input");
+  const input = inputs[inputs.length - 1]!;
+  expect(input).toBeDefined(); input.value = draft as string; input.dispatchEvent(new Event("input", { bubbles: true })); await tick();
+  button("Apply").click(); await tick(); expect(writes).toHaveLength(1); await writes[0];
+  expect((await source.queryFiles(files, [field])).records[0]?.values["tags"]).toEqual([...(initial as unknown[]), expected]);
+});
+
+it("an incomplete typed list member or active composition blocks Apply without a write", async () => {
+  const { writes } = await mount(DataFieldType.Number, [0]);
+  button("Add item").click(); await tick(); await tick();
+  const inputs = document.querySelectorAll<HTMLInputElement>(".ppp-t2-list-editor input"), input = inputs[inputs.length - 1]!;
+  input.value = "-"; input.dispatchEvent(new Event("input", { bubbles: true })); await tick();
+  button("Apply").click(); await tick(); expect(writes).toHaveLength(0); expect(input).toHaveAttribute("aria-invalid", "true");
+  input.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true })); input.value = "3";
+  input.dispatchEvent(new Event("input", { bubbles: true })); await tick(); button("Apply").click(); await tick();
+  expect(writes).toHaveLength(0);
 });
 
 it.each([{}, { isComposing: true }, { keyCode: 229 }])("IME Escape leaves suggestions open; the next Escapes close suggestions and cancel (%j)", async flags => {

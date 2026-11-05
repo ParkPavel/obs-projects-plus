@@ -4,6 +4,7 @@
 </script>
 
 <script lang="ts">
+  import { registerFormField } from "./formFields";
   /** Re-arm an unchanged draft after the consumer reports a failed write. */
   export function retryCommit(): void { ctl.arm(); }
   /** A containing editor can own Tab while keeping the field's selected option. */
@@ -33,6 +34,10 @@
   }
   export function isComposing(): boolean { return ctl.isComposing(); }
   export function hasActiveOption(): boolean { return activeNow() !== undefined; }
+  registerFormField({
+    isComposing: () => !disabled && !readOnly && ctl.isComposing(),
+    syncForSubmit: () => disabled || readOnly || (!dirty && !invalid && ctl.valueForSubmit() === value) || syncForSubmit(),
+  });
   /**
    * ComboField (stab-forms) — a text input with a suggestion listbox. DOM focus
    * stays on the input (role=combobox, aria-activedescendant names the active

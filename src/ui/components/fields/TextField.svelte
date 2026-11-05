@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { registerFormField } from "./formFields";
   /**
    * TextField (stab-forms) — the one text input with a draft. The control owns
    * its text while the user is in it; the `value` prop is only ever read, so a
@@ -58,6 +59,10 @@
   }>();
 
   const ctl = createDraftController(value);
+  registerFormField({
+    isComposing: () => !disabled && !readOnly && ctl.isComposing(),
+    syncForSubmit: () => disabled || readOnly || (!invalid && ctl.getState().draft === ctl.getState().baseline && ctl.valueForSubmit() === value) || syncForSubmit(),
+  });
   let draft = value;
   let invalid = false;
   let inputEl: HTMLInputElement | HTMLTextAreaElement | null = null;

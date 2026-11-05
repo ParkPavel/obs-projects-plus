@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { provideFormFields } from "src/ui/components/fields/formFields";
+  const formFields = provideFormFields();
   import { sourceCatalogue } from "src/lib/relations/baseRef";
   import {
     Button,
@@ -585,7 +587,9 @@
   $: options = dataFieldTypeOptions((key) => $i18n.t(key));
 
   async function handleSave() {
-    if (saving || fieldNameError) return;
+    if (saving || !formFields.syncForSubmit()) return;
+    fieldNameError = validateFieldName(field.name);
+    if (fieldNameError) return;
     if (field?.typeConfig && field.typeConfig?.options) {
       const options = field.typeConfig.options;
       field = {

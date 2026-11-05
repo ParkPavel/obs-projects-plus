@@ -8,6 +8,9 @@
 
 import "@testing-library/jest-dom";
 import { tick } from "svelte";
+import { optionRows, tap } from "src/ui/components/fields/__tests__/support/comboKit";
+import { get } from "svelte/store";
+import { app } from "src/lib/stores/obsidian";
 
 jest.mock(
   "src/ui/components/ColorPicker",
@@ -81,6 +84,39 @@ afterEach(() => {
 });
 
 describe("FieldControl text entry on shared fields", () => {
+  it("image controls share the permitted vault-file source and release it without leaking paths into ordinary properties", async () => {
+    const { TFile } = require("obsidian"), previous = get(app), events = new Map<string, () => void>();
+    let files = [new TFile("Attachments/old.png"), new TFile("Private/note.md")];
+    const owner = { vault: { getAllLoadedFiles: jest.fn(() => files), getRoot: () => ({ path: "/" }),
+      on: jest.fn((name: string, callback: () => void) => { events.set(name, callback); return name; }), offref: jest.fn() } };
+    app.set(owner as never); const first = mount("cover", ""), second = mount("banner", ""), ordinary = mount("category", "");
+    try {
+      await tick(); expect(owner.vault.getAllLoadedFiles).toHaveBeenCalledTimes(1); expect(owner.vault.on).toHaveBeenCalledTimes(3);
+      first.input.focus(); await type(first.input, "draft"); first.input.setSelectionRange(1, 3);
+      files = [...files, new TFile("Attachments/draft image.png")]; events.get("create")!(); jest.advanceTimersByTime(100); await tick(); await tick();
+      expect(first.target.querySelector("input")).toBe(first.input); expect(first.input.value).toBe("draft");
+      expect([first.input.selectionStart, first.input.selectionEnd]).toEqual([1, 3]); expect(document.activeElement).toBe(first.input);
+      expect(first.onChange).not.toHaveBeenCalled(); expect(optionRows().map(row => row.textContent)).toEqual(["Attachments/draft image.png"]);
+      tap(optionRows()[0]!); await tick(); expect(first.onChange).toHaveBeenCalledWith("Attachments/draft image.png");
+      ordinary.input.focus(); await tick(); await tick(); expect(optionRows()).toHaveLength(0); expect(ordinary.onChange).not.toHaveBeenCalled();
+      first.component.$destroy(); expect(owner.vault.offref).not.toHaveBeenCalled();
+      second.component.$destroy(); expect(owner.vault.offref).toHaveBeenCalledTimes(3);
+    } finally { first.component.$destroy(); second.component.$destroy(); ordinary.component.$destroy(); app.set(previous); }
+  });
+  it.each([
+    ["cover", "Attachments/My image.png", "Attachments/My image.png"],
+    ["starttime", "09:30", "09:30"],
+    ["color", "#ABC", "#aabbcc"],
+  ])("%s selects a semantic suggestion on its original input", async (name, suggestion, stored) => {
+    const m = mount(name, "");
+    try {
+      m.component.$set({ suggestions: [suggestion] }); await tick(); m.input.focus(); await tick(); await tick();
+      expect(m.input).toHaveAttribute("role", "combobox"); const option = optionRows().find(row => row.textContent === suggestion);
+      expect(option).toBeDefined(); tap(option!); await tick();
+      expect(m.onChange).toHaveBeenCalledTimes(1); expect(m.onChange).toHaveBeenCalledWith(stored);
+      expect(m.target.querySelector("input")).toBe(m.input); expect(document.activeElement).toBe(m.input);
+    } finally { m.component.$destroy(); }
+  });
   it("accepting an untouched external value on blur cannot queue a live save or overwrite its successor", async () => {
     const m = mount("title", "a");
     try {
