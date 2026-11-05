@@ -22,6 +22,7 @@ import type {
   ProjectsPluginPreferences,
 } from "src/settings/settings";
 import { DataSource } from "../dataSource";
+import { applyDeclaredStoredTypes } from "src/lib/relations/declaredFieldTypes";
 
 /**
  * FrontMatterDataSource is a intermediate data source for records that use
@@ -77,6 +78,7 @@ export abstract class FrontMatterDataSource extends DataSource {
       );
     }
 
+    fields = applyDeclaredStoredTypes(fields, this.project.fieldConfig);
     for (const predefinedField of predefinedFields ?? []) {
       fields = fields.map((field) =>
         field.name !== predefinedField.name

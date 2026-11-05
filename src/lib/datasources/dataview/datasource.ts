@@ -23,6 +23,7 @@ import type {
 } from "src/settings/settings";
 import { get } from "svelte/store";
 import { DataSource } from "../dataSource";
+import { applyDeclaredStoredTypes } from "src/lib/relations/declaredFieldTypes";
 import { parseRecords } from "../helpers";
 import { detectSchema } from "./schema";
 import { standardizeValues } from "./standardize";
@@ -115,6 +116,7 @@ export class DataviewDataSource extends DataSource {
       );
     }
 
+    fields = applyDeclaredStoredTypes(fields, this.project.fieldConfig);
     const records = parseRecords(standardizedRecords, fields, this.project.dateFormat?.writeFormat);
 
     const baseFrame: DataFrame = { fields, records };

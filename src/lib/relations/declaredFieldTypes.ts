@@ -37,8 +37,9 @@ export function applyDeclaredFieldTypes(
   fieldConfig: DeclaredRelations | undefined
 ): DataFrame {
   if (!fieldConfig) return frame;
-  let changed = false;
-  const fields = frame.fields.map((field) => {
+  const storedFields = applyDeclaredStoredTypes(frame.fields, fieldConfig);
+  let changed = storedFields !== frame.fields;
+  const fields = storedFields.map((field) => {
     const cfg = fieldConfig[field.name];
     if (!field.identifier && (cfg?.type === "autotime" || cfg?.type === "unique_id")) {
       const type = cfg.type === "autotime" ? DataFieldType.AutoTime : DataFieldType.UniqueId;
@@ -84,6 +85,25 @@ const STORED_TYPES: Partial<Record<PropertyType, DataFieldType>> = {
   phone: DataFieldType.String,
 };
 
+/** Explicit stored-property declarations precede value parsing, unlike inference. */
+export function applyDeclaredStoredTypes(fields: DataField[], config: DeclaredRelations | undefined): DataField[] {
+  if (!config) return fields;
+  let changed = false;
+  const result = fields.map(field => {
+    const cfg = config[field.name], type = cfg?.type ? STORED_TYPES[cfg.type as PropertyType] : undefined;
+    if (!type || field.identifier || [DataFieldType.AutoTime, DataFieldType.Formula, DataFieldType.Rollup].includes(field.type) ||
+      (field.derived && (field.name === "name" || field.name === "path"))) return field;
+    const typeConfig = { ...field.typeConfig, ...cfg, ...(cfg?.type === "datetime" ? { time: true } : {}) };
+    const repeated = type === DataFieldType.List || field.repeated;
+    const current = field.typeConfig as Record<string, unknown> | undefined;
+    if (field.type === type && field.repeated === repeated &&
+      Object.entries(typeConfig).every(([key, value]) => Object.is(current?.[key], value))) return field;
+    changed = true;
+    return { ...field, type, repeated, typeConfig };
+  });
+  return changed ? result : fields;
+}
+
 /**
  * The field a config entry declares, or undefined when it declares none. A
  * rollup is left to `applyRollupColumns`, which also computes its values.
@@ -109,7 +129,7 @@ function declaredField(
     ...base,
     type: stored,
     repeated: stored === DataFieldType.List,
-    ...(cfg.type === "datetime" ? { typeConfig: { time: true } } : {}),
+    typeConfig: { ...cfg, ...(cfg.type === "datetime" ? { time: true } : {}) },
   };
 }
 

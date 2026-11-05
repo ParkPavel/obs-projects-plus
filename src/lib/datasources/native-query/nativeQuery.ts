@@ -88,6 +88,8 @@ export interface NativeQueryDeps {
   readonly fileSystem: IFileSystem;
   readonly preferences: ProjectsPluginPreferences;
   readonly excludedNotes?: ReadonlyArray<string>;
+  readonly fieldConfig?: ProjectDefinition["fieldConfig"];
+  readonly dateFormat?: ProjectDefinition["dateFormat"];
 }
 
 /**
@@ -146,7 +148,7 @@ async function acquireBaseFrame(
         path: source.path,
         recursive: source.recursive ?? false,
       },
-    }, excludedNotes);
+    }, excludedNotes, deps);
     const ds = new FolderDataSource(deps.fileSystem, project, deps.preferences);
     return ds.queryAll();
   }
@@ -158,7 +160,7 @@ async function acquireBaseFrame(
       tag: source.tag,
       hierarchy: source.hierarchy ?? false,
     },
-  }, excludedNotes);
+  }, excludedNotes, deps);
   const ds = new TagDataSource(deps.fileSystem, project, deps.preferences);
   return ds.queryAll();
 }
@@ -170,12 +172,14 @@ async function acquireBaseFrame(
  */
 function synthesizeProject(
   dataSource: ProjectDefinition["dataSource"],
-  excludedNotes: string[]
+  excludedNotes: string[],
+  schema: Pick<NativeQueryDeps, "fieldConfig" | "dateFormat">
 ): ProjectDefinition {
   return {
     name: "__native-query__",
     id: "__native-query__",
-    fieldConfig: {},
+    fieldConfig: schema.fieldConfig ?? {},
+    ...(schema.dateFormat ? { dateFormat: schema.dateFormat } : {}),
     views: [],
     defaultName: "",
     templates: [],
