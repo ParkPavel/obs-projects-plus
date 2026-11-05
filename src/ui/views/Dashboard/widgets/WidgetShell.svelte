@@ -16,7 +16,6 @@
   import { i18n } from "src/lib/stores/i18n";
   import { ariaWidget } from "src/lib/dashboard-engine/accessibility";
   import { isImeKey, recordImeCompositionEnd } from "src/ui/components/fields/draftController";
-
   export let widgetId: string;
   export let title: string;
   export let collapsed = false;

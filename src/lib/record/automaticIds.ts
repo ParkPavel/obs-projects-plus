@@ -2,6 +2,7 @@ import { get } from "svelte/store";
 import type { DataRecord } from "src/lib/dataframe/dataframe";
 import type { ProjectDefinition } from "src/settings/settings";
 import { settings } from "src/lib/stores/settings";
+import { toNumber } from "src/lib/engine/numeric";
 
 interface Reservation { projectId: string; sequence: number; fields: Array<{ key: string; prefix: string }> }
 const reservations = new WeakMap<DataRecord, Reservation>();
@@ -44,8 +45,8 @@ export function reconcileAutomaticIds(record: DataRecord, records: readonly Data
     if (!text.startsWith(field.prefix)) continue;
     const tail = text.slice(field.prefix.length);
     if (!/^\d{1,16}$/.test(tail)) continue;
-    const sequence = Number(tail);
-    if (Number.isSafeInteger(sequence)) floor = Math.max(floor, sequence);
+    const sequence = toNumber(tail);
+    if (sequence !== null && Number.isSafeInteger(sequence)) floor = Math.max(floor, sequence);
   }
   if (reservation.sequence > floor) return record;
   return assigned(record, { ...reservation, sequence: settings.bumpUniqueId(reservation.projectId, floor) });

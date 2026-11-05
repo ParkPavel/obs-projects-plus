@@ -7,7 +7,6 @@
   import { namesToOptions } from "src/ui/components/fields/comboOptions";
   import { onCellRetry } from "./tableEditing";
   import { createListCellDraft } from "./listCellDraft";
-
   export let field: DataField;
   export let value: Optional<DataValue>;
   export let options: string[] = [];
@@ -23,7 +22,6 @@
   const retry = onCellRetry(() => { finished = false; });
   $: retry(retryVersion);
   $: suggestionOptions = namesToOptions(options);
-
   function finish(apply: boolean): void {
     if (finished || saving) return;
     if (apply && !$items.every(item => editors[item.id]?.syncForSubmit())) return;
@@ -34,7 +32,6 @@
     } else dispatch("cancel");
     void tick().then(() => { if (cell?.isConnected) cell.focus(); });
   }
-
   function add(): void {
     if (saving) return;
     items.add([DataFieldType.Number, DataFieldType.Date, DataFieldType.Boolean].includes(field.type) ? null : "");
@@ -43,9 +40,7 @@
       inputs?.[inputs.length - 1]?.focus();
     });
   }
-
 </script>
-
 <span bind:this={triggerEl} aria-hidden="true" />
 <FloatingPopup open={true} dismissible={!saving} triggerEl={triggerEl?.parentElement ?? null} ariaLabel={field.name} on:close={() => finish(false)}>
   <div class="ppp-t2-list-editor" bind:this={listEl}>
@@ -74,7 +69,6 @@
     </div>
   </div>
 </FloatingPopup>
-
 <style>
   .ppp-t2-list-editor {
     display: flex;

@@ -12,7 +12,6 @@
   import type { ViewApi } from "src/lib/viewApi";
   import type { WidgetDefinition, WidgetSourceConfig, LinkedSelectionConfig, DataTableConfig, FieldPreset } from "../types";
   import type { TransformPipeline } from "src/lib/dashboard-engine/transformTypes";
-
   import { createEventDispatcher } from "svelte";
   import { computeHostFrames } from "./hostFrames";
   import { liveBlockSources, mergeBlockSources } from "./blockSources";
@@ -37,7 +36,6 @@
   import DatabaseCallSettings from "./DatabaseCall/DatabaseCallSettings.svelte";
   import { provideBlockHeaderControlsHost } from "./DatabaseCall/tableControlsHost";
   const headerControlsHost = provideBlockHeaderControlsHost();
-
   export let widget: WidgetDefinition;
   export let frame: DataFrame;
   export let api: ViewApi;

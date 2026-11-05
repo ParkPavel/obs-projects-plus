@@ -68,9 +68,10 @@ describe("the block's filter is one button (N8)", () => {
 
   test("the block draws its views and its filter in one row", () => {
     const block = readFileSync(join(__dirname, "..", "widgets", "DatabaseCall", "DatabaseCallBlock.svelte"), "utf8");
-    const head = block.indexOf('<div class="ppp-dbc-head">');
+    const head = block.indexOf('<div class="ppp-dbc-head"');
     const end = block.indexOf("</div>", block.indexOf("<BlockFilterBar"));
     expect(head).toBeGreaterThan(-1);
+    expect(block.indexOf('use:moveTableControls={$blockHeaderControlsHost}')).toBeGreaterThan(head);
     expect(block.indexOf("<ViewTabBar")).toBeGreaterThan(head);
     expect(block.indexOf("<BlockFilterBar")).toBeGreaterThan(block.indexOf("<ViewTabBar"));
     expect(end).toBeGreaterThan(block.indexOf("<BlockFilterBar"));
