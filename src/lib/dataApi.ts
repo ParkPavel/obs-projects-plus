@@ -2,7 +2,10 @@
 
 
 import { get } from "svelte/store";
-import { reserveAutomaticIds } from "src/lib/record/automaticIds";
+import { reserveAutomaticIds, automaticIdProject, reconcileAutomaticIds } from "src/lib/record/automaticIds";
+import { queryProjectRecords } from "src/lib/datasources/queryProjectRecords";
+import { getAPI, isPluginEnabled } from "src/lib/datasources/dataview/host";
+import { app } from "src/lib/stores/obsidian";
 import { v4 as uuidv4 } from "uuid";
 
 import {
@@ -210,7 +213,22 @@ export class DataApi {
     templatePath: string,
     body?: string,
     defaults?: Record<string, Optional<DataValue>>,
+    onPrepared?: (record: DataRecord) => void,
   ): Promise<void> {
+    // Every creation path, including the general create-note command, crosses
+    // this boundary. A view may display only the reconciled record below.
+    const projectId = automaticIdProject(record);
+    if (projectId) {
+      const currentSettings = get(settings), project = currentSettings.projects.find(item => item.id === projectId);
+      if (!project) throw new Error("Cannot check automatic IDs: project source unavailable");
+      const currentApp = get(app);
+      const records = await queryProjectRecords(project, {
+        fileSystem: this.fileSystem,
+        preferences: currentSettings.preferences,
+        dataviewApi: currentApp && isPluginEnabled(currentApp) ? getAPI(currentApp) : undefined,
+      });
+      record = reconcileAutomaticIds(record, records);
+    }
     let content = body ?? "";
 
     if (templatePath && body === undefined) {
@@ -253,6 +271,7 @@ export class DataApi {
     // incomplete file when the second write failed, blocking a safe retry.
     const prepared = doUpdateRecord(content, fields, record, undefined, defaults);
     if (E.isLeft(prepared)) throw prepared.left;
+    onPrepared?.(record);
     await this.fileSystem.create(record.id, prepared.right);
   }
 

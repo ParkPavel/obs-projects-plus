@@ -1,10 +1,7 @@
 import { Notice } from "obsidian";
 import { isEmptyFieldValue } from "src/lib/relations/declaredFieldTypes";
 import { get } from "svelte/store";
-import { automaticIdProject, reconcileAutomaticIds } from "src/lib/record/automaticIds";
-import { settings } from "src/lib/stores/settings";
-import { queryProjectRecords } from "src/lib/datasources/queryProjectRecords";
-import { getAPI, isPluginEnabled } from "src/lib/datasources/dataview/host";
+import { automaticIdProject } from "src/lib/record/automaticIds";
 
 import type {
   DataField,
@@ -15,7 +12,7 @@ import type {
 import { DataFieldType } from "./dataframe/dataframe";
 import type { DataFrame } from "./dataframe/dataframe";
 import type { BulkFieldWriteOutcome, DataApi, RecordsWriteOutcome } from "./dataApi";
-import { dataFrame } from "./stores/dataframe";
+import { dataFrame, dataSource } from "./stores/dataframe";
 import { changedKeys, patchRecord, touchedKeys } from "./recordDiff";
 import { noticeFor } from "src/lib/errors/errorText";
 import { noticeWithRetry } from "src/lib/errors/retryNotice";
@@ -95,33 +92,27 @@ export class ViewApi {
    * passes the source's so the copy is not created empty.
    */
   async addRecord(record: DataRecord, fields: DataField[], templatePath: string, body?: string, defaults?: Record<string, Optional<DataValue>>): Promise<void> {
-    const projectId = automaticIdProject(record);
-    if (projectId) {
-      const currentSettings = get(settings), project = currentSettings.projects.find(item => item.id === projectId);
-      if (!project) throw new Error("Cannot check automatic IDs: project source unavailable");
-      const currentApp = get(app);
-      const records = await queryProjectRecords(project, {
-        fileSystem: this.dataApi.fileSystem,
-        preferences: currentSettings.preferences,
-        dataviewApi: currentApp && isPluginEnabled(currentApp) ? getAPI(currentApp) : undefined,
-      });
-      record = reconcileAutomaticIds(record, records);
-    }
+    const automatic = automaticIdProject(record) !== undefined;
+    const owner = get(dataSource);
+    const ownsFrame = () => get(dataSource) === owner && (!owner || owner === this.dataSource);
     // w4-p02 (F19): the row is shown while the note is written and taken back
     // if the create is refused — before, a refused create left a phantom row.
     // Only this row: a record already in the frame under the same id is
     // neither duplicated nor removed.
-    const shown =
-      this.dataSource.includes(record.id) && !get(dataFrame).records.some((r) => r.id === record.id);
-    if (shown) {
-      dataFrame.addRecord(record);
-    }
+    let shown = false, shownRecord = record;
+    const show = (prepared: DataRecord) => {
+      shownRecord = prepared;
+      shown = ownsFrame() && this.dataSource.includes(prepared.id) && !get(dataFrame).records.some(r => r.id === prepared.id);
+      if (shown) dataFrame.addRecord(prepared);
+    };
+    if (!automatic) show(record);
     // Rethrown, not swallowed: a caller that awaits (the create form, the
     // calendar duplicate) must see a failed create and keep what was typed.
     try {
-      await this.dataApi.createNote(record, fields ?? [], templatePath, body, defaults);
+      if (automatic) await this.dataApi.createNote(record, fields ?? [], templatePath, body, defaults, show);
+      else await this.dataApi.createNote(record, fields ?? [], templatePath, body, defaults);
     } catch (error) {
-      if (shown) dataFrame.deleteRecord(record.id);
+      if (shown && ownsFrame() && get(dataFrame).records.find(r => r.id === shownRecord.id) === shownRecord) dataFrame.deleteRecord(shownRecord.id);
       throw error;
     }
   }

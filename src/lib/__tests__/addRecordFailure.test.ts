@@ -17,6 +17,20 @@ import { dataFrame } from "src/lib/stores/dataframe";
 const ids = () => get(dataFrame).records.map((r) => r.id);
 
 describe("ViewApi.addRecord", () => {
+  it("a failed old creation cannot remove the same path from a newly loaded project's frame", async () => {
+    const { dataSource } = require("src/lib/stores/dataframe");
+    const previous = get(dataSource), source = { includes: () => true } as unknown as DataSource;
+    dataSource.set(source);
+    try {
+      let fail!: (error: Error) => void;
+      const dataApi = { createNote: jest.fn(() => new Promise<void>((_resolve, reject) => { fail = reject; })) } as unknown as DataApi;
+      const pending = new ViewApi(source, dataApi).addRecord({ id: "x.md", values: {} }, [], "");
+      dataSource.set({ includes: () => true });
+      const otherFrame = { fields: [], records: [{ id: "x.md", values: { keep: true } }] }; dataFrame.set(otherFrame);
+      fail(new Error("refused")); await expect(pending).rejects.toThrow("refused");
+      expect(get(dataFrame)).toBe(otherFrame);
+    } finally { dataSource.set(previous); }
+  });
   beforeEach(() => dataFrame.set({ fields: [], records: [] }));
 
   it("rejects when the note cannot be created", async () => {

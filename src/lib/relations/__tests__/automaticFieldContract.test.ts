@@ -7,7 +7,7 @@ import { InMemFileSystem } from "src/lib/filesystem/inmem/filesystem";
 import { FolderDataSource } from "src/lib/datasources/folder/datasource";
 import { ViewApi } from "src/lib/viewApi";
 import { settings } from "src/lib/stores/settings";
-import { dataFrame } from "src/lib/stores/dataframe";
+import { dataFrame, dataSource } from "src/lib/stores/dataframe";
 import { DEFAULT_PROJECT, DEFAULT_SETTINGS } from "src/settings/settings";
 import { applyDeclaredFieldTypes, declaredPropertyType } from "../declaredFieldTypes";
 
@@ -158,4 +158,36 @@ test("an unavailable additional source refuses automatic-ID creation before any 
     await expect(api.addRecord(record, [field(DataFieldType.UniqueId)], "")).rejects.toThrow(/dataview-unavailable/);
     expect(create).not.toHaveBeenCalled(); expect(get(dataFrame)).toBe(before);
   } finally { settings.set(previous); }
+});
+
+test("the general command's direct DataApi creation reconciles existing automatic IDs too", async () => {
+  const previous = get(settings), project = { ...DEFAULT_PROJECT, id: "command-ids", name: "Command",
+    dataSource: { kind: "folder", config: { path: "Notes", recursive: true } }, fieldConfig: { Ticket: { type: "unique_id", uniqueIdPrefix: "T-" } } };
+  settings.set({ ...previous, projects: [project as never] });
+  try {
+    const files = new InMemFileSystem({}); await files.create("Notes/old.md", "---\nTicket: T-8\n---");
+    await new DataApi(files).createNote(createDataRecord("new", project as never), [], "");
+    expect((await files.getFile("Notes/new.md")!.readValues())["Ticket"]).toBe("T-9");
+  } finally { settings.set(previous); }
+});
+
+test("a source read completing after project switch cannot add its row to the new frame", async () => {
+  const previous = get(settings), previousSource = get(dataSource), project = { ...DEFAULT_PROJECT, id: "slow-create", name: "Slow",
+    dataSource: { kind: "folder", config: { path: "Notes", recursive: true } }, fieldConfig: { Ticket: { type: "unique_id" } } };
+  settings.set({ ...previous, projects: [project as never] });
+  try {
+    const files = new InMemFileSystem({}); await files.create("Notes/old.md", "---\nTicket: '8'\n---");
+    const old = files.getFile("Notes/old.md")!, originalRead = old.read.bind(old);
+    let release!: () => void, started!: () => void;
+    const began = new Promise<void>(done => { started = done; }), gate = new Promise<void>(done => { release = done; });
+    jest.spyOn(old, "read").mockImplementationOnce(async () => { started(); await gate; return originalRead(); });
+    const source = new FolderDataSource(files, project as never, DEFAULT_SETTINGS.preferences); dataSource.set(source);
+    const pending = new ViewApi(source, new DataApi(files)).addRecord(createDataRecord("new", project as never), [field(DataFieldType.UniqueId)], "");
+    await began;
+    dataSource.set({ project: { id: "other" } } as never);
+    const otherFrame = { fields: [], records: [{ id: "Other/B.md", values: { keep: true } }] }; dataFrame.set(otherFrame);
+    release(); await pending;
+    expect(get(dataFrame)).toBe(otherFrame);
+    expect((await files.getFile("Notes/new.md")!.readValues())["Ticket"]).toBe("9");
+  } finally { settings.set(previous); dataSource.set(previousSource); }
 });
