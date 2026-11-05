@@ -987,11 +987,12 @@
     <!-- NPLAN-A2 — UniqueId sub-panel -->
     {#if field.type === DataFieldType.UniqueId && !field.identifier}
       <SettingItem
-        name={$i18n.t("modals.field.configure.uniqueid.prefix.name", { defaultValue: "ID prefix" })}
-        description={$i18n.t("modals.field.configure.uniqueid.prefix.description", { defaultValue: 'Optional prefix for generated IDs (e.g. "TASK-"). Counter is appended automatically.' })}
+        name={$i18n.t("automatic-fields.prefix-label")}
+        description={$i18n.t("automatic-fields.prefix-hint")}
       >
         <TextInput
           value={uniqueIdPrefixValue}
+          ariaLabel={$i18n.t("automatic-fields.prefix-label")}
           placeholder={$i18n.t("modals.configure-field.prefix-placeholder")}
           on:input={handleUniqueIdPrefixChange}
         />

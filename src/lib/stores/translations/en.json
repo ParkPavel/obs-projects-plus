@@ -2573,6 +2573,12 @@
             "text": "Create the demo — three linked projects with tables, boards, calendars and charts — or start your own project from a folder, a tag or a query.",
             "create-demo": "Create demo: three linked projects",
             "create-project": "Create project"
+        },
+        "automatic-fields": {
+            "generated": "Automatically generated field — read only",
+            "unknown": "Choose a field type before editing this value",
+            "prefix-label": "ID prefix",
+            "prefix-hint": "Prefix for generated IDs, for example TASK-. Each new note and copy receives a new ID."
         }
     }
 }

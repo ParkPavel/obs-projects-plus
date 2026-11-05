@@ -13,7 +13,7 @@ export type FieldConfigRelationMap = Record<
       rollup?: RollupFieldConfig;
       formulaVersion?: string;
       formula?: string;
-      type?: import("src/lib/visualizer/propertyTypes").PropertyType;
+      type?: import("src/settings/base/settings").ProjectPropertyType;
     }
   | undefined
 >;

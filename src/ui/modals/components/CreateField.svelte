@@ -755,6 +755,12 @@
       </SettingItem>
     {/if}
 
+    {#if field.type === DataFieldType.UniqueId}
+      <SettingItem name={$i18n.t("automatic-fields.prefix-label")} description={$i18n.t("automatic-fields.prefix-hint")}>
+        <TextInput value={field.typeConfig?.uniqueIdPrefix ?? ""} ariaLabel={$i18n.t("automatic-fields.prefix-label")}
+          placeholder="TASK-" on:input={event => (field = { ...field, typeConfig: { ...field.typeConfig, uniqueIdPrefix: event.detail } })} />
+      </SettingItem>
+    {/if}
     <SettingItem
       name={$i18n.t("modals.field.create.default.name")}
       description={$i18n.t("modals.field.create.default.description")}

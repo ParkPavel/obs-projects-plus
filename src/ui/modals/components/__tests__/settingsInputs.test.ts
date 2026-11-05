@@ -127,3 +127,13 @@ test("form composition guards are scoped and a retired editor cannot block anoth
     expect(firstSave).toHaveBeenCalledTimes(1); expect(firstSave.mock.calls[0][0].type).toBe(DataFieldType.Boolean);
   } finally { first.destroy(); second.destroy(); }
 });
+
+test("Create offers the real ID prefix control and preserves it without a literal default", async () => {
+  const onCreate = jest.fn(), m = mount(CreateField, { existingFields: [], field: base(DataFieldType.UniqueId), defaultName: "Ticket", onCreate });
+  try {
+    await settle(); const input = Array.from(m.target.querySelectorAll<HTMLInputElement>("input")).find(item => item.getAttribute("aria-label") === get(i18n).t("automatic-fields.prefix-label"))!;
+    expect(input).toBeDefined(); await enter(input); typeInto(input, "TASK-"); await settle();
+    m.target.querySelector<HTMLButtonElement>("[data-variant='primary']")!.click(); await settle();
+    expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ type: DataFieldType.UniqueId, typeConfig: expect.objectContaining({ uniqueIdPrefix: "TASK-" }) }), "");
+  } finally { m.destroy(); }
+});

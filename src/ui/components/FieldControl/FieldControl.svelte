@@ -236,7 +236,7 @@
 </script>
 
 <div class="field-control-wrapper">
-  {#if field.derived || field.type === DataFieldType.Formula || field.type === DataFieldType.Rollup || field.type === DataFieldType.AutoTime || !!field.typeConfig?.rollup}
+  {#if field.derived || field.type === DataFieldType.Formula || field.type === DataFieldType.Rollup || field.type === DataFieldType.AutoTime || field.type === DataFieldType.UniqueId || !!field.typeConfig?.rollup}
     <span class="field-computed-value">{formatDisplayValue(value) || "—"}</span>
   {:else if field.type === DataFieldType.Boolean && !field.repeated}
     <Switch
@@ -433,6 +433,8 @@
       />
     {/if}
     {/key}
+  {:else}
+    <span class="field-computed-value">{formatDisplayValue(value) || "—"}</span>
   {/if}
 </div>
 

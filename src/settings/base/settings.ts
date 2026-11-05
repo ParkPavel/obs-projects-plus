@@ -323,6 +323,9 @@ export type RollupFieldConfig = {
   readonly orderBy?: string;
 };
 
+/** Project-only automatic fields are not writable note pp_types overrides. */
+export type ProjectPropertyType = import("src/lib/visualizer/propertyTypes").PropertyType | "autotime" | "unique_id";
+
 export type FieldConfig = StringFieldConfig &
   DateFieldConfig & {
     readonly relation?: RelationFieldConfig;
@@ -336,7 +339,7 @@ export type FieldConfig = StringFieldConfig &
      *
      * @since 3.4.2 (R2.1b)
      */
-    readonly type?: import("src/lib/visualizer/propertyTypes").PropertyType;
+    readonly type?: ProjectPropertyType;
     /**
      * NPLAN-A3 — Status semantic groups (overlay only).
      *

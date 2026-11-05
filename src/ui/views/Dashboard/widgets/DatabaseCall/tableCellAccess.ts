@@ -30,6 +30,12 @@ export function cellAccess(field: DataField, value: Optional<DataValue>, readonl
   if (field.derived) {
     return { editable: false, reason: { key: `${R}.derived`, defaultValue: "Computed field — read only" } };
   }
+  if (field.type === DataFieldType.AutoTime || field.type === DataFieldType.UniqueId) {
+    return { editable: false, reason: { key: "automatic-fields.generated", defaultValue: "Automatically generated field — read only" } };
+  }
+  if (field.type === DataFieldType.Unknown) {
+    return { editable: false, reason: { key: "automatic-fields.unknown", defaultValue: "Choose a field type before editing this value" } };
+  }
   if (readonly) {
     return { editable: false, reason: { key: `${R}.source`, defaultValue: "This source is read only" } };
   }

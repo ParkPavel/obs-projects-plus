@@ -92,24 +92,24 @@
   bind:this={cellEl}
   class="ppp-t2-cell"
   class:ppp-t2-cell--number={cell.kind === "number"} class:ppp-t2-cell--editable={editable}
-  class:ppp-t2-cell--editing={editing} class:ppp-t2-cell--invalid={invalid}
+  class:ppp-t2-cell--editing={editing && editable} class:ppp-t2-cell--invalid={invalid}
   role="gridcell" tabindex="0" aria-readonly={editable ? undefined : "true"} title={reason || undefined}
-  use:cellTouch={handleCellClick} use:liftOnKeyboard={editing}
+  use:cellTouch={handleCellClick} use:liftOnKeyboard={editing && editable}
   on:focus={() => { reasonOpen = !editable; }} on:blur={() => { reasonOpen = false; }}
   on:keydown={(e) => { if (e.target === e.currentTarget && e.key === "Enter" && !editing) { e.preventDefault(); handleCellClick(); } }}
 >
-  {#if editing && field.type === DataFieldType.Relation}
+  {#if editing && editable && field.type === DataFieldType.Relation}
     <RelationPickerPopover {field} {value} {api} {frame} triggerEl={cellEl}
       {saving}
       on:commit on:cancel
       on:setupRelation={() => dispatch("setupRelation", field)} />
-  {:else if editing && (field.repeated || field.type === DataFieldType.List || field.type === DataFieldType.String && Array.isArray(value))}
+  {:else if editing && editable && (field.repeated || field.type === DataFieldType.List || field.type === DataFieldType.String && Array.isArray(value))}
     <ListCellEditor {field} {value} {options} {dateFormat} {saving} {retryVersion} on:commit on:cancel />
-  {:else if editing && (isChoice || (field.type === DataFieldType.String && options.length > 0))}
+  {:else if editing && editable && (isChoice || (field.type === DataFieldType.String && options.length > 0))}
     <CellChoiceDropdown bind:draft {field} {options} {saving} {retryVersion}
       on:commit={(e) => commitDraft(e.detail)}
       on:cancel />
-  {:else if editing}
+  {:else if editing && editable}
     <TypedCellEditor {field} {value} {options} {dateFormat} {saving} {retryVersion}
       on:commit on:cancel on:invalid={(e) => { invalid = e.detail; }} />
   {:else if field.type === DataFieldType.Rollup || field.typeConfig?.rollup}

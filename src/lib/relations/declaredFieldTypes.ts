@@ -1,6 +1,7 @@
 import { DataFieldType, type DataField, type DataFrame } from "src/lib/dataframe/dataframe";
 import type { DataValue, Optional } from "src/lib/dataframe/dataframe";
 import type { PropertyType } from "src/lib/visualizer/propertyTypes";
+import type { FieldConfig, ProjectPropertyType } from "src/settings/base/settings";
 
 /**
  * The part of a project's field config this needs: which fields are declared
@@ -8,7 +9,7 @@ import type { PropertyType } from "src/lib/visualizer/propertyTypes";
  */
 export type DeclaredRelations = Record<
   string,
-  { relation?: { targetProjectId?: string }; formula?: string; formulaVersion?: string; type?: PropertyType } | undefined
+  Pick<FieldConfig, "relation" | "formula" | "formulaVersion" | "type" | "autoTime" | "uniqueIdPrefix"> | undefined
 >;
 
 /**
@@ -38,6 +39,15 @@ export function applyDeclaredFieldTypes(
   if (!fieldConfig) return frame;
   let changed = false;
   const fields = frame.fields.map((field) => {
+    const cfg = fieldConfig[field.name];
+    if (!field.identifier && (cfg?.type === "autotime" || cfg?.type === "unique_id")) {
+      const type = cfg.type === "autotime" ? DataFieldType.AutoTime : DataFieldType.UniqueId;
+      const current = field.typeConfig as Record<string, unknown> | undefined;
+      if (field.type === type && field.derived === (type === DataFieldType.AutoTime) && !field.repeated &&
+        Object.entries(cfg).every(([key, value]) => Object.is(current?.[key], value))) return field;
+      changed = true;
+      return { ...field, type, derived: type === DataFieldType.AutoTime, repeated: false, typeConfig: { ...field.typeConfig, ...cfg } };
+    }
     if (field.type === DataFieldType.Relation) return field;
     if (!fieldConfig[field.name]?.relation?.targetProjectId) return field;
     changed = true;
@@ -83,6 +93,10 @@ function declaredField(
   cfg: NonNullable<DeclaredRelations[string]>
 ): DataField | undefined {
   const base = { name, identifier: false, derived: false, repeated: false, typeConfig: {} };
+  if (cfg.type === "autotime" || cfg.type === "unique_id") {
+    return { ...base, type: cfg.type === "autotime" ? DataFieldType.AutoTime : DataFieldType.UniqueId,
+      derived: cfg.type === "autotime", typeConfig: { ...cfg } };
+  }
   if (cfg.relation?.targetProjectId || cfg.type === "relation") {
     return { ...base, type: DataFieldType.Relation, repeated: true };
   }
@@ -107,7 +121,7 @@ export function isEmptyFieldValue(value: Optional<DataValue>): boolean {
   return value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
 }
 
-const DECLARED_TYPES: Partial<Record<DataFieldType, PropertyType>> = {
+const DECLARED_TYPES: Partial<Record<DataFieldType, ProjectPropertyType>> = {
   [DataFieldType.String]: "string",
   [DataFieldType.Number]: "number",
   [DataFieldType.Boolean]: "boolean",
@@ -117,6 +131,8 @@ const DECLARED_TYPES: Partial<Record<DataFieldType, PropertyType>> = {
   [DataFieldType.Status]: "status",
   [DataFieldType.Formula]: "formula",
   [DataFieldType.Relation]: "relation",
+  [DataFieldType.AutoTime]: "autotime",
+  [DataFieldType.UniqueId]: "unique_id",
 };
 
 /**
@@ -124,7 +140,7 @@ const DECLARED_TYPES: Partial<Record<DataFieldType, PropertyType>> = {
  * frame lists it although no note carries its key. A rollup declares itself
  * through its own config; a field typed otherwise declares nothing.
  */
-export function declaredPropertyType(field: DataField): PropertyType | undefined {
+export function declaredPropertyType(field: DataField): ProjectPropertyType | undefined {
   if (field.type === DataFieldType.Date && field.typeConfig?.time) return "datetime";
   return DECLARED_TYPES[field.type];
 }

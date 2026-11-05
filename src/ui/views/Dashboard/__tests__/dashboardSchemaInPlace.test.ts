@@ -107,6 +107,13 @@ beforeEach(() => {
 });
 
 describe("i3-final schema dialog edits in place", () => {
+  it("converting an automatic ID back to text replaces its persisted automatic declaration", async () => {
+    const settings = require("src/lib/stores/settings").settings; settings.updateFieldConfig.mockClear();
+    const original = { ...field("Ticket"), type: DataFieldType.UniqueId };
+    const { controller } = setup([original]); controller.openSchema(); mockSchemas[0]!.args[5](original);
+    await mockConfigureSave?.(field("Ticket"));
+    expect(settings.updateFieldConfig).toHaveBeenCalledWith("p", "Ticket", ["Ticket"], { type: "string" });
+  });
   it("a rename keeps the dialog open, refreshes the list and focuses the renamed row", async () => {
     const { controller, setFields } = setup([field("a"), field("b")]);
     controller.openSchema();

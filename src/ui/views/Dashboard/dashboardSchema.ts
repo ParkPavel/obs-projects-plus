@@ -31,7 +31,7 @@ const ADD_FIELD_FAILED = "PPP-401";
 const REOPEN_SCHEMA_FAILED = "PPP-402";
 import { tick } from "svelte";
 
-import type { DataField } from "src/lib/dataframe/dataframe";
+import { DataFieldType, type DataField } from "src/lib/dataframe/dataframe";
 import type { ViewApi } from "src/lib/viewApi";
 import type { ProjectDefinition, ProjectId } from "src/settings/settings";
 import { settings } from "src/lib/stores/settings";
@@ -236,7 +236,9 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
             await deps.api.updateField(next);
           }
         }
-        persistFieldTypeConfig(next);
+        const automatic = [DataFieldType.AutoTime, DataFieldType.UniqueId];
+        const type = automatic.includes(field.type) || automatic.includes(next.type) ? declaredPropertyType(next) : undefined;
+        persistFieldTypeConfig(type ? { ...next, typeConfig: { ...next.typeConfig, type } } : next);
         afterWrite({ name: next.name, expect: "present" });
       },
       deps.getProjects(),
