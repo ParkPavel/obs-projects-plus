@@ -22,6 +22,8 @@
   export let readOnly = false;
   export let choices: ComboOption[] | undefined = undefined;
   export let error = false;
+  export let validate: ((draft: string) => boolean) | undefined = undefined;
+  export let preserveInvalidOnBlur = false;
   export let helperText = "";
   export let autoFocus = false;
   export let inputMode: "text" | "numeric" | "decimal" = "text";
@@ -52,6 +54,8 @@
     focusOnMount={autoFocus}
     commitOnDestroy={false}
     {error}
+    {validate}
+    {preserveInvalidOnBlur}
     {inputMode}
     inputClass="ppp-value-field-input"
     on:draftChange={(e) => dispatch("input", e.detail)}

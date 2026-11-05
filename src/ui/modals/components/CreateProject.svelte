@@ -61,7 +61,8 @@
   let dateFormatField: DateFormatSelector | undefined;
   let queryBaseline = "";
   let additionalPathFields: Record<string, PathSuggestField | null | undefined> = {};
-  const sourceRows = new ProjectRows<DataSourceConfig>();
+  let textFields: Record<string, ValueSuggestField | null | undefined> = {};
+  const sourceRows = new ProjectRows<DataSourceConfig>(source => source.id);
   const conditionRows = new ProjectRows<FilterCondition>();
   $: additionalRows = sourceRows.sync(project.id, project.additionalSources ?? []);
   $: conditionEntries = conditionRows.sync(project.id, project.dataSource.kind === "native-query" ? project.dataSource.config.where?.conditions ?? [] : []);
@@ -83,9 +84,10 @@
     for (const target of composing) {
       if (!target.isConnected || !formEl?.contains(target)) composing.delete(target);
     }
-    if (composing.size || nameError) return;
+    if (composing.size) return;
     if (project.dataSource.kind === "native-query" && !limitField?.commitForNavigation()) return;
-    if ([folderField, newNotesFolderField, templateFields, excludedFields, queryField, dateFormatField, ...Object.values(additionalPathFields)].some(field => field && !field.commitForNavigation())) return;
+    if ([folderField, newNotesFolderField, templateFields, excludedFields, queryField, dateFormatField, ...Object.values(additionalPathFields), ...Object.values(textFields)].some(field => field && !field.commitForNavigation())) return;
+    if (validateName(project.name, originalName, projects)) return;
     onSave({ ...project, templates: project.templates?.filter(notEmpty) ?? [] });
   }
 
@@ -311,6 +313,12 @@
       const { limit, ...rest } = config;
       nqSetConfig(rest);
     }
+  }
+
+  function updatePrimaryTag({detail: raw}: CustomEvent<string>) {
+    const text = raw.trim(), tag = text ? text.startsWith("#") ? text : "#" + text : "";
+    if (project.dataSource.kind === "tag") patchPrimaryConfig({ tag });
+    else if (project.dataSource.kind === "native-query" && project.dataSource.config.from.kind === "tag") nqUpdateFrom({tag});
   }
 
   function validateName(name: string, baseline: string, available: readonly ProjectDefinition[]) {
@@ -605,9 +613,11 @@
       description={$i18n.t("modals.project.name.description") ?? ""}
     >
       <ValueSuggestField
+        bind:this={textFields['name']}
         value={project.name}
         ariaLabel={$i18n.t("modals.project.name.name")}
         on:input={({ detail: name }) => (project = { ...project, name })}
+        on:commit={({ detail: name }) => (project = { ...project, name })}
         autoFocus
         error={!!nameError}
         helperText={nameError}
@@ -692,18 +702,12 @@
         vertical
       >
         <ValueSuggestField
+          bind:this={textFields['primary-tag']}
           placeholder="#tag"
           ariaLabel={$i18n.t("modals.project.tag.name")}
           value={project.dataSource.config.tag ?? ""}
-          on:input={({ detail: rawTag }) => {
-            if (project.dataSource.kind === "tag") {
-              // Normalize: ensure tag always has exactly one leading #
-              const tag = rawTag.trim()
-                ? (rawTag.trim().startsWith("#") ? rawTag.trim() : "#" + rawTag.trim())
-                : "";
-              patchPrimaryConfig({ tag });
-            }
-          }}
+          on:input={updatePrimaryTag}
+          on:commit={updatePrimaryTag}
         />
       </SettingItem>
 
@@ -736,7 +740,12 @@
             placeholder={`TABLE status AS "Status" FROM "Work"`}
             value={project.dataSource.config.query ?? ""}
             on:focus={() => { if (project.dataSource.kind === "dataview") queryBaseline = project.dataSource.config.query ?? ""; }}
-            on:commit={({detail}) => { queryBaseline = detail.value; }}
+            on:commit={({detail}) => {
+              queryBaseline = detail.value;
+              if (project.dataSource.kind === "dataview" && project.dataSource.config.query !== detail.value) {
+                patchPrimaryConfig({query: detail.value}); validateDataviewQuery(detail.value);
+              }
+            }}
             on:cancel={() => { if (project.dataSource.kind === "dataview") { patchPrimaryConfig({query: queryBaseline}); validateDataviewQuery(queryBaseline); } }}
             on:input={({ detail: query }) => {
               if (project.dataSource.kind === "dataview") {
@@ -829,17 +838,12 @@
           vertical
         >
           <ValueSuggestField
+            bind:this={textFields['query-tag']}
             placeholder="#tag"
             ariaLabel={$i18n.t("modals.project.tag.name")}
             value={project.dataSource.config.from.tag ?? ""}
-            on:input={({ detail: rawTag }) => {
-              const tag = rawTag.trim()
-                ? rawTag.trim().startsWith("#")
-                  ? rawTag.trim()
-                  : "#" + rawTag.trim()
-                : "";
-              nqUpdateFrom({ tag });
-            }}
+            on:input={updatePrimaryTag}
+            on:commit={updatePrimaryTag}
           />
         </SettingItem>
         <SettingItem
@@ -864,6 +868,7 @@
           {#each conditionEntries as {id: rowId, value: condition} (rowId)}
             <div class="ppp-nq-condition-row">
               <ValueSuggestField
+                bind:this={textFields[`condition:${rowId}:field`]}
                 value={condition.field}
                 ariaLabel={$i18n.t("modals.project.native-query.where.field-placeholder")}
                 placeholder={$i18n.t(
@@ -871,6 +876,7 @@
                 )}
                 on:input={({ detail: field }) =>
                   nqUpdateCondition(rowId, { field })}
+                on:commit={({ detail: field }) => nqUpdateCondition(rowId, {field})}
               />
               <SelectField
                 contextKey={`${project.id}:condition:${rowId}`}
@@ -882,6 +888,7 @@
               />
               {#if getFilterOperatorType(condition.operator) !== "unary"}
                 <ValueSuggestField
+                  bind:this={textFields[`condition:${rowId}:value`]}
                   value={condition.value ?? ""}
                   ariaLabel={$i18n.t("modals.project.native-query.where.value-placeholder")}
                   placeholder={$i18n.t(
@@ -889,6 +896,7 @@
                   )}
                   on:input={({ detail: value }) =>
                     nqUpdateCondition(rowId, { value })}
+                  on:commit={({ detail: value }) => nqUpdateCondition(rowId, {value})}
                 />
               {/if}
               <Button variant="plain" on:click={() => nqRemoveCondition(rowId)}>
@@ -930,12 +938,14 @@
           {#each additionalRows as {id: rowId, value: src} (rowId)}
             <div class="ppp-additional-source-row">
               <ValueSuggestField
+                bind:this={textFields[`source:${rowId}:name`]}
                 value={src.name ?? ""}
                 ariaLabel={$i18n.t("modals.project.additional-sources.name")}
                 placeholder={$i18n.t("modals.project.additional-sources.name-placeholder", {
                   defaultValue: "Name (optional)",
                 })}
                 on:input={({ detail: name }) => renameAdditionalSource(rowId, name)}
+                on:commit={({ detail: name }) => renameAdditionalSource(rowId, name)}
               />
               <SelectField
                 contextKey={`${project.id}:source:${rowId}`}
@@ -956,17 +966,21 @@
                 />
               {:else if src.kind === "tag"}
                 <ValueSuggestField
+                  bind:this={textFields[`source:${rowId}:tag`]}
                   value={src.config.tag}
                   ariaLabel={$i18n.t("modals.project.tag.name")}
                   placeholder="#tag"
                   on:input={({ detail: tag }) => updateAdditionalSourceConfig(rowId, { tag, hierarchy: src.config.hierarchy ?? false })}
+                  on:commit={({ detail: tag }) => updateAdditionalSourceConfig(rowId, { tag, hierarchy: src.config.hierarchy ?? false })}
                 />
               {:else if src.kind === "dataview"}
                 <ValueSuggestField
+                  bind:this={textFields[`source:${rowId}:query`]}
                   value={src.config.query}
                   ariaLabel={$i18n.t("modals.project.query.name")}
                   placeholder="TABLE ..."
                   on:input={({ detail: query }) => updateAdditionalSourceConfig(rowId, { query })}
+                  on:commit={({ detail: query }) => updateAdditionalSourceConfig(rowId, {query})}
                 />
               {/if}
               <Button variant="plain" on:click={() => removeAdditionalSource(rowId)}>
@@ -1019,10 +1033,12 @@
           vertical
         >
           <ValueSuggestField
+            bind:this={textFields['default-name']}
             value={project.defaultName ?? ""}
             ariaLabel={$i18n.t("modals.project.defaultName.name")}
             on:input={({ detail: defaultName }) =>
               (project = { ...project, defaultName })}
+            on:commit={({ detail: defaultName }) => (project = {...project, defaultName})}
           />
           <small>
             {defaultName}

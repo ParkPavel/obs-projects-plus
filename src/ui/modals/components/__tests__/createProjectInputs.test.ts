@@ -208,7 +208,7 @@ test("Escape restores the custom date syntax in the actual project saved later",
 });
 
 test("an empty custom date draft blocks Save until restored or corrected",async()=>{
- const view=mount({...makeProject(),dateFormat:{preset:'custom',writeFormat:'YYYY-MM-DD',includeTime:true}} as any);await flush();const input=inputFor(view.container,'modals.date-format.custom.name');await enter(input);typeInto(input,'');await flush();await fireEvent.click(save(view.container));expect(view.onSave).not.toHaveBeenCalled();
+ const view=mount({...makeProject(),dateFormat:{preset:'custom',writeFormat:'YYYY-MM-DD',includeTime:true}} as any);await flush();const input=inputFor(view.container,'modals.date-format.custom.name');await enter(input);typeInto(input,'');await flush();input.blur();await flush();await fireEvent.click(save(view.container));expect(view.onSave).not.toHaveBeenCalled();expect(input.value).toBe('');
  typeInto(input,'DD.MM.YYYY');await flush();await fireEvent.click(save(view.container));expect(view.onSave.mock.calls[0][0].dateFormat.writeFormat).toBe('DD.MM.YYYY');
 });
 
@@ -236,4 +236,31 @@ test("changing the project retires a pending preview and the old textarea's late
  const view=mount(dqlProject() as any);await flush();const old=view.container.querySelector('textarea')!;old.focus();typeQuery(old,'LIST FROM #old');await flush();jest.advanceTimersByTime(650);await flush();
  view.component.$set({project:{...dqlProject(),id:'p2',name:'Other'}});await flush();const current=view.container.querySelector('textarea')!;expect(current).not.toBe(old);expect(view.container.querySelector('.ppp-dv-preview')).toBeNull();
  old.value='retired';old.dispatchEvent(new CompositionEvent('compositionend',{bubbles:true}));pending[0]!({successful:false});await flush();expect(view.container.querySelector('.ppp-dv-preview')).toBeNull();await fireEvent.click(save(view.container));expect(view.onSave.mock.calls[0][0].dataSource.config.query).toBe('LIST FROM #first');
+});
+
+test.each([true,false])("an immutable source acknowledgement retains its folder draft (persisted id: %s)",async withId=>{
+ const source={...(withId?{id:'extra'}:{}),name:'Extra',kind:'folder',config:{path:'Notes',recursive:false}},project={...makeProject(),additionalSources:[source]},view=mount(project as any);await flush();
+ const input=view.container.querySelector<HTMLInputElement>('.ppp-additional-source-row .ppp-path-field input')!;await enter(input);typeInto(input,'private folder');input.setSelectionRange(1,4);await flush();
+ view.component.$set({project:{...project,additionalSources:project.additionalSources.map((item:typeof source)=>({...item,config:{...item.config}}))}});await flush();
+ expect(view.container.querySelector('.ppp-additional-source-row .ppp-path-field input')).toBe(input);expect(input.value).toBe('private folder');expect([input.selectionStart,input.selectionEnd]).toEqual([1,4]);await fireEvent.click(save(view.container));expect(view.onSave.mock.calls[0][0].additionalSources[0].config.path).toBe('private folder');
+});
+
+test("Save preserves an edited name after the same project's older prop is echoed",async()=>{
+ const project=makeProject(),view=mount(project);await flush();const input=inputFor(view.container,'modals.project.name.name');await enter(input);typeInto(input,'Private name');await flush();view.component.$set({project:{...project}});await flush();
+ expect(input.value).toBe('Private name');expect(inputFor(view.container,'modals.project.name.name')).toBe(input);await fireEvent.click(save(view.container));expect(view.onSave.mock.calls[0][0].name).toBe('Private name');
+});
+
+test("Save preserves an edited DQL draft after an older project prop is echoed",async()=>{
+ require('src/lib/stores/capabilities').capabilities.set({dataview:true});const project=dqlProject(),view=mount(project as any);await flush();const input=view.container.querySelector('textarea')!;input.focus();typeQuery(input,'LIST FROM #private');await flush();view.component.$set({project:{...project}});await flush();
+ expect(input.value).toBe('LIST FROM #private');await fireEvent.click(save(view.container));expect(view.onSave.mock.calls[0][0].dataSource.config.query).toBe('LIST FROM #private');
+});
+
+test("Save validates the current custom date draft after an older invalid prop is echoed",async()=>{
+ const project={...makeProject(),dateFormat:{preset:'custom',writeFormat:'',includeTime:true}},view=mount(project as any);await flush();const input=inputFor(view.container,'modals.date-format.custom.name');await enter(input);typeInto(input,'DD.MM.YYYY');await flush();view.component.$set({project:{...project,dateFormat:{...project.dateFormat}}});await flush();
+ expect(input.value).toBe('DD.MM.YYYY');await fireEvent.click(save(view.container));expect(view.onSave).toHaveBeenCalledTimes(1);expect(view.onSave.mock.calls[0][0].dateFormat.writeFormat).toBe('DD.MM.YYYY');
+});
+
+test("an untouched date input cannot authorize saving a newly invalid parent value",async()=>{
+ const project={...makeProject(),dateFormat:{preset:'custom',writeFormat:'YYYY-MM-DD',includeTime:true}},view=mount(project as any);await flush();const input=inputFor(view.container,'modals.date-format.custom.name');await enter(input);
+ view.component.$set({project:{...project,dateFormat:{...project.dateFormat,writeFormat:''}}});await flush();await fireEvent.click(save(view.container));expect(view.onSave).not.toHaveBeenCalled();
 });

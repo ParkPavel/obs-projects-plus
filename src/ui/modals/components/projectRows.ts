@@ -4,16 +4,38 @@ export class ProjectRows<T extends object> {
   private owner: string | undefined;
   private rows: Array<{id: number; value: T}> = [];
   private seen: readonly T[] = [];
+  private keys = new WeakMap<T, string>();
+
+  constructor(private stableId: (value: T) => string | undefined = () => undefined) {}
+
+  private key(value: T): string {
+    const cached = this.keys.get(value);
+    if (cached !== undefined) return cached;
+    const id = this.stableId(value), key = id ? `id:${id}` : `legacy:${JSON.stringify(value)}`;
+    this.keys.set(value, key);
+    return key;
+  }
 
   sync(owner: string, values: readonly T[]): Array<{id: number; value: T}> {
     if (owner !== this.owner) { this.rows = []; this.seen = []; this.owner = owner; }
     if (values.length === this.seen.length && values.every((value, index) => value === this.seen[index])) return this.rows;
     const available = new Map<T, Array<{id: number; value: T}>>();
+    const unique = new Map<string, {id: number; value: T} | null>();
     for (const row of this.rows) {
       const queue = available.get(row.value) ?? [];
       queue.push(row); available.set(row.value, queue);
+      const key = this.key(row.value);
+      unique.set(key, unique.has(key) ? null : row);
     }
-    this.rows = values.map(value => available.get(value)?.shift() ?? {id: this.next++, value});
+    const counts = new Map<string, number>(), used = new Set<number>();
+    for (const value of values) { const key = this.key(value); counts.set(key, (counts.get(key) ?? 0) + 1); }
+    this.rows = values.map(value => {
+      const exact = available.get(value)?.find(row => !used.has(row.id));
+      const key = this.key(value), candidate = counts.get(key) === 1 ? unique.get(key) : undefined;
+      const matched = exact ?? (candidate && !used.has(candidate.id) ? candidate : undefined);
+      const row = matched ? {id: matched.id, value} : {id: this.next++, value};
+      used.add(row.id); return row;
+    });
     this.seen = [...values];
     return this.rows;
   }

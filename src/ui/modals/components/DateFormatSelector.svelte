@@ -18,7 +18,8 @@
   let customField: ValueSuggestField | undefined;
   export function commitForNavigation(): boolean {
     if (!dateFormat || currentPreset !== "custom") return true;
-    return isValidFormat && (customField?.commitForNavigation() ?? true);
+    const accepted = customField?.commitForNavigation() ?? isValidFormat;
+    return accepted && validFormat(dateFormat?.writeFormat ?? "");
   }
 
   // Preset options
@@ -54,16 +55,16 @@
   })();
 
   // Validation
-  $: isValidFormat = (() => {
-    if (currentPreset !== "custom") return true;
-    if (!customFormat) return false;
+  $: isValidFormat = currentPreset !== "custom" || validFormat(customFormat);
+  function validFormat(format: string): boolean {
+    if (!format) return false;
     try {
-      previewDate.format(customFormat);
+      dayjs().format(format);
       return true;
     } catch {
       return false;
     }
-  })();
+  }
 
   function handlePresetChange({ detail: value }: CustomEvent<string>) {
     const preset = value as DateFormatPreset;
@@ -88,11 +89,12 @@
   function handleCustomFormatChange({ detail: value }: CustomEvent<string>) {
     if (currentPreset !== "custom") return;
     
-    onChange({
+    dateFormat = {
       writeFormat: value,
       includeTime,
       preset: "custom",
-    });
+    };
+    onChange(dateFormat);
   }
 
   function handleTimeToggle({ detail: checked }: CustomEvent<boolean>) {
@@ -151,9 +153,12 @@
     >
       <ValueSuggestField
         bind:this={customField}
+        validate={validFormat}
+        preserveInvalidOnBlur
         ariaLabel={$i18n.t("modals.date-format.custom.name")}
         value={customFormat}
         on:input={handleCustomFormatChange}
+        on:commit={handleCustomFormatChange}
         error={!isValidFormat}
         helperText={!isValidFormat ? $i18n.t("modals.date-format.invalid") : ""}
         placeholder="YYYY-MM-DD"
