@@ -4,12 +4,18 @@ type DataField = import("src/lib/dataframe/dataframe").DataField;
 type FieldType = import("src/lib/dataframe/dataframe").DataFieldType;
 import { createDataRecord, DataApi } from "src/lib/dataApi";
 import { InMemFileSystem } from "src/lib/filesystem/inmem/filesystem";
+import { FolderDataSource } from "src/lib/datasources/folder/datasource";
+import { ViewApi } from "src/lib/viewApi";
 import { settings } from "src/lib/stores/settings";
-import { DEFAULT_PROJECT } from "src/settings/settings";
+import { dataFrame } from "src/lib/stores/dataframe";
+import { DEFAULT_PROJECT, DEFAULT_SETTINGS } from "src/settings/settings";
 import { applyDeclaredFieldTypes, declaredPropertyType } from "../declaredFieldTypes";
 
 jest.mock("yaml", () => jest.requireActual(process.cwd() + "/node_modules/yaml/dist/index.js"));
 const field = (type: FieldType): DataField => ({ name: "Ticket", type, repeated: false, identifier: false, derived: false });
+let previousFrame = get(dataFrame);
+beforeEach(() => { previousFrame = get(dataFrame); });
+afterEach(() => dataFrame.set(previousFrame));
 
 test.each([DataFieldType.AutoTime, DataFieldType.UniqueId])("a newly created %s field remains declared after the source refresh", type => {
   expect(declaredPropertyType(field(type))).toBe(type);
@@ -64,4 +70,57 @@ test("a failed file write does not reuse a reserved ID on the next creation", as
 test("ordinary creation tolerates unknown or null field configs without changing unrelated values", () => {
   const project = { ...DEFAULT_PROJECT, id: "ordinary-config", fieldConfig: { broken: null, future: { type: "future-version" } } };
   expect(createDataRecord("A", project as never, { value: [0, false, null, "0"] }).values).toEqual({ value: [0, false, null, "0"] });
+});
+
+test("a converted ID field reconciles existing project IDs before creating another note", async () => {
+  const previous = get(settings), project = { ...DEFAULT_PROJECT, id: "existing-ids", dataSource: { kind: "folder", config: { path: "Notes", recursive: true } },
+    fieldConfig: { Ticket: { type: "unique_id", uniqueIdPrefix: "T-" } } };
+  settings.set({ ...previous, projects: [project as never] });
+  try {
+    const files = new InMemFileSystem({}); await files.create("Notes/old.md", "---\nTicket: T-1\n---\nKeep me");
+    await files.create("Other/foreign.md", "---\nTicket: T-500\n---\nOther project");
+    const source = new FolderDataSource(files, project as never, DEFAULT_SETTINGS.preferences), api = new ViewApi(source, new DataApi(files));
+    const record = createDataRecord("new", project as never); await api.addRecord(record, [field(DataFieldType.UniqueId)], "");
+    expect((await files.getFile("Notes/new.md")!.readValues())["Ticket"]).toBe("T-2");
+    expect(await files.getFile("Notes/old.md")!.read()).toBe("---\nTicket: T-1\n---\nKeep me");
+  } finally { settings.set(previous); }
+});
+
+test("concurrent creations reconcile an old counter without duplicating IDs or mutating caller snapshots", async () => {
+  const previous = get(settings), project = { ...DEFAULT_PROJECT, id: "parallel-ids", uniqueIdCounter: 1,
+    dataSource: { kind: "folder", config: { path: "Notes", recursive: true } }, fieldConfig: { Ticket: { type: "unique_id", uniqueIdPrefix: "T-" } } };
+  settings.set({ ...previous, projects: [project as never] });
+  try {
+    const files = new InMemFileSystem({}); await files.create("Notes/old.md", "---\nTicket: T-8\n---");
+    const api = new ViewApi(new FolderDataSource(files, project as never, DEFAULT_SETTINGS.preferences), new DataApi(files));
+    const records = [createDataRecord("A", project as never), createDataRecord("B", project as never)];
+    await Promise.all(records.map(record => api.addRecord(record, [field(DataFieldType.UniqueId)], "")));
+    const ids = await Promise.all(records.map(async record => (await files.getFile(record.id)!.readValues())["Ticket"]));
+    expect(new Set(ids)).toEqual(new Set(["T-9", "T-10"])); expect(get(settings).projects[0]?.uniqueIdCounter).toBe(10);
+    expect(records.map(record => record.values["Ticket"])).toEqual(["T-2", "T-3"]);
+    expect(new Set(get(dataFrame).records.filter(record => records.some(item => item.id === record.id)).map(record => record.values["Ticket"]))).toEqual(new Set(ids));
+  } finally { settings.set(previous); }
+});
+
+test("an embedded creation checks the target project's IDs through its resolver", async () => {
+  const previous = get(settings), target = { ...DEFAULT_PROJECT, id: "target-ids", dataSource: { kind: "folder", config: { path: "Notes", recursive: true } },
+    fieldConfig: { Ticket: { type: "unique_id", uniqueIdPrefix: "T-" } } };
+  settings.set({ ...previous, projects: [target as never] });
+  try {
+    const files = new InMemFileSystem({}); await files.create("Notes/old.md", "---\nTicket: T-8\n---");
+    const source = new FolderDataSource(files, target as never, DEFAULT_SETTINGS.preferences);
+    const wrongQuery = jest.fn(), resolve = jest.fn(async () => source.queryAll());
+    const api = new ViewApi({ project: { id: "parent" }, includes: () => false, queryAll: wrongQuery } as never, new DataApi(files), resolve);
+    await api.addRecord(createDataRecord("new", target as never), [field(DataFieldType.UniqueId)], "");
+    expect(resolve).toHaveBeenCalledWith(target.id); expect(wrongQuery).not.toHaveBeenCalled();
+    expect((await files.getFile("Notes/new.md")!.readValues())["Ticket"]).toBe("T-9");
+  } finally { settings.set(previous); }
+});
+
+test("an automatic ID cannot overwrite the tag required for membership in a tag project", () => {
+  const previous = get(settings), project = { ...DEFAULT_PROJECT, id: "tag-id-conflict", dataSource: { kind: "tag", config: { tag: "work" } },
+    fieldConfig: { tags: { type: "unique_id" } } };
+  settings.set({ ...previous, projects: [project as never] });
+  try { expect(() => createDataRecord("new", project as never)).toThrow(/tags/); expect(get(settings).projects[0]?.uniqueIdCounter).toBeUndefined(); }
+  finally { settings.set(previous); }
 });

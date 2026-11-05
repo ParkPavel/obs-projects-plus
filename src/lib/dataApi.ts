@@ -2,6 +2,7 @@
 
 
 import { get } from "svelte/store";
+import { reserveAutomaticIds } from "src/lib/record/automaticIds";
 import { v4 as uuidv4 } from "uuid";
 
 import {
@@ -436,20 +437,6 @@ export function createDataRecord(
   project: ProjectDefinition,
   values?: Record<string, Optional<DataValue>>
 ): DataRecord {
-  const currentProject = get(settings).projects.find(candidate => candidate.id === project.id);
-  const uniqueFields = Object.entries((currentProject ?? project).fieldConfig ?? {}).filter(([, config]) => config?.type === "unique_id");
-  if (uniqueFields.length) {
-    if (!currentProject) throw new Error("Cannot reserve a unique ID for a project that is not saved");
-    const counter = currentProject.uniqueIdCounter ?? 0;
-    if (!Number.isSafeInteger(counter) || counter < 0 || counter >= Number.MAX_SAFE_INTEGER) {
-      throw new Error("The project's unique ID counter must be a non-negative safe integer");
-    }
-    for (const [, config] of uniqueFields) {
-      if (config.uniqueIdPrefix !== undefined && typeof config.uniqueIdPrefix !== "string") throw new Error("The unique ID prefix must be text");
-    }
-    const next = settings.bumpUniqueId(project.id);
-    values = { ...values, ...Object.fromEntries(uniqueFields.map(([key, config]) => [key, `${config.uniqueIdPrefix ?? ""}${next}`])) };
-  }
   let path = "";
 
   if (project.dataSource.kind === "folder") {
@@ -484,10 +471,10 @@ export function createDataRecord(
     };
   }
 
-  return {
+  return reserveAutomaticIds({
     id: normalizePath(path + "/" + name + ".md"),
     values: values ?? {},
-  };
+  }, project);
 }
 
 function getDefaultStringType() {

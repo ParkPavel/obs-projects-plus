@@ -1,6 +1,7 @@
 import { Notice } from "obsidian";
 import { isEmptyFieldValue } from "src/lib/relations/declaredFieldTypes";
 import { get } from "svelte/store";
+import { automaticIdProject, reconcileAutomaticIds } from "src/lib/record/automaticIds";
 
 import type {
   DataField,
@@ -91,6 +92,12 @@ export class ViewApi {
    * passes the source's so the copy is not created empty.
    */
   async addRecord(record: DataRecord, fields: DataField[], templatePath: string, body?: string, defaults?: Record<string, Optional<DataValue>>): Promise<void> {
+    const projectId = automaticIdProject(record);
+    if (projectId) {
+      const source = this.dataSource.project?.id === projectId ? await this.dataSource.queryAll() : await this.resolveExternalFrame?.(projectId);
+      if (!source) throw new Error("Cannot check the project's existing unique IDs");
+      record = reconcileAutomaticIds(record, source.records);
+    }
     // w4-p02 (F19): the row is shown while the note is written and taken back
     // if the create is refused — before, a refused create left a phantom row.
     // Only this row: a record already in the frame under the same id is
