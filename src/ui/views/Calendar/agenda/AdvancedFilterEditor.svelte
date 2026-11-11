@@ -12,9 +12,8 @@
   export let records: DataRecord[] = [];
   export let referenceDate: dayjs.Dayjs = dayjs();
   export let version: string | undefined = undefined;
-  // One rule set: a filter that predates the version mark is edited under it and saved with the mark.
-  const CURRENT = 'unified-v1';
-  $: effectiveVersion = version ?? CURRENT;
+  // Preview and validation must use the same profile as the saved list.
+  $: effectiveVersion = version;
   $: semantics = formulaEditorSemantics(effectiveVersion, 'legacy-filter');
 
   const dispatch = createEventDispatcher<{
@@ -83,10 +82,6 @@
 
   function handleChange(e: CustomEvent<string>) {
     formula = e.detail;
-    if (version === undefined) {
-      version = CURRENT;
-      dispatch('modechange', { formulaVersion: CURRENT });
-    }
     dispatch('change', formula);
   }
 </script>

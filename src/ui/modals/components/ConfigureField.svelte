@@ -972,6 +972,7 @@
         vertical
       >
         <FormulaEditor
+          newDefinition={field.typeConfig?.formula === undefined}
           version={field.typeConfig?.formulaVersion}
           on:modechange={handleFormulaModeChange}
           expression={formulaExpression}

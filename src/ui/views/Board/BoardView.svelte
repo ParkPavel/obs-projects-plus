@@ -526,7 +526,7 @@
     {columnWidth}
     zoom={config?.boardZoom ?? 1}
     onZoomChange={(z) => saveConfig({ ...config, boardZoom: z })}
-    checkField={fields.find((field) => field.name === config?.checkField)?.name}
+    checkField={fields.find((field) => field.name === config?.checkField && field.type === DataFieldType.Boolean && !field.repeated && !field.derived && !field.identifier)?.name}
     includeFields={fields.filter((field) => includeFields.includes(field.name))}
     customHeader={fields.find((field) => field.name === customHeader)}
     iconField={fields.find((field) => field.name === iconField)}

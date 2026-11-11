@@ -361,7 +361,7 @@
     const step = steps[stepIndex] as ComputeStep;
     updateStep(stepIndex, {
       ...step,
-      columns: [...step.columns, { name: `computed_${step.columns.length + 1}`, expression: "" }],
+      columns: [...step.columns, { name: `computed_${step.columns.length + 1}`, expression: "", formulaVersion: "unified-v1" }],
     });
   }
 

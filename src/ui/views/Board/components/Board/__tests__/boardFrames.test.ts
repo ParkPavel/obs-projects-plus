@@ -548,6 +548,22 @@ describe("cards-g5 — BoardView writes frames through onConfigChange", () => {
     m.destroy();
   });
 
+  it("a computed Boolean has no editable header control and stays disabled in metadata", () => {
+    const updateRecord = jest.fn();
+    const field = { name: "derivedFlag", type: "boolean", repeated: false, derived: true, identifier: false };
+    const record = { id: "a.md", values: { derivedFlag: true } };
+    const m = mountView({ checkField: "derivedFlag", includeFields: ["derivedFlag"] }, {
+      frame: { fields: [field], records: [record] }, getRecord: () => record,
+      api: { updateRecord, updateRecords: jest.fn(), addRecord: jest.fn() },
+    });
+    expect(m.card("a.md").querySelector(".checkbox-wrapper")).toBeNull();
+    const checkbox = m.card("a.md").querySelector<HTMLInputElement>('.field-label input[type="checkbox"]')!;
+    expect(checkbox.disabled).toBe(true);
+    checkbox.click();
+    expect(updateRecord).not.toHaveBeenCalled();
+    m.destroy();
+  });
+
   it("a key action on a card's handle saves the override once, keeping the rest of the config", async () => {
     const m = mountView({ boardZoom: 1, cardFrame: { heightRem: 10 } });
     expect(m.onConfigChange).not.toHaveBeenCalled();

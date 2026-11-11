@@ -33,7 +33,8 @@
   /** Formula preview uses the selected day; visual value suggestions retain all project records. */
   export let previewRecords: DataRecord[] | undefined = undefined;
   export let referenceDate: dayjs.Dayjs = dayjs();
-  let formulaVersion = list?.formulaVersion;
+  let formulaVersion = list?.formulaVersion !== undefined ? list.formulaVersion
+    : list?.filterFormula?.trim() ? undefined : "unified-v1";
   export let existingLists: AgendaCustomList[] = [];
   /** w4-input2: a new list's name already typed in place (the row's gear). */
   export let initialName = '';

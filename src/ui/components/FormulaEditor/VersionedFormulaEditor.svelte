@@ -6,6 +6,8 @@
   import { i18n } from "src/lib/stores/i18n";
   export let expression = "";
   export let version: unknown = undefined;
+  /** Only a new definition may acquire a version without a migration action. */
+  export let newDefinition = false;
   export let legacy: Exclude<FormulaSemantics, "unified-v1"> = "legacy-computed";
   export let fields: string[] = [];
   export let placeholder = "";
@@ -19,12 +21,10 @@
   let hasContent = !!expression.trim();
   let editor: FormulaEditor;
   const dispatch = createEventDispatcher<{ change: string; commit: string; modechange: import("src/lib/formula/version").VersionedFormula }>();
-  // One rule set: a formula that predates the version mark is edited under it and
-  // saved with the mark, which is its migration.
   const CURRENT = "unified-v1";
-  $: semantics = formulaEditorSemantics(version ?? CURRENT, legacy);
+  $: semantics = formulaEditorSemantics(newDefinition && version === undefined ? CURRENT : version, legacy);
   function markCurrent(): void {
-    if (version !== undefined) return;
+    if (!newDefinition || version !== undefined) return;
     version = CURRENT;
     dispatch("modechange", { formulaVersion: CURRENT });
   }

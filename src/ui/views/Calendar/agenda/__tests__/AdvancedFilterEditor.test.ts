@@ -20,6 +20,12 @@ import "@testing-library/jest-dom";
 import { fireEvent, render } from "@testing-library/svelte";
 import { tick } from "svelte";
 
+jest.mock("src/lib/stores/i18n", () => {
+  const { writable } = require("svelte/store");
+  return { i18n: writable({ t: (key: string, options?: {count?: number; total?: number}) =>
+    key === "formula-mode.matches" ? `Matches:${options?.count}/${options?.total}` : key }) };
+});
+
 jest.mock("dayjs", () => {
   const actual = jest.requireActual("dayjs");
   return Object.assign(actual, { default: actual });
@@ -49,9 +55,18 @@ describe("AdvancedFilterEditor (Calendar agenda)", () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
 
-  test("a filter without a version mark is checked under the one rule set (and keeps its source)", async () => {
+  test.each([[undefined, 1], ["unified-v1", 0]])("preview uses exactly the saved profile %s", async (version, count) => {
     const { container } = render(AdvancedFilterEditor, { props: {
-      formula: "SUM(@amount) > 0", fields: [makeField("amount", DataFieldType.Number)],
+      formula: 'flag = "garbage"', version,
+      fields: [makeField("flag", DataFieldType.Boolean)], records: [{id: "r", values: {flag: false}}],
+    } });
+    await settleValidation();
+    expect(container.querySelector(".ppp-formula-agenda-preview")?.textContent).toBe(`Matches:${count}/1`);
+  });
+
+  test("a newly versioned filter supports strict column aggregates", async () => {
+    const { container } = render(AdvancedFilterEditor, { props: {
+      formula: "SUM(@amount) > 0", version: "unified-v1", fields: [makeField("amount", DataFieldType.Number)],
     } });
     expect(container.querySelector(".ppp-formula-mode")).toBeNull();
     await settleValidation();

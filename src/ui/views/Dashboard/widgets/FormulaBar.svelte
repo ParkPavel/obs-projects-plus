@@ -34,10 +34,10 @@
 
   let fieldName = "";
   let editingName: string | undefined;
-  // One rule set. A saved formula that predates it is converted when it is opened and saved again.
+  // New definitions use current rules; selecting a saved one keeps its stored profile.
   const FORMULA_VERSION = "unified-v1";
-  let draftVersion: string = FORMULA_VERSION;
-  $: draft = { formulaVersion: draftVersion };
+  let draftVersion: string | undefined = FORMULA_VERSION;
+  $: draft = draftVersion === undefined ? {} : { formulaVersion: draftVersion };
   $: semantics = formulaEditorSemantics(draftVersion, "legacy-computed");
   let inputValue = expression;
   let adopted = expression;
@@ -178,7 +178,7 @@
     <div class="ppp-formula-saved" aria-label={$i18n.t("views.dashboard.formula.saved")}>
       {#each formulaFields as definition (definition.name)}
         <div class="ppp-formula-saved-item">
-          <button type="button" on:click={() => { fieldName = definition.name; editingName = definition.name; draftVersion = definition.formulaVersion ?? FORMULA_VERSION; inputValue = definition.expression; }}>
+          <button type="button" on:click={() => { fieldName = definition.name; editingName = definition.name; draftVersion = definition.formulaVersion; inputValue = definition.expression; }}>
             ƒ {definition.name}
           </button>
           <button

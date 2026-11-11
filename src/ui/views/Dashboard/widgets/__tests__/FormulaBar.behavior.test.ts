@@ -87,17 +87,18 @@ test("a saved definition survives a copied field name and keeps the one rule set
   } finally { jest.useRealTimers(); }
 });
 
-test("a definition saved before the version mark is opened and saved under the one rule set", async () => {
+test("an existing unversioned definition keeps its preview and saved semantics on Apply", async () => {
   jest.useFakeTimers();
   try {
     const { container, component } = render(FormulaBar, { fields: ["amount", "Total"], previewFrame: frame,
-      formulaFields: [{ name: "Total", expression: "amount * 2" }] });
+      formulaFields: [{ name: "Total", expression: '"2" < "10"' }] });
     const applied: unknown[] = [];
     component.$on("apply", event => applied.push(event.detail));
     await fireEvent.click(container.querySelector(".ppp-formula-saved button")!);
     jest.advanceTimersByTime(700); await tick();
     await fireEvent.keyDown(container.querySelector("textarea")!, { key: "Enter", ctrlKey: true });
-    expect(applied.at(-1)).toEqual({ name: "Total", expression: "amount * 2", draft: { formulaVersion: "unified-v1" } });
+    expect(container.querySelector(".ppp-formula-preview-value")?.textContent).toBe("true");
+    expect(applied.at(-1)).toEqual({ name: "Total", expression: '"2" < "10"', draft: {} });
   } finally { jest.useRealTimers(); }
 });
 

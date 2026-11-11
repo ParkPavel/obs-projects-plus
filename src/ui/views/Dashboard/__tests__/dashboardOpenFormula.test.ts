@@ -16,7 +16,7 @@ test("opening a saved dashboard preserves unversioned formula semantics and does
   const config: DatabaseViewConfig = {
     widgets: [], layoutMode: "stack", layoutVersion: 1, table: {},
     showWidgetToolbar: true, compactMode: false,
-    formulaFields: [{name: "Answer", expression: '\"2\" < \"10\"'}],
+    formulaFields: [{name: "Answer", expression: '"2" < "10"'}],
   };
   const before = JSON.stringify(config);
   const saveConfig = jest.fn();
