@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount, createEventDispatcher } from "svelte";
-  import { get, writable } from "svelte/store";
-  import { providePaletteProject } from "src/ui/paletteProject";
+  import { get } from "svelte/store";
 
   import { Notice } from "obsidian";
   import { v4 as uuidv4 } from "uuid";
@@ -58,10 +57,6 @@
 
   export let projectId: ProjectId | undefined;
   export let viewId: ViewId | undefined;
-  const paletteProject = writable<string | undefined>(undefined);
-  providePaletteProject(paletteProject);
-  $: paletteProject.set(project?.id);
-
   const dispatch = createEventDispatcher();
 
   $: ({ projects } = $settings);

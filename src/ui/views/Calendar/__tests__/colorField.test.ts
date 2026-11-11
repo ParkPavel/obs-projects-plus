@@ -19,6 +19,9 @@ it("requires an explicit choice for conflicting project keys, including differen
 it.each([DataFieldType.Number, DataFieldType.Boolean, DataFieldType.Date])("does not overwrite a %s property as a color", type => {
   expect(resolveCalendarColorField({ eventColorField: "tint" }, [], [{ name: "tint", type, repeated: false, derived: false, identifier: false }])).toBeUndefined();
 });
+it.each([DataFieldType.Select, DataFieldType.Status])("accepts a repeating-color property inferred as %s", type => {
+  expect(resolveCalendarColorField({ eventColorField: "color" }, [], [{ name: "color", type, repeated: false, derived: false, identifier: false }])).toBe("color");
+});
 it("refuses computed and identity properties", () => {
   for (const flags of [{ derived: true, identifier: false }, { derived: false, identifier: true }]) {
     expect(resolveCalendarColorField({ eventColorField: "tint" }, [], [{ name: "tint", type: DataFieldType.String, repeated: false, ...flags }])).toBeUndefined();

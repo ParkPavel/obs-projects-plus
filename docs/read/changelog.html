@@ -19,6 +19,14 @@ Downloadable versions and their publication dates are listed in
 The version in <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/manifest.json">manifest.json</a> identifies this source tree; it does not
 mean that a new release has been published.</p>
 <h2 id="372-unreleased">3.7.2 — unreleased</h2>
+<h3 id="card-controls-and-mobile-panels">Card controls and mobile panels</h3>
+<ul>
+<li>Boolean properties displayed in board cards can be toggled through the record update route without opening the note inspector. Read-only and computed values stay protected.</li>
+<li>Inline palettes in forms use their parent&#39;s scroll area, including all favorite colors. New event forms start with the palette expanded.</li>
+<li>The mobile agenda editor reserves the safe area once, fills the visible viewport and keeps its header actions outside the scrolling fields, including when the keyboard is shown.</li>
+<li>The note inspector lays out computed results in the same scroll area as ordinary properties after a property section is collapsed.</li>
+</ul>
+<p>These changes have automated interaction and browser layout checks. Real iPhone and Android acceptance remains pending.</p>
 <h3 id="safety-and-stability">Safety and stability</h3>
 <ul>
 <li>Board column dragging closes a handler leak: a column dropped where it

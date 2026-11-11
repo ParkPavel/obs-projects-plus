@@ -34,3 +34,34 @@ it("does not pin a disconnected or zero-sized early clone to zero", () => {
   const clone = document.createElement("div"); compactDraggedColumn(clone, 270, 0.55); expect(clone.style.width).toBe("");
   document.body.append(clone); compactDraggedColumn(clone, 270, 0.55); expect(clone.style.width).toBe("");
 });
+
+it("compacts the clone on the frame the library appends it (the leftmost column no longer stays expanded)", async () => {
+  const clone = document.createElement("div"), column = document.createElement("section");
+  column.className = "projects--board--column"; clone.append(column);
+  Object.assign(clone.style, { left: "10px", top: "10px", width: "270px", height: "400px" });
+  jest.spyOn(clone, "getBoundingClientRect").mockReturnValue({ left: 10, top: 10, width: 270, height: 400, right: 280, bottom: 410 } as DOMRect);
+  compactDraggedColumn(clone, 270, 1);
+  expect(clone.classList.contains("ppp-board-column-clone")).toBe(true);
+  expect(clone.style.maxWidth).toBe("");
+  document.body.append(clone);
+  await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+  expect(clone.style.maxWidth).not.toBe("");
+  expect(column.classList.contains("collapse")).toBe(true);
+});
+
+it("moves a zoomed clone at the pointer's pace, not at the pointer's pace times the zoom", () => {
+  const clone = document.createElement("div");
+  document.body.append(clone);
+  Object.assign(clone.style, { left: "0px", top: "0px", width: "135px", height: "200px" });
+  jest.spyOn(clone, "getBoundingClientRect").mockReturnValue({ left: 0, top: 0, width: 135, height: 200, right: 135, bottom: 200 } as DOMRect);
+  compactDraggedColumn(clone, 270, 0.5);
+  // The library writes its translation first; the follower listens after it.
+  Object.assign(clone.style, { transform: "translate3d(100px, 40px, 0)" });
+  window.dispatchEvent(new Event("mousemove"));
+  // The library writes px; the follower rewrites it in rem, divided by the zoom (root font 16px in jsdom).
+  expect(clone.style.transform).toBe("translate3d(12.5rem, 5rem, 0)");
+  document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+  clone.style.transform = "translate3d(200px, 80px, 0)";
+  window.dispatchEvent(new Event("mousemove"));
+  expect(clone.style.transform).toBe("translate3d(200px, 80px, 0)");
+});

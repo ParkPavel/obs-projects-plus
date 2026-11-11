@@ -6,6 +6,14 @@ Projects Plus helps you work with Obsidian notes as a project: compare records i
 
 Each record remains a Markdown file. Fields such as status, date, and assignee live in note properties — the YAML block at the beginning of the file. Editing an ordinary writable field in the plugin updates the note.
 
+Dashboard formulas add calculated columns to the data shown in a view. They are read-only and do not write formula results to the source notes.
+
+## Development status
+
+The current source targets **3.7.2**; it is an unreleased candidate. Download a published build from [Releases](https://github.com/ParkPavel/obs-projects-plus/releases) and check its own release notes. Desktop automated checks and simulated phone layouts do not establish acceptance on an iPhone or Android device.
+
+See the [changelog](CHANGELOG.md) and the [updating and rollback guide](docs/upgrade.md) before updating an existing vault.
+
 ## What you can do
 
 | Task | Tool |
@@ -14,7 +22,7 @@ Each record remains a Markdown file. Fields such as status, date, and assignee l
 | Organize tasks by status | Board with draggable cards |
 | Browse meetings and deadlines | Calendar with year-to-day views |
 | Browse materials by cover image | Gallery |
-| Combine records, charts, and metrics | Dashboard with configurable blocks |
+| Combine records, charts, metrics, and calculated columns | Dashboard with configurable blocks |
 | Total up related records | Rollups through a relation, and reverse ones — records that link here |
 | Compare figures across projects | Charts with several series, another project's data and a second axis |
 | Select the notes to include | Folder, tag, built-in filtered query, or Dataview |
@@ -25,11 +33,11 @@ This illustration shows one interface configuration; your installed version may 
 
 ## Installation
 
-Once Projects Plus is listed in the Obsidian community directory, install it from Obsidian: **Settings → Community plugins → Browse**, search for **Projects Plus**, then select **Install** and **Enable**.
+If Projects Plus is available in the Obsidian Community plugins browser, install it from **Settings → Community plugins → Browse**: search for **Projects Plus**, then select **Install** and **Enable**.
 
 To install a release by hand:
 
-The current version is **3.7.0**: configurable gallery layouts and card fields, resizable card frames, board thumbnails, filters in the view settings, touch-first behaviour on phones and tablets, and styles that follow your Obsidian theme. 3.6.3 named the plugin Projects Plus; 3.6.1 brought a demo of three linked projects. The first version in the Obsidian community catalogue format is 3.6.0. Packaged builds are in [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases); it needs Obsidian 1.8.7 or newer, on desktop or mobile. See the [changelog](CHANGELOG.md) for what changed.
+Download a published build from [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases). Use the release notes and [changelog](CHANGELOG.md) to check which features are included. Projects Plus requires Obsidian 1.8.7 or newer.
 
 1. Choose a release and download **all three files** from it: `main.js`, `manifest.json`, and `styles.css`.
 2. Create `.obsidian/plugins/obs-projects-plus/` inside your vault and place the files there. If you use a custom Obsidian configuration folder, use that folder instead of `.obsidian`.
@@ -76,5 +84,7 @@ Projects Plus works with your vault through the Obsidian API. It has no separate
 - [Contributing](CONTRIBUTING.md) and [custom view API](docs/api.md).
 
 See [Contributing](CONTRIBUTING.md) to report a reproducible issue, improve the documentation or contribute code. Release notes describe the behaviour and limits of each published version.
+
+If Projects Plus helps you, you can [support its development](https://web.tribute.tg/d/Sh6).
 
 Projects Plus is based on Marcus Olsson's [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects). The current maintainer is Park Pavel. Licensed under [Apache 2.0](https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE); see [NOTICE](https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE) for attribution.

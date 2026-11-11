@@ -103,7 +103,7 @@
     if (scope !== textScope || locked) {
       clearTimer();
       entryValue = null;
-      showColorPicker = false;
+      showColorPicker = !locked;
     }
     textScope = scope;
   }
@@ -196,7 +196,7 @@
   // COLOR PICKER - v5.1.0 INLINE MODE
   // Палитра встроена в форму, не popup
   // ========================================
-  let showColorPicker = false;
+  let showColorPicker = true;
   
   function toggleColorPicker() {
     if (readonly) return;
@@ -325,6 +325,7 @@
             on:touchend|stopPropagation={() => {}}
           >
             <ColorPicker 
+              scrollable={false}
               value={localDisplayValue || DEFAULT_COLOR}
               on:change={handleColorChange}
             />

@@ -142,12 +142,24 @@ describe("TimelineDragManager — touch gesture on an event bar (ios-d1)", () =>
       expect(get(manager.ghostPosition)).toBeNull();
     });
 
-    it.each(["pointercancel", "lostpointercapture"])("%s cancels without retaining quick re-grab", type => {
+    it("a mouse or pen pointercancel cancels without retaining quick re-grab", () => {
       drag();
-      bar.dispatchEvent(new Event(type, { bubbles: true }));
+      bar.dispatchEvent(new Event("pointercancel", { bubbles: true }));
       expect(onCommit).not.toHaveBeenCalled();
       expect(get(manager.state)).toBe("idle");
       expect(get(manager.longPressActive)).toBe(false);
+    });
+
+    // iOS reports these just before the touchend of an ordinary release; touchcancel is the cancellation.
+    it.each(["pointercancel", "lostpointercapture"])("a touch %s is not a cancellation: the release still commits", type => {
+      drag();
+      const event = new Event(type, { bubbles: true });
+      Object.defineProperty(event, "pointerType", { value: "touch" });
+      bar.dispatchEvent(event);
+      expect(get(manager.state)).toBe("dragging");
+      bar.dispatchEvent(touch("touchend", BAR_CENTRE_Y + HOUR_PX));
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      expect(get(manager.state)).toBe("idle");
     });
 
     it("release is observed even if a sidebar or bar stops bubbling", () => {

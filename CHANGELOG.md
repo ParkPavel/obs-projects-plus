@@ -10,6 +10,15 @@ mean that a new release has been published.
 
 ## 3.7.2 — unreleased
 
+### Card controls and mobile panels
+
+- Boolean properties displayed in board cards can be toggled through the record update route without opening the note inspector. Read-only and computed values stay protected.
+- Inline palettes in forms use their parent's scroll area, including all favorite colors. New event forms start with the palette expanded.
+- The mobile agenda editor reserves the safe area once, fills the visible viewport and keeps its header actions outside the scrolling fields, including when the keyboard is shown.
+- The note inspector lays out computed results in the same scroll area as ordinary properties after a property section is collapsed.
+
+These changes have automated interaction and browser layout checks. Real iPhone and Android acceptance remains pending.
+
 ### Safety and stability
 
 - Board column dragging closes a handler leak: a column dropped where it

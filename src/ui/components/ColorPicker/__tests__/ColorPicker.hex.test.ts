@@ -2,6 +2,7 @@ import { fireEvent } from "@testing-library/svelte";
 import { tick } from "svelte";
 import { get } from "svelte/store";
 import { settings } from "src/lib/stores/settings";
+import { DEFAULT_PROJECT } from "src/settings/settings";
 import type ColorPicker from "../ColorPicker.svelte";
 const Component = require("../ColorPicker.svelte").default as typeof ColorPicker;
 
@@ -30,6 +31,38 @@ test("favorite management changes the palette without selecting or writing a rec
     expect(get(settings).preferences.colorFavorites).toEqual([]);
     expect(saveColor).not.toHaveBeenCalled();
   } finally { m.destroy(); settings.set(original); }
+});
+
+test("shared and legacy project favorites appear together and edits stay unified", async () => {
+  const original = get(settings);
+  settings.set({
+    ...original,
+    preferences: { ...original.preferences, colorFavorites: [{ color: "#112233", name: "Shared" }] },
+    projects: [
+      { ...DEFAULT_PROJECT, id: "palette-project", name: "Project palette", colorFavorites: [{ color: "#445566", name: "Project" }] },
+      { ...DEFAULT_PROJECT, id: "palette-project-2", name: "Second project", colorFavorites: [{ color: "#445566", name: "Duplicate" }] },
+    ],
+  });
+  const m = mount();
+  const other = mount();
+  try {
+    await tick();
+    const titles = (picker: ReturnType<typeof mount>) => Array.from(picker.target.querySelectorAll(".favorites-grid .color-swatch")).map(button => button.getAttribute("title"));
+    expect(titles(m)).toEqual(["Shared", "Project"]);
+    expect(titles(other)).toEqual(titles(m));
+    (m.target.querySelector(".preview-row .star-btn") as HTMLButtonElement).click();
+    await tick();
+    expect(get(settings).preferences.colorFavorites?.map(color => color.color)).toEqual(["#112233", "#ff0000"]);
+    expect(titles(other)).toEqual(["Shared", "#ff0000", "Project"]);
+
+    const projectSwatch = Array.from(m.target.querySelectorAll<HTMLButtonElement>(".favorites-grid .color-swatch"))
+      .find(button => button.title === "Project")!;
+    (projectSwatch.parentElement!.querySelector(".remove-btn") as HTMLButtonElement).click();
+    await tick();
+    expect(get(settings).projects.every(project => project.colorFavorites?.every(color => color.color !== "#445566"))).toBe(true);
+    expect(titles(m)).toEqual(["Shared", "#ff0000"]);
+    expect(titles(other)).toEqual(titles(m));
+  } finally { m.destroy(); other.destroy(); settings.set(original); }
 });
 
 test.each(["#1234", "12345", "#12345678", "#xyz", "#123456  invalid"])("invalid HEX %s cannot apply an old or truncated color", async (input) => {

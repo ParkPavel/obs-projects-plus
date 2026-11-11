@@ -84,6 +84,21 @@ describe("TextField", () => {
     m.destroy();
   });
 
+  test("single-line control never overflows its container and multiline fills its width", () => {
+    const single = mount();
+    expect(getComputedStyle(single.input).maxInlineSize).toBe("100%");
+    single.destroy();
+
+    const target = document.createElement("div");
+    document.body.appendChild(target);
+    const component = new TextField({ target, props: { value: "", multiline: true } });
+    const textarea = target.querySelector<HTMLTextAreaElement>("textarea")!;
+    expect(getComputedStyle(textarea).width).toBe("100%");
+    expect(getComputedStyle(textarea).boxSizing).toBe("border-box");
+    component.$destroy();
+    target.remove();
+  });
+
   test("typing emits input(draft) and never commits; Enter commits once and the blur after it adds nothing", async () => {
     const m = mount();
     m.input.focus();

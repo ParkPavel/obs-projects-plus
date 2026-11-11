@@ -54,7 +54,7 @@ Also check the new-note folder, templates, default name, and excluded files. The
 
 ## Creating and editing records
 
-Use the project's create-note action or **Create new note plus**. Check the selected project in the dialog, enter a name, and choose a template if needed. In the calendar, double-clicking an empty cell can create a note.
+Use the project's create-note action or **Create new note plus**. Check the selected project in the dialog, enter a name, and choose a template if needed. On a computer, double-click an empty calendar cell. On a phone, hold an empty slot and move your finger to set the duration; releasing opens the bottom form. Move or resize the draft before confirming. Confirm creates the file; Cancel discards the draft.
 
 These properties are enough to begin:
 
@@ -108,6 +108,8 @@ Use the grip to move cards and columns: a card's grip is the strip along its lef
 
 In the view settings (gear → View) a board can show a cover from an image field on each card: on top, as a small square at the left, or none. A card without an image shows no thumbnail. Use consistent values for a shared process: `todo`, `doing`, and `done` are easier to maintain than several spellings of the same status.
 
+Boolean properties in a board card's body and the separate header checkbox toggle without opening the YAML inspector. Computed properties and records from a read-only source cannot be changed.
+
 ### Calendar and Agenda
 
 Explicitly select event start and end fields in calendar settings. For the example above, use `startDate` and `endDate`; map the time fields to `startTime` and `endTime`, and color to `color`.
@@ -117,6 +119,8 @@ When a start field is not configured or is absent, the calendar tries common fie
 Switch between year-to-day scales. In week and day modes, timed events appear on a timeline; dragging changes their date or time, and resizing a bar changes its duration. In month and 2-weeks modes, drag a record onto another day to change its date. Use **Today** to return to the current date.
 
 Agenda is a sidebar with event lists. You can select a day and configure filters for individual lists. If an event appears in the calendar but not in Agenda, check the selected date and the list's filter.
+
+The new-event form starts with its color palette expanded. It scrolls with the form's other fields and can be collapsed with the color button. In the note inspector, ordinary properties and computed results share one scroll area. Formula and rollup results remain read-only.
 
 ### Gallery
 
@@ -130,9 +134,9 @@ A filter limits displayed records; it does not delete notes. A view's filter liv
 
 Formulas calculate values from fields. Begin with a small expression over numeric fields, such as `budget - spent`. Check the result against a known record before using it in summary statistics. The built-in editor helps you choose fields and functions; valid operations depend on data types.
 
-**Project formulas and dashboard formulas.** A formula configured on a project property belongs to that property and is available in the project's views. The dashboard's “Formulas” action creates a computed field for that dashboard. It is a working calculation, rather than a separate preview calculator: Apply saves its definition in the view settings and recalculates it for the records. It does not rewrite Markdown properties.
+**Project formulas and dashboard calculated fields.** A formula configured on a project property belongs to that property and is available in the project's views. The dashboard's “Calculated fields” toolbar control creates a computed column for that page only. It is a working calculation, rather than a separate preview calculator: Apply saves its definition in the view settings and recalculates it for the records. It does not rewrite Markdown properties.
 
-In the dashboard panel, enter a new name such as `Remaining` and the expression `budget - spent`. Preview shows the first record in the dashboard's data. A reference such as `budget` reads the current record; `SUM(@budget)` aggregates that column across the dashboard's complete dataset, rather than just the first row. Check the filters and source first. After applying, the field is available to that page's tables and widgets. Saved formulas appear in the panel: select a name to edit its expression. An empty name, a collision with an ordinary property, invalid syntax or a circular dependency cannot be applied.
+In the dashboard panel, enter a new name such as `Remaining` and the expression `budget - spent`. Preview shows the first record in the dashboard's data. A reference such as `budget` reads the current record; `SUM(@budget)` aggregates that column across the dashboard's complete dataset, rather than just the first row. Check the filters and source first. After applying, the field is available to that page's tables and widgets. Saved fields appear in the panel: select a name to edit its expression, or use the adjacent delete button to remove it from the page. Update any other formulas that depend on a deleted field. An empty name, a collision with an ordinary property, invalid syntax or a circular dependency cannot be applied.
 
 A relation points to notes in another project. For example, a YAML link can look like this:
 

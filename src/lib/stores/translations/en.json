@@ -1038,6 +1038,7 @@
                 "reset-to-original-time": "Reset to original time",
                 "draft": {
                     "title": "New event",
+                    "resize": "Resize event form: drag the handle or use the arrow keys",
                     "discard": "Discard event",
                     "start": "Starts",
                     "end": "Ends",
@@ -1156,7 +1157,7 @@
                     "layout-stack": "Stack",
                     "hide-formula-bar": "Hide formula bar",
                     "show-formula-bar": "Show formula bar",
-                    "formula-builder": "Formulas",
+                    "formula-builder": "Calculated fields",
                     "filter-bridge-global": "Global filter: {{count}} condition(s)",
                     "filter-bridge-local": "Local: {{field}} = {{value}}",
                     "filter-bridge-clear": "Clear local filter",
@@ -1340,10 +1341,6 @@
                     "resize": "Resize the block: drag, or use the arrow keys",
                     "menu-properties": "Properties of «{{source}}»…"
                 },
-                "quick": {
-                    "group": "Quick actions",
-                    "formula": "Formula builder"
-                },
                 "types": {
                     "data-table": "Data table",
                     "chart": "Chart",
@@ -1364,8 +1361,10 @@
                 },
                 "formula": {
                     "title": "Formula editor",
-                    "scope": "Creates or updates a computed field for every record in this dashboard. Preview shows the first record in the dashboard's data; column aggregates use that full dataset. Markdown properties stay unchanged.",
+                    "scope": "Creates or updates a calculated column for every record shown by this dashboard. It appears in the dashboard's data blocks but does not write to note properties. Preview uses the dashboard dataset; column aggregates use every visible record.",
                     "saved": "Saved dashboard formulas — select one to edit",
+                    "remove": "Delete calculated field {{name}}",
+                    "applied": "Field “{{name}}” saved. It now appears as a column in tables and in the field lists of blocks (stats, chart).",
                     "cycle": "This formula would create a circular dependency. Remove the reference loop before applying.",
                     "hint": "Ctrl+Enter to apply, Esc to cancel",
                     "field-name": "Field name",
@@ -1932,9 +1931,6 @@
                 "pick-color": "Pick color",
                 "favorites": "Favorites",
                 "favorites-empty-hint": "Press ⭐ to add",
-                "favorites-scope": "Saved colors",
-                "shared-favorites": "Shared",
-                "project-favorites-hint": "Changes to saved colors apply only to the selected project.",
                 "used-in-notes": "Colors used in notes",
                 "hex-code": "HEX code",
                 "invalid-format": "Use #RGB or #RRGGBB",

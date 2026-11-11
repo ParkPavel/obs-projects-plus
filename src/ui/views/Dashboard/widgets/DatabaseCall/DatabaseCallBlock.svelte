@@ -32,7 +32,6 @@
   import { i18n } from "src/lib/stores/i18n";
   import { getContext, onMount, onDestroy } from "svelte";
   import { writable } from "svelte/store";
-  import { providePaletteProject } from "src/ui/paletteProject";
   import {
     DATA_PROVIDER_REGISTRY_CONTEXT_KEY,
     type DataProvider,
@@ -248,9 +247,6 @@
   // filter then come from that view, live; `effectiveFrame` already carries the
   // block's own filter, so the view's filter narrows it further (AND).
   $: sourceProjectId = sourceState.kind === "ready" ? sourceState.projectId : project?.id;
-  const paletteProject = writable<string | undefined>(undefined);
-  providePaletteProject(paletteProject);
-  $: paletteProject.set(sourceProjectId);
   $: sourceProject = $settings.projects.find((p) => p.id === sourceProjectId) ?? project;
   $: sourceViews = sourceProject?.views ?? ([] as ViewDefinition[]);
   $: resolvedTab = activeTab ? resolveTabView(activeTab, sourceViews) : undefined;

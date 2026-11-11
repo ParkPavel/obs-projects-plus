@@ -11,7 +11,7 @@ export type Column = {
 };
 
 export type OnRecordClick = (record: DataRecord) => void;
-export type OnRecordCheck = (record: DataRecord, checked: boolean) => void;
+export type OnRecordCheck = (record: DataRecord, checked: boolean, fieldName?: string) => void;
 export type OnRecordAdd = (
   column: string,
   name: string,

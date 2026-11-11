@@ -35,19 +35,19 @@
   "files": [
     {
       "name": "read/project-readme.html",
-      "sha256": "9871872d4c2e4801926f82fca262717f276db5af742690cbab90beba2471d446"
+      "sha256": "ebb76920aaa1b8793b40c57ea0b1ff880f2b11716e43f78cbb06efd0c75d6ced"
     },
     {
       "name": "read/readme-ru.html",
-      "sha256": "013468631d9696c939f1d82687d939ab2354461630b90924b2137c90daa35d29"
+      "sha256": "fe374203fcfdc029807315b0970036727d286ddbe88c525de45081e7f92b7ad5"
     },
     {
       "name": "read/changelog.html",
-      "sha256": "28a686ae56d93be9d23a9e4794f2e20f6d249d4396d01c0173f83445a6c6dd90"
+      "sha256": "b5eeab9d187c4d6b7834977438d461dbde4390ee2e0fa11d31a37af202b40eb6"
     },
     {
       "name": "read/changelog-ru.html",
-      "sha256": "bb0fd7d893deadd740689ebc87fb63df3faa35fab3c89cc8c1e431c2e4d4718e"
+      "sha256": "d2e4f20cd6b13a27fd02583aa14691e12f877079dc24037873afc360a86729a6"
     },
     {
       "name": "read/roadmap.html",
@@ -123,11 +123,11 @@
     },
     {
       "name": "read/user-guide-en.html",
-      "sha256": "49302ae2fba1853077cd1cf72106ff0f69d6b60404adeb427dd72bdf845b8bc8"
+      "sha256": "2be5e32f7f0f36302f275fbae71e3024e74eab5220aa3ff678042e89ccf73d5f"
     },
     {
       "name": "read/user-guide.html",
-      "sha256": "d69e13f8a7c7b96fa3c87827d3f07c7caef2c07d1e225956a3ad0102cb4d0621"
+      "sha256": "11741f290ca361bceade3c4be4edc9f38b19496c149b03ff56586631be15cffa"
     },
     {
       "name": "read/templates-readme.html",
@@ -151,15 +151,15 @@
     },
     {
       "name": "index.html",
-      "sha256": "0f8868a725cc84220f25c374f51e3c97c0953391aaa7df959c09afba27d26315"
+      "sha256": "66a64a6b4bbf300bf699e56899ccf796137f08ddf34df786e3a4285538fca1bd"
     },
     {
       "name": "en.html",
-      "sha256": "b4c4abd387833da6fb4684195aceb769f3588020a12102b40376c7a0e903f63d"
+      "sha256": "233c678e16df4a2a0287fc214e65fc692aa8b099e9373895fe12831bdef707a8"
     },
     {
       "name": "search-index.json",
-      "sha256": "e58803745ca3075f8e13d51fce07ebb3589fe092a040c7f9acc4ab452e7b2711"
+      "sha256": "7e86480723272b0a7a3324e435c61f356cfe60084c3cd8ea5b90306086df26db"
     },
     {
       "name": ".nojekyll",

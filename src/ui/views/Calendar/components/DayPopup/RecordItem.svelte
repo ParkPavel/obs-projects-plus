@@ -363,7 +363,8 @@
         if (!await onColorChange(color)) return false;
       } else dispatch('colorChange', color);
       optimisticColor = color;
-      showColorPalette = false;
+      // The palette stays open: it has its own toggle, and picking, favouriting or deleting
+      // favourites takes several clicks.
       return true;
     } catch (error) {
       console.error("[Projects+] popup color write failed", error);

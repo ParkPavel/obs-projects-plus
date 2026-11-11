@@ -64,6 +64,19 @@ test("formula saves preserve an unspecified future flag and persist only explici
   expect(config.formulaFields?.[1]).toEqual({ name: "Copy", expression: "5", formulaVersion: "unified-v1" });
 });
 
+test("removing saved formulas removes their definitions and leaves a stable empty list", () => {
+  let config = { ...makeConfig(), formulaFields: [
+    { name: "Total", expression: "qty * price" },
+    { name: "Label", expression: "CONCAT(qty, price)" },
+  ] } as DatabaseViewConfig;
+  const controller = createWidgetController({ getConfig: () => config, saveConfig: (next: DatabaseViewConfig) => { config = next; }, i18nStore: makeI18nStore() });
+  controller.removeFormulaField("Total");
+  expect(config.formulaFields).toEqual([{ name: "Label", expression: "CONCAT(qty, price)" }]);
+  controller.removeFormulaField("Label");
+  expect(config.formulaFields).toEqual([]);
+  controller.removeFormulaField("Missing");
+});
+
 // Minimal i18n store double: returns the key's defaultValue with `{{name}}`
 // filled from options, the way i18next interpolates in production.
 function makeI18nStore() {

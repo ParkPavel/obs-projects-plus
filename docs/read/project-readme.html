@@ -9,10 +9,14 @@
 <body data-prefix="../" data-language="en"><a class="skip-link" href="#main">Skip to content</a>
 <header class="site-header"><a class="wordmark" href="../en.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
 <nav aria-label="Main navigation"><a href="../en.html#ideas">Garden of ideas</a><a href="../read/user-guide-en.html">Documentation</a><a class="language" href="../read/readme-ru.html" hreflang="ru">Русский</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
-<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../en.html">← Explore the plugin</a><strong>On this page</strong><nav aria-label="On this page"><a href="#what-you-can-do">What you can do</a><a href="#installation">Installation</a><a href="#usage">Usage</a><a href="#privacy-and-access">Privacy and access</a><a href="#continue">Continue</a></nav></aside><article class="doc-article"><p class="doc-version">Documentation follows the source code; an installed release may differ.</p><h1 id="projects-plus">Projects Plus</h1>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../en.html">← Explore the plugin</a><strong>On this page</strong><nav aria-label="On this page"><a href="#development-status">Development status</a><a href="#what-you-can-do">What you can do</a><a href="#installation">Installation</a><a href="#usage">Usage</a><a href="#privacy-and-access">Privacy and access</a><a href="#continue">Continue</a></nav></aside><article class="doc-article"><p class="doc-version">Documentation follows the source code; an installed release may differ.</p><h1 id="projects-plus">Projects Plus</h1>
 <p><a href="../read/readme-ru.html">Русский</a> · <a href="https://parkpavel.github.io/obs-projects-plus/en.html">Website &amp; ideas</a> · <a href="../read/user-guide-en.html">User guide</a> · <a href="../read/readme.html">Documentation</a> · <a href="../read/roadmap.html">Roadmap</a></p>
 <p>Projects Plus helps you work with Obsidian notes as a project: compare records in a table, arrange them on a board, plan events in a calendar, and build an overview on a Dashboard.</p>
 <p>Each record remains a Markdown file. Fields such as status, date, and assignee live in note properties — the YAML block at the beginning of the file. Editing an ordinary writable field in the plugin updates the note.</p>
+<p>Dashboard formulas add calculated columns to the data shown in a view. They are read-only and do not write formula results to the source notes.</p>
+<h2 id="development-status">Development status</h2>
+<p>The current source targets <strong>3.7.2</strong>; it is an unreleased candidate. Download a published build from <a href="https://github.com/ParkPavel/obs-projects-plus/releases">Releases</a> and check its own release notes. Desktop automated checks and simulated phone layouts do not establish acceptance on an iPhone or Android device.</p>
+<p>See the <a href="../read/changelog.html">changelog</a> and the <a href="../read/upgrade.html">updating and rollback guide</a> before updating an existing vault.</p>
 <h2 id="what-you-can-do">What you can do</h2>
 <table>
 <thead>
@@ -38,7 +42,7 @@
 <td>Gallery</td>
 </tr>
 <tr>
-<td>Combine records, charts, and metrics</td>
+<td>Combine records, charts, metrics, and calculated columns</td>
 <td>Dashboard with configurable blocks</td>
 </tr>
 <tr>
@@ -57,9 +61,9 @@
 <p><img src="../media/images--2026-01-27_12-24-17.png" alt="Example Projects Plus calendar" loading="lazy" decoding="async"></p>
 <p>This illustration shows one interface configuration; your installed version may look different.</p>
 <h2 id="installation">Installation</h2>
-<p>Once Projects Plus is listed in the Obsidian community directory, install it from Obsidian: <strong>Settings → Community plugins → Browse</strong>, search for <strong>Projects Plus</strong>, then select <strong>Install</strong> and <strong>Enable</strong>.</p>
+<p>If Projects Plus is available in the Obsidian Community plugins browser, install it from <strong>Settings → Community plugins → Browse</strong>: search for <strong>Projects Plus</strong>, then select <strong>Install</strong> and <strong>Enable</strong>.</p>
 <p>To install a release by hand:</p>
-<p>The current version is <strong>3.7.0</strong>: configurable gallery layouts and card fields, resizable card frames, board thumbnails, filters in the view settings, touch-first behaviour on phones and tablets, and styles that follow your Obsidian theme. 3.6.3 named the plugin Projects Plus; 3.6.1 brought a demo of three linked projects. The first version in the Obsidian community catalogue format is 3.6.0. Packaged builds are in <a href="https://github.com/ParkPavel/obs-projects-plus/releases">GitHub Releases</a>; it needs Obsidian 1.8.7 or newer, on desktop or mobile. See the <a href="../read/changelog.html">changelog</a> for what changed.</p>
+<p>Download a published build from <a href="https://github.com/ParkPavel/obs-projects-plus/releases">GitHub Releases</a>. Use the release notes and <a href="../read/changelog.html">changelog</a> to check which features are included. Projects Plus requires Obsidian 1.8.7 or newer.</p>
 <ol>
 <li>Choose a release and download <strong>all three files</strong> from it: <code>main.js</code>, <code>manifest.json</code>, and <code>styles.css</code>.</li>
 <li>Create <code>.obsidian/plugins/obs-projects-plus/</code> inside your vault and place the files there. If you use a custom Obsidian configuration folder, use that folder instead of <code>.obsidian</code>.</li>
@@ -104,6 +108,7 @@ startDate: 2026-09-15
 <li><a href="../read/contributing.html">Contributing</a> and <a href="../read/api.html">custom view API</a>.</li>
 </ul>
 <p>See <a href="../read/contributing.html">Contributing</a> to report a reproducible issue, improve the documentation or contribute code. Release notes describe the behaviour and limits of each published version.</p>
+<p>If Projects Plus helps you, you can <a href="https://web.tribute.tg/d/Sh6">support its development</a>.</p>
 <p>Projects Plus is based on Marcus Olsson&#39;s <a href="https://github.com/marcusolsson/obsidian-projects">Obsidian Projects</a>. The current maintainer is Park Pavel. Licensed under <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache 2.0</a>; see <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE">NOTICE</a> for attribution.</p>
 <p class="doc-source"><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/README.md">Page source ↗</a></p></article></main>
 <footer class="site-footer"><a class="wordmark" href="../en.html">Projects Plus</a><p>An open-source project by Park Pavel. Based on Obsidian Projects by Marcus Olsson.</p><div><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache-2.0</a><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE">Attribution</a><a href="https://github.com/ParkPavel/obs-projects-plus/issues">Feedback</a></div></footer>

@@ -82,6 +82,54 @@ describe("CalendarDraftSheet — there at once, and not in the way", () => {
     expect(inputs.map((input) => input.type)).toEqual(["date", "date"]);
   });
 
+  it("resizes the form by dragging its handle and with accessible keyboard controls", async () => {
+    const m = mount();
+    begin(m.ctl);
+    await tick();
+    const handle = m.container.querySelector<HTMLElement>(".ppp-draft-sheet__resize")!;
+    const measure = jest.spyOn(m.sheet()!.parentElement!, "getBoundingClientRect").mockReturnValue({
+      x: 0, y: 0, top: 0, left: 0, right: 400, bottom: 400, width: 400, height: 400, toJSON() { return {}; },
+    });
+    try {
+      expect(handle).toHaveAttribute("aria-valuenow", "42");
+      expect(m.sheet()!.style.blockSize).toBe("");
+      const pointer = (type: string, y: number) => {
+        const event = new Event(type, { bubbles: true, cancelable: true });
+        Object.defineProperties(event, {
+          pointerId: { value: 7 },
+          button: { value: 0 },
+          clientY: { value: y },
+        });
+        handle.dispatchEvent(event);
+      };
+      pointer("pointerdown", 200);
+      pointer("pointermove", 160);
+      await tick();
+      expect(handle).toHaveAttribute("aria-valuenow", "52");
+      pointer("pointerup", 160);
+      await fireEvent.keyDown(handle, { key: "ArrowUp", bubbles: true, cancelable: true });
+      expect(handle).toHaveAttribute("aria-valuenow", "55");
+      await fireEvent.keyDown(handle, { key: "End", bubbles: true, cancelable: true });
+      expect(handle).toHaveAttribute("aria-valuenow", "78");
+    } finally { measure.mockRestore(); }
+  });
+
+  it("starts with an expanded inline palette and can collapse and reopen it", async () => {
+    const m = mount();
+    begin(m.ctl);
+    await tick();
+    const colorButton = m.container.querySelector<HTMLButtonElement>(".ppp-draft-sheet__color > button")!;
+    expect(colorButton).toHaveAttribute("aria-expanded", "true");
+    expect(m.container.querySelector(".color-picker--inline")).not.toBeNull();
+    await fireEvent.click(colorButton);
+    await tick();
+    expect(m.container.querySelector(".color-picker")).toBeNull();
+    await fireEvent.click(colorButton);
+    await tick();
+    expect(m.container.querySelector(".color-picker")).not.toBeNull();
+    expect(m.container.querySelectorAll(".color-picker .palette-label").length).toBe(3);
+  });
+
   it("a new draft starts from its own name, not from text left in the last one", async () => {
     const m = mount();
     begin(m.ctl);

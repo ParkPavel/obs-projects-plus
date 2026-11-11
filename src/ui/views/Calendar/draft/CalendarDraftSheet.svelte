@@ -27,7 +27,8 @@
   export let controller: CalendarDraftController;
   export let templates: readonly string[] = [];
   export let statusOptions: ComboOption[] = [];
-  export let projectPalette: string[] = [];
+  /** An embedded calendar's host reserves the phone's bottom bar once, outside the widget. */
+  export let embedded = false;
   /** Why a file name cannot be used ("" when it can): the create window's rules. */
   export let nameProblem: (fileName: string) => string = () => "";
   /** Desktop: the name is selected on open. A phone keeps its keyboard down. */
@@ -46,7 +47,9 @@
   let typedName = "";
   let typedIcon = "";
   let typedStatus = "";
-  let colorOpen = false;
+  let colorOpen = true;
+  let sheetSize: number | null = null;
+  let resizePointer: { id: number; startY: number; startSize: number; parentHeight: number } | null = null;
   let seeded = -1;
 
   $: state = $controller;
@@ -56,7 +59,7 @@
     if (!d || d.session === seeded) return;
     seeded = d.session;
     composing = false;
-    colorOpen = false;
+    colorOpen = true;
     typedName = d.name;
     typedIcon = d.icon;
     typedStatus = d.status;
@@ -131,6 +134,46 @@
     if (!state.saving) controller.cancel();
   }
 
+  /** Until the user resizes, the sheet follows its content; this is its current share of the host. */
+  function currentSize(): number {
+    const parentHeight = rootEl?.parentElement?.getBoundingClientRect().height ?? 0;
+    const height = rootEl?.getBoundingClientRect().height ?? 0;
+    if (parentHeight <= 0 || height <= 0) return 42;
+    return Math.max(25, Math.min(78, Math.round((height / parentHeight) * 100)));
+  }
+
+  function resizeByKeyboard(e: KeyboardEvent): void {
+    const step = e.shiftKey ? 8 : 3;
+    const size = sheetSize ?? currentSize();
+    if (e.key === "ArrowUp") sheetSize = Math.min(78, size + step);
+    else if (e.key === "ArrowDown") sheetSize = Math.max(25, size - step);
+    else if (e.key === "Home") sheetSize = 25;
+    else if (e.key === "End") sheetSize = 78;
+    else return;
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  function beginResize(e: PointerEvent): void {
+    if (e.button !== 0 || !rootEl?.parentElement) return;
+    const parentHeight = rootEl.parentElement.getBoundingClientRect().height;
+    if (parentHeight <= 0) return;
+    e.preventDefault();
+    resizePointer = { id: e.pointerId, startY: e.clientY, startSize: sheetSize ?? currentSize(), parentHeight };
+    const handle = e.currentTarget as HTMLElement;
+    if (typeof handle.setPointerCapture === "function") handle.setPointerCapture(e.pointerId);
+  }
+
+  function moveResize(e: PointerEvent): void {
+    if (!resizePointer || e.pointerId !== resizePointer.id) return;
+    const delta = ((resizePointer.startY - e.clientY) / resizePointer.parentHeight) * 100;
+    sheetSize = Math.max(25, Math.min(78, Math.round(resizePointer.startSize + delta)));
+  }
+
+  function endResize(e: PointerEvent): void {
+    if (resizePointer?.id === e.pointerId) resizePointer = null;
+  }
+
   const at = (date: Date | null) => (date ? dayjs(date) : null);
 
   onMount(() => {
@@ -153,6 +196,10 @@
   <div
     bind:this={rootEl}
     class="ppp-draft-sheet"
+    class:ppp-draft-sheet--embedded={embedded}
+    class:ppp-draft-sheet--palette={colorOpen}
+    style:block-size={sheetSize === null ? null : `${sheetSize}%`}
+    style:max-block-size={sheetSize === null ? null : "78%"}
     role="dialog"
     aria-modal="false"
     aria-labelledby="{uid}-title"
@@ -162,6 +209,23 @@
     on:compositionstart={() => (composing = true)}
     on:compositionend={(event) => { composing = false; recordImeCompositionEnd(event); }}
   >
+    <div
+      class="ppp-draft-sheet__resize"
+      role="slider"
+      aria-label={$i18n.t("views.calendar.draft.resize")}
+      aria-orientation="vertical"
+      aria-valuemin="25"
+      aria-valuemax="78"
+      aria-valuenow={sheetSize ?? 42}
+      aria-valuetext="{sheetSize ?? 42}%"
+      tabindex="0"
+      on:pointerdown={beginResize}
+      on:pointermove={moveResize}
+      on:pointerup={endResize}
+      on:pointercancel={endResize}
+      on:lostpointercapture={() => (resizePointer = null)}
+      on:keydown={resizeByKeyboard}
+    ></div>
     <div class="ppp-draft-sheet__bar">
       <button
         type="button"
@@ -187,6 +251,7 @@
         on:click={confirm}
       >
         <Icon name={state.saving ? "loader" : "check"} />
+        <span class="ppp-draft-sheet__label">{state.saving ? $i18n.t("modals.note.create.creating") : $i18n.t("modals.note.create.create")}</span>
       </button>
     </div>
 
@@ -317,15 +382,17 @@
       {/if}
 
       {#if writable(draft.mapping.color)}
-        <div class="ppp-draft-sheet__field">
+        <div class="ppp-draft-sheet__field ppp-draft-sheet__field--color">
           <span class="ppp-draft-sheet__caption">{$i18n.t("views.calendar.draft.color")}</span>
           <span class="ppp-draft-sheet__color">
-            <button type="button" class="ppp-draft-sheet__button"
+            <button type="button" class="ppp-draft-sheet__button ppp-draft-sheet__color-button"
               aria-label={$i18n.t("views.calendar.draft.color")}
               aria-expanded={colorOpen}
               disabled={state.saving}
               on:click={() => (colorOpen = !colorOpen)}>
-              <Icon name="palette" /> {draft.color || (draft.templatePath && !draft.edited.includes("color") ? $i18n.t("views.calendar.draft.template-default") : "")}
+              <span class="ppp-draft-sheet__swatch" style:background={draft.color || "transparent"} aria-hidden="true"></span>
+              <span class="ppp-draft-sheet__color-text">{draft.color || (draft.templatePath && !draft.edited.includes("color") ? $i18n.t("views.calendar.draft.template-default") : "")}</span>
+              <Icon name={colorOpen ? "chevron-up" : "chevron-down"} size="sm" />
             </button>
               <button
                 type="button"
@@ -338,10 +405,12 @@
                 <Icon name="eraser" />
               </button>
           </span>
-          {#if colorOpen && !state.saving}
-            <ColorPicker value={draft.color || "#808080"} {projectPalette} on:change={(e) => controller.edit({ color: e.detail })} />
-          {/if}
         </div>
+        {#if colorOpen && !state.saving}
+          <div class="ppp-draft-sheet__palette">
+            <ColorPicker scrollable={false} value={draft.color || "#808080"} on:change={(e) => controller.edit({ color: e.detail })} />
+          </div>
+        {/if}
       {/if}
     </div>
 
@@ -369,13 +438,44 @@
     box-sizing: border-box;
     overflow: hidden;
     container-type: inline-size;
-    padding: 0.5em 0.75em calc(0.75em + env(safe-area-inset-bottom, 0em));
+    padding: 0.5em 0.75em calc(0.75em + var(--ppp-calendar-bottom-spacing, var(--view-bottom-spacing, env(safe-area-inset-bottom, 0em))));
     background: var(--background-primary);
     border-top: var(--ppp-border-width) solid var(--background-modifier-border);
     box-shadow: var(--shadow-s);
     /* It rises from the edge it belongs to; the reduced-motion rule over the
        plugin root (tokens.css) takes the movement away. */
     animation: ppp-draft-sheet-in var(--ppp-duration-normal, 200ms) cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  .ppp-draft-sheet--embedded { padding-bottom: 0.75em; }
+  .ppp-draft-sheet__resize {
+    align-self: center;
+    inline-size: min(100%, 12em);
+    block-size: 1em;
+    margin-block: -0.25em 0;
+    cursor: ns-resize;
+    touch-action: none;
+    display: grid;
+    place-items: center;
+    border-radius: 999em;
+    outline-offset: 0.125rem;
+  }
+  .ppp-draft-sheet__resize::before {
+    content: "";
+    inline-size: 2.5em;
+    block-size: 0.25em;
+    border-radius: 999em;
+    background: var(--text-faint);
+    opacity: 0.7;
+  }
+  .ppp-draft-sheet__resize:hover::before,
+  .ppp-draft-sheet__resize:focus-visible::before {
+    background: var(--interactive-accent);
+    opacity: 1;
+  }
+  @media (max-width: 48rem), (pointer: coarse) {
+    .ppp-draft-sheet__resize {
+      block-size: var(--ppp-touch-target-min, 2.75rem);
+    }
   }
   @keyframes ppp-draft-sheet-in {
     from {
@@ -467,6 +567,43 @@
     display: flex;
     align-items: center;
     gap: 0.5em;
+  }
+  .ppp-draft-sheet__color-button {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    justify-content: space-between;
+    gap: 0.5em;
+  }
+  .ppp-draft-sheet__color-text {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: start;
+  }
+  .ppp-draft-sheet__swatch {
+    flex: none;
+    inline-size: 1.25em;
+    block-size: 1.25em;
+    border-radius: 50%;
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
+    background-image: repeating-conic-gradient(var(--background-modifier-border) 0% 25%, transparent 0% 50%);
+    background-size: 0.5em 0.5em;
+  }
+  .ppp-draft-sheet__palette {
+    grid-column: 1 / -1;
+    min-inline-size: 0;
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    background: var(--background-secondary);
+  }
+  .ppp-draft-sheet__label { display: none; }
+  .ppp-draft-sheet--palette { max-block-size: 78%; }
+  @container (min-width: 48em) {
+    .ppp-draft-sheet__label { display: inline; }
+    .ppp-draft-sheet__confirm { gap: 0.5em; padding-inline: 1em; }
+    .ppp-draft-sheet__palette { max-inline-size: 40em; }
   }
   .ppp-draft-sheet__problem,
   .ppp-draft-sheet__error {

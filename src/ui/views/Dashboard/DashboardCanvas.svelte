@@ -1,5 +1,6 @@
 <script lang="ts">
   import { guarded } from "src/lib/errors/guarded";
+  import { Notice } from "obsidian";
   import type { DataFrame, DataRecord } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
   import type { ProjectDefinition } from "src/settings/settings";
@@ -61,16 +62,6 @@
   $: effectiveConfig = (commitTick, configEcho.receiveProp(config), configEcho.current);
   $: widgets = effectiveConfig?.widgets ?? [];
   let rootEl: HTMLDivElement | null = null;
-  // #191. Filtered by kind HERE as well as in the migration, and the two are
-  // not redundant. The migration cleans the stored file; this decides what is
-  // drawn from whatever it is handed — and after the template dispatcher was
-  // removed every button runs the one remaining action, so an unfiltered
-  // «Обзорный пресет» left in a config would silently toggle the formula bar.
-  // Drawing only what this canvas can honour is the correctness half.
-  // Array-ness checked, not assumed: the migrator leaves a malformed value alone
-  // rather than throw, and `.filter()` on a string would down the whole canvas.
-  $: quickActions = (Array.isArray(effectiveConfig?.quickActions) ? effectiveConfig.quickActions : [])
-    .filter((action) => action?.kind === "toggle-formula-bar");
   const widgetController = createWidgetController({ getConfig: () => effectiveConfig, saveConfig, i18nStore: i18n, onAdded: createWidgetReveal(() => rootEl) });
   function handleFieldPresetsChange(e: CustomEvent<{ fieldPresets: FieldPreset[]; activeFieldPresetId: string | undefined }>) {
     if (!effectiveConfig) return;
@@ -128,6 +119,7 @@
   function handleFormulaApply(e: CustomEvent<{ name: string; expression: string; draft?: import("src/lib/formula/version").VersionedFormula }>) {
     widgetController.applyFormulaField(e.detail.name, e.detail.expression, e.detail.draft);
     showFormulaBar = false;
+    new Notice($i18n.t("views.dashboard.formula.applied", { name: e.detail.name }));
   }
   const suggest = createSuggestionController({
     getConfig: () => effectiveConfig,
@@ -143,21 +135,11 @@
         <DashboardToolbar {readonly} {showFormulaBar} on:toggleFormulaBar={() => (showFormulaBar = !showFormulaBar)} />
         {#if isRecalculating}<span class="ppp-recalc-dot" aria-label={$i18n.t("views.dashboard.canvas.recalculating", { defaultValue: "Recalculating…" })} aria-live="polite" />{/if}
       </div>
-      {#if !readonly && quickActions.length > 0}
-        <div class="ppp-quick-actions" role="group" aria-label={$i18n.t("views.dashboard.quick.group", { defaultValue: "Quick actions" })}>
-          {#each quickActions as action (action.id)}
-            <!-- #191: the remaining quick actions toggle the formula panel. -->
-            <button class="ppp-quick-action clickable-icon" on:click={() => (showFormulaBar = !showFormulaBar)}
-              aria-label={action.labelKey ? $i18n.t(action.labelKey, { defaultValue: action.label }) : action.label}>
-              {action.labelKey ? $i18n.t(action.labelKey, { defaultValue: action.label }) : action.label}
-            </button>
-          {/each}
-        </div>
-      {/if}
       {#if showFormulaBar && !readonly}
         <FormulaBar fields={fieldNames} {previewRecord} previewFrame={filteredFrame}
           formulaFields={effectiveConfig?.formulaFields ?? []}
-          on:apply={handleFormulaApply} on:cancel={() => (showFormulaBar = false)} />
+          on:apply={handleFormulaApply} on:remove={(event) => { widgetController.removeFormulaField(event.detail); showFormulaBar = false; }}
+          on:cancel={() => (showFormulaBar = false)} />
       {/if}
       <FilterBridge {activeFilterTab} {readonly}
         canPromote={!!onViewFilterChange} on:promote={promoteLocalToGlobal} on:clear={() => (activeFilterTab = null)} />
@@ -187,8 +169,4 @@
   .ppp-toolbar-row { display: flex; align-items: center; gap: 0.375rem; }
   .ppp-recalc-dot { display: inline-block; width: 0.375rem; height: 0.375rem; border-radius: 50%; background: var(--interactive-accent); opacity: 0.7; animation: ppp-pulse 0.8s ease-in-out infinite alternate; flex-shrink: 0; }
   @keyframes ppp-pulse { from { opacity: 0.3; } to { opacity: 0.9; } }
-  .ppp-quick-actions { display: flex; align-items: center; gap: 0.375rem; flex-wrap: wrap; }
-  .ppp-quick-action { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.625rem; font-size: var(--font-ui-small); color: var(--text-normal); background: var(--background-secondary); border: var(--ppp-border-width) solid var(--background-modifier-border); border-radius: var(--radius-s, 0.25rem); cursor: pointer; }
-  .ppp-quick-action:hover { border-color: var(--interactive-accent); background: var(--background-modifier-hover); }
-  .ppp-quick-action:focus-visible { outline: 0.125rem solid var(--interactive-accent); outline-offset: 0.0625rem; }
 </style>

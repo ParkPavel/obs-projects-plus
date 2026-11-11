@@ -2,6 +2,12 @@ import { DataFieldType, type DataField } from "src/lib/dataframe/dataframe";
 import type { ViewDefinition } from "src/settings/base/settings";
 import type { CalendarConfig } from "./types";
 
+const COLOR_CARRIERS: ReadonlySet<DataFieldType> = new Set([
+  DataFieldType.String, DataFieldType.Unknown,
+  // A color that repeats across notes is inferred as a Select/Status; it is still one text value.
+  DataFieldType.Select, DataFieldType.Status,
+]);
+
 /** An exact configured key, an unambiguous project mapping, or the documented default. */
 export function resolveCalendarColorField(
   config: CalendarConfig | undefined,
@@ -18,7 +24,7 @@ export function resolveCalendarColorField(
     candidate = inherited.values().next().value ?? "eventColor";
   }
   const field = fields.find(field => field.name === candidate);
-  if (field && (field.derived || field.identifier || (field.type !== DataFieldType.String && field.type !== DataFieldType.Unknown))) return undefined;
+  if (field && (field.derived || field.identifier || !COLOR_CARRIERS.has(field.type))) return undefined;
   return candidate;
 }
 

@@ -1,6 +1,5 @@
 <script lang="ts">
   import { i18n } from "src/lib/stores/i18n";
-  import { isTouchDevice } from "src/lib/stores/ui";
   import { getAnimationDuration } from "src/lib/helpers/animation";
   import type { DataField } from "src/lib/dataframe/dataframe";
   import {
@@ -550,6 +549,7 @@
 
     <section
       class="projects--board"
+      class:projects--board--zone-dragging={isDraggingColumns}
       use:dragHandleZone={{
         type: dragTypes.columns,
         items: dndUnpinnedColumns,
@@ -564,9 +564,9 @@
         // The library's drop tween ignores individual translate/scale on the compact clone.
         // End the preview at release; the real columns restore in their own layout.
         dropAnimationDisabled: true,
-        // ios-d1: as for cards (CardList) — the column grip leads its header,
-        // so on touch centre the clone on the finger for zone hit-tests.
-        centreDraggedOnCursor: $isTouchDevice,
+        // The library centres the clone on the pointer, and the compact clone keeps that
+        // centre, so the strip and the library's hit-test are under the pointer on every device.
+        centreDraggedOnCursor: true,
       }}
       use:disarmAfterGripTap={".board-column-grip"}
       use:gateDisabledGrip={{ grip: ".board-column-grip", disabled: columnZoneDisabled }}
@@ -776,7 +776,10 @@
   }
   :global(.ppp-board-column-clone),
   :global(.ppp-board-column-clone section.projects--board--column) { box-sizing: border-box; }
-  :global(.ppp-board-column-clone) { z-index: var(--ppp-z-overlay, 30); }
+  :global(.ppp-board-column-clone) { z-index: var(--ppp-z-overlay, 30); transition: none !important; }
+  /* While a column is carried the others are strips; the drop zone then spans the whole
+     board, so the pointer is "in" it anywhere to the right of the last strip too. */
+  .projects--board--zone-dragging { flex: 1 1 auto; min-width: 0; }
   @media (pointer: coarse) {
     .projects--board--viewport :global(.ppp-board-card-slot) {
       -webkit-touch-callout: none;

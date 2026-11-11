@@ -1,5 +1,5 @@
 /** Shared and per-project palettes use data.json and its verified settings writer. */
-import { derived, get, readable, type Readable } from "svelte/store";
+import { derived, get } from "svelte/store";
 import { loadAppLocal } from "src/lib/appStorage";
 import { normalizeHexColor } from "src/lib/colors/recordColor";
 import { settings } from "./settings";
@@ -38,43 +38,51 @@ export function migrateLegacyFavorites(loadedSuccessfully: boolean): void {
   }
 }
 
-function palette(state: LatestProjectsPluginSettings, projectId: string | undefined): Favorite[] {
-  const project = projectId ? state.projects.find((item) => item.id === projectId) : undefined;
-  return normalizeFavorites(project?.colorFavorites ?? state.preferences.colorFavorites);
+/** Read legacy project favorites while writing all new changes to shared settings. */
+function allFavorites(state: LatestProjectsPluginSettings): Favorite[] {
+  return normalizeFavorites([
+    ...normalizeFavorites(state.preferences.colorFavorites),
+    ...state.projects.flatMap((project) => normalizeFavorites(project.colorFavorites)),
+  ]);
 }
 
-export function createFavoritesStore(projectId: Readable<string | undefined> = readable(undefined)) {
-  const store = derived([settings, projectId], ([state, id]) => palette(state, id));
-  function change(edit: (current: Favorite[]) => Favorite[]): void {
-    const state = get(settings);
-    const id = get(projectId);
-    const current = palette(state, id);
-    const next = edit(current);
-    if (next === current) return;
-    if (id !== undefined) {
-      const project = state.projects.find((item) => item.id === id);
-      if (!project) return;
-      settings.updateProject({ ...project, colorFavorites: next });
-    } else {
-      settings.updatePreferences({ ...state.preferences, colorFavorites: next });
-    }
-  }
+function createUnifiedFavoritesStore() {
+  const store = derived(settings, allFavorites);
   return {
     subscribe: store.subscribe,
     add(color: string, name?: string): void {
       const normalized = normalizeHexColor(color);
       if (!normalized) return;
-      change((current) => current.some((item) => item.color === normalized)
-        ? current : [...current, { color: normalized, name: name ?? normalized }]);
+      const state = get(settings);
+      if (allFavorites(state).some((item) => item.color === normalized)) return;
+      settings.updatePreferences({
+        ...state.preferences,
+        colorFavorites: normalizeFavorites([
+          ...(state.preferences.colorFavorites ?? []),
+          { color: normalized, name: name ?? normalized },
+        ]),
+      });
     },
     remove(color: string): void {
       const normalized = normalizeHexColor(color);
-      change((current) => current.filter((item) => item.color !== normalized));
+      if (!normalized) return;
+      const state = get(settings);
+      const shared = state.preferences.colorFavorites ?? [];
+      const nextShared = shared.filter((item) => normalizeHexColor(item.color) !== normalized);
+      if (nextShared.length !== shared.length) {
+        settings.updatePreferences({ ...state.preferences, colorFavorites: nextShared });
+      }
+      for (const project of state.projects) {
+        const colors = project.colorFavorites;
+        if (!colors) continue;
+        const next = colors.filter((item) => normalizeHexColor(item.color) !== normalized);
+        if (next.length !== colors.length) settings.updateProject({ ...project, colorFavorites: next });
+      }
     },
     // Settings adoption is reactive; it never re-imports device-local state.
     reload(): void {},
   };
 }
 
-/** Callers without a project use the shared fallback. */
-export const favoritesStore = createFavoritesStore();
+/** Every picker reads and edits one deduplicated favorite set. */
+export const favoritesStore = createUnifiedFavoritesStore();

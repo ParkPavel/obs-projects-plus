@@ -305,11 +305,16 @@
     max-width: 100%;
     margin: 0 0 0.75rem;
     font-size: var(--font-ui-small);
+    /* Both property blocks contribute their full height to the panel scroller. */
+    overflow-anchor: none;
   }
 
   .ppp-rcv-computed > summary {
     cursor: pointer;
     color: var(--text-muted);
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--background-modifier-border);
+    margin-bottom: 0.25rem;
   }
 
   .ppp-rcv-computed-values {

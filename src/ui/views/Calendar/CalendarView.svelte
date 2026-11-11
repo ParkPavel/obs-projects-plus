@@ -37,8 +37,6 @@
   import { creationContextKey } from "src/ui/utils/creationContext";
   import { valueSuggestions, templateFoldersOf } from "src/lib/suggestions/valueSuggestions";
   import { namesToOptions } from "src/ui/components/fields/comboOptions";
-  import { normalizeColor } from "src/lib/visualizer/colors";
-  import { hexToHsv } from "src/lib/colors/math";
   import {
     getFirstDayOfWeek,
     parseDateInTimezone,
@@ -55,7 +53,7 @@
   import { creationDurationOf } from "./creationRange";
   import { resolveCalendarColorField, withColorField } from "./colorField";
   import type { CalendarInterval } from "./calendar";
-  import { processCalendarData } from "./processor";
+  import { mergeCalendarPreview, processCalendarData } from "./processor";
   import { calendarLogger } from "./logger";
   import { ZOOM_LEVELS, TIMING } from "./constants";
   import type { RecordChangeOptions } from "./dnd/types";
@@ -272,15 +270,10 @@
   $: draftUntitled = $i18n.t("modals.note.create.untitled");
   $: shownDraft = draftState.draft ? draftRecord(draftState.draft, draftUntitled) : null;
   $: draftStatusOptions = namesToOptions(valueSuggestions(records, fields.find((f) => f.name === draftMap.status), { templateFolders: templateFoldersOf($app) }));
-  $: hasDraft = !!draftState.draft;
-  $: draftProjectPalette = hasDraft ? [...new Set([
-    ...valueSuggestions(records, fields.find((f) => f.name === draftMap.color)),
-    ...records.map(getRecordColor),
-  ].map(normalizeColor).filter((color): color is string => color !== null && hexToHsv(color) !== null))] : [];
   $: draftKey = draftState.draft ? `${draftState.draft.session}.${draftState.draft.revision}` : "";
   // The draft is added to the frame, never put in its place.
   $: displayFrame = shownDraft ? { ...frame, records: [...frame.records, shownDraft] } : frame;
-  
+
   // Agenda records filtering (v3.0.4)
   // Standard mode: use all records (AgendaSidebar handles its own date filtering)
   // Custom mode: use all records (filterEngine handles filtering)
@@ -1291,9 +1284,11 @@
   // Now: processCalendarData runs ONCE; sortedGroupedRecords derived from result (zero extra grouping)
   
   let cachedProcessedData: ProcessedCalendarData | null = null;
+  let cachedBaseProcessedData: ProcessedCalendarData | null = null;
   let lastProcessedKey = '';
   let lastProcessedConfigKey = '';
   let lastProcessedRecords: typeof records | null = null;
+  let lastProcessedFields: typeof fields | null = null;
   let lastProcessedColor: typeof getRecordColor | null = null;
   
   // CRITICAL: Use function-call pattern to break Svelte's self-referential dependency tracking.
@@ -1304,38 +1299,48 @@
   // Function body is NOT analyzed for $: dependencies — only the explicit arguments are tracked.
   // w4-calendar-draft: a draft is drawn even before the frame has a date field.
   $: processedStartField = dateField?.name ?? (shownDraft ? draftMap.start : undefined);
-  $: updateProcessedData(processedStartField, colorConfig, records, dataVersion, draftKey, displayFrame, getRecordColor, project.dateFormat?.writeFormat);
+  $: updateProcessedData(processedStartField, colorConfig, records, fields, dataVersion, draftKey, displayFrame, getRecordColor, project.dateFormat?.writeFormat);
   function updateProcessedData(
     startField: string | undefined,
     cfg: typeof config,
     recs: typeof records,
+    frameFields: typeof fields,
     dv: typeof dataVersion,
     dk: string,
     fr: typeof frame,
     getColor: typeof getRecordColor,
     writeFormat?: string
   ): void {
-    if (startField && cfg && recs && fr.records.length > 0) {
+    const previewRecord = dk ? fr.records.find((record) => isDraftId(record.id)) : undefined;
+    if (startField && cfg && recs && frameFields && (recs.length > 0 || previewRecord)) {
       // Cheap change detection: dataVersion increments on every data update,
       // configKey only includes fields that affect processing
       const configKey = `${startField}|${cfg.startDateField}|${cfg.endDateField}|${cfg.startTimeField}|${cfg.endTimeField}|${cfg.eventColorField}|${cfg.timezone}|${cfg.startHour}|${cfg.endHour}|${writeFormat}`;
-      // The draft's session and revision join the data version as text: a sum
-      // of two counters could repeat a key already processed.
-      const versionKey = `${dv}|${dk}`;
+      const versionKey = String(dv);
 
-      if (versionKey !== lastProcessedKey || configKey !== lastProcessedConfigKey || fr.records !== lastProcessedRecords || getColor !== lastProcessedColor) {
+      if (versionKey !== lastProcessedKey || configKey !== lastProcessedConfigKey || recs !== lastProcessedRecords || frameFields !== lastProcessedFields || getColor !== lastProcessedColor) {
         lastProcessedKey = versionKey;
         lastProcessedConfigKey = configKey;
-        lastProcessedRecords = fr.records;
+        lastProcessedRecords = recs;
+        lastProcessedFields = frameFields;
         lastProcessedColor = getColor;
-        cachedProcessedData = processCalendarData(fr, cfg, getColor, writeFormat, startField);
-        calendarLogger.debug('[Perf] processCalendarData called', { data: { dataVersion: dv, records: fr.records.length } });
+        cachedBaseProcessedData = processCalendarData({ ...fr, fields: frameFields, records: recs }, cfg, getColor, writeFormat, startField);
+        calendarLogger.debug('[Perf] processCalendarData called', { data: { dataVersion: dv, records: recs.length } });
       }
+      if (!cachedBaseProcessedData) return;
+      cachedProcessedData = previewRecord
+        ? mergeCalendarPreview(
+          cachedBaseProcessedData,
+          processCalendarData({ ...fr, fields: frameFields, records: [previewRecord] }, cfg, getColor, writeFormat, startField)
+        )
+        : cachedBaseProcessedData;
     } else {
       cachedProcessedData = null;
+      cachedBaseProcessedData = null;
       lastProcessedKey = '';
       lastProcessedConfigKey = '';
       lastProcessedRecords = null;
+      lastProcessedFields = null;
       lastProcessedColor = null;
     }
   }
@@ -2017,7 +2022,7 @@
       controller={draftCtl}
       templates={project.templates}
       statusOptions={draftStatusOptions}
-      projectPalette={draftProjectPalette}
+      {embedded}
       nameProblem={(fileName) => noteNameProblem($app, project, fileName)}
       autoFocus={!isMobile}
       returnFocus={calendarRootEl}

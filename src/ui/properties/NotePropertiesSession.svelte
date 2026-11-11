@@ -23,7 +23,7 @@
    * values other notes hold are memoized (usedValuesCache).
    */
   import { onDestroy, onMount, tick } from "svelte";
-  import { get, writable } from "svelte/store";
+  import { get } from "svelte/store";
   import { Notice, TFile, type App, type EventRef } from "obsidian";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
@@ -60,8 +60,7 @@
   import ComboField from "src/ui/components/fields/ComboField.svelte";
   import { namesToOptions, type ComboOption } from "src/ui/components/fields/comboOptions";
   import { ColorPicker } from "src/ui/components/ColorPicker";
-  import PaletteScopeSelect from "src/ui/components/ColorPicker/PaletteScopeSelect.svelte";
-  import { providePaletteProject, usePaletteProject } from "src/ui/paletteProject";
+  import { remAt, rootFontPx } from "src/ui/utils/cssLength";
   import { RelationPickerModal, pathFromFile } from "src/ui/views/VisualizerPane/RelationPickerModal";
   import ChipsEditor from "./ChipsEditor.svelte";
   import { createWriteQueue } from "./writeQueue";
@@ -95,14 +94,6 @@
   let alive = true;
   const isCurrent = () => alive && file.path === ownerPath;
 
-  // Keep a parent's explicit owner (e.g. NotePeek); a standalone header offers
-  // a deliberate choice rather than inferring query membership from a folder.
-  const inheritedPaletteProject = usePaletteProject();
-  const notePaletteProject = writable<string | undefined>(undefined);
-  providePaletteProject(inheritedPaletteProject ?? notePaletteProject);
-  let paletteOwnerPath = file.path;
-  $: if ($notePaletteProject && !$settings.projects.some(p => p.id === $notePaletteProject)) notePaletteProject.set(undefined);
-
   const EMPTY_OVERLAY: NoteOverlay = { hidden: [], pinned: [], order: [] };
   const READONLY_TYPES = new Set<string>(["formula", "rollup"]);
 
@@ -119,7 +110,6 @@
   let renamingKey: string | null = null;
   let renameSession = 0;
   let renameError: string | null = null;
-  let paletteKey: string | null = null;
   let choiceOptions: ComboOption[] = [];
   let adding = false;
   let addRevision = 0;
@@ -130,17 +120,12 @@
   let renameField: TextField | null = null;
   let listEl: HTMLUListElement | null = null;
 
-  // i3-final: the colours other notes use, read once when the palette opens.
-  let paletteColors: string[] = [];
-  $: if (file.path !== paletteOwnerPath) {
-    paletteOwnerPath = file.path;
-    notePaletteProject.set(undefined);
-    paletteKey = null;
-    paletteColors = [];
-  }
   // i3-final: a grip drag in progress — the row, its pointer, the slot it would land in.
   let dragKey: string | null = null;
   let dragPointer: number | null = null;
+  let dragStartY = 0;
+  let dragDy = 0;
+  $: rootPx = rootFontPx(listEl?.ownerDocument ?? document);
   let dropIndex: number | null = null;
 
   // i3-props: one queue for every write of this block, in the order asked.
@@ -393,12 +378,15 @@
     if (editingKey !== null) endEdit();
     dragKey = key;
     dragPointer = e.pointerId;
+    dragStartY = e.clientY;
+    dragDy = 0;
     dropIndex = shownIndex(key);
   }
 
   function onGripMove(e: PointerEvent): void {
     if (dragKey === null || e.pointerId !== dragPointer) return;
     e.preventDefault();
+    dragDy = e.clientY - dragStartY;
     dropIndex = slotAt(dragKey, e.clientY);
   }
 
@@ -413,6 +401,7 @@
   function endDrag(): void {
     dragKey = null;
     dragPointer = null;
+    dragDy = 0;
     dropIndex = null;
   }
 
@@ -570,16 +559,6 @@
     if (plan.kind === "write") await writeKey(entry.key, plan.value);
   }
 
-  function togglePalette(key: string): void {
-    paletteKey = paletteKey === key ? null : key;
-    // i3-final: read once on open, not on every render of the open palette.
-    paletteColors = paletteKey === null ? [] : projectColors(paletteKey);
-  }
-
-  function projectColors(key: string): string[] {
-    return usedValues(key).filter((v) => isColorValue(v));
-  }
-
   // ── Rename / delete ──────────────────────────────────────
   async function startRename(key: string): Promise<void> {
     if (!isCurrent()) return;
@@ -625,7 +604,6 @@
     if (!isCurrent()) return;
     if (editingKey === key) endEdit();
     if (renamingKey === key) endRename();
-    if (paletteKey === key) paletteKey = null;
     await persist((ownerApp, target) => deleteProperty(ownerApp, target, key));
   }
 
@@ -868,24 +846,8 @@
           class:is-drop-before={dropMarker?.key === entry.key && !dropMarker.after}
           class:is-drop-after={dropMarker?.key === entry.key && dropMarker.after}
           data-row-key={entry.key}
+          style:transform={dragKey === entry.key ? `translateY(${remAt(dragDy, rootPx)})` : null}
         >
-          {#if entry.hidden}
-            <span class="ppp-note-props__grip is-placeholder" aria-hidden="true"></span>
-          {:else}
-            <!-- i3-final: pointer events, so a finger drags as a mouse does; Alt+↑/↓ from the keyboard. -->
-            <button
-              type="button"
-              class="ppp-note-props__grip clickable-icon"
-              data-row-grip
-              aria-label={`${entry.key}: ${t("views.visualizer.block.reorder", { defaultValue: "Drag to reorder (Alt+↑ / Alt+↓)" })}`}
-              title={t("views.visualizer.block.reorder", { defaultValue: "Drag to reorder (Alt+↑ / Alt+↓)" })}
-              on:pointerdown={(e) => onGripDown(e, entry.key)}
-              on:pointermove={onGripMove}
-              on:pointerup={onGripUp}
-              on:pointercancel={endDrag}
-              on:lostpointercapture={(e) => e.pointerId === dragPointer && endDrag()}
-            ><Icon name="menu" size="sm" /></button>
-          {/if}
           {#if renamingKey === entry.key}
             <div class="ppp-note-props__rename">
               <TextField
@@ -996,9 +958,6 @@
                   if (canEdit && (e.key === "Enter" || e.key === " ")) {
                     e.preventDefault();
                     void startEdit(entry, type);
-                  } else if (e.key === "Escape" && paletteKey === entry.key) {
-                    e.preventDefault();
-                    paletteKey = null;
                   }
                 }}
               >
@@ -1020,19 +979,17 @@
                   {/each}
                 {:else if isColorValue(entry.value)}
                   {#if canEdit}
-                    <button
-                      type="button"
-                      class="ppp-note-props__swatch is-button"
-                      style:background={normalizeColor(entry.value) ?? ""}
-                      aria-expanded={paletteKey === entry.key}
-                      aria-label={t("views.visualizer.block.color.palette", { defaultValue: "Color palette" })}
-                      title={t("views.visualizer.block.color.palette", { defaultValue: "Color palette" })}
-                      on:click|stopPropagation={() => togglePalette(entry.key)}
-                    ></button>
+                    <div class="ppp-note-props__palette-inline">
+                      <ColorPicker
+                        scrollable={false}
+                        value={normalizeColor(entry.value) ?? DEFAULT_COLOR}
+                        on:change={(e) => commitColor(entry, e.detail)}
+                      />
+                    </div>
                   {:else}
                     <span class="ppp-note-props__swatch" style:background={normalizeColor(entry.value) ?? ""} aria-hidden="true"></span>
+                    {String(entry.value)}
                   {/if}
-                  {String(entry.value)}
                 {:else if type === "url" || type === "email" || type === "phone"}
                   {@const link = buildLinkHref(entry.value, type)}
                   {#if link}
@@ -1051,19 +1008,6 @@
                 {/if}
               </div>
             {/if}
-            {#if canEdit && paletteKey === entry.key && isColorValue(entry.value)}
-              {#key file.path}
-                <div class="ppp-note-props__palette">
-                  {#if !inheritedPaletteProject}<PaletteScopeSelect projectId={notePaletteProject} projects={$settings.projects} />{/if}
-                  <ColorPicker
-                    value={normalizeColor(entry.value) ?? DEFAULT_COLOR}
-                    projectPalette={paletteColors}
-                    projectPaletteLabel={t("components.color.used-in-notes")}
-                    on:change={(e) => commitColor(entry, e.detail)}
-                  />
-                </div>
-              {/key}
-            {/if}
           </div>
 
           <button
@@ -1073,6 +1017,23 @@
             title={t("views.visualizer.block.more")}
             on:click={(e) => rowMenu(e, entry, index)}
           ><Icon name="more-horizontal" size="sm" /></button>
+          {#if entry.hidden}
+            <span class="ppp-note-props__grip is-placeholder" aria-hidden="true"></span>
+          {:else}
+            <!-- i3-final: pointer events, so a finger drags as a mouse does; Alt+↑/↓ from the keyboard. -->
+            <button
+              type="button"
+              class="ppp-note-props__grip clickable-icon"
+              data-row-grip
+              aria-label={`${entry.key}: ${t("views.visualizer.block.reorder", { defaultValue: "Drag to reorder (Alt+↑ / Alt+↓)" })}`}
+              title={t("views.visualizer.block.reorder", { defaultValue: "Drag to reorder (Alt+↑ / Alt+↓)" })}
+              on:pointerdown={(e) => onGripDown(e, entry.key)}
+              on:pointermove={onGripMove}
+              on:pointerup={onGripUp}
+              on:pointercancel={endDrag}
+              on:lostpointercapture={(e) => e.pointerId === dragPointer && endDrag()}
+            ><Icon name="grip-vertical" size="xs" /></button>
+          {/if}
         </li>
       {/each}
     </ul>
@@ -1162,8 +1123,8 @@
   }
   .ppp-note-props__icon {
     flex: none;
-    min-width: 2.3em;
-    min-height: 2.3em;
+    min-width: 1.9em;
+    min-height: 2.1em;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1182,21 +1143,25 @@
   }
   .ppp-note-props__row {
     display: grid;
-    grid-template-columns: auto minmax(8em, 30%) minmax(0, 1fr) auto;
+    grid-template-columns: minmax(8em, 30%) minmax(0, 1fr) auto auto;
     align-items: center;
-    gap: 0.6em;
-    min-height: 2.3em;
+    column-gap: 0.4em;
+    min-height: 2.1em;
     border-radius: var(--radius-s, 0.3em);
+    position: relative;
+    /* The drop line and the lift ease in; the dragged row itself follows the pointer 1:1. */
+    transition: box-shadow 120ms ease-out, background-color 120ms ease-out;
   }
   .ppp-note-props__row.is-hidden {
     opacity: 0.55;
   }
   /* i3-final: the grip. touch-action none — a finger on it drags the row
-     instead of scrolling the note. */
+     instead of scrolling the note. It sits at the right end, compact, next
+     to «⋯»: the row's text starts at the edge. */
   .ppp-note-props__grip {
     flex: none;
-    width: 1.6em;
-    min-height: 2.3em;
+    width: 1.5em;
+    min-height: 2.1em;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1207,28 +1172,36 @@
     color: var(--text-faint);
     cursor: grab;
     touch-action: none;
-    opacity: 0.5;
+    opacity: 0.45;
+    transition: opacity 120ms ease-out, color 120ms ease-out;
   }
   .ppp-note-props__grip:focus-visible,
   .ppp-note-props__row.is-dragging .ppp-note-props__grip {
     opacity: 1;
+    color: var(--text-muted);
   }
   @media (hover: hover) and (pointer: fine) {
     .ppp-note-props__row:hover .ppp-note-props__grip {
       opacity: 1;
     }
   }
-  /* A finger has no hover: the grip stays fully visible. */
+  /* A finger has no hover: the grip stays fully visible and gets a finger-sized target. */
   @media (pointer: coarse) {
     .ppp-note-props__grip {
       opacity: 1;
+      width: 2.25em;
     }
   }
   .ppp-note-props__grip.is-placeholder {
     cursor: default;
   }
   .ppp-note-props__row.is-dragging {
-    background: var(--background-modifier-hover);
+    position: relative;
+    z-index: var(--ppp-z-raised, 1);
+    transition: none;
+    background: var(--background-secondary);
+    box-shadow: var(--shadow-s);
+    will-change: transform;
   }
   .ppp-note-props__row.is-dragging .ppp-note-props__grip {
     cursor: grabbing;
@@ -1334,13 +1307,12 @@
     border: var(--ppp-border-width) solid var(--background-modifier-border);
     box-shadow: none;
   }
-  .ppp-note-props__swatch.is-button {
-    width: 1.4em;
-    height: 1.4em;
-    cursor: pointer;
-  }
-  .ppp-note-props__palette {
-    max-width: 24em;
+  .ppp-note-props__display > .ppp-note-props__palette-inline {
+    width: 100%;
+    min-width: 0;
+    flex: none;
+    overflow: visible;
+    white-space: normal;
   }
   .ppp-note-props__link {
     color: var(--text-accent);
@@ -1389,8 +1361,8 @@
      the ellipsis hid most of every value. */
   @container ppp-note-props (max-width: 32em) {
     .ppp-note-props__row {
-      grid-template-columns: auto minmax(0, 1fr) auto;
-      grid-template-areas: "grip key more" "value value value";
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      grid-template-areas: "key more grip" "value value value";
       row-gap: 0;
       padding-bottom: 0.3em;
     }

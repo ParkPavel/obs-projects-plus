@@ -9,7 +9,7 @@ import {
 import DashboardCanvasSvelte from "./DashboardCanvas.svelte";
 import type { DatabaseViewConfig } from "./types";
 import { isLegacyTableConfig, migrateTableConfig,
-  emptyDashboardConfig, migrateDashboardTransforms, dropTemplateQuickActions } from "./migration";
+  emptyDashboardConfig, migrateDashboardTransforms, dropObsoleteQuickActions, markFormulaFieldsCurrent } from "./migration";
 import { get } from "svelte/store";
 import { app } from "src/lib/stores/obsidian";
 import { writeMigrationBackup } from "src/lib/settingsBackup";
@@ -114,14 +114,19 @@ export class DashboardView extends ProjectView<DatabaseViewConfig> {
       }
     }
 
-    // #191: a quick action pointing at the removed dashboard-template mechanism
-    // is dropped on the way in, so the button is gone from the first render
-    // rather than lingering as something that does nothing. The save below is
-    // the existing one — this is a fourth participant in a chain, not new
-    // machinery, and the #145 restore point above already covers it.
-    const withoutTemplates = dropTemplateQuickActions(config);
-    if (withoutTemplates.migrated) {
-      config = withoutTemplates.config;
+    // The toolbar is now the sole formula entry point. Remove its old duplicate
+    // quick action on the existing migration path before the first render.
+    const withoutQuickActions = dropObsoleteQuickActions(config);
+    if (withoutQuickActions.migrated) {
+      config = withoutQuickActions.config;
+      migrated = true;
+      props.saveConfig(config);
+    }
+
+    // One rule set for formulas: calculated fields saved before the version mark take it.
+    const currentFormulas = markFormulaFieldsCurrent(config);
+    if (currentFormulas.migrated) {
+      config = currentFormulas.config;
       migrated = true;
       props.saveConfig(config);
     }

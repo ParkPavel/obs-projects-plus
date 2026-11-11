@@ -19,6 +19,11 @@ import { readFileSync } from "fs";
 import { join, resolve } from "path";
 import { tick } from "svelte";
 
+jest.mock("obsidian-svelte", () => ({
+  ...jest.requireActual("src/__mocks__/obsidian-svelte"),
+  Checkbox: (jest.requireActual("obsidian-svelte/Checkbox/Checkbox.svelte") as { default: unknown }).default,
+}));
+
 // CardList reads two view contexts keyed by private symbols (gripLayout
 // pattern); BoardView's `set` calls are no-ops against the same stubs.
 jest.mock("src/ui/views/helpers", () => ({
@@ -153,6 +158,51 @@ beforeEach(() => {
 
 afterEach(() => {
   document.body.innerHTML = "";
+});
+
+describe("board checkbox interaction", () => {
+  it("toggles the Boolean property shown in card metadata, without opening YAML", async () => {
+    const onRecordCheck = jest.fn();
+    const m = mountCards({
+      items: [{ id: "a.md", values: { reviewed: false } }],
+      includeFields: [{ name: "reviewed", type: "boolean", repeated: false, derived: false, identifier: false }],
+      onRecordCheck,
+    });
+    const checkbox = m.card("a.md").querySelector<HTMLInputElement>('.field-label input[type="checkbox"]');
+    expect(checkbox).not.toBeNull();
+    checkbox!.click();
+    await tick();
+    expect(onRecordCheck).toHaveBeenCalledWith(expect.objectContaining({ id: "a.md" }), true, "reviewed");
+    expect(m.onRecordClick).not.toHaveBeenCalled();
+    m.destroy();
+  });
+  it("does not write on mount; a native click toggles once without opening the note", async () => {
+    const onRecordCheck = jest.fn();
+    const onRecordEdit = jest.fn();
+    const m = mountCards({ checkField: "done", onRecordCheck, onRecordEdit });
+    await tick();
+    expect(onRecordCheck).not.toHaveBeenCalled();
+    const checkbox = m.card("a.md").querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+    expect(checkbox).not.toBeNull();
+    checkbox.click();
+    await tick();
+    expect(checkbox.checked).toBe(true);
+    expect(onRecordCheck).toHaveBeenCalledTimes(1);
+    expect(onRecordCheck).toHaveBeenCalledWith(m.items[0], true);
+    expect(m.onRecordClick).not.toHaveBeenCalled();
+    expect(onRecordEdit).not.toHaveBeenCalled();
+    m.destroy();
+  });
+
+  it("a read-only card cannot change its checkbox", async () => {
+    const onRecordCheck = jest.fn();
+    const m = mountCards({ checkField: "done", readOnly: true, onRecordCheck });
+    m.card("a.md").querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
+    await tick();
+    expect(onRecordCheck).not.toHaveBeenCalled();
+    expect(m.onRecordClick).not.toHaveBeenCalled();
+    m.destroy();
+  });
 });
 
 describe("cards-g5 — board height", () => {
@@ -315,6 +365,51 @@ describe("cards-g5 — the board handle", () => {
 });
 
 describe("column drag temporarily folds columns without changing saved state", () => {
+  it.each([0.25, 0.55, 1, 1.5, 2])("a mouse drag reorders columns at zoom %s", async zoom => {
+    const target = document.createElement("div");
+    document.body.appendChild(target);
+    const columns = [
+      { id: "Open", records: RECORDS(), collapse: false, pinned: false, persisted: false },
+      { id: "Closed", records: RECORDS(), collapse: true, pinned: false, persisted: false },
+    ];
+    const onSortColumns = jest.fn();
+    const component = new Board({ target, props: {
+      columns, project: { id: "board", name: "Board" }, readonly: true, dataReadOnly: false, richText: false, zoom,
+      onRecordClick: jest.fn(), onRecordCheck: jest.fn(), onRecordUpdate: jest.fn(), onRecordAdd: jest.fn(),
+      columnWidth: 270, onSortColumns, onColumnAdd: jest.fn(), onColumnDelete: jest.fn(),
+      onColumnRename: jest.fn(), onColumnCollapse: jest.fn(), onColumnPin: jest.fn(), onColumnPersist: jest.fn(),
+      validateStatusField: () => ({}), checkField: undefined, includeFields: [], customHeader: undefined,
+    }});
+    const zone = target.querySelector<HTMLElement>("section.projects--board:not(.projects--board--pinned)")!;
+    const grip = target.querySelector<HTMLElement>('section[data-id="Open"] .board-column-grip')!;
+    const scrollingElementDescriptor = Object.getOwnPropertyDescriptor(document, "scrollingElement");
+    Object.defineProperty(document, "scrollingElement", { configurable: true, value: document.documentElement });
+    try {
+      grip.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0, clientX: 10, clientY: 10 }));
+      window.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, cancelable: true, clientX: 20, clientY: 10 }));
+      await tick();
+      const wrappers = Array.from(target.querySelectorAll<HTMLElement>(".projects--board--column--dndwrapper"));
+      expect(wrappers).toHaveLength(2);
+      expect(wrappers.every((wrapper) => wrapper.classList.contains("projects--board--column--dndwrapper--collapsed"))).toBe(true);
+      expect(wrappers.every((wrapper) => wrapper.style.width === "3rem")).toBe(true);
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+      zone.dispatchEvent(new CustomEvent(TRIGGERS.DRAGGED_OVER_INDEX, {
+        detail: { indexObj: { index: 1, isProximityBased: false } },
+      }));
+      await tick();
+      window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true, clientX: 20, clientY: 10 }));
+      await tick();
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      expect(onSortColumns).toHaveBeenCalledTimes(1);
+      expect(onSortColumns).toHaveBeenCalledWith(["Closed", "Open"]);
+    } finally {
+      component.$destroy();
+      target.remove();
+      if (scrollingElementDescriptor) Object.defineProperty(document, "scrollingElement", scrollingElementDescriptor);
+      else Reflect.deleteProperty(document, "scrollingElement");
+    }
+  });
+
   it("restores expanded, collapsed and pinned columns and keeps the pressed handle connected", async () => {
     const target=document.createElement("div");document.body.appendChild(target);
     const columns=[
@@ -323,7 +418,7 @@ describe("column drag temporarily folds columns without changing saved state", (
       {id:"Closed",records:RECORDS(),collapse:true,pinned:false,persisted:false},
     ];
     const onColumnCollapse=jest.fn();const onSortColumns=jest.fn();
-    const component=new Board({target,props:{columns,readonly:true,dataReadOnly:false,richText:false,
+    const component=new Board({target,props:{columns,project:{id:"board",name:"Board"},readonly:true,dataReadOnly:false,richText:false,
       onRecordClick:jest.fn(),onRecordCheck:jest.fn(),onRecordUpdate:jest.fn(),onRecordAdd:jest.fn(),columnWidth:270,
       onSortColumns,onColumnAdd:jest.fn(),onColumnDelete:jest.fn(),onColumnRename:jest.fn(),onColumnCollapse,
       onColumnPin:jest.fn(),onColumnPersist:jest.fn(),validateStatusField:()=>({}),checkField:undefined,includeFields:[],customHeader:undefined,
@@ -368,6 +463,7 @@ describe("cards-g5 — Board passes frames to every column", () => {
       target,
       props: {
         columns: [column("Pinned", { pinned: true }), column("Open")],
+        project: { id: "board", name: "Board" },
         readonly: true,
         dataReadOnly: false,
         richText: false,
@@ -403,7 +499,7 @@ describe("cards-g5 — Board passes frames to every column", () => {
 });
 
 describe("cards-g5 — BoardView writes frames through onConfigChange", () => {
-  function mountView(config: Record<string, unknown>) {
+  function mountView(config: Record<string, unknown>, props: Record<string, unknown> = {}) {
     const target = document.createElement("div");
     document.body.appendChild(target);
     const records = RECORDS();
@@ -422,11 +518,35 @@ describe("cards-g5 — BoardView writes frames through onConfigChange", () => {
         onConfigChange,
         hasSort: false,
         hasFilter: false,
+        ...props,
       },
     });
     const card = (id: string) => target.querySelector<HTMLElement>(`article[data-ppp-card-id="${id}"]`) as HTMLElement;
     return { target, card, onConfigChange, destroy: () => component.$destroy() };
   }
+
+  it.each([false, true])("metadata checkbox reaches the record API only for writable data (readOnly=%s)", async (dataReadOnly) => {
+    const updateRecord = jest.fn();
+    const booleanField = { name: "reviewed", type: "boolean", repeated: false, derived: false, identifier: false };
+    const record = { id: "a.md", values: { reviewed: false } };
+    const m = mountView({ includeFields: ["reviewed"] }, {
+      frame: { fields: [booleanField], records: [record] },
+      getRecord: () => record,
+      dataReadOnly,
+      api: { updateRecord, updateRecords: jest.fn(), addRecord: jest.fn() },
+    });
+    const checkbox = m.card("a.md").querySelector<HTMLInputElement>('.field-label input[type="checkbox"]')!;
+    expect(checkbox.disabled).toBe(dataReadOnly);
+    checkbox.click();
+    await tick();
+    if (dataReadOnly) expect(updateRecord).not.toHaveBeenCalled();
+    else {
+      expect(updateRecord).toHaveBeenCalledTimes(1);
+      expect(updateRecord).toHaveBeenCalledWith({ id: "a.md", values: { reviewed: true } }, [booleanField]);
+      expect(record.values.reviewed).toBe(false);
+    }
+    m.destroy();
+  });
 
   it("a key action on a card's handle saves the override once, keeping the rest of the config", async () => {
     const m = mountView({ boardZoom: 1, cardFrame: { heightRem: 10 } });

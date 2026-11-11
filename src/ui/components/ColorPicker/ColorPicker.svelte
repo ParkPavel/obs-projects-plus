@@ -6,15 +6,15 @@
   import { hsvToHex } from '../../../lib/colors/math';
   import { parsePickerColor } from './parsePickerColor';
   import { normalizeHexColor } from 'src/lib/colors/recordColor';
-  import { DEFAULT_COLOR } from 'src/lib/stores/palettes';
-  import { useFavoritesStore } from 'src/ui/paletteProject';
+  import { favoritesStore, DEFAULT_COLOR } from 'src/lib/stores/palettes';
   import { bindDragSessionEnd } from 'src/ui/utils/dragSessionLifecycle';
-  const favoritesStore = useFavoritesStore();
 
   const dispatch = createEventDispatcher<{ change: string }>();
 
   /** Current color; existing CSS notation is accepted alongside opaque HEX. */
   export let value: string = DEFAULT_COLOR;
+  /** Forms already own a scroll container; their palette stays in normal flow. */
+  export let scrollable = true;
   /**
    * Optional palette of colors already in use by the surrounding project
    * context (e.g. sibling agenda lists, project highlight rules). Rendered
@@ -302,7 +302,7 @@
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <!-- svelte-ignore a11y-click-events-have-key-events -->
-<div class="color-picker" aria-busy={saving}>
+<div class="color-picker" class:color-picker--inline={!scrollable} aria-busy={saving}>
   <!-- Section: HSV Picker -->
   <div class="palette-section">
     <span class="palette-label">{$i18n.t('components.color.pick-color')}</span>
@@ -520,7 +520,11 @@
     max-width: 100%;
     box-sizing: border-box;
     user-select: none;
-    overflow: hidden;
+    max-block-size: min(70vh, 34rem);
+    max-block-size: min(70dvh, 34rem);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
   
   /* === Section === */
@@ -850,7 +854,7 @@
       touch-action: pan-y;
       overscroll-behavior: contain;
     }
-    
+
     /* v5.0.0: Sliders need precise touch control */
     .sat-light-picker,
     .hue-slider {
@@ -873,6 +877,27 @@
     }
     
   }
+
+  @media (min-width: 48rem) and (pointer: fine) {
+    .color-picker {
+      --cp-base: 0.875rem;
+      --cp-picker-height: 6rem;
+      --cp-btn-size: 1.5rem;
+      --cp-swatch-size: 2rem;
+    }
+
+    .favorites-grid {
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 4.5rem), 1fr));
+      gap: calc(var(--cp-base) * 0.375);
+    }
+  }
+
+  @media (max-width: 48rem), (pointer: coarse) {
+    .color-picker {
+      max-block-size: min(52vh, 28rem);
+      max-block-size: min(52dvh, 28rem);
+    }
+  }
   
   /* v5.0.0: Landscape optimizations */
   @media (max-height: 31.25rem) and (orientation: landscape) {
@@ -890,5 +915,15 @@
     .favorites-grid {
       max-height: calc((var(--cp-swatch-size) + calc(var(--cp-base) * 0.5)) * 2);
     }
+  }
+  .color-picker.color-picker--inline {
+    flex: none;
+    max-block-size: none;
+    overflow: visible;
+    overscroll-behavior: auto;
+  }
+  .color-picker--inline .favorites-grid {
+    max-height: none;
+    overflow: visible;
   }
 </style>

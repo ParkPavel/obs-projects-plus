@@ -49,22 +49,14 @@ describe("AdvancedFilterEditor (Calendar agenda)", () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
 
-  test("mode changes invalidate the validation badge while keeping the same source", async () => {
+  test("a filter without a version mark is checked under the one rule set (and keeps its source)", async () => {
     const { container } = render(AdvancedFilterEditor, { props: {
       formula: "SUM(@amount) > 0", fields: [makeField("amount", DataFieldType.Number)],
     } });
+    expect(container.querySelector(".ppp-formula-mode")).toBeNull();
     await settleValidation();
-    expect(container.querySelector(".ppp-fcf-hint-error")).not.toBeNull();
-    await fireEvent.click(container.querySelectorAll(".ppp-formula-mode button")[1]!);
-    expect(container.querySelector(".ppp-fcf-hint-valid")).toBeNull();
-    jest.advanceTimersByTime(699); await tick();
-    expect(container.querySelector(".ppp-fcf-hint-valid")).toBeNull();
-    jest.advanceTimersByTime(1); await tick();
     expect(container.querySelector(".ppp-fcf-hint-valid")).not.toBeNull();
-    await fireEvent.click(container.querySelectorAll(".ppp-formula-mode button")[0]!);
-    expect(container.querySelector(".ppp-fcf-hint-valid")).toBeNull();
-    await settleValidation();
-    expect(container.querySelector(".ppp-fcf-hint-error")).not.toBeNull();
+    expect(container.querySelector(".ppp-fcf-hint-error")).toBeNull();
     expect(container.querySelector("textarea")?.value).toBe("SUM(@amount) > 0");
   });
 	describe("validation contract", () => {

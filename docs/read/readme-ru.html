@@ -9,10 +9,15 @@
 <body data-prefix="../" data-language="ru"><a class="skip-link" href="#main">К содержимому</a>
 <header class="site-header"><a class="wordmark" href="../index.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
 <nav aria-label="Основная навигация"><a href="../index.html#ideas">Сад идей</a><a href="../read/user-guide.html">Документация</a><a class="language" href="../read/project-readme.html" hreflang="en">English</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
-<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../index.html">← Все возможности</a><strong>На этой странице</strong><nav aria-label="На этой странице"><a href="#что-можно-сделать">Что можно сделать</a><a href="#установка">Установка</a><a href="#использование">Использование</a><a href="#доступ-и-приватность">Доступ и приватность</a><a href="#куда-дальше">Куда дальше</a></nav></aside><article class="doc-article"><p class="doc-version">Документация исходного кода; установленный выпуск может отличаться.</p><h1 id="projects-plus">Projects Plus</h1>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../index.html">← Все возможности</a><strong>На этой странице</strong><nav aria-label="На этой странице"><a href="#состояние-разработки">Состояние разработки</a><a href="#что-можно-сделать">Что можно сделать</a><a href="#установка">Установка</a><a href="#использование">Использование</a><a href="#доступ-и-приватность">Доступ и приватность</a><a href="#куда-дальше">Куда дальше</a></nav></aside><article class="doc-article"><p class="doc-version">Документация исходного кода; установленный выпуск может отличаться.</p><h1 id="projects-plus">Projects Plus</h1>
 <p><a href="../read/project-readme.html">English</a> · <a href="https://parkpavel.github.io/obs-projects-plus/">Сайт и идеи</a> · <a href="../read/user-guide.html">Руководство пользователя</a> · <a href="../read/readme.html">Документация</a> · <a href="../read/roadmap-ru.html">План развития</a></p>
 <p>Projects Plus помогает работать с заметками Obsidian как с проектом: просматривать записи в таблице, распределять их по колонкам, планировать события в календаре и собирать обзор на Dashboard.</p>
 <p>Каждая запись остаётся Markdown-файлом. Поля, например статус, дата и исполнитель, хранятся в свойствах заметки — YAML-блоке в начале файла. Изменение обычного редактируемого поля в плагине записывается в заметку.</p>
+<p>Формулы Dashboard добавляют вычисляемые столбцы к данным представления. Они доступны только для чтения и не записывают результат в исходные заметки.</p>
+<h2 id="состояние-разработки">Состояние разработки</h2>
+<p>Текущие исходники готовятся к <strong>3.7.2</strong>; это ещё не опубликованный кандидат. Готовую версию скачивайте из <a href="https://github.com/ParkPavel/obs-projects-plus/releases">Releases</a> и сверяйте с её описанием. Автоматические проверки на ПК и моделирование мобильных размеров не заменяют приёмку на iPhone или Android.</p>
+<p>Изменения описаны в <a href="../read/changelog-ru.html">журнале</a>. Перед обновлением рабочего хранилища прочитайте <a href="../read/upgrade-ru.html">руководство по обновлению и откату</a>.</p>
+<p>Если Projects Plus вам полезен, можно <a href="https://web.tribute.tg/d/Sh6">поддержать разработку</a>.</p>
 <h2 id="что-можно-сделать">Что можно сделать</h2>
 <table>
 <thead>
@@ -38,7 +43,7 @@
 <td>Галерея</td>
 </tr>
 <tr>
-<td>Объединить данные, графики и показатели</td>
+<td>Объединить данные, графики, показатели и вычисляемые столбцы</td>
 <td>Dashboard с настраиваемыми блоками</td>
 </tr>
 <tr>
@@ -57,9 +62,9 @@
 <p><img src="../media/images--2026-01-27_12-24-17.png" alt="Пример календаря Projects Plus" loading="lazy" decoding="async"></p>
 <p>Иллюстрация показывает один из вариантов интерфейса; оформление установленной версии может отличаться.</p>
 <h2 id="установка">Установка</h2>
-<p>Когда Projects Plus появится в каталоге сообщества Obsidian, его можно будет установить прямо из Obsidian: <strong>Настройки → Сторонние плагины → Обзор</strong>, найдите <strong>Projects Plus</strong>, затем <strong>Установить</strong> и <strong>Включить</strong>.</p>
+<p>Если Projects Plus доступен в каталоге плагинов сообщества Obsidian, установите его через <strong>Настройки → Сторонние плагины → Обзор</strong>: найдите <strong>Projects Plus</strong>, затем нажмите <strong>Установить</strong> и <strong>Включить</strong>.</p>
 <p>Чтобы установить выпуск вручную:</p>
-<p>Текущая версия — <strong>3.7.0</strong>: настраиваемые раскладки и поля карточек галереи, изменяемые рамки карточек, миниатюры в канбане, фильтры в настройках вида, поведение под касание на телефонах и планшетах и стили, следующие теме Obsidian. 3.6.3 дала плагину имя Projects Plus; 3.6.1 принесла демо из трёх связанных проектов. Первая версия в формате каталога сообщества Obsidian — 3.6.0. Готовые сборки лежат в <a href="https://github.com/ParkPavel/obs-projects-plus/releases">GitHub Releases</a>; нужен Obsidian 1.8.7 или новее, на компьютере или телефоне. Что изменилось — в <a href="../read/changelog-ru.html">истории изменений</a>.</p>
+<p>Скачайте опубликованную сборку в разделе <a href="https://github.com/ParkPavel/obs-projects-plus/releases">GitHub Releases</a>. По заметкам к выпуску и <a href="../read/changelog-ru.html">истории изменений</a> можно проверить, какие функции в него входят. Нужен Obsidian 1.8.7 или новее.</p>
 <ol>
 <li>Выберите релиз и скачайте из него <strong>все три файла</strong>: <code>main.js</code>, <code>manifest.json</code> и <code>styles.css</code>.</li>
 <li>Создайте в своём хранилище папку <code>.obsidian/plugins/obs-projects-plus/</code> и поместите туда файлы. Если в Obsidian задана другая папка конфигурации, используйте её вместо <code>.obsidian</code>.</li>

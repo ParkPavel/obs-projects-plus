@@ -54,7 +54,7 @@ describe("FormulaBar — the typed formula", () => {
       await tick();
       expect(apply).toBeEnabled();
       apply?.click();
-      expect(applied).toEqual([{ name: "total", expression: "1 + 2", draft: {} }]);
+      expect(applied).toEqual([{ name: "total", expression: "1 + 2", draft: { formulaVersion: "unified-v1" } }]);
     } finally {
       jest.useRealTimers();
     }

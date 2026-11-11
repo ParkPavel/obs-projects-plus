@@ -1,7 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy } from 'svelte';
   import dayjs from 'dayjs';
-  import FormulaMode from 'src/ui/components/FormulaEditor/FormulaMode.svelte';
   import { formulaEditorSemantics, validateVersionedFormula } from 'src/lib/formula/version';
   import { evaluateAgendaFormula } from './filterEngine';
   import type { DataField, DataRecord } from 'src/lib/dataframe/dataframe';
@@ -13,7 +12,10 @@
   export let records: DataRecord[] = [];
   export let referenceDate: dayjs.Dayjs = dayjs();
   export let version: string | undefined = undefined;
-  $: semantics = formulaEditorSemantics(version, 'legacy-filter');
+  // One rule set: a filter that predates the version mark is edited under it and saved with the mark.
+  const CURRENT = 'unified-v1';
+  $: effectiveVersion = version ?? CURRENT;
+  $: semantics = formulaEditorSemantics(effectiveVersion, 'legacy-filter');
 
   const dispatch = createEventDispatcher<{
     change: string;
@@ -34,7 +36,7 @@
     return (expr: string, availableFields: string[]): string[] =>
       validateVersionedFormula(expr, availableFields, savedVersion, 'legacy-filter');
   }
-  $: calendarValidate = validatorFor(version);
+  $: calendarValidate = validatorFor(effectiveVersion);
 
   // Snippet catalog tailored for Calendar agenda. Labels are localised via
   // i18n keys; insert strings are language-independent formula source.
@@ -76,16 +78,19 @@
       previewError = result.error;
     }, 700);
   }
-  $: schedulePreview(formula, version, records, fields, referenceDate);
+  $: schedulePreview(formula, effectiveVersion, records, fields, referenceDate);
   onDestroy(() => clearTimeout(timer));
 
   function handleChange(e: CustomEvent<string>) {
     formula = e.detail;
+    if (version === undefined) {
+      version = CURRENT;
+      dispatch('modechange', { formulaVersion: CURRENT });
+    }
     dispatch('change', formula);
   }
 </script>
 
-<FormulaMode {version} on:change={(event) => { version = event.detail.formulaVersion; dispatch("modechange", event.detail); }} />
 {#if semantics}
 <FormulaConstructorFull
   {semantics}

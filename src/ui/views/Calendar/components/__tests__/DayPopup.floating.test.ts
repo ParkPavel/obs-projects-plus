@@ -13,6 +13,9 @@ import { tick } from "svelte";
 import dayjs from "dayjs";
 import { processCalendarData } from "../../processor";
 import { DEFAULT_RECORD_COLOR } from "src/lib/colors/recordColor";
+import { get } from "svelte/store";
+import { settings } from "src/lib/stores/settings";
+import { DEFAULT_PROJECT } from "src/settings/settings";
 
 // The Svelte transform reads `dayjs.default`; the CommonJS build has none.
 jest.mock("dayjs", () => {
@@ -125,9 +128,44 @@ describe("B10 — DayPopup on FloatingPopup", () => {
     expect(saveRecordColor).toHaveBeenCalledTimes(2);
     resolve(true);
     await flush();
-    expect(document.querySelector(".color-palette")).toBeNull();
+    expect(document.querySelector(".color-palette")).not.toBeNull(); // it stays open: its own toggle closes it
     expect(changed).not.toHaveBeenCalled();
     component.$destroy();
+  });
+
+  it("uses the same merged favorites as note-property palettes, including legacy project colors", async () => {
+    const original = get(settings);
+    settings.set({
+      ...original,
+      preferences: { ...original.preferences, colorFavorites: [{ color: "#112233", name: "Shared" }] },
+      projects: [{
+        ...DEFAULT_PROJECT,
+        id: "legacy-palette",
+        name: "Legacy palette",
+        colorFavorites: [{ color: "#445566", name: "Legacy project color" }],
+      }],
+    });
+    const { component } = mount();
+    try {
+      await flush();
+      await openColor();
+      const favoriteTitles = () => Array.from(
+        document.querySelectorAll<HTMLButtonElement>(".color-palette .favorites-grid .color-swatch"),
+      ).map((button) => button.title);
+      expect(favoriteTitles()).toEqual(["Shared", "Legacy project color"]);
+
+      const legacySwatch = Array.from(
+        document.querySelectorAll<HTMLButtonElement>(".color-palette .favorites-grid .color-swatch"),
+      ).find((button) => button.title === "Legacy project color")!;
+      legacySwatch.parentElement!.querySelector<HTMLButtonElement>(".remove-btn")!.click();
+      await flush();
+
+      expect(get(settings).projects[0]!.colorFavorites).toEqual([]);
+      expect(favoriteTitles()).toEqual(["Shared"]);
+    } finally {
+      component.$destroy();
+      settings.set(original);
+    }
   });
 
   it("mounts as the engine's floating layer in the anchor's own document", async () => {

@@ -1,7 +1,7 @@
-import { get, writable } from "svelte/store";
+import { get } from "svelte/store";
 import { settings } from "../settings";
-import { DEFAULT_SETTINGS, DEFAULT_PROJECT, migrateSettings } from "src/settings/settings";
-import { createFavoritesStore, migrateLegacyFavorites, normalizeFavorites } from "../palettes";
+import { DEFAULT_SETTINGS, DEFAULT_PROJECT } from "src/settings/settings";
+import { favoritesStore, migrateLegacyFavorites, normalizeFavorites } from "../palettes";
 import { loadAppLocal } from "src/lib/appStorage";
 
 jest.mock("src/lib/appStorage", () => ({ loadAppLocal: jest.fn(), saveAppLocal: jest.fn() }));
@@ -35,45 +35,46 @@ test("a failed settings load cannot start a palette write over the unreadable fi
   expect(mockLoad).not.toHaveBeenCalled();
   unsubscribe();
 });
-test("one project's edit forks the shared fallback and cannot affect another project", () => {
-  settings.updatePreferences({ ...get(settings).preferences, colorFavorites: [red] });
-  const a = createFavoritesStore(writable("a"));
-  const b = createFavoritesStore(writable("b"));
-  a.add(blue.color, blue.name);
-  expect(get(a)).toEqual([red, blue]);
-  expect(get(b)).toEqual([red]);
-  expect(get(settings).preferences.colorFavorites).toEqual([red]);
-  a.remove(red.color);
-  a.remove(blue.color);
-  expect(get(a)).toEqual([]);
-  expect(get(b)).toEqual([red]);
-});
-test("a settings adoption updates open pickers; each leaf keeps its own project", () => {
-  const project = writable<string | undefined>("a");
-  const picker = createFavoritesStore(project);
-  const shown: string[][] = [];
-  const unsubscribe = picker.subscribe((items) => shown.push(items.map((item) => item.color)));
-  settings.updateProject({ ...get(settings).projects[0]!, colorFavorites: [blue] });
-  expect(shown.at(-1)).toEqual([blue.color]);
-  project.set("b");
-  expect(shown.at(-1)).toEqual([]);
-  settings.updatePreferences({ ...get(settings).preferences, colorFavorites: [red] });
-  expect(shown.at(-1)).toEqual([red.color]);
-  const serialized = JSON.parse(JSON.stringify(get(settings)));
-  const resolved = migrateSettings(serialized);
-  expect(resolved._tag).toBe("Right");
-  if (resolved._tag === "Right") {
-    settings.set(resolved.right);
-    project.set("a");
-    expect(get(picker)).toEqual([blue]);
+test("the unified picker merges legacy project colors and removes a favorite from every list", () => {
+  settings.set({
+    ...get(settings),
+    preferences: { ...get(settings).preferences, colorFavorites: [red] },
+    projects: get(settings).projects.map((project, index) => ({
+      ...project,
+      colorFavorites: index === 0 ? [blue] : [{ color: "#0000FF", name: "Duplicate blue" }],
+    })),
+  });
+  const first: string[][] = [], second: string[][] = [];
+  const unsubscribeFirst = favoritesStore.subscribe((items) => first.push(items.map((item) => item.color)));
+  const unsubscribeSecond = favoritesStore.subscribe((items) => second.push(items.map((item) => item.color)));
+  try {
+    expect(get(favoritesStore)).toEqual([red, blue]);
+    favoritesStore.add("#00ff00", "Green");
+    expect(get(settings).preferences.colorFavorites).toEqual([red, { color: "#00ff00", name: "Green" }]);
+    expect(first.at(-1)).toEqual(["#ff0000", "#00ff00", "#0000ff"]);
+    expect(second.at(-1)).toEqual(first.at(-1));
+
+    favoritesStore.remove(blue.color);
+    expect(get(settings).projects.every((project) => project.colorFavorites?.every((item) => normalizeFavorites([item])[0]?.color !== blue.color))).toBe(true);
+    expect(get(favoritesStore).map((item) => item.color)).toEqual(["#ff0000", "#00ff00"]);
+    expect(first.at(-1)).toEqual(second.at(-1));
+  } finally {
+    unsubscribeFirst();
+    unsubscribeSecond();
   }
-  unsubscribe();
 });
-test("a stale picker cannot write to the fallback after its project is deleted", () => {
-  const picker = createFavoritesStore(writable("gone"));
-  const before = get(settings);
-  picker.add(blue.color);
-  expect(get(settings)).toBe(before);
+test("open pickers update together when shared settings are adopted", () => {
+  const first: string[][] = [], second: string[][] = [];
+  const unsubscribeFirst = favoritesStore.subscribe((items) => first.push(items.map((item) => item.color)));
+  const unsubscribeSecond = favoritesStore.subscribe((items) => second.push(items.map((item) => item.color)));
+  try {
+    settings.updatePreferences({ ...get(settings).preferences, colorFavorites: [red] });
+    expect(first.at(-1)).toEqual([red.color]);
+    expect(second.at(-1)).toEqual(first.at(-1));
+  } finally {
+    unsubscribeFirst();
+    unsubscribeSecond();
+  }
 });
 test("invalid legacy JSON cannot replace settings or crash startup", () => {
   const warning = jest.spyOn(console, "warn").mockImplementation(() => {});

@@ -42,7 +42,7 @@ type TFile = { path: string };
 
 const NotePropertiesBlock = require("../NotePropertiesBlock.svelte").default;
 
-function setup(fm: Record<string, unknown>, other?: Record<string, unknown>, parentProjectId?: string) {
+function setup(fm: Record<string, unknown>, other?: Record<string, unknown>) {
   const file = new TFile("Notes/a.md");
   const getMarkdownFiles = jest.fn(() => [file, new TFile("Notes/b.md")]);
   const listeners = new Set<(f: TFile) => void>();
@@ -63,8 +63,7 @@ function setup(fm: Record<string, unknown>, other?: Record<string, unknown>, par
     vault: { getMarkdownFiles, getAbstractFileByPath: () => null },
     workspace: { openLinkText: jest.fn(), getLeaf: jest.fn() },
   };
-  const Component = parentProjectId === undefined ? NotePropertiesBlock : require("./fixtures/PaletteNoteHost.svelte").default;
-  const result = render(Component, { props: { app, file, ...(parentProjectId === undefined ? {} : { projectId: parentProjectId }) } });
+  const result = render(NotePropertiesBlock, { props: { app, file } });
   return { ...result, app, file, processFrontMatter, getMarkdownFiles, notifyChanged: (changed: TFile) => listeners.forEach(cb => cb(changed)) };
 }
 
@@ -796,7 +795,7 @@ describe("i3-final NotePropertiesBlock", () => {
     expect(fm["three"]).toBe("z");
   });
 
-  it("reads the vault once for the palette, however often it opens or renders", async () => {
+  it("does not scan the vault for the palette: it offers the shared favorites only", async () => {
     const fm: Record<string, unknown> = { tint: "#ff0000", other: "x" };
     const { getMarkdownFiles } = setup(fm);
     await tick();
@@ -807,10 +806,10 @@ describe("i3-final NotePropertiesBlock", () => {
     await flush();
     swatch().click();
     await flush();
-    expect(getMarkdownFiles).toHaveBeenCalledTimes(1);
+    expect(getMarkdownFiles).not.toHaveBeenCalled();
   });
 
-  it("chooses saved colors explicitly, isolating two note headers and each project's changes", async () => {
+  it("shows one shared favorite list in both note headers and removes legacy favorites globally", async () => {
     const original = get(settings);
     const shared = [{ color: "#112233", name: "Shared" }];
     settings.set({ ...original, preferences: { ...original.preferences, colorFavorites: shared }, projects: [
@@ -823,79 +822,52 @@ describe("i3-final NotePropertiesBlock", () => {
       await tick();
       for (const m of [first, second]) (m.container.querySelector(".ppp-note-props__swatch.is-button") as HTMLButtonElement).click();
       await flush();
-      const select = first.container.querySelector<HTMLSelectElement>("[data-palette-scope]")!;
-      const otherSelect = second.container.querySelector<HTMLSelectElement>("[data-palette-scope]")!;
-      expect(select).not.toBeNull();
-      expect(select.value).toBe(""); // never infer query membership from the note folder
-      expect(first.container.querySelector(".favorites-grid")?.textContent).not.toContain("One");
-      select.value = "one"; select.dispatchEvent(new Event("change", { bubbles: true }));
-      await flush();
-      expect(otherSelect.value).toBe("");
+      const favoriteTitles = (m: ReturnType<typeof setup>) => Array.from(m.container.querySelectorAll<HTMLButtonElement>(".favorites-grid .color-swatch")).map(button => button.title);
+      expect(favoriteTitles(first)).toContain("Shared");
+      expect(favoriteTitles(first)).toContain("One");
+      expect(favoriteTitles(second)).toEqual(favoriteTitles(first));
       (first.container.querySelector("button.star-btn") as HTMLButtonElement).click();
       await flush();
       const state = get(settings);
-      expect(state.projects[0]!.colorFavorites?.map(f => f.color)).toEqual(["#445566", "#ff0000"]);
-      expect(state.projects[1]!.colorFavorites).toBeUndefined();
-      expect(state.preferences.colorFavorites).toEqual(shared);
+      expect(state.projects[0]!.colorFavorites?.map(f => f.color)).toEqual(["#445566"]);
+      expect(state.preferences.colorFavorites?.map(f => f.color)).toEqual(["#112233", "#ff0000"]);
       expect(first.processFrontMatter).not.toHaveBeenCalled();
       expect(fm.tint).toBe("#ff0000");
-      select.value = "two"; select.dispatchEvent(new Event("change", { bubbles: true }));
+      expect(favoriteTitles(second)).toEqual(favoriteTitles(first));
+      const projectSwatch = Array.from(first.container.querySelectorAll<HTMLButtonElement>(".favorites-grid .color-swatch"))
+        .find(button => button.title === "One")!;
+      (projectSwatch.parentElement!.querySelector(".remove-btn") as HTMLButtonElement).click();
       await flush();
-      (first.container.querySelector("button.star-btn") as HTMLButtonElement).click();
-      await flush();
-      expect(get(settings).projects[1]!.colorFavorites?.map(f => f.color)).toEqual(["#112233", "#ff0000"]);
-      expect(get(settings).preferences.colorFavorites).toEqual(shared);
+      expect(get(settings).projects[0]!.colorFavorites).toEqual([]);
+      expect(favoriteTitles(first)).not.toContain("One");
+      expect(favoriteTitles(second)).not.toContain("One");
       // Deletion cannot leave a hidden stale target, even while the picker stays open.
       settings.set({ ...get(settings), projects: get(settings).projects.filter(p => p.id !== "two") });
-      await flush();
-      expect(select.value).toBe("");
-      select.value = "one"; select.dispatchEvent(new Event("change", { bubbles: true }));
       await flush();
       first.component.$set({ file: new TFile("Elsewhere/new.md") });
       await flush();
       expect(first.container.querySelector(".color-picker")).toBeNull();
       (first.container.querySelector(".ppp-note-props__swatch.is-button") as HTMLButtonElement).click();
       await flush();
-      expect(first.container.querySelector<HTMLSelectElement>("[data-palette-scope]")!.value).toBe("");
+      expect(favoriteTitles(first)).toContain("Shared");
     } finally { first.component.$destroy(); second.component.$destroy(); settings.set(original); }
   });
 
-  it("reopens with the new note's property colors instead of the old suggestions", async () => {
+  it("reopens the palette for the new note with the same three sections", async () => {
     const m = setup({ tint: "#ff0000" }, { shade: "#00ff00" });
     try {
       await tick();
       (m.container.querySelector(".ppp-note-props__swatch.is-button") as HTMLButtonElement).click();
       await flush();
-      const suggestions = () => Array.from(m.container.querySelectorAll(".color-picker > .palette-section:nth-child(2) .color-swatch")).map(el => el.getAttribute("title"));
-      expect(suggestions()).toEqual(["#ff0000"]);
+      const sections = () => m.container.querySelectorAll(".color-picker > .palette-section").length;
+      expect(sections()).toBe(3);
       m.component.$set({ file: new TFile("Notes/b.md") });
       await flush();
       expect(m.container.querySelector(".color-picker")).toBeNull();
       (m.container.querySelector(".ppp-note-props__swatch.is-button") as HTMLButtonElement).click();
       await flush();
-      expect(suggestions()).toEqual(["#00ff00"]);
+      expect(sections()).toBe(3);
     } finally { m.component.$destroy(); }
-  });
-
-  it("keeps an explicit parent palette context and reacts when that owner changes", async () => {
-    const original = get(settings);
-    settings.set({ ...original, projects: [
-      { ...DEFAULT_PROJECT, id: "one", name: "One", colorFavorites: [{ color: "#112233", name: "One" }] },
-      { ...DEFAULT_PROJECT, id: "two", name: "Two", colorFavorites: [{ color: "#445566", name: "Two" }] },
-    ] });
-    const m = setup({ tint: "#ff0000" }, undefined, "one");
-    try {
-      await tick();
-      (m.container.querySelector(".ppp-note-props__swatch.is-button") as HTMLButtonElement).click();
-      await flush();
-      expect(m.container.querySelector("[data-palette-scope]")).toBeNull();
-      m.component.$set({ projectId: "two" });
-      await flush();
-      (m.container.querySelector("button.star-btn") as HTMLButtonElement).click();
-      await flush();
-      expect(get(settings).projects[0]!.colorFavorites?.map(f => f.color)).toEqual(["#112233"]);
-      expect(get(settings).projects[1]!.colorFavorites?.map(f => f.color)).toEqual(["#445566", "#ff0000"]);
-    } finally { m.component.$destroy(); settings.set(original); }
   });
 
   it("a color gesture started on one note cannot commit into the next note", async () => {

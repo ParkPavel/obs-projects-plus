@@ -5,17 +5,17 @@ describe("PipelineEditor preserves saved formula rules", () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
 
-  it("Apply saves the visible draft after a mode choice rerenders the original expression", async () => {
+  it("Apply saves the visible draft, marked with the one rule set", async () => {
     const target = document.createElement("div"); document.body.appendChild(target);
     const applied: TransformPipeline[] = [];
     const component = new PipelineEditor({ target, props: { pipeline: { steps: [{ type: "compute", columns: [{ name: "Answer", expression: "1 + 1" }] }] }, fields: [], availableSources: [] } });
     component.$on("apply", (event: CustomEvent<TransformPipeline>) => applied.push(event.detail));
     try {
       (target.querySelector(".ppp-step-summary") as HTMLElement).click(); await Promise.resolve();
+      expect(target.querySelector(".ppp-formula-mode")).toBeNull();
       const textarea = target.querySelector("textarea")!;
       textarea.focus(); textarea.value = "3 + 4";
       textarea.dispatchEvent(new Event("input", { bubbles: true })); await Promise.resolve();
-      target.querySelectorAll<HTMLButtonElement>(".ppp-formula-mode button")[1]!.click(); await Promise.resolve();
       jest.advanceTimersByTime(700); await Promise.resolve();
       expect(textarea.value).toBe("3 + 4");
       target.querySelector<HTMLButtonElement>(".ppp-versioned-formula-editor > button")!.click(); await Promise.resolve();
@@ -55,7 +55,9 @@ describe("PipelineEditor preserves saved formula rules", () => {
       expression.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", ctrlKey: true, bubbles: true }));
       await Promise.resolve();
       jest.advanceTimersByTime(400);
-      expect((applied.at(-1)!.steps[0] as ComputeStep).columns[0]).toEqual({ ...column, name: "renamed", expression: "3 + 4" });
+      expect((applied.at(-1)!.steps[0] as ComputeStep).columns[0]).toEqual({
+        ...column, name: "renamed", expression: "3 + 4", ...(version === undefined ? { formulaVersion: "unified-v1" } : {}),
+      });
       expect(column).toEqual({ name: "answer", expression: "1 + 1", ...(version === undefined ? {} : { formulaVersion: version }) });
     } finally {
       component.$destroy();

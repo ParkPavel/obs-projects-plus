@@ -74,17 +74,24 @@ describe("calendar creation opens an in-view draft, not a modal", () => {
     expect(view).toMatch(/onDestroy\(\(\) => draftCtl\.destroy\(\)\)/);
     expect(view).not.toMatch(/<CalendarDraftSheet[^>]*use:portal/);
   });
+
+  it("the draft's color picker offers the same shared favorites as every other palette", () => {
+    expect(view).not.toMatch(/getProjectPalette/);
+    expect(sheet).toMatch(/\{#if colorOpen && !state\.saving\}\s*<div class="ppp-draft-sheet__palette"[^>]*>\s*<ColorPicker value=\{draft\.color \|\| "#808080"\} on:change/);
+  });
 });
 
 describe("the calendar draws the draft beside the notes", () => {
   it("the processed frame is the frame plus the draft, never the draft alone", () => {
     expect(view).toMatch(/displayFrame = shownDraft \? \{ \.\.\.frame, records: \[\.\.\.frame\.records, shownDraft\] \} : frame/);
-    expect(view).toMatch(/updateProcessedData\(processedStartField, colorConfig, records, dataVersion, draftKey, displayFrame,/);
+    expect(view).toMatch(/updateProcessedData\(processedStartField, colorConfig, records, fields, dataVersion, draftKey, displayFrame,/);
   });
 
-  it("the cache key joins the data version and the draft revision as text, not as a sum", () => {
+  it("draft revisions reuse source processing and only process the transient record", () => {
     const body = fnBody(view, /function updateProcessedData\(/);
-    expect(body).toMatch(/const versionKey = `\$\{dv\}\|\$\{dk\}`;/);
+    expect(body).toMatch(/const versionKey = String\(dv\);/);
+    expect(body).toMatch(/fr\.records\.find\(\(record\) => isDraftId\(record\.id\)\)/);
+    expect(body).toMatch(/mergeCalendarPreview/);
     expect(body).toMatch(/versionKey !== lastProcessedKey/);
     expect(hasIdentifier(view, "lastProcessedVersion")).toBe(false);
     expect(hasIdentifier(view.replace("</script>", "let lastProcessedVersion = 0;\n</script>"), "lastProcessedVersion")).toBe(true);

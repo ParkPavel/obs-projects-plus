@@ -77,13 +77,6 @@ function createConfig() {
     table: {},
     showWidgetToolbar: false,
     compactMode: false,
-    quickActions: [
-      {
-        id: "toggle-formula",
-        kind: "toggle-formula-bar",
-        label: "Toggle formula",
-      },
-    ],
   };
 }
 
@@ -151,10 +144,8 @@ function mountCanvas(configOverrides?: Record<string, unknown>) {
   };
 }
 
-function getQuickAction(target: HTMLElement, label: string) {
-  return Array.from(target.querySelectorAll(".ppp-quick-action")).find(
-    (button) => button.textContent?.includes(label)
-  ) ?? null;
+function getFormulaControl(target: HTMLElement) {
+  return target.querySelector<HTMLButtonElement>(".ppp-toolbar-btn");
 }
 
 
@@ -257,10 +248,7 @@ describe("DatabaseViewCanvas", () => {
     } finally { view.destroy(); }
   });
 
-  test("#191 a stored apply-template action does not reach the screen", () => {
-    // The only test that proves the button is gone from the RENDER rather than
-    // from an object. A vault carries this exact shape today: migrateTableConfig
-    // wrote it into every dashboard it migrated before #191.
+  test("legacy quick actions do not duplicate the calculated-fields toolbar control", () => {
     const view = mountCanvas({
       quickActions: [
         { id: "qa-overview", kind: "apply-template", label: "Overview Preset", templateId: "overview-finance" },
@@ -269,41 +257,37 @@ describe("DatabaseViewCanvas", () => {
     });
 
     try {
-      const actions = view.target.querySelectorAll(".ppp-quick-action");
-      expect(actions).toHaveLength(1);
-      expect(actions[0]?.textContent?.trim()).toBe("Toggle formula");
+      expect(view.target.querySelectorAll(".ppp-quick-action")).toHaveLength(0);
+      expect(view.target.querySelectorAll(".ppp-toolbar-btn")).toHaveLength(1);
       expect(view.target.textContent).not.toContain("Overview Preset");
     } finally {
       view.destroy();
     }
   });
 
-  test("#191 a malformed quickActions value does not take the dashboard down", () => {
-    // The migrator leaves a value it does not recognise alone rather than
-    // throwing, so anything can still reach the render. Calling .filter() on a
-    // string crashes the whole canvas to remove one button — found by audit,
-    // not by the gates.
+  test("malformed legacy quickActions do not take the dashboard down", () => {
     for (const broken of ["nope", 42, { a: 1 }, [null], [{ kind: null }]]) {
       const view = mountCanvas({ quickActions: broken as never });
       try {
         expect(view.target.querySelectorAll(".ppp-quick-action")).toHaveLength(0);
+        expect(view.target.querySelectorAll(".ppp-toolbar-btn")).toHaveLength(1);
       } finally {
         view.destroy();
       }
     }
   });
 
-  test("toggles formula bar from quick actions", async () => {
+  test("toggles the calculated-fields panel from its single toolbar control", async () => {
     const view = mountCanvas();
 
     try {
       expect(view.target.querySelector(".ppp-formula-bar")).toBeNull();
 
-      click(getQuickAction(view.target, "Toggle formula"));
+      click(getFormulaControl(view.target));
       await flush();
       expect(view.target.querySelector(".ppp-formula-bar")).not.toBeNull();
 
-      click(getQuickAction(view.target, "Toggle formula"));
+      click(getFormulaControl(view.target));
       await flush();
       expect(view.target.querySelector(".ppp-formula-bar")).toBeNull();
     } finally {
@@ -315,7 +299,7 @@ describe("DatabaseViewCanvas", () => {
     const view = mountCanvas();
 
     try {
-      click(getQuickAction(view.target, "Toggle formula"));
+      click(getFormulaControl(view.target));
       await flush();
 
       click(view.target.querySelector(".formula-bar-apply"));
@@ -336,7 +320,7 @@ describe("DatabaseViewCanvas", () => {
     const view = mountCanvas();
 
     try {
-      click(getQuickAction(view.target, "Toggle formula"));
+      click(getFormulaControl(view.target));
       await flush();
 
       click(view.target.querySelector(".formula-bar-cancel"));

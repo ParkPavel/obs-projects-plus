@@ -234,6 +234,7 @@ describe("ComboField — ARIA and the portalled popup", () => {
     expect(list.parentElement).toBe(document.body);
     expect(m.target.contains(list)).toBe(false);
     expect(list.classList.contains("ppp-popup")).toBe(true);
+    expect(list.getAttribute("style")).toContain("z-index: max(var(--ppp-z-popover, 50), calc(var(--layer-modal, 1000) + 1))");
     m.destroy();
     expect(listbox()).toBeNull();
   });

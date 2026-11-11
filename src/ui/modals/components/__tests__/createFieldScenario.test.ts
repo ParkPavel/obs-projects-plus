@@ -59,17 +59,16 @@ const projects = [
 async function settle() { for (let i = 0; i < 4; i++) { await Promise.resolve(); await tick(); } }
 function change(el: HTMLSelectElement, value: string) { el.value = value; el.dispatchEvent(new Event("change")); }
 
-describe("formula property mode persistence through real field components", () => {
-  it.each(["default", "modern", "return", "leave"])("creates a field with explicit mode choice %s", async choice => {
+describe("formula property persistence through real field components", () => {
+  it.each(["default", "leave"])("creates a field with the one rule set (%s)", async choice => {
     const target = document.createElement("div"); document.body.appendChild(target);
     const onCreate = jest.fn().mockResolvedValue(true);
     const component = new CreateField({ target, props: { existingFields: [f("qty", DataFieldType.Number)], defaultName: "Answer", onCreate } });
     try {
       target.querySelector<HTMLButtonElement>(`button[data-type='${DataFieldType.Formula}']`)!.click(); await settle();
+      expect(target.querySelector(".ppp-formula-mode")).toBeNull();
       const textarea = target.querySelector("textarea")!;
       textarea.value = "qty + 1"; textarea.dispatchEvent(new Event("input", { bubbles: true })); await settle();
-      if (choice !== "default") { target.querySelectorAll<HTMLButtonElement>(".ppp-formula-mode button")[1]!.click(); await settle(); }
-      if (choice === "return") { target.querySelectorAll<HTMLButtonElement>(".ppp-formula-mode button")[0]!.click(); await settle(); }
       if (choice === "leave") { target.querySelector<HTMLButtonElement>(`button[data-type='${DataFieldType.Number}']`)!.click(); await settle(); }
       target.querySelector<HTMLButtonElement>("[data-testid='modal-button-group'] button[data-variant='primary']")!.click(); await settle();
       expect(onCreate).toHaveBeenCalledTimes(1);
@@ -77,22 +76,20 @@ describe("formula property mode persistence through real field components", () =
       if (choice === "leave") { expect(saved.typeConfig?.formula).toBeUndefined(); expect(saved.typeConfig?.formulaVersion).toBeUndefined(); }
       else {
         expect(saved.typeConfig?.formula).toBe("qty + 1");
-        expect(saved.typeConfig?.formulaVersion).toBe(choice === "modern" ? "unified-v1" : undefined);
-        if (choice !== "modern") expect(Object.prototype.hasOwnProperty.call(saved.typeConfig, "formulaVersion")).toBe(false);
+        expect(saved.typeConfig?.formulaVersion).toBe("unified-v1");
       }
     } finally { component.$destroy(); target.remove(); }
   });
 
-  it.each([false, true])("preserves a future version on ordinary save; explicit replacement=%s", async replace => {
+  it("keeps a future version read-only and untouched on an ordinary save", async () => {
     const target = document.createElement("div"); document.body.appendChild(target);
     const field = Object.freeze({ ...f("Answer", DataFieldType.Formula), typeConfig: Object.freeze({ formula: "qty + 1", formulaVersion: "future-v9" }) });
     const onSave = jest.fn();
     const component = new ConfigureField({ target, props: { title: "Answer", field, editable: true, existingFields: [f("qty", DataFieldType.Number)], onSave } });
     try {
       expect(target.querySelector<HTMLTextAreaElement>("textarea")!.readOnly).toBe(true);
-      if (replace) { target.querySelectorAll<HTMLButtonElement>(".ppp-formula-mode button")[1]!.click(); await settle(); }
       target.querySelector<HTMLButtonElement>("[data-testid='modal-button-group'] button[data-variant='primary']")!.click(); await settle();
-      expect(onSave.mock.calls[0]![0].typeConfig).toEqual({ formula: "qty + 1", formulaVersion: replace ? "unified-v1" : "future-v9" });
+      expect(onSave.mock.calls[0]![0].typeConfig).toEqual({ formula: "qty + 1", formulaVersion: "future-v9" });
       expect(field.typeConfig.formulaVersion).toBe("future-v9");
     } finally { component.$destroy(); target.remove(); }
   });

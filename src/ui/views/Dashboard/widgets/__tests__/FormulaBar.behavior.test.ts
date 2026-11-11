@@ -32,7 +32,7 @@ test("keyboard Apply requires a valid expression and a non-colliding name", asyn
   expect(applied).not.toHaveBeenCalled();
   await fireEvent.input(name, { target: { value: "Profit" } });
   await fireEvent.keyDown(textarea, { key: "Enter", ctrlKey: true });
-  expect(applied).toHaveBeenCalledWith(expect.objectContaining({ detail: { name: "Profit", expression: "amount + 1", draft: {} } }));
+  expect(applied).toHaveBeenCalledWith(expect.objectContaining({ detail: { name: "Profit", expression: "amount + 1", draft: { formulaVersion: "unified-v1" } } }));
 });
 test("a saved definition can be edited and its aggregate preview uses the actual dataset", async () => {
   jest.useFakeTimers();
@@ -49,6 +49,18 @@ test("a saved definition can be edited and its aggregate preview uses the actual
     expect((container.querySelector(".ppp-btn--primary") as HTMLButtonElement).disabled).toBe(false);
   } finally { jest.useRealTimers(); }
 });
+test("saved calculated fields can be deleted without selecting or applying them", async () => {
+  const { container, component } = render(FormulaBar, {
+    formulaFields: [{ name: "Total", expression: "SUM(@amount)" }],
+  });
+  const removed = jest.fn();
+  const applied = jest.fn();
+  component.$on("remove", removed);
+  component.$on("apply", applied);
+  await fireEvent.click(container.querySelector(".ppp-formula-saved-remove")!);
+  expect(removed).toHaveBeenCalledWith(expect.objectContaining({ detail: "Total" }));
+  expect(applied).not.toHaveBeenCalled();
+});
 test("Escape outside the suggestion list closes the formula editor without applying", async () => {
   const { container, component } = render(FormulaBar, { fields: [] });
   const cancelled = jest.fn(); const applied = jest.fn();
@@ -58,11 +70,12 @@ test("Escape outside the suggestion list closes the formula editor without apply
   expect(applied).not.toHaveBeenCalled();
 });
 
-test("saved rules survive a copied field name; an explicit mode choice changes preview and apply together", async () => {
+test("a saved definition survives a copied field name and keeps the one rule set", async () => {
   jest.useFakeTimers();
   try {
     const { container, component } = render(FormulaBar, { fields: ["amount", "Answer"], previewFrame: frame,
       formulaFields: [{ name: "Answer", expression: '"2" < "10"', formulaVersion: "unified-v1" }] });
+    expect(container.querySelector(".ppp-formula-mode")).toBeNull();
     const applied: unknown[] = [];
     component.$on("apply", event => applied.push(event.detail));
     await fireEvent.click(container.querySelector(".ppp-formula-saved button")!);
@@ -71,15 +84,24 @@ test("saved rules survive a copied field name; an explicit mode choice changes p
     await fireEvent.input(container.querySelector("input")!, { target: { value: "Copy" } });
     await fireEvent.keyDown(container.querySelector("textarea")!, { key: "Enter", ctrlKey: true });
     expect(applied.at(-1)).toEqual({ name: "Copy", expression: '"2" < "10"', draft: { formulaVersion: "unified-v1" } });
-    await fireEvent.click(container.querySelectorAll(".ppp-formula-mode button")[0]!);
-    jest.advanceTimersByTime(150); await tick();
-    expect(container.querySelector(".ppp-formula-preview-value")?.textContent).toBe("true");
-    await fireEvent.keyDown(container.querySelector("textarea")!, { key: "Enter", ctrlKey: true });
-    expect(applied.at(-1)).toEqual({ name: "Copy", expression: '"2" < "10"', draft: {} });
   } finally { jest.useRealTimers(); }
 });
 
-test("a future formula is read-only until an explicit supported choice; typing its name cannot overwrite it", async () => {
+test("a definition saved before the version mark is opened and saved under the one rule set", async () => {
+  jest.useFakeTimers();
+  try {
+    const { container, component } = render(FormulaBar, { fields: ["amount", "Total"], previewFrame: frame,
+      formulaFields: [{ name: "Total", expression: "amount * 2" }] });
+    const applied: unknown[] = [];
+    component.$on("apply", event => applied.push(event.detail));
+    await fireEvent.click(container.querySelector(".ppp-formula-saved button")!);
+    jest.advanceTimersByTime(700); await tick();
+    await fireEvent.keyDown(container.querySelector("textarea")!, { key: "Enter", ctrlKey: true });
+    expect(applied.at(-1)).toEqual({ name: "Total", expression: "amount * 2", draft: { formulaVersion: "unified-v1" } });
+  } finally { jest.useRealTimers(); }
+});
+
+test("a future formula is read-only and cannot be overwritten by typing its name", async () => {
   const { container, component } = render(FormulaBar, { fields: ["Answer"], previewFrame: frame,
     formulaFields: [{ name: "Answer", expression: "1+1", formulaVersion: "future-v9" }] });
   const applied = jest.fn(); component.$on("apply", applied);
@@ -90,10 +112,6 @@ test("a future formula is read-only until an explicit supported choice; typing i
   await fireEvent.click(container.querySelector(".ppp-formula-saved button")!);
   expect((container.querySelector("textarea") as HTMLTextAreaElement).readOnly).toBe(true);
   expect((container.querySelector(".ppp-btn--primary") as HTMLButtonElement).disabled).toBe(true);
-  await fireEvent.click(container.querySelectorAll(".ppp-formula-mode button")[1]!);
-  expect((container.querySelector("textarea") as HTMLTextAreaElement).readOnly).toBe(false);
-  await fireEvent.keyDown(container.querySelector("textarea")!, { key: "Enter", ctrlKey: true });
-  expect(applied.mock.calls[0][0].detail.draft).toEqual({ formulaVersion: "unified-v1" });
 });
 
 test("versioned record-only fallback reports a missing dataset for @columns", async () => {
@@ -135,7 +153,7 @@ test("burst typing defers graph and wrapper validation; keyboard commit uses the
     jest.mocked(formulaWouldCycle).mockClear();
     jest.mocked(validateVersionedFormula).mockClear();
     await fireEvent.keyDown(textarea, { key: "Enter", ctrlKey: true });
-    expect(applied).toHaveBeenCalledWith(expect.objectContaining({ detail: { name: "Answer", expression: "3 + 4", draft: {} } }));
+    expect(applied).toHaveBeenCalledWith(expect.objectContaining({ detail: { name: "Answer", expression: "3 + 4", draft: { formulaVersion: "unified-v1" } } }));
     expect(formulaWouldCycle).toHaveBeenCalledTimes(1);
     expect(validateVersionedFormula).not.toHaveBeenCalled();
   } finally { jest.useRealTimers(); }
@@ -161,6 +179,6 @@ test("changed definitions invalidate cycle approval and immediate commit checks 
     jest.advanceTimersByTime(150); await tick();
     expect(apply.disabled).toBe(false);
     await fireEvent.click(apply);
-    expect(applied).toHaveBeenCalledWith(expect.objectContaining({ detail: { name: "Answer", expression: "Other + 1", draft: {} } }));
+    expect(applied).toHaveBeenCalledWith(expect.objectContaining({ detail: { name: "Answer", expression: "Other + 1", draft: { formulaVersion: "unified-v1" } } }));
   } finally { jest.useRealTimers(); }
 });

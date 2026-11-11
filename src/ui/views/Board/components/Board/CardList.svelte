@@ -150,13 +150,14 @@
       },
     };
   }
+
 </script>
 
 <script lang="ts">
   import { readCardDragType } from "./boardDragTypes";
   const cardDragType = readCardDragType();
   // import { Checkbox, InternalLink} from "obsidian-svelte";
-  import { Checkbox, Icon } from "obsidian-svelte";
+  import { Icon } from "obsidian-svelte";
   import IconButton from "src/ui/components/IconButton/IconButton.svelte";
   import InternalLink from "src/ui/components/InternalLink.svelte";
 
@@ -255,6 +256,14 @@
     if (!target || typeof target !== "object" || !("closest" in target)) return false;
     const closest = target.closest;
     return typeof closest === "function" && closest.call(target, ".board-card-grip") !== null;
+  };
+
+  /** Whether a click landed on a checkbox or its wrapper. */
+  const isCheckboxTarget = (e: Event) => {
+    const target = e.target;
+    if (!target || typeof target !== "object" || !("closest" in target)) return false;
+    const closest = target.closest;
+    return typeof closest === "function" && closest.call(target, '.checkbox-wrapper, .ppp-card-meta-boolean, input[type="checkbox"]') !== null;
   };
 
   $: zoneDisabled = isDragZoneDisabled({ editing: boardEditing, locked: disableDnd });
@@ -390,6 +399,7 @@
         on:keypress
         on:click={(e) => {
           if (isGripTarget(e)) return;
+          if (isCheckboxTarget(e)) return;
           // B10: the body carries the same modifiers as the title link.
           if (e.shiftKey) void openRecord({ id: item.id }, "window", { app: $app });
           else if (e.ctrlKey || e.metaKey) void openRecord({ id: item.id }, "tab", { app: $app });
@@ -422,14 +432,19 @@
         </svelte:fragment>
         <div slot="header" class="card-header">
           {#if checkField}
-            <span class="checkbox-wrapper">
-              <Checkbox
+            <div class="checkbox-wrapper">
+              <input
+                type="checkbox"
+                aria-label={checkField}
+                disabled={readOnly}
+                on:click|stopPropagation
+                on:dblclick|stopPropagation
                 checked={checkField !== undefined
                   ? !!item.values[checkField]
                   : false}
-                on:check={({ detail: checked }) => onRecordCheck(item, checked)}
+                on:change={(e) => !readOnly && onRecordCheck(item, e.currentTarget.checked)}
               />
-            </span>
+            </div>
           {/if}
           {#if iconField}
             <PageIcon value={item.values[iconField.name]} />
@@ -471,10 +486,10 @@
               />
             </span>
           {:else}
-            <CardMetadata fields={[customHeader]} record={item} />
+            <CardMetadata fields={[customHeader]} record={item} onBooleanChange={readOnly ? undefined : (field, checked) => onRecordCheck(item, checked, field.name)} />
           {/if}
         </div>
-        <CardMetadata slot="metadata" fields={bodyFields} record={item} />
+        <CardMetadata slot="metadata" fields={bodyFields} record={item} onBooleanChange={readOnly ? undefined : (field, checked) => onRecordCheck(item, checked, field.name)} />
         <!-- cards-g5: the resize handle, at the card's trailing lower corner,
              far from the grip lane; it is no drag handle and stops its own
              presses, so a resize never arms the board's drag. -->

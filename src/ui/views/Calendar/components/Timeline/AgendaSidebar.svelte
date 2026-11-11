@@ -1601,6 +1601,7 @@
      The .ppp-list-editor-overlay class prefix prevents collisions. */
   :global(.ppp-list-editor-overlay) {
     position: fixed;
+    box-sizing: border-box;
     inset: 0;
     background: var(--background-modifier-cover);
     backdrop-filter: blur(0.125rem);
@@ -1636,16 +1637,19 @@
   /* Keyframes ppp-fade-in and ppp-slide-up are defined in styles.css (global)
      because the overlay is portaled to document.body outside Svelte's scope */
   
-  /* v3.1.0: Mobile — full-screen takeover modal for agenda editor.
-     Full screen avoids all guesswork re: toolbars, safe areas, etc.
-     The inner AgendaListEditor handles its own scroll + footer padding. */
+  /* The portal owns viewport/keyboard sizing and reserves the safe area once.
+     Children fill this content box; only the editor body scrolls. */
   @media (max-width: 37.5rem) {
     :global(.ppp-list-editor-overlay) {
-      padding: 0;
+      padding: max(env(safe-area-inset-top, 0rem), var(--safe-area-inset-top, 0rem), var(--view-top-spacing, 0rem))
+        env(safe-area-inset-right, 0rem)
+        max(env(safe-area-inset-bottom, 0rem), var(--safe-area-inset-bottom, 0rem))
+        env(safe-area-inset-left, 0rem);
       align-items: stretch;
     }
     
     :global(.ppp-list-editor-modal) {
+      min-height: 0;
       max-width: 100%;
       max-height: none;
       height: 100%;

@@ -13,6 +13,7 @@
   import { agendaEmoji } from './agendaEmoji';
   import { calendarLogger } from '../logger';
   
+  
   // Generate unique ID
   function generateId(): string {
     return `list-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -164,6 +165,7 @@
 
   // The outer editor overlay owns keyboard-visible sizing and focused scrolling.
   // Do not add keyboard-height padding to an already-shrunken scroll container.
+
 </script>
 
 <div class="agenda-list-editor">
@@ -270,6 +272,7 @@
       {#if showColorPicker}
         <div class="color-picker-wrapper">
           <ColorPicker 
+            scrollable={false}
             value={formData.color ?? '#7c3aed'}
             projectPalette={existingLists.map((l) => l.color ?? '').filter(Boolean)}
             on:change={handleColorChange}
@@ -801,10 +804,13 @@
       max-height: none;
       height: 100%;
       border-radius: 0;
+      overflow: hidden;
     }
     
     .editor-header {
       padding: var(--ppp-spacing-sm, 0.5rem) var(--ppp-spacing-md, 0.75rem);
+      background: var(--background-primary);
+      border-bottom: 1px solid var(--background-modifier-border);
     }
     
     .editor-title {
@@ -814,6 +820,11 @@
     .editor-content {
       padding: var(--ppp-spacing-md, 0.75rem);
       gap: var(--ppp-spacing-md, 0.75rem);
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
     }
 
     /* Show header save/cancel on mobile, hide the X close */

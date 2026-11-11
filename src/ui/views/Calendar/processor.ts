@@ -471,6 +471,44 @@ export function processCalendarData(
   return processor.process(frame);
 }
 
+/** Add transient records without reprocessing the calendar's source records. */
+export function mergeCalendarPreview(
+  base: ProcessedCalendarData,
+  preview: ProcessedCalendarData
+): ProcessedCalendarData {
+  if (preview.processed.length === 0) return base;
+
+  let lane = -1;
+  for (const date of Object.keys(preview.grouped)) {
+    for (const record of base.grouped[date] ?? []) lane = Math.max(lane, record.lane);
+  }
+  lane += 1;
+
+  const replacements = new Map<ProcessedRecord, ProcessedRecord>();
+  preview.processed.forEach((record, index) => {
+    replacements.set(record, { ...record, lane: lane + index });
+  });
+
+  const grouped = { ...base.grouped };
+  for (const [date, records] of Object.entries(preview.grouped)) {
+    grouped[date] = [
+      ...(base.grouped[date] ?? []),
+      ...records.map((record) => replacements.get(record) ?? record),
+    ];
+  }
+
+  const processed = [...base.processed, ...replacements.values()];
+  const index = new Map(base.index);
+  for (const record of replacements.values()) index.set(record.record.id, record);
+
+  return {
+    processed,
+    grouped,
+    index,
+    maxLane: processed.reduce((max, record) => Math.max(max, record.lane), base.maxLane),
+  };
+}
+
 /**
  * Get header plaques for a specific date
  */

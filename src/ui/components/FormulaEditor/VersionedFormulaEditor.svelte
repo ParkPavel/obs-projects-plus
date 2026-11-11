@@ -3,7 +3,6 @@
   import type { FormulaSemantics } from "src/lib/formula/catalog";
   import { formulaEditorSemantics } from "src/lib/formula/version";
   import FormulaEditor from "./FormulaEditor.svelte";
-  import FormulaMode from "./FormulaMode.svelte";
   import { i18n } from "src/lib/stores/i18n";
   export let expression = "";
   export let version: unknown = undefined;
@@ -20,16 +19,23 @@
   let hasContent = !!expression.trim();
   let editor: FormulaEditor;
   const dispatch = createEventDispatcher<{ change: string; commit: string; modechange: import("src/lib/formula/version").VersionedFormula }>();
-  $: semantics = formulaEditorSemantics(version, legacy);
+  // One rule set: a formula that predates the version mark is edited under it and
+  // saved with the mark, which is its migration.
+  const CURRENT = "unified-v1";
+  $: semantics = formulaEditorSemantics(version ?? CURRENT, legacy);
+  function markCurrent(): void {
+    if (version !== undefined) return;
+    version = CURRENT;
+    dispatch("modechange", { formulaVersion: CURRENT });
+  }
 </script>
 
 <div class="ppp-versioned-formula-editor">
-<FormulaMode {version} {disabled} on:change={(event) => { version = event.detail.formulaVersion; dispatch("modechange", event.detail); }} />
 {#if semantics}
   <FormulaEditor bind:this={editor} {expression} {semantics} {fields} {placeholder} {ariaLabel} {rows} {disabled} {highlight}
-    on:change={(event) => { hasContent = !!event.detail.trim(); dispatch("change", event.detail); }}
+    on:change={(event) => { hasContent = !!event.detail.trim(); markCurrent(); dispatch("change", event.detail); }}
     on:validation={(event) => { pending = event.detail.pending; errors = event.detail.errors; hasContent = !!event.detail.value.trim(); }}
-    on:commit={(event) => dispatch("commit", event.detail)} />
+    on:commit={(event) => { markCurrent(); dispatch("commit", event.detail); }} />
 {:else}
   <textarea value={expression} {rows} readonly aria-label={ariaLabel || placeholder || $i18n.t("views.dashboard.formula.title")}></textarea>
 {/if}

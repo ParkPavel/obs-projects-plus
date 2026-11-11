@@ -330,7 +330,7 @@ describe("PipelineEditor — field, function and formula boxes", () => {
     jest.advanceTimersByTime(400);
     expect(m.events).toHaveLength(1);
     const col = (m.events[0]?.steps[0] as { columns: Array<{ name: string; expression: string }> }).columns[0];
-    expect(col).toEqual({ name: "total", expression: "price * 2" });
+    expect(col).toEqual({ name: "total", expression: "price * 2", formulaVersion: "unified-v1" });
     m.destroy();
   });
 });

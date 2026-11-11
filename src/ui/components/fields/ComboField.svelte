@@ -110,6 +110,7 @@
 
   const uid = `ppp-combo-${++sequence}`;
   const listId = `${uid}-list`;
+  const popupLayer = "max(var(--ppp-z-popover, 50), calc(var(--layer-modal, 1000) + 1))";
 
   const ctl = createDraftController(value);
   const search = createOptionSearch<ComboOption>();
@@ -545,6 +546,7 @@
       aria-busy={loading ? "true" : undefined}
       aria-hidden={placementHidden ? "true" : undefined}
       style={popupStyle}
+      style:z-index={popupLayer}
       on:mousedown|preventDefault
     >
       <span bind:this={insetEl} class="ppp-combo-insets" aria-hidden="true"></span>
@@ -589,7 +591,6 @@
   }
   .ppp-combo-popup {
     position: fixed;
-    z-index: max(var(--ppp-z-popover, 50), calc(var(--layer-modal, 50) + 1));
     box-sizing: border-box;
     max-width: var(--ppp-popup-max-w, 24rem);
     max-height: 12rem;

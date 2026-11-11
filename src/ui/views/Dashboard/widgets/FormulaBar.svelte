@@ -9,8 +9,8 @@
   // The visual node-editor approach was rejected — code mode is the only mode.
 
   import { createEventDispatcher, onDestroy } from "svelte";
+  import { Icon } from "obsidian-svelte";
   import { evaluateVersionedFormula, validateVersionedFormula, formulaEditorSemantics } from "src/lib/formula/version";
-  import FormulaMode from "src/ui/components/FormulaEditor/FormulaMode.svelte";
   import type { DataFrame, DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
   import type { FormulaFieldDef } from "../types";
   import { previewFormulaField, formulaWouldCycle } from "./formulaPreview";
@@ -29,12 +29,15 @@
   const dispatch = createEventDispatcher<{
     apply: { name: string; expression: string; draft?: { formulaVersion?: string } };
     cancel: void;
+    remove: string;
   }>();
 
   let fieldName = "";
   let editingName: string | undefined;
-  let draftVersion: string | undefined;
-  $: draft = draftVersion === undefined ? {} : { formulaVersion: draftVersion };
+  // One rule set. A saved formula that predates it is converted when it is opened and saved again.
+  const FORMULA_VERSION = "unified-v1";
+  let draftVersion: string = FORMULA_VERSION;
+  $: draft = { formulaVersion: draftVersion };
   $: semantics = formulaEditorSemantics(draftVersion, "legacy-computed");
   let inputValue = expression;
   let adopted = expression;
@@ -174,9 +177,18 @@
   {#if formulaFields.length > 0}
     <div class="ppp-formula-saved" aria-label={$i18n.t("views.dashboard.formula.saved")}>
       {#each formulaFields as definition (definition.name)}
-        <button type="button" on:click={() => { fieldName = definition.name; editingName = definition.name; draftVersion = definition.formulaVersion; inputValue = definition.expression; }}>
-          ƒ {definition.name}
-        </button>
+        <div class="ppp-formula-saved-item">
+          <button type="button" on:click={() => { fieldName = definition.name; editingName = definition.name; draftVersion = definition.formulaVersion ?? FORMULA_VERSION; inputValue = definition.expression; }}>
+            ƒ {definition.name}
+          </button>
+          <button
+            type="button"
+            class="ppp-formula-saved-remove clickable-icon"
+            aria-label={$i18n.t("views.dashboard.formula.remove", { name: definition.name })}
+            title={$i18n.t("views.dashboard.formula.remove", { name: definition.name })}
+            on:click={() => dispatch("remove", definition.name)}
+          ><Icon name="x" size="xs" /></button>
+        </div>
       {/each}
     </div>
   {/if}
@@ -197,7 +209,6 @@
   {#if nameTaken}<p role="alert">{$i18n.t("modals.field.create.existing-name-error")}</p>{/if}
   {#if previewCyclic}<p role="alert">{$i18n.t("views.dashboard.formula.cycle")}</p>{/if}
 
-  <FormulaMode version={draftVersion} on:change={(event) => { draftVersion = event.detail.formulaVersion; }} />
   {#if semantics}
   <FormulaConstructor
     bind:this={editor}
@@ -248,6 +259,8 @@
 <style>
   .ppp-formula-scope { margin: 0; color: var(--text-muted); }
   .ppp-formula-saved { display: flex; flex-wrap: wrap; gap: 0.25em; }
+  .ppp-formula-saved-item { display: inline-flex; align-items: center; gap: 0.125em; }
+  .ppp-formula-saved-remove { display: inline-flex; align-items: center; justify-content: center; }
   .ppp-formula-bar {
     display: flex;
     flex-direction: column;

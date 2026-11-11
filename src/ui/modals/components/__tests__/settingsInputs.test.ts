@@ -88,7 +88,7 @@ test.each(["create", "configure"])("%s cannot save a formula during composition 
     input.value = "1 + 4"; input.dispatchEvent(new Event("input", { bubbles: true })); await settle();
     button.click(); await settle(); expect(save).toHaveBeenCalledTimes(1);
     expect(save.mock.calls[0][0].typeConfig.formula).toBe("1 + 4");
-    expect(save.mock.calls[0][0].typeConfig.formulaVersion).toBeUndefined();
+    expect(save.mock.calls[0][0].typeConfig.formulaVersion).toBe("unified-v1");
   } finally { m.destroy(); }
 });
 

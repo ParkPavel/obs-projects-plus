@@ -31,6 +31,8 @@
    * Bases cards do. Off by default: every other consumer is unchanged.
    */
   export let reserveEmpty = false;
+  /** A writable card supplies its existing record-update route. */
+  export let onBooleanChange: ((field: DataField, checked: boolean) => void) | undefined = undefined;
 
   setContext<string>("sourcePath", record.id);
 
@@ -83,7 +85,7 @@
           <span class="ppp-card-meta-chip">{itemText(value)}</span>
         {/if}
       {:else if field.type === DataFieldType.Boolean}
-        <Checkbox {field} {value} />
+        <Checkbox {field} {value} onChange={onBooleanChange && !field.derived && !field.identifier ? checked => onBooleanChange?.(field, checked) : undefined} />
       {:else if field.type === DataFieldType.String}
         <Text {field} {value} />
       {:else if field.type === DataFieldType.Number}

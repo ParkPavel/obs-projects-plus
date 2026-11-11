@@ -45,6 +45,7 @@ export interface WidgetController {
   handleTableConfigChange(e: CustomEvent<unknown>): void;
   /** FormulaBar apply: upsert a view-level formula field by name. */
   applyFormulaField(name: string, expression: string, draft?: import("src/lib/formula/version").VersionedFormula): void;
+  removeFormulaField(name: string): void;
 }
 
 export function createWidgetController({
@@ -140,7 +141,14 @@ export function createWidgetController({
     saveConfig({ ...config, formulaFields: updated });
   }
 
-  return { addWidget, duplicateWidget, removeWidget, handleWidgetConfigChange, handleTableConfigChange, applyFormulaField };
+  function removeFormulaField(name: string): void {
+    const config = cfg();
+    if (!config?.formulaFields?.some((definition) => definition.name === name)) return;
+    const formulaFields = config.formulaFields.filter((definition) => definition.name !== name);
+    saveConfig({ ...config, formulaFields });
+  }
+
+  return { addWidget, duplicateWidget, removeWidget, handleWidgetConfigChange, handleTableConfigChange, applyFormulaField, removeFormulaField };
 }
 
 /** B7: insert at `index` (clamped); no index means "at the end", as before. */

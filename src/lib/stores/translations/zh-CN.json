@@ -1076,6 +1076,7 @@
                 "reset-to-original-time": "重置为原始时间",
                 "draft": {
                     "title": "新建事件",
+                    "resize": "调整事件表单高度：拖动分隔条或使用方向键",
                     "discard": "放弃事件",
                     "start": "开始",
                     "end": "结束",
@@ -1195,7 +1196,7 @@
                     "layout-stack": "列表",
                     "hide-formula-bar": "隐藏公式栏",
                     "show-formula-bar": "显示公式栏",
-                    "formula-builder": "公式",
+                    "formula-builder": "计算字段",
                     "filter-bridge-global": "全局筛选器：{{count}} 个条件",
                     "filter-bridge-local": "本地：{{field}} = {{value}}",
                     "filter-bridge-clear": "清除本地筛选器",
@@ -1204,7 +1205,7 @@
                     "empty-hint": "仪表板是由区块组成的页面。从数据库开始：用本项目的笔记生成表格、看板或日历。",
                     "empty-add-block": "添加数据库",
                     "recalculating": "正在重新计算…",
-                    "show-formula-bar-tip": "显示公式编辑器 — 提示、实时预览、语法检查",
+                    "show-formula-bar-tip": "根据此仪表板中的记录添加或修改计算字段",
                     "add-widget": "添加组件",
                     "error-add-field": "添加字段失败。请重试。",
                     "error-reopen-schema": "重新打开模式失败。",
@@ -1290,10 +1291,6 @@
                     "resize": "调整区块大小：拖动或使用方向键",
                     "menu-properties": "«{{source}}» 的属性…"
                 },
-                "quick": {
-                    "group": "快速操作",
-                    "formula": "公式构建器"
-                },
                 "types": {
                     "data-table": "数据表",
                     "chart": "图表",
@@ -1314,6 +1311,8 @@
                 },
                 "formula": {
                     "title": "公式编辑器",
+                    "remove": "删除计算字段 {{name}}",
+                    "applied": "字段“{{name}}”已保存。它已作为列出现在表格以及区块（统计、图表）的字段列表中。",
                     "scope": "为此仪表板中的每条记录创建或更新计算字段。预览显示仪表板数据中的第一条记录；列聚合使用完整数据集。Markdown 属性保持不变。",
                     "saved": "已保存的仪表板公式 — 选择以编辑",
                     "cycle": "此公式会产生循环依赖。请先移除引用循环再应用。",
@@ -2024,9 +2023,6 @@
                 "pick-color": "选择颜色",
                 "favorites": "收藏",
                 "favorites-empty-hint": "按 ⭐ 添加",
-                "favorites-scope": "收藏颜色",
-                "shared-favorites": "通用",
-                "project-favorites-hint": "收藏颜色的更改仅影响所选项目。",
                 "used-in-notes": "笔记中使用的颜色",
                 "hex-code": "HEX 代码",
                 "invalid-format": "请输入 #RGB 或 #RRGGBB",

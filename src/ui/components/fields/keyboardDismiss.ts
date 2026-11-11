@@ -34,7 +34,9 @@ export function offerKeyboardDismiss(field: HTMLInputElement | HTMLTextAreaEleme
   if (!doc.body.classList.contains("is-mobile")) return () => {};
   const label = options.label();
   const bar = doc.body.createDiv({ cls: KEYBOARD_BAR_CLASS });
-  const pill = bar.createDiv({ cls: "mobile-toolbar-floating-options mod-raised" });
+  // Each control sits on a pill of its own: one shared backing used to stretch past the
+  // screen edge and put one button over a different background than the other.
+  const pill = bar.createDiv({ cls: "mobile-toolbar-floating-options mod-raised ppp-keyboard-pill" });
   const option = pill.createDiv({
     cls: "mobile-toolbar-option ppp-keyboard-hide",
     attr: { role: "button", "aria-label": label, title: label },
@@ -76,12 +78,13 @@ export function offerKeyboardDismiss(field: HTMLInputElement | HTMLTextAreaEleme
   }
   if (options.confirm) {
     const label = options.confirm.label();
-    const confirm = pill.createDiv({
+    const confirmPill = bar.createDiv({ cls: "mobile-toolbar-floating-options mod-raised ppp-keyboard-pill" });
+    const confirm = confirmPill.createDiv({
       cls: "mobile-toolbar-option ppp-keyboard-confirm",
       attr: { role: "button", "aria-label": label, title: label },
     });
     // Before keyboard-toggle, matching the existing right-hand control.
-    pill.insertBefore(confirm, option);
+    bar.insertBefore(confirmPill, pill);
     setIcon(confirm, "check");
     bindButton(confirm, (event) => { event.preventDefault(); options.confirm?.run(); });
   }

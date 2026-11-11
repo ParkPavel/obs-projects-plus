@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ProjectViewProps } from "src/customViewApi";
   import { createDataRecord } from "src/lib/dataApi";
+  import { DataFieldType } from "src/lib/dataframe/dataframe";
   import type {
     DataField,
     DataFrame,
@@ -118,11 +119,13 @@
 
   const handleRecordCheck =
     (checkField: string): OnRecordCheck =>
-    (record, checked) => {
+    (record, checked, fieldName = checkField) => {
       if (dataReadOnly) return;
+      const field = fields.find(f => f.name === fieldName);
+      if (!field || field.type !== DataFieldType.Boolean || field.repeated || field.derived || field.identifier) return;
       api.updateRecord(
         updateRecordValues(record, {
-          [checkField]: checked,
+          [fieldName]: checked,
         }),
         fields
       );
