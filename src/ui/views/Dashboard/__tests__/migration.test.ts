@@ -1,6 +1,6 @@
-﻿// src/ui/views/Dashboard/__tests__/migration.test.ts
+// src/ui/views/Dashboard/__tests__/migration.test.ts
 
-import { migrateTableConfig, isLegacyTableConfig, migrateAggregationCount, migrateDashboardTransforms, dropObsoleteQuickActions, markFormulaFieldsCurrent } from "../migration";
+import { migrateTableConfig, isLegacyTableConfig, migrateAggregationCount, migrateDashboardTransforms, dropObsoleteQuickActions } from "../migration";
 import type { DatabaseViewConfig } from "../types";
 
 describe("isLegacyTableConfig", () => {
@@ -305,31 +305,5 @@ describe("dropObsoleteQuickActions — a vault that still carries duplicate cont
     const result = dropObsoleteQuickActions(future);
     expect(result.migrated).toBe(false);
     expect(result.config).toBe(future);
-  });
-});
-
-describe("markFormulaFieldsCurrent — one rule set for saved calculated fields", () => {
-  const withFormulas = (formulaFields: unknown): DatabaseViewConfig =>
-    ({ widgets: [], layoutMode: "stack", layoutVersion: 1, table: {}, showWidgetToolbar: true, compactMode: false, formulaFields } as unknown as DatabaseViewConfig);
-
-  it("stamps a formula saved before the version mark and keeps its source", () => {
-    const r = markFormulaFieldsCurrent(withFormulas([{ name: "Net", expression: 'IF(type = "expense", 0 - amount, paid)' }]));
-    expect(r.migrated).toBe(true);
-    expect(r.config.formulaFields).toEqual([{ name: "Net", expression: 'IF(type = "expense", 0 - amount, paid)', formulaVersion: "unified-v1" }]);
-  });
-
-  it("leaves a marked formula, an unparsable one and a foreign shape alone, and is idempotent", () => {
-    const stored = withFormulas([
-      { name: "A", expression: "1 + 1", formulaVersion: "unified-v1" },
-      { name: "B", expression: "1 +" },
-      { name: "C", expression: "1", formulaVersion: "future-v9" },
-      null,
-    ]);
-    const r = markFormulaFieldsCurrent(stored);
-    expect(r.migrated).toBe(false);
-    expect(r.config).toBe(stored);
-    expect(markFormulaFieldsCurrent(withFormulas(undefined)).migrated).toBe(false);
-    const once = markFormulaFieldsCurrent(withFormulas([{ name: "N", expression: "2 * 3" }]));
-    expect(markFormulaFieldsCurrent(once.config).migrated).toBe(false);
   });
 });

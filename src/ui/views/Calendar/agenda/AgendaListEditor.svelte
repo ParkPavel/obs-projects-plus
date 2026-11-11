@@ -810,7 +810,7 @@
     .editor-header {
       padding: var(--ppp-spacing-sm, 0.5rem) var(--ppp-spacing-md, 0.75rem);
       background: var(--background-primary);
-      border-bottom: 1px solid var(--background-modifier-border);
+      border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
     }
     
     .editor-title {

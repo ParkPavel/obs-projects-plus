@@ -94,6 +94,11 @@
   let alive = true;
   const isCurrent = () => alive && file.path === ownerPath;
 
+  function isPaletteClick(event: MouseEvent): boolean {
+    const palette = (event.currentTarget as HTMLElement).querySelector(".ppp-note-props__palette-inline");
+    return palette?.contains(event.target as Node) ?? false;
+  }
+
   const EMPTY_OVERLAY: NoteOverlay = { hidden: [], pinned: [], order: [] };
   const READONLY_TYPES = new Set<string>(["formula", "rollup"]);
 
@@ -952,7 +957,7 @@
                 tabindex={canEdit ? 0 : -1}
                 aria-label={canEdit ? undefined : entry.key}
                 title={canEdit ? undefined : readOnlyTitle(entry)}
-                on:click={() => canEdit && startEdit(entry, type)}
+                on:click={(e) => canEdit && !isPaletteClick(e) && startEdit(entry, type)}
                 on:keydown={(e) => {
                   if (e.target !== e.currentTarget) return;
                   if (canEdit && (e.key === "Enter" || e.key === " ")) {

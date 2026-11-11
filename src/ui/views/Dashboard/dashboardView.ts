@@ -9,7 +9,7 @@ import {
 import DashboardCanvasSvelte from "./DashboardCanvas.svelte";
 import type { DatabaseViewConfig } from "./types";
 import { isLegacyTableConfig, migrateTableConfig,
-  emptyDashboardConfig, migrateDashboardTransforms, dropObsoleteQuickActions, markFormulaFieldsCurrent } from "./migration";
+  emptyDashboardConfig, migrateDashboardTransforms, dropObsoleteQuickActions } from "./migration";
 import { get } from "svelte/store";
 import { app } from "src/lib/stores/obsidian";
 import { writeMigrationBackup } from "src/lib/settingsBackup";
@@ -119,14 +119,6 @@ export class DashboardView extends ProjectView<DatabaseViewConfig> {
     const withoutQuickActions = dropObsoleteQuickActions(config);
     if (withoutQuickActions.migrated) {
       config = withoutQuickActions.config;
-      migrated = true;
-      props.saveConfig(config);
-    }
-
-    // One rule set for formulas: calculated fields saved before the version mark take it.
-    const currentFormulas = markFormulaFieldsCurrent(config);
-    if (currentFormulas.migrated) {
-      config = currentFormulas.config;
       migrated = true;
       props.saveConfig(config);
     }

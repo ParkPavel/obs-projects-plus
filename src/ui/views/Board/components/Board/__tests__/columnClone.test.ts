@@ -61,7 +61,7 @@ it("moves a zoomed clone at the pointer's pace, not at the pointer's pace times 
   // The library writes px; the follower rewrites it in rem, divided by the zoom (root font 16px in jsdom).
   expect(clone.style.transform).toBe("translate3d(12.5rem, 5rem, 0)");
   document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-  clone.style.transform = "translate3d(200px, 80px, 0)";
+  Object.assign(clone.style, { transform: "translate3d(200px, 80px, 0)" });
   window.dispatchEvent(new Event("mousemove"));
   expect(clone.style.transform).toBe("translate3d(200px, 80px, 0)");
 });

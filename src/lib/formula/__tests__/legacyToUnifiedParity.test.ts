@@ -2,9 +2,8 @@ import { evaluateExpression } from "src/lib/formula/extendedEvaluator";
 import type { DataRecord } from "src/lib/dataframe/dataframe";
 
 /**
- * Migration quality: every formula the owner's stand actually stores (field formulas of the demo
- * projects) gives the same value under the one remaining rule set as under the old
- * compatibility rules, over the value shapes those notes hold.
+ * These demo vectors agree between profiles. They are regression examples,
+ * not proof that arbitrary saved expressions can be migrated automatically.
  */
 const REAL_FORMULAS = [
   'IF(AND(type = "visit", status = "проведён"), 1)',
@@ -28,7 +27,7 @@ const SAMPLES = [
   {},
 ];
 
-describe("legacy-computed formulas behave the same under the single rule set", () => {
+describe("owner demo formulas agree between legacy-computed and unified-v1", () => {
   for (const expression of REAL_FORMULAS) {
     it(expression, () => {
       for (const sample of SAMPLES) {

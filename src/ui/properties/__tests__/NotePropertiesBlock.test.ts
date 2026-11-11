@@ -799,13 +799,12 @@ describe("i3-final NotePropertiesBlock", () => {
     const fm: Record<string, unknown> = { tint: "#ff0000", other: "x" };
     const { getMarkdownFiles } = setup(fm);
     await tick();
-    const swatch = () => row("tint").querySelector<HTMLButtonElement>(".ppp-note-props__swatch.is-button") as HTMLButtonElement;
-    swatch().click();
+    const picker = row("tint").querySelector(".color-picker--inline");
+    expect(picker).not.toBeNull();
+    row("tint").querySelector<HTMLElement>(".sat-light-picker")!.click();
     await flush();
-    swatch().click();
-    await flush();
-    swatch().click();
-    await flush();
+    expect(row("tint").querySelector(".color-picker--inline")).toBe(picker);
+    expect(row("tint").querySelector('[role="combobox"]')).toBeNull();
     expect(getMarkdownFiles).not.toHaveBeenCalled();
   });
 
@@ -820,7 +819,6 @@ describe("i3-final NotePropertiesBlock", () => {
     const first = setup(fm), second = setup({ ...fm });
     try {
       await tick();
-      for (const m of [first, second]) (m.container.querySelector(".ppp-note-props__swatch.is-button") as HTMLButtonElement).click();
       await flush();
       const favoriteTitles = (m: ReturnType<typeof setup>) => Array.from(m.container.querySelectorAll<HTMLButtonElement>(".favorites-grid .color-swatch")).map(button => button.title);
       expect(favoriteTitles(first)).toContain("Shared");
@@ -846,9 +844,7 @@ describe("i3-final NotePropertiesBlock", () => {
       await flush();
       first.component.$set({ file: new TFile("Elsewhere/new.md") });
       await flush();
-      expect(first.container.querySelector(".color-picker")).toBeNull();
-      (first.container.querySelector(".ppp-note-props__swatch.is-button") as HTMLButtonElement).click();
-      await flush();
+      expect(first.container.querySelector(".color-picker--inline")).not.toBeNull();
       expect(favoriteTitles(first)).toContain("Shared");
     } finally { first.component.$destroy(); second.component.$destroy(); settings.set(original); }
   });
@@ -857,15 +853,13 @@ describe("i3-final NotePropertiesBlock", () => {
     const m = setup({ tint: "#ff0000" }, { shade: "#00ff00" });
     try {
       await tick();
-      (m.container.querySelector(".ppp-note-props__swatch.is-button") as HTMLButtonElement).click();
       await flush();
       const sections = () => m.container.querySelectorAll(".color-picker > .palette-section").length;
       expect(sections()).toBe(3);
       m.component.$set({ file: new TFile("Notes/b.md") });
       await flush();
-      expect(m.container.querySelector(".color-picker")).toBeNull();
-      (m.container.querySelector(".ppp-note-props__swatch.is-button") as HTMLButtonElement).click();
-      await flush();
+      expect(m.container.querySelector(".color-picker--inline")).not.toBeNull();
+      expect(m.container.querySelector<HTMLElement>(".color-preview")?.style.backgroundColor).toBe("rgb(0, 255, 0)");
       expect(sections()).toBe(3);
     } finally { m.component.$destroy(); }
   });
@@ -874,7 +868,6 @@ describe("i3-final NotePropertiesBlock", () => {
     const m = setup({ tint: "#ff0000" });
     try {
       await tick();
-      (m.container.querySelector(".ppp-note-props__swatch.is-button") as HTMLButtonElement).click();
       await flush();
       const hue = m.container.querySelector<HTMLElement>(".hue-slider")!;
       jest.spyOn(hue, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, top: 0, left: 0, right: 100, bottom: 10, width: 100, height: 10, toJSON() { return {}; } });

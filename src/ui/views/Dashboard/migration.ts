@@ -1,7 +1,6 @@
-﻿// src/ui/views/Dashboard/migration.ts
+// src/ui/views/Dashboard/migration.ts
 
 import type { DatabaseViewConfig, DataTableConfig, WidgetDefinition } from "./types";
-import { parseFormula } from "src/lib/formula/syntax";
 import { migrateTransformToViewLevel } from "./widgets/legacyMigration";
 
 interface LegacyTableConfig {
@@ -215,31 +214,4 @@ export function dropObsoleteQuickActions(config: DatabaseViewConfig): {
     config: { ...config, quickActions: kept as NonNullable<DatabaseViewConfig["quickActions"]> },
     migrated: true,
   };
-}
-
-/**
- * One rule set for formulas. A calculated field saved before the version mark is
- * stamped with the current one when its source parses under it (the stand's real
- * formulas give identical values under both, see legacyToUnifiedParity). One that
- * does not parse keeps its source untouched: the editor shows the error and the
- * owner fixes or deletes it; nothing is rewritten blindly.
- */
-export function markFormulaFieldsCurrent(config: DatabaseViewConfig): {
-  config: DatabaseViewConfig;
-  migrated: boolean;
-} {
-  const fields = config.formulaFields;
-  if (!Array.isArray(fields)) return { config, migrated: false };
-  let migrated = false;
-  const next = fields.map((field) => {
-    if (!field || typeof field.expression !== "string" || field.formulaVersion !== undefined) return field;
-    try {
-      parseFormula(field.expression, undefined, "strict");
-    } catch {
-      return field;
-    }
-    migrated = true;
-    return { ...field, formulaVersion: "unified-v1" };
-  });
-  return migrated ? { config: { ...config, formulaFields: next }, migrated } : { config, migrated };
 }

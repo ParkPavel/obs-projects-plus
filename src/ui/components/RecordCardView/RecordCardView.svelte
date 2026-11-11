@@ -313,7 +313,7 @@
     cursor: pointer;
     color: var(--text-muted);
     padding-bottom: 0.25rem;
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
     margin-bottom: 0.25rem;
   }
 
