@@ -92,6 +92,22 @@ test.each(["create", "configure"])("%s cannot save a formula during composition 
   } finally { m.destroy(); }
 });
 
+test("clearing and retyping an existing formula never makes it a new definition", async () => {
+  const onSave = jest.fn().mockResolvedValue(true);
+  const expression = '"2" < "10"';
+  const m = mount(ConfigureField, { title: "Formula", existingFields: [], editable: true, onSave,
+    field: { ...base(DataFieldType.Formula), typeConfig: { formula: expression } } });
+  try {
+    await settle();
+    const input = m.target.querySelector<HTMLTextAreaElement>("textarea")!;
+    input.value = ""; input.dispatchEvent(new Event("input", {bubbles:true})); await settle();
+    input.value = expression; input.dispatchEvent(new Event("input", {bubbles:true})); await settle();
+    m.target.querySelector<HTMLButtonElement>("[data-variant='primary']")!.click(); await settle();
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0][0].typeConfig).toEqual({formula: expression});
+  } finally {m.destroy();}
+});
+
 test("Create validates the original date draft before writing a default into every note", async () => {
   const onCreate = jest.fn(), m = mount(CreateField, { existingFields: [], defaultName: "new", field: base(DataFieldType.Date), onCreate });
   try {

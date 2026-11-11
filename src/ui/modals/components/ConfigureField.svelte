@@ -37,6 +37,7 @@
 
   export let title: string;
   export let field: DataField;
+  const newFormulaDefinition = field.type !== DataFieldType.Formula;
   export let editable: boolean;
   export let existingFields: DataField[];
   export let onSave: (field: DataField) => void | Promise<void>;
@@ -972,7 +973,7 @@
         vertical
       >
         <FormulaEditor
-          newDefinition={field.typeConfig?.formula === undefined}
+          newDefinition={newFormulaDefinition}
           version={field.typeConfig?.formulaVersion}
           on:modechange={handleFormulaModeChange}
           expression={formulaExpression}
