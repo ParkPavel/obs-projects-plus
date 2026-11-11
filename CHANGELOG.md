@@ -10,6 +10,10 @@ mean that a new release has been published.
 
 ## 3.7.2 — unreleased
 
+### Unified formulas
+
+- One strict evaluator now serves formulas, transform columns and Agenda filters. Existing definitions migrate with a verified settings backup and a report; results can change. Unknown future versions fail closed. Rollback requires both the original settings and the previous plugin assets; see the [upgrade guide](docs/upgrade.md).
+
 ### Card controls and mobile panels
 
 - Boolean properties displayed in board cards can be toggled through the record update route without opening the note inspector. Read-only and computed values stay protected.

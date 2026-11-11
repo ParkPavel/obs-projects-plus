@@ -80,6 +80,6 @@ it("a field is found whatever its case — in the check and in the value", () =>
 
 it("messages are sentences, not parser tokens", () => {
   expect(validateFormulaExpression("paid +", ["paid"])).toEqual(["Формула не закончена — допишите значение"]);
-  expect(validateFormulaExpression("+", ["paid"])[0]).toMatch(/не хватает значения/);
+  expect(validateFormulaExpression("+", ["paid"])).toEqual(validateFormulaExpression("paid +", ["paid"]));
   expect(validateFormulaExpression("price * 2", ["paid"])).toEqual(["Нет свойства «price»"]);
 });

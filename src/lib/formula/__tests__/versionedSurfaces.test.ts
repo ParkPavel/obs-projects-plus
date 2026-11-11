@@ -19,9 +19,9 @@ const modern = { formulaVersion: "unified-v1" };
 
 describe("persisted formula versions", () => {
   it("retains each surface's absent-version default", () => {
-    expect(formulaSemantics(undefined, "legacy-filter")).toBe("legacy-filter");
-    expect(formulaSemantics(undefined, "legacy-computed")).toBe("legacy-computed");
-    expect(formulaSemantics("unified-v1", "legacy-filter")).toBe("unified-v1");
+    expect(formulaSemantics(undefined)).toBe("unified-v1");
+    expect(formulaSemantics(undefined)).toBe("unified-v1");
+    expect(formulaSemantics("unified-v1")).toBe("unified-v1");
   });
   it.each(["future-v2", "", null, 0, false, {}, ["unified-v1"]])("fails closed for unsupported persisted version %p", version => {
     const result = evaluateVersionedFormula("1 + 1", version, { record: frame().records[0]! });
@@ -43,7 +43,7 @@ describe("persisted formula versions", () => {
       { name: "next", expression: '"2" < "10"', ...modern },
       { name: "unknown", expression: "1 + 1", formulaVersion: "future" },
     ]);
-    expect(result.records[0]!.values).toMatchObject({ old: true, next: false, unknown: null });
+    expect(result.records[0]!.values).toMatchObject({ old: false, next: false, unknown: null });
     expect(JSON.stringify(source)).toBe(before);
   });
   it("resolves strict bare reserved field names and long operator dependencies", () => {
@@ -66,13 +66,13 @@ describe("persisted formula versions", () => {
   });
   it("orders new static PROP dependencies for names with spaces while preserving old ordering", () => {
     const definitions = [{ name: "answer", expression: 'PROP("Total cost") + 1' }, { name: "Total cost", expression: "qty * 2" }];
-    expect(applyFormulaFields(frame(), definitions).records.map(record => record.values["answer"])).toEqual([1, 1]);
+    expect(applyFormulaFields(frame(), definitions).records.map(record => record.values["answer"])).toEqual([5, 7]);
     expect(applyFormulaFields(frame(), definitions.map(definition => ({ ...definition, ...modern }))).records.map(record => record.values["answer"])).toEqual([5, 7]);
   });
   it("previews the saved mode, explicit draft mode and explicit return to compatibility", () => {
     const definitions = [{ name: "answer", expression: '"2" < "10"', ...modern }];
     expect(previewFormulaField(frame(), definitions, "answer", '"2" < "10"').value).toBe(false);
-    expect(previewFormulaField(frame(), definitions, "answer", '"2" < "10"', {}).value).toBe(true);
+    expect(previewFormulaField(frame(), definitions, "answer", '"2" < "10"', {}).value).toBe(false);
     expect(previewFormulaField(frame(), [], "new", '"2" < "10"', modern).value).toBe(false);
     expect(previewFormulaField(frame(), [], "new", "1", { formulaVersion: "future" }).error).toBeTruthy();
     expect(definitions[0]!.formulaVersion).toBe("unified-v1");
@@ -85,7 +85,7 @@ describe("persisted formula versions", () => {
       { name: "newRange", expression: "SUM(@DOUBLED)", ...modern },
       { name: "future", expression: "7", formulaVersion: "future" },
     ] }] });
-    expect(result.data.records.map(record => record.values["oldRange"])).toEqual([0, 0]);
+    expect(result.data.records.map(record => record.values["oldRange"])).toEqual([10, 10]);
     expect(result.data.records.map(record => record.values["newRange"])).toEqual([10, 10]);
     expect(result.data.records[0]!.values["future"]).toBeNull();
     expect(result.meta.warnings).toHaveLength(2);

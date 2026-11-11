@@ -10,18 +10,6 @@
             "matches": "所选日期共有 {{total}} 条记录，其中 {{count}} 条匹配。"
         },
         "formula-profile-docs": {
-            "legacy-computed": {
-                "COUNT": "计算列表的每个位置，包括空白项。跳过单独的 null；兼容模式的 @列仅包含数值。",
-                "WORKDAYS": "按原有本地日期规则计算工作日。反向日期范围返回零。",
-                "TODAY": "设备当前日期，格式为 YYYY-MM-DD。",
-                "NOW": "设备当前时间，格式为 ISO 时间戳。"
-            },
-            "legacy-filter": {
-                "TODAY": "所选参考日期，格式为 YYYY-MM-DD。",
-                "NOW": "此次计算固定使用的参考时刻。",
-                "AND": "仅当所有参数均为布尔值 true 时返回 true。",
-                "OR": "任一参数为布尔值 true 时返回 true。"
-            },
             "unified-v1": {
                 "COUNT": "计算非 null 值和列表项。跳过 null 和缺失项；false、零和空文本均计数。",
                 "WORKDAYS": "计算（较早日期，较晚日期] 内的有符号工作日差。交换日期会改变正负号；同一天为零。",

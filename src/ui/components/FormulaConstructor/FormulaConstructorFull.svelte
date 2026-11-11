@@ -19,7 +19,7 @@
     entries: ReadonlyArray<{ signature: string; doc?: string }>;
   };
 
-  export let semantics: import("src/lib/formula/catalog").FormulaSemantics = "legacy-computed";
+  export let semantics: import("src/lib/formula/catalog").FormulaSemantics = "unified-v1";
   export let disabled = false;
   export let ariaLabel = "";
   export let value: string = "";

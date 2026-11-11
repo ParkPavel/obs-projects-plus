@@ -38,7 +38,7 @@
   const FORMULA_VERSION = "unified-v1";
   let draftVersion: string | undefined = FORMULA_VERSION;
   $: draft = draftVersion === undefined ? {} : { formulaVersion: draftVersion };
-  $: semantics = formulaEditorSemantics(draftVersion, "legacy-computed");
+  $: semantics = formulaEditorSemantics(draftVersion);
   let inputValue = expression;
   let adopted = expression;
   let barEl: HTMLElement | null = null;

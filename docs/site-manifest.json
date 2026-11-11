@@ -43,11 +43,11 @@
     },
     {
       "name": "read/changelog.html",
-      "sha256": "b5eeab9d187c4d6b7834977438d461dbde4390ee2e0fa11d31a37af202b40eb6"
+      "sha256": "fe226b65085e2836adeef8497f190be323254fb88291258e91bea5c5f03488c5"
     },
     {
       "name": "read/changelog-ru.html",
-      "sha256": "d2e4f20cd6b13a27fd02583aa14691e12f877079dc24037873afc360a86729a6"
+      "sha256": "537096a6da39e3849630bec9948895ed151718e20d90c1b4dc1c00114f53380e"
     },
     {
       "name": "read/roadmap.html",
@@ -115,11 +115,11 @@
     },
     {
       "name": "read/upgrade-ru.html",
-      "sha256": "06952a5882fe681e5c785e8aac9a8131cb114dbb8954def6ee2b7a09ed72ef8c"
+      "sha256": "64d458132857f507822dea74c078ce2e7f61791d6723a2df6ba33824c9ab4ab9"
     },
     {
       "name": "read/upgrade.html",
-      "sha256": "20fadb302896d8d644fc92f1e67ea592334ad00fc9d39e8d811bb00ac25200e8"
+      "sha256": "0821ddb12a0ffc21d9c1a11dd916dbff41c3613a78f699112c713716994ff462"
     },
     {
       "name": "read/user-guide-en.html",
@@ -159,7 +159,7 @@
     },
     {
       "name": "search-index.json",
-      "sha256": "7e86480723272b0a7a3324e435c61f356cfe60084c3cd8ea5b90306086df26db"
+      "sha256": "6d550fdff776bac0020d862180efc9b598f37e09677a999357151557140d06a5"
     },
     {
       "name": ".nojekyll",

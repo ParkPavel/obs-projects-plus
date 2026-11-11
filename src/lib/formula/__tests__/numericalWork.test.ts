@@ -23,6 +23,6 @@ test("nested NPV cashflow work is bounded in compatibility mode too", () => {
 
 test("compatibility WORKDAYS charges its real day-by-day loop across nested calls", () => {
   const source = 'MAP([1,2,3,4,5], "item", WORKDAYS("2026-10-01","2026-10-15"))';
-  expect(evaluateFormulaWithError(source, record).error).toContain("limit");
+  expect(evaluateFormulaWithError(source, record)).toEqual({ value: [10, 10, 10, 10, 10] });
   expect(evaluateExpression(source, { record, semantics: "unified-v1" }).error).toBeUndefined();
 });

@@ -12,7 +12,7 @@ import type { DataRecord, DataField } from 'src/lib/dataframe/dataframe';
 import type { AgendaFilter, AgendaFilterGroup, AgendaCustomList } from 'src/settings/v3/settings';
 import type { FilterOperator, FilterCondition, FilterDefinition } from 'src/settings/base/settings';
 import { isDateFilterOperator } from 'src/settings/base/settings';
-import { parseFormula, evaluateFormula, evaluateVersionedFormula, createFormulaPass } from 'src/lib/formula';
+import { evaluateVersionedFormula, createFormulaPass } from 'src/lib/formula';
 import { matchesCondition, matchesFilterConditions, type FilterOpts } from 'src/lib/engine/filterEvaluator';
 import { stripToDisplay } from 'src/lib/engine/wikilink';
 import { calendarLogger } from '../logger';
@@ -23,14 +23,14 @@ import { humanFormulaError } from 'src/lib/formula/formulaErrors';
 /** Both the editor and versioned list evaluate exactly this subset and reference date. */
 export function evaluateAgendaFormula(records: DataRecord[], expression: string, version: unknown,
   baseDate: Dayjs, fields: DataField[]): { records: DataRecord[]; error: string | null } {
-  const semantics = formulaEditorSemantics(version, "legacy-filter");
+  const semantics = formulaEditorSemantics(version);
   if (!semantics) return { records: [], error: humanFormulaError("Unsupported formula version") };
   const frame = { records, fields };
   const referenceDate = baseDate.toDate();
   const pass = createFormulaPass(frame, semantics, referenceDate);
   let error: string | null = null;
   const matched = records.filter(record => {
-    const result = evaluateVersionedFormula(expression, version, { record, frame, referenceDate, pass }, "legacy-filter");
+    const result = evaluateVersionedFormula(expression, version, { record, frame, referenceDate, pass });
     if (result.error && !error) error = result.error;
     return !result.error && Boolean(result.value);
   });
@@ -103,19 +103,7 @@ export function filterRecordsForList(
   fields: DataField[] = []
 ): DataRecord[] {
   if (list.filterMode === 'advanced' && list.filterFormula) {
-    if (list.formulaVersion !== undefined) {
-      return evaluateAgendaFormula(records, list.filterFormula, list.formulaVersion, baseDate, fields).records;
-    }
-    try {
-      const ast = parseFormula(list.filterFormula);
-      return records.filter(r => {
-        try { return evaluateFormula(ast, r, baseDate.toDate()); }
-        catch (e) { calendarLogger.error(`[FilterEngine] formula eval failed for ${r?.id}`, e); return false; }
-      });
-    } catch (e) {
-      calendarLogger.error(`[FilterEngine] formula parse failed: ${list.filterFormula}`, e);
-      return [];
-    }
+    return evaluateAgendaFormula(records, list.filterFormula, list.formulaVersion, baseDate, fields).records;
   }
   if (list.filterMode === 'visual' && list.filterGroup) {
     return records.filter(r => evaluateFilterGroup(r, list.filterGroup!, baseDate));

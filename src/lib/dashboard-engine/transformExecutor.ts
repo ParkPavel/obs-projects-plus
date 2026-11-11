@@ -23,10 +23,9 @@ import type {
   AggregationFunction,
 } from "./transformTypes";
 import { matchesFilterConditions } from "src/lib/engine/filterEvaluator";
-import { isNumeric, toNumber, toNumbers } from "src/lib/engine/numeric";
+import { isNumeric, toNumbers } from "src/lib/engine/numeric";
 import { aggregate, type RollupFunction } from "src/lib/engine/aggregate";
-import { createFormulaPass, evaluateFormulaValue } from "./formulaEngine";
-import { evaluateFormulaValue as evaluateCanonicalFormulaValue } from "src/lib/formula";
+import { createFormulaPass } from "./formulaEngine";
 import { evaluateVersionedFormula } from "src/lib/formula/version";
 import { compileSafeRegex } from "src/lib/helpers/regexSafety";
 import { joinKey } from "./joinKey";
@@ -507,99 +506,26 @@ function inferFieldType(value: DataValue | undefined | null): DataFieldType {
   return DataFieldType.String;
 }
 
-function executeCompute(
-  df: DataFrame,
-  step: ComputeStep,
-  warnings: string[],
-  budget: TransformBudget
-): DataFrame {
-  if (step.columns.some(column => {
-    budget.charge();
-    return column.formulaVersion !== undefined;
-  })) {
-    return executeVersionedCompute(df, step, warnings, budget);
-  }
-  // First pass: compute all values to infer types
-  const columnValues: (DataValue | undefined | null)[][] = step.columns.map(() => {
-    budget.charge();
-    return [];
-  });
-  // i3-final: `df` is not changed while this step runs, so a column aggregate
-  // (`SUM(@amount)`) is computed once for the step instead of once per record.
-  const pass = createFormulaPass(df, "legacy-computed", undefined, budget.charge);
 
-  const newRecords = df.records.map((record) => {
-    budget.charge();
-    const newValues = { ...record.values };
-
-    for (let ci = 0; ci < step.columns.length; ci++) {
-      budget.charge();
-      const col = step.columns[ci]!;
-      try {
-        // Build a DataRecord that includes previously computed columns in this step
-        const evalRecord: DataRecord = { id: record.id, values: newValues };
-        const result = evaluateFormulaValue(col.expression, evalRecord, df, pass);
-        newValues[col.name] = result;
-        columnValues[ci]!.push(result);
-      } catch {
-        newValues[col.name] = undefined;
-        columnValues[ci]!.push(undefined);
-        warnings.push(
-          `Compute error for '${col.name}' on record '${record.id}': invalid expression`
-        );
-      }
-    }
-
-    return { ...record, values: newValues };
-  });
-
-  // Infer field types from first non-null value
-  const newFields: DataField[] = [
-    ...df.fields,
-    ...step.columns.map((col, ci) => {
-      budget.charge();
-      const firstVal = columnValues[ci]!.find((v) => {
-        budget.charge();
-        return v != null;
-      });
-      return {
-        name: col.name,
-        type: inferFieldType(firstVal),
-        repeated: false,
-        identifier: false,
-        derived: true,
-      };
-    }),
-  ];
-
-  return { fields: newFields, records: newRecords };
-}
 
 /** New columns see complete earlier columns; legacy aggregates still read the input frame. */
-function executeVersionedCompute(df: DataFrame, step: ComputeStep, warnings: string[], budget: TransformBudget): DataFrame {
-  let records = df.records.map(record => {
-    budget.charge();
-    return ({ ...record, values: { ...record.values } });
-  });
+/** Every calculated column reads the completed earlier columns under the same rules. */
+function executeCompute(df: DataFrame, step: ComputeStep, warnings: string[], budget: TransformBudget): DataFrame {
+  let records = df.records.map(record => { budget.charge(); return { ...record, values: { ...record.values } }; });
   const fields = [...df.fields];
   const referenceDate = new Date();
-  const legacyPass = createFormulaPass(df, "legacy-computed", referenceDate, budget.charge);
   for (const column of step.columns) {
     budget.charge();
-    const unified = column.formulaVersion === "unified-v1";
-    const frame = unified ? { fields: [...fields], records } : df;
-    const pass = unified ? createFormulaPass(frame, "unified-v1", referenceDate, budget.charge) : legacyPass;
+    const frame = { fields: [...fields], records };
+    const pass = createFormulaPass(frame, "unified-v1", referenceDate, budget.charge);
     records = records.map(record => {
       budget.charge();
-      const result = column.formulaVersion === undefined
-        ? { value: evaluateFormulaValue(column.expression, record, df, legacyPass) }
-        : evaluateVersionedFormula(column.expression, column.formulaVersion, { record, frame, pass, referenceDate });
+      const result = evaluateVersionedFormula(column.expression, column.formulaVersion, { record, frame, pass, referenceDate });
       if (result.error) warnings.push(`Compute error for '${column.name}' on record '${record.id}': ${result.error}`);
       return { ...record, values: { ...record.values, [column.name]: result.value } };
     });
     fields.push({ name: column.name, type: inferFieldType(records.find(record => {
-      budget.charge();
-      return record.values[column.name] != null;
+      budget.charge(); return record.values[column.name] != null;
     })?.values[column.name]), repeated: false, identifier: false, derived: true });
   }
   return { fields, records };
@@ -609,62 +535,11 @@ function executeVersionedCompute(df: DataFrame, step: ComputeStep, warnings: str
  * @deprecated Compatibility adapter for the old numeric-only API. Arithmetic
  * evaluation is delegated to the canonical formula runtime.
  */
-export function evaluateExpression(
-  expression: string,
-  values: Record<string, DataValue | undefined | null>
-): number | null {
-  // Tokenize: split by operators, preserving them
-  const tokens = expression
-    .trim()
-    .split(/\s*([+\-*/()])\s*/)
-    .filter((t) => t.length > 0);
-
-  if (tokens.length === 0 || tokens.includes("(") || tokens.includes(")")) return null;
-
-  // Simple two-pass evaluator (no parentheses for Phase 1)
-  const resolvedTokens: (number | string)[] = tokens.map((token) => {
-    // Numeric literal. The token comes from the user's expression text, but the
-    // grammar it must satisfy is the same one their data satisfies, so there is
-    // no reason for this to be a second rule — and it was: this branch carried
-    // a `token !== ""` guard that the field-reference branch ten lines below
-    // did not (#180a).
-    const literal = toNumber(token);
-    if (literal !== null) return literal;
-
-    // Operator
-    if (["+", "-", "*", "/"].includes(token)) return token;
-
-    // Field reference
-    const fieldValue = toNumber(values[token]);
-    if (fieldValue !== null) return fieldValue;
-
-    return NaN;
-  });
-
-  // Evaluate: first pass * and /, second pass + and -
-  return evaluateArithmeticCompatibility(resolvedTokens);
+/** Numeric adapter over the same bounded evaluator used by formulas and filters. */
+export function evaluateExpression(expression: string, values: Record<string, DataValue | undefined | null>): number | null {
+  const result = evaluateVersionedFormula(expression, "unified-v1", {record: {id: "numeric-expression", values}});
+  return typeof result.value === "number" && Number.isFinite(result.value) ? result.value : null;
 }
-
-function evaluateArithmeticCompatibility(tokens: (number | string)[]): number | null {
-  if (tokens.length === 0 || tokens.length % 2 === 0) return null;
-
-  const parts: string[] = [];
-  for (let index = 0; index < tokens.length; index++) {
-    const token = tokens[index];
-    if (index % 2 === 0) {
-      if (typeof token !== "number" || !Number.isFinite(token)) return null;
-      parts.push(String(token));
-    } else {
-      if (typeof token !== "string" || !["+", "-", "*", "/"].includes(token)) return null;
-      parts.push(token);
-    }
-  }
-
-  const result = evaluateCanonicalFormulaValue(parts.join(" "), { id: "", values: {} });
-  return typeof result === "number" && Number.isFinite(result) ? result : null;
-}
-
-// ── FILTER ───────────────────────────────────────────────────
 
 /**
  * Apply FilterDefinition to DataFrame.

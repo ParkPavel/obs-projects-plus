@@ -7,45 +7,35 @@ function bindingName(node: FormulaNode | undefined, fallback?: string): string |
   return node?.type === "field" ? node.name : node?.type === "literal" ? String(node.value) : fallback;
 }
 
-/** One validator walk; compatibility adapters retain their old diagnostics. */
-export function validateFormulaRaw(expression: string, fields: string[], semantics: FormulaSemantics, compatibility = false): string[] {
+/** One bounded validator walk for every formula surface. */
+export function validateFormulaRaw(expression: string, fields: string[], semantics: FormulaSemantics): string[] {
   const errors: string[] = [];
-  const shared = semantics === "unified-v1";
   try {
     if (!isFormulaSemantics(semantics)) throw new Error("Unknown formula semantics");
-    if (shared && expression.length > MAX_FORMULA_INPUT_LENGTH) throw new Error("Formula input limit exceeded");
-    for (const token of tokenize(expression, shared ? "strict" : "legacy")) {
-      // The old filter validator checked syntax/fields only, even for a
-      // recognised but unsupported computed function. Preserve that API.
-      if (!(compatibility && semantics === "legacy-filter") && token.type === "FUNCTION" && !getFormulaDefinition(token.value, semantics)) {
+    if (expression.length > MAX_FORMULA_INPUT_LENGTH) throw new Error("Formula input limit exceeded");
+    for (const token of tokenize(expression, "strict")) {
+      if (token.type === "FUNCTION" && !getFormulaDefinition(token.value, semantics)) {
         errors.push(`Unknown function: ${token.value}`);
       }
     }
-    const ast = parseFormula(expression, shared ? MAX_FORMULA_DEPTH : undefined, shared ? "strict" : "legacy");
-    if (shared) assertFormulaLimits(ast);
+    const ast = parseFormula(expression, MAX_FORMULA_DEPTH, "strict");
+    assertFormulaLimits(ast);
     function check(node: FormulaNode, scope: ReadonlySet<string>): void {
-      if (!compatibility && semantics === "legacy-filter" && node.type === "column_ref") {
-        errors.push("Column references require new filter rules");
-        return;
-      }
-      if (node.type === "field" || (shared && node.type === "column_ref")) {
+      if (node.type === "field" || node.type === "column_ref") {
         if (node.type === "field" && scope.has(node.name)) return;
-        const found = semantics === "legacy-filter" ? fields.includes(node.name) : resolveFieldName(node.name, fields) !== undefined;
+        const found = resolveFieldName(node.name, fields) !== undefined;
         if (!found) errors.push(`Unknown field: ${node.name}`);
       } else if (node.type === "operator") {
-        if (!shared) { check(node.left, scope); check(node.right, scope); }
-        else {
-          const pending: FormulaNode[] = [node];
-          while (pending.length) {
-            const next = pending.pop()!;
-            if (next.type === "operator") pending.push(next.right, next.left);
-            else check(next, scope);
-          }
+        const pending: FormulaNode[] = [node];
+        while (pending.length) {
+          const next = pending.pop()!;
+          if (next.type === "operator") pending.push(next.right, next.left);
+          else check(next, scope);
         }
       } else if (node.type === "array") {
         node.items.forEach(item => check(item, scope));
       } else if (node.type === "function") {
-        if (shared && (node.name === "LET" || node.name === "LETS")) {
+        if (node.name === "LET" || node.name === "LETS") {
           const local = new Set(scope);
           const pairs = node.name === "LET" ? 1 : Math.floor((node.args.length - 1) / 2);
           for (let index = 0; index < pairs; index++) {
@@ -56,7 +46,7 @@ export function validateFormulaRaw(expression: string, fields: string[], semanti
           }
           const result = node.args[node.name === "LET" ? 2 : node.args.length - 1];
           if (result) check(result, local);
-        } else if (shared && (node.name === "MAP" || node.name === "FILTER" || node.name === "REDUCE")) {
+        } else if (node.name === "MAP" || node.name === "FILTER" || node.name === "REDUCE") {
           const input = node.args[0]; if (input) check(input, scope);
           const local = new Set(scope);
           local.add(bindingName(node.args[1], "item")!);

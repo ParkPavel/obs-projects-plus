@@ -1,5 +1,5 @@
-// Pure shared formula syntax; callable names come from the executable registry.
-import { FORMULA_FUNCTION_NAMES } from "./catalog";
+// One strict, bounded formula syntax shared by all consumers.
+import { MAX_FORMULA_DEPTH, MAX_FORMULA_INPUT_LENGTH } from "./limits";
 
 
 // ============================================
@@ -41,7 +41,6 @@ export type Token =
 // ============================================
 
 const OPERATORS = ['>=', '<=', '!=', '=', '>', '<', '+', '-', '*', '/'];
-const FUNCTIONS = FORMULA_FUNCTION_NAMES;
 
 /**
  * i3-final — a field name is letters of any script, digits and `_`. ASCII
@@ -52,14 +51,14 @@ const FUNCTIONS = FORMULA_FUNCTION_NAMES;
 const IDENT_START = /[\p{L}_]/u;
 const IDENT_PART = /[\p{L}\p{N}_]/u;
 const STRICT_NUMBER = /(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/y;
-export type FormulaSyntaxPolicy = "legacy" | "strict";
+export type FormulaSyntaxPolicy = "strict";
 
-export function tokenize(formula: string, policy: FormulaSyntaxPolicy = "legacy"): Token[] {
-  if (policy !== "legacy" && policy !== "strict") throw new Error("Unknown formula syntax");
-  const strict = policy === "strict";
+export function tokenize(formula: string, policy: FormulaSyntaxPolicy = "strict"): Token[] {
+  if (policy !== "strict") throw new Error("Unknown formula syntax");
+  if (formula.length > MAX_FORMULA_INPUT_LENGTH) throw new Error("Formula input limit exceeded");
   const tokens: Token[] = [];
   let i = 0;
-  const at = (index: number): string => strict && index < formula.length
+  const at = (index: number): string => index < formula.length
     ? String.fromCodePoint(formula.codePointAt(index)!) : formula[index] ?? "";
   function callFollows(index: number): boolean {
     while (index < formula.length) {
@@ -104,12 +103,11 @@ export function tokenize(formula: string, policy: FormulaSyntaxPolicy = "legacy"
           switch (escaped) {
             case 'n': value += '\n'; break;
             case 't': value += '\t'; break;
-            case 'r': value += strict ? '\r' : 'r'; break;
+            case 'r': value += '\r'; break;
             case '\\': value += '\\'; break;
             case quote: value += quote; break;
             default:
-              if (strict) throw new Error(`Unknown string escape: ${escaped}`);
-              value += escaped;
+              throw new Error(`Unknown string escape: ${escaped}`);
           }
         } else {
           value += formula[i];
@@ -117,7 +115,7 @@ export function tokenize(formula: string, policy: FormulaSyntaxPolicy = "legacy"
         i++;
       }
 
-      if (strict && formula[i] !== quote) throw new Error("Unterminated string literal");
+      if (formula[i] !== quote) throw new Error("Unterminated string literal");
       i++; // Skip closing quote
       tokens.push({ type: 'STRING', value, start: tokenStart, end: i });
       continue;
@@ -125,28 +123,16 @@ export function tokenize(formula: string, policy: FormulaSyntaxPolicy = "legacy"
 
     // Numbers
     const nextChar = formula[i + 1];
-    if (/\d/.test(char) || (strict && char === '.' && nextChar && /\d/.test(nextChar)) || (!strict && char === '-' && nextChar && /\d/.test(nextChar))) {
-      let value = '';
-      if (strict) {
-        STRICT_NUMBER.lastIndex = i;
-        const match = STRICT_NUMBER.exec(formula);
-        if (!match) throw new Error(`Invalid numeric literal at position ${i}`);
-        value = match[0];
-        i = STRICT_NUMBER.lastIndex;
-        if (formula[i] === '.' || (at(i) && IDENT_START.test(at(i)))) throw new Error(`Invalid numeric literal at position ${tokenStart}`);
-      } else {
-        if (char === '-') { value += char; i++; }
-        while (i < formula.length) {
-          const ch = formula[i];
-          if (!ch || !/[\d.]/.test(ch)) break;
-          value += ch;
-          i++;
-        }
-      }
-
-      // coercion-exempt: Class B — lexing a numeric source token, not coercing cell data; legacy scanner behavior is retained explicitly.
+    if (/\d/.test(char) || (char === '.' && nextChar && /\d/.test(nextChar))) {
+      STRICT_NUMBER.lastIndex = i;
+      const match = STRICT_NUMBER.exec(formula);
+      if (!match) throw new Error(`Invalid numeric literal at position ${i}`);
+      const value = match[0];
+      i = STRICT_NUMBER.lastIndex;
+      if (formula[i] === '.' || (at(i) && IDENT_START.test(at(i)))) throw new Error(`Invalid numeric literal at position ${tokenStart}`);
+      // coercion-exempt: Class B — lexing a validated numeric source token, not coercing cell data.
       const number = parseFloat(value);
-      if (strict && !Number.isFinite(number)) throw new Error(`Invalid numeric literal at position ${tokenStart}`);
+      if (!Number.isFinite(number)) throw new Error(`Invalid numeric literal at position ${tokenStart}`);
       tokens.push({ type: 'NUMBER', value: number, start: tokenStart, end: i });
       continue;
     }
@@ -202,7 +188,7 @@ export function tokenize(formula: string, policy: FormulaSyntaxPolicy = "legacy"
       }
       if (value) {
         tokens.push({ type: 'FIELD', value: `@${value}`, start: tokenStart, end: i });
-      } else if (strict) throw new Error(`Missing column name at position ${tokenStart}`);
+      } else throw new Error(`Missing column name at position ${tokenStart}`);
       continue;
     }
 
@@ -225,7 +211,7 @@ export function tokenize(formula: string, policy: FormulaSyntaxPolicy = "legacy"
         tokens.push({ type: 'BOOLEAN', value: false, start: tokenStart, end: i });
       } else if (upperValue === 'NULL') {
         tokens.push({ type: 'NULL', value: null, start: tokenStart, end: i });
-      } else if (strict ? callFollows(i) : FUNCTIONS.includes(upperValue)) {
+      } else if (callFollows(i)) {
         tokens.push({ type: 'FUNCTION', value: upperValue, start: tokenStart, end: i });
       } else {
         // Field reference
@@ -250,12 +236,10 @@ class Parser {
   private current = 0;
   private nesting = 0;
   private readonly maxDepth: number;
-  private readonly strict: boolean;
 
-  constructor(tokens: Token[], maxDepth = Infinity, strict = false) {
+  constructor(tokens: Token[], maxDepth = MAX_FORMULA_DEPTH) {
     this.tokens = tokens;
     this.maxDepth = maxDepth;
-    this.strict = strict;
   }
 
   private peek(): Token {
@@ -329,7 +313,7 @@ class Parser {
     try {
     const token = this.peek();
 
-    if (this.strict && token.type === 'OPERATOR' && (token.value === '+' || token.value === '-')) {
+    if (token.type === 'OPERATOR' && (token.value === '+' || token.value === '-')) {
       this.advance();
       const operand = this.parseTerm();
       if (token.value === '+') return { type: 'operator', operator: '*', left: { type: 'literal', value: 1 }, right: operand };
@@ -426,8 +410,8 @@ class Parser {
   }
 }
 
-export function parseFormula(formula: string, maxDepth?: number, policy: FormulaSyntaxPolicy = "legacy"): FormulaNode {
+export function parseFormula(formula: string, maxDepth?: number, policy: FormulaSyntaxPolicy = "strict"): FormulaNode {
   const tokens = tokenize(formula, policy);
-  const parser = new Parser(tokens, maxDepth, policy === "strict");
+  const parser = new Parser(tokens, maxDepth);
   return parser.parse();
 }

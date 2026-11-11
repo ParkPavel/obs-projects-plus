@@ -14,7 +14,7 @@
   }> = [];
   export let onInsert: ((signature: string) => void) | undefined = undefined;
 
-  export let semantics: import("src/lib/formula/catalog").FormulaSemantics = "legacy-computed";
+  export let semantics: import("src/lib/formula/catalog").FormulaSemantics = "unified-v1";
   $: groups = groupFormulaMetadata(semantics);
 
   $: categoryTitle = (category: string) =>

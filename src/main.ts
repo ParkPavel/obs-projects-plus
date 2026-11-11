@@ -1,3 +1,4 @@
+import { prepareFormulaMigration, migrateFormulaSettings } from "src/lib/formula/settingsMigration";
 import dayjs from "dayjs";
 import { migrateLegacyFavorites } from "src/lib/stores/palettes";
 import { installCrashLog, installLongTaskWatch } from "src/lib/errors/crashLog";
@@ -154,6 +155,7 @@ export default class ProjectsPlusPlugin extends Plugin {
   private loadedSettings?: LatestProjectsPluginSettings;
   /** #185: version found on disk when it differed from the current one. */
   private migratedFromVersion: number | null = null;
+  private formulaSettingsMigrated = false;
   /**
    * #199: the canonical form of what `data.json` last held, as far as this
    * plugin knows. It is what separates "our write did not land" from "someone
@@ -502,7 +504,7 @@ export default class ProjectsPlusPlugin extends Plugin {
     // the first firing a no-op.
     if (this.loadedSettings) {
       writer.prime(this.loadedSettings);
-      if (this.migratedFromVersion !== null) {
+      if (this.migratedFromVersion !== null || this.formulaSettingsMigrated) {
         // …but that echo was also the ONLY thing persisting a migration.
         // Skipping it alone would leave a v1 file on disk indefinitely, so the
         // migration is written here by name: because the version changed, not
@@ -919,12 +921,13 @@ export default class ProjectsPlusPlugin extends Plugin {
           );
           return this.refuseAsConflict(raw, "unresolvable");
         }
+        const adopted = await this.prepareCurrentFormulas(resolved.right, JSON.parse(raw));
         this.pendingAdoption = {
-          settings: resolved.right,
+          settings: adopted,
           base: canonical(JSON.parse(raw)),
           carried: episode.outcome.carried,
         };
-        return { kind: "adopted", settings: resolved.right };
+        return { kind: "adopted", settings: adopted };
       }
     }
   }
@@ -1286,13 +1289,28 @@ export default class ProjectsPlusPlugin extends Plugin {
     // defaults, which the file does NOT hold.
     this.confirmedOnDisk = canonical(raw);
     this.confirmedRawOnDisk = null;
-    this.publishSettings(result.right);
+    const migration = await this.prepareCurrentFormulas(result.right, raw);
+    this.formulaSettingsMigrated = migration !== result.right;
+    this.publishSettings(migration);
   }
 
   /**
    * #185 — put `value` into the store and remember the exact object, so the
    * writer can be primed with the reference that is already on disk.
    */
+  private async prepareCurrentFormulas(value: LatestProjectsPluginSettings, expectedDisk: unknown): Promise<LatestProjectsPluginSettings> {
+    if (!migrateFormulaSettings(value).changed) return value;
+    const dir = this.manifest.dir;
+    if (!dir) throw new Error("Cannot determine formula migration backup directory");
+    const rawText = await this.readSettingsFile();
+    if (rawText === null || canonical(JSON.parse(rawText)) !== canonical(expectedDisk)) {
+      throw new Error("Cannot verify original formula settings; reopen the plugin");
+    }
+    const migration = await prepareFormulaMigration(this.app.vault.adapter, dir, rawText, value);
+    if (migration.reportPath) new Notice(`Projects+: formula rules migrated. Backup and report: ${migration.reportPath}`, 15000);
+    return migration.settings;
+  }
+
   private publishSettings(value: LatestProjectsPluginSettings): void {
     this.loadedSettings = value;
     settings.set(value);

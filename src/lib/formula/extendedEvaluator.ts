@@ -1,12 +1,10 @@
-// One formula traversal. Existing exports keep the computed compatibility profile.
+// One bounded formula traversal for every surface.
 import type { DataRecord, DataValue, DataFrame, Optional } from "src/lib/dataframe/dataframe";
 import { humanFormulaError, resolveFieldName } from "./formulaErrors";
 import { parseFormula, type FormulaNode } from "./syntax";
 import { buildSafeClass, operandNumber, isAbsentOperand, type FormulaResult } from "./computedFunctions";
 import { getFormulaDefinition, formulaFunctionNames, isFormulaSemantics, type FormulaSemantics } from "./catalog";
-import { legacyEquals, legacyCompare } from "./legacyFunctions";
 import { sharedEquals, sharedCompare } from "./sharedSemantics";
-import { toNumbers } from "src/lib/engine/numeric";
 import { MAX_FORMULA_DEPTH as MAX_EVAL_DEPTH, MAX_FORMULA_INPUT_LENGTH, MAX_FORMULA_EVALUATION_STEPS, MAX_FORMULA_LIST_ITEMS as MAX_LIST_ITEMS, assertFormulaLimits, freezeParsedFormula, consumeFinancialWork } from "./limits";
 import { validateFormulaRaw } from "./validation";
 export { isStyledValue } from "./computedFunctions";
@@ -22,27 +20,19 @@ export type { StyledValue, FormulaResult } from "./computedFunctions";
  */
 const AST_CACHE_LIMIT = 256;
 const astCache = new Map<string, FormulaNode | Error>();
-const parserOwnedRoots = new WeakSet<FormulaNode>();
 const checkedParsedRoots = new WeakSet<FormulaNode>();
-function parsedFormula(expression: string, bounded = false): FormulaNode {
-  if (bounded && expression.length > MAX_FORMULA_INPUT_LENGTH) throw new Error("Formula input limit exceeded");
-  // Prefix BOTH profiles: arbitrary source cannot impersonate the other key space.
-  const key = (bounded ? "unified:" : "legacy:") + expression;
-  let entry = astCache.get(key);
+function parsedFormula(expression: string): FormulaNode {
+  if (expression.length > MAX_FORMULA_INPUT_LENGTH) throw new Error("Formula input limit exceeded");
+  let entry = astCache.get(expression);
   if (entry === undefined) {
     try {
-      entry = parseFormula(expression, bounded ? MAX_EVAL_DEPTH : undefined, bounded ? "strict" : "legacy");
-      if (bounded) {
-        assertFormulaLimits(entry);
-      }
-      // Legacy roots can also escape through public pass keys; do not let
-      // mutation poison the shared parse/shape caches for future callers.
+      entry = parseFormula(expression, MAX_EVAL_DEPTH, "strict");
+      assertFormulaLimits(entry);
       freezeParsedFormula(entry);
-      if (bounded) checkedParsedRoots.add(entry);
-      parserOwnedRoots.add(entry);
-    } catch (e) { entry = e instanceof Error ? e : new Error(String(e)); }
+      checkedParsedRoots.add(entry);
+    } catch (error) { entry = error instanceof Error ? error : new Error(String(error)); }
     if (astCache.size >= AST_CACHE_LIMIT) astCache.delete(astCache.keys().next().value as string);
-    astCache.set(key, entry);
+    astCache.set(expression, entry);
   }
   if (entry instanceof Error) throw entry;
   return entry;
@@ -54,7 +44,7 @@ function parsedFormula(expression: string, bounded = false): FormulaNode {
  * for the whole pass, yet it used to be recomputed for each record: O(N²),
  * seconds on a 2000-row table. A pass remembers, keyed by the parsed
  * expression's node (the AST cache keeps it stable) within this frame:
- *   - each column read by `@name`, raw and numeric;
+ *   - each typed column read by `@name`;
  *   - the value of every call that reads columns and nothing record-specific.
  * The caller owns the lifetime: a new pass for a new or changed frame.
  */
@@ -65,7 +55,6 @@ export interface FormulaPass {
   /** Caller-owned work accounting, shared across rows/columns of one execution. */
   readonly chargeWork?: (steps: number) => void;
   readonly rawColumns: Map<string, readonly unknown[]>;
-  readonly numericColumns: Map<string, readonly number[]>;
   readonly frameValues: Map<FormulaNode, Optional<DataValue>>;
 }
 
@@ -74,8 +63,8 @@ interface RuntimePass extends FormulaPass {
   readonly referenceTime: number;
 }
 
-export function createFormulaPass(frame?: DataFrame, semantics: FormulaSemantics = "legacy-computed", referenceDate?: Date, chargeWork?: (steps: number) => void): RuntimePass {
-  return { frame, semantics, referenceTime: referenceDate?.getTime() ?? Date.now(), ...(chargeWork ? { chargeWork } : {}), rawColumns: new Map(), numericColumns: new Map(), frameValues: new Map() };
+export function createFormulaPass(frame?: DataFrame, semantics: FormulaSemantics = "unified-v1", referenceDate?: Date, chargeWork?: (steps: number) => void): RuntimePass {
+  return { frame, semantics, referenceTime: referenceDate?.getTime() ?? Date.now(), ...(chargeWork ? { chargeWork } : {}), rawColumns: new Map(), frameValues: new Map() };
 }
 
 export interface FormulaEvaluationContext {
@@ -88,20 +77,18 @@ export interface FormulaEvaluationContext {
 
 function passFor(context: FormulaEvaluationContext): RuntimePass {
   const { pass, frame, semantics } = context;
-  if (!isFormulaSemantics(semantics)) {
-    throw new Error("Unknown formula semantics");
-  }
-  const matches = pass && pass.frame === frame && (pass.semantics ?? "legacy-computed") === semantics;
+  if (!isFormulaSemantics(semantics)) throw new Error("Unknown formula semantics");
+  const matches = pass && pass.frame === frame && (pass.semantics ?? "unified-v1") === semantics;
   const referenceTime = context.referenceDate?.getTime() ?? (matches ? pass.referenceTime ?? Date.now() : Date.now());
-  if (semantics === "unified-v1" && !Number.isFinite(referenceTime)) throw new Error("Invalid formula reference date");
-  if (matches && (pass.referenceTime === referenceTime || (pass.referenceTime === undefined && semantics === "legacy-computed"))) return { ...pass, semantics, referenceTime };
-  return createFormulaPass(frame, semantics, new Date(referenceTime));
+  if (!Number.isFinite(referenceTime)) throw new Error("Invalid formula reference date");
+  if (matches && pass.referenceTime === referenceTime) return { ...pass, semantics, referenceTime };
+  return createFormulaPass(frame, semantics, new Date(referenceTime), pass?.chargeWork);
 }
 
-/** Explicit context API. Nothing selects the new rules without naming its profile. */
+/** Explicit context API for the single current rule set. */
 export function evaluateExpression(expression: string, context: FormulaEvaluationContext): FormulaResult {
   try {
-    return { value: evaluateFormulaNode(parsedFormula(expression, context.semantics === "unified-v1"), context) };
+    return { value: evaluateFormulaNode(parsedFormula(expression), context) };
   } catch (error) {
     return { value: null, error: humanFormulaError(error instanceof Error ? error.message : String(error), Object.keys(context.record.values)) };
   }
@@ -110,10 +97,10 @@ export function evaluateExpression(expression: string, context: FormulaEvaluatio
 /** AST entry also serves the old boolean wrapper; it preserves its thrown errors. */
 export function evaluateFormulaNode(node: FormulaNode, context: FormulaEvaluationContext): Optional<DataValue> {
   const pass = passFor(context);
-  if (pass.semantics === "unified-v1" && !checkedParsedRoots.has(node)) assertFormulaLimits(node);
+  if (!checkedParsedRoots.has(node)) assertFormulaLimits(node);
   return evaluateNode(node, context.record, context.frame, undefined, 0, pass, {
     remaining: MAX_FORMULA_EVALUATION_STEPS,
-    cacheAst: pass.semantics === "unified-v1" ? checkedParsedRoots.has(node) : parserOwnedRoots.has(node),
+    cacheAst: checkedParsedRoots.has(node),
   });
 }
 
@@ -126,37 +113,19 @@ export function evaluateFormulaValue(
   return evaluateFormulaWithError(expression, record, dataFrame, pass).value;
 }
 
-export function evaluateFormulaWithError(
-  expression: string,
-  record: DataRecord,
-  dataFrame?: DataFrame,
-  pass?: FormulaPass
-): FormulaResult {
-  try {
-    const ast = parsedFormula(expression);
-    // A pass built for another frame would answer for the wrong rows.
-    const own: RuntimePass = pass && pass.frame === dataFrame && (pass.semantics ?? "legacy-computed") === "legacy-computed"
-      ? { ...pass, semantics: "legacy-computed", referenceTime: pass.referenceTime ?? Date.now() } : createFormulaPass(dataFrame);
-    const value = evaluateNode(ast, record, dataFrame, undefined, 0, own, { remaining: MAX_FORMULA_EVALUATION_STEPS, cacheAst: true });
-    return { value };
-  } catch (e) {
-    // i3-final: the preview's error is shown to the person — in their language.
-    return {
-      value: null,
-      error: humanFormulaError(e instanceof Error ? e.message : String(e), Object.keys(record.values)),
-    };
-  }
+export function evaluateFormulaWithError(expression: string, record: DataRecord, dataFrame?: DataFrame, pass?: FormulaPass): FormulaResult {
+  return evaluateExpression(expression, { record, ...(dataFrame ? { frame: dataFrame } : {}), ...(pass ? { pass } : {}), semantics: "unified-v1" });
 }
 
 export function validateFormulaExpression(
   expression: string,
   availableFields: string[]
 ): string[] {
-  return validateFormulaRaw(expression, availableFields, "legacy-computed", true).map(raw => humanFormulaError(raw, availableFields));
+  return validateFormulaRaw(expression, availableFields, "unified-v1").map(raw => humanFormulaError(raw, availableFields));
 }
 
 export function getFormulaFunctions(): string[] {
-  return formulaFunctionNames("legacy-computed");
+  return formulaFunctionNames("unified-v1");
 }
 
 // ── Internal ─────────────────────────────────────────────────
@@ -215,29 +184,20 @@ function evaluateNode(
 
   // i3-final: a column is read once per pass, in the frame's own key spelling.
   function rawColumn(name: string): readonly unknown[] {
-    if (!dataFrame && pass.semantics === "unified-v1") throw new Error("Column reference requires a data frame");
+    if (!dataFrame) throw new Error("Column reference requires a data frame");
     let col = pass.rawColumns.get(name);
     if (!col) {
       if (!dataFrame) return [];
       pass.chargeWork?.(dataFrame.records.length + dataFrame.fields.length);
       const key = resolveFieldName(name, dataFrame.fields.map((f) => f.name)) ?? name;
       // Frozen: the pass's own snapshot, which lets criteria remember scans.
-      col = Object.freeze(dataFrame.records.map((r) => pass.semantics === "unified-v1" && !Object.prototype.hasOwnProperty.call(r.values, key) ? undefined : r.values[key]));
+      col = Object.freeze(dataFrame.records.map((r) => !Object.prototype.hasOwnProperty.call(r.values, key) ? undefined : r.values[key]));
       pass.rawColumns.set(name, col);
     }
     return col;
   }
 
-  function resolveColumn(name: string): number[] {
-    let col = pass.numericColumns.get(name);
-    if (!col) {
-      // A whole column of user data — the plainest Class-A site in the file.
-      col = toNumbers(rawColumn(name));
-      pass.numericColumns.set(name, col);
-    }
-    // A copy: the value may be stored in a record, and records must not share it.
-    return col.slice();
-  }
+
 
   function rangeOf(n: FormulaNode): readonly unknown[] | null {
     if (n.type === "column_ref") return rawColumn(n.name);
@@ -247,113 +207,54 @@ function evaluateNode(
 
   function evaluate(n: FormulaNode): Optional<DataValue> {
     pass.chargeWork?.(1);
-    if (pass.semantics === "unified-v1" && --budget.remaining < 0) throw new Error("Formula evaluation limit exceeded");
+    if (--budget.remaining < 0) throw new Error("Formula evaluation limit exceeded");
     switch (n.type) {
-      case "literal":
-        return n.value;
-
+      case "literal": return n.value;
       case "field": {
         if (scope?.has(n.name)) return scope.get(n.name);
-        // D20: `Paid` reaches the property `paid` — names match without case.
-        const key = pass.semantics === "legacy-filter" ? n.name :
-          (pass.semantics === "unified-v1" ? Object.prototype.hasOwnProperty.call(record.values, n.name) : n.name in record.values)
-            ? n.name : resolveFieldName(n.name, Object.keys(record.values)) ?? n.name;
-        if (pass.semantics === "unified-v1" && !Object.prototype.hasOwnProperty.call(record.values, key)) return null;
+        const key = Object.prototype.hasOwnProperty.call(record.values, n.name)
+          ? n.name : resolveFieldName(n.name, Object.keys(record.values)) ?? n.name;
+        if (!Object.prototype.hasOwnProperty.call(record.values, key)) return null;
         const val = record.values[key];
         if (val === undefined) return null;
         if (typeof val === "string") {
-          const m = val.match(/^\[\[([^\]]+)\]\]$/);
-          if (m?.[1]) {
-            const inner = m[1];
-            const pipe = inner.indexOf("|");
+          const match = val.match(/^\[\[([^\]]+)\]\]$/);
+          if (match?.[1]) {
+            const inner = match[1], pipe = inner.indexOf("|");
             return pipe >= 0 ? inner.substring(pipe + 1) : inner;
           }
         }
         return val;
       }
-
-      case "column_ref":
-        if (pass.semantics === "legacy-filter") throw new Error('Unknown node type: "column_ref"');
-        if (pass.semantics === "unified-v1") return rawColumn(n.name).slice() as Array<Optional<DataValue>>;
-        return resolveColumn(n.name);
-
-      case "array":
-        return n.items.map((item) => evaluate(item));
-
-      case "operator": {
-        if (pass.semantics === "unified-v1") return evaluateOperators(n);
-        return applyOperator(n.operator, evaluate(n.left), evaluate(n.right));
-      }
-
+      case "column_ref": return rawColumn(n.name).slice() as Array<Optional<DataValue>>;
+      case "array": return n.items.map(item => evaluate(item));
+      case "operator": return evaluateOperators(n);
       case "function": {
-        if (pass.semantics === "legacy-filter" || !budget.cacheAst) return callFunction(n);
+        if (!budget.cacheAst) return callFunction(n);
         const shape = shapeOf(n);
         if (!shape.constant || !shape.readsColumn) return callFunction(n);
-        // i3-final: once per pass. Only a plain value is kept — a list would
-        // be one array shared by every record that stores it.
         if (pass.frameValues.has(n)) return pass.frameValues.get(n);
         const value = callFunction(n);
         if (value === null || typeof value !== "object") pass.frameValues.set(n, value);
         return value;
       }
-
-      default:
-        if (pass.semantics === "legacy-filter") throw new Error(`Unknown node type: ${JSON.stringify((n as { type?: unknown }).type)}`);
-        return null;
+      default: throw new Error("Unknown formula node or operator");
     }
   }
 
   function applyOperator(operator: string, left: Optional<DataValue>, right: Optional<DataValue>): Optional<DataValue> {
-    if (pass.semantics === "legacy-filter") {
-      switch (operator) {
-        case "=": return legacyEquals(left, right);
-        case "!=": return !legacyEquals(left, right);
-        case ">": return legacyCompare(left, right) > 0;
-        case "<": return legacyCompare(left, right) < 0;
-        case ">=": return legacyCompare(left, right) >= 0;
-        case "<=": return legacyCompare(left, right) <= 0;
-        // Saved filter formulas retain their original JS arithmetic.
-        case "+": return (left as number) + (right as number);
-        case "-": return (left as number) - (right as number);
-        case "*": return (left as number) * (right as number);
-        case "/": return (left as number) / (right as number);
-        default: throw new Error(`Unknown operator: ${operator}`);
-      }
-    }
-    if (pass.semantics === "unified-v1") {
-      if (operator === "=") return sharedEquals(left, right);
-      if (operator === "!=") return !sharedEquals(left, right);
-      if ([">", "<", ">=", "<="].includes(operator)) {
-        const comparison = sharedCompare(left, right);
-        if (comparison === null) return false;
-        if (operator === ">") return comparison > 0;
-        if (operator === "<") return comparison < 0;
-        if (operator === ">=") return comparison >= 0;
-        return comparison <= 0;
-      }
+    if (operator === "=") return sharedEquals(left, right);
+    if (operator === "!=") return !sharedEquals(left, right);
+    if ([">", "<", ">=", "<="].includes(operator)) {
+      const comparison = sharedCompare(left, right);
+      if (comparison === null) return false;
+      if (operator === ">") return comparison > 0;
+      if (operator === "<") return comparison < 0;
+      if (operator === ">=") return comparison >= 0;
+      return comparison <= 0;
     }
     switch (operator) {
-      case "=": return smartEq(left, right);
-      case "!=": return !smartEq(left, right);
-      case ">": return toNum(left) > toNum(right);
-      case "<": return toNum(left) < toNum(right);
-      case ">=": return toNum(left) >= toNum(right);
-      case "<=": return toNum(left) <= toNum(right);
       case "+": {
-        // `+` is numeric as soon as ONE side is a number; an absent operand
-        // contributes 0. Only when neither side is a number does it
-        // concatenate, so two absent fields give "" rather than a silent 0.
-        //
-        // Before #180a this operator disagreed with itself about an absent
-        // field: `null` arrived as 0 through `Number(null)` while
-        // `undefined` arrived as NaN and concatenated. Making both
-        // concatenate would have removed that disagreement and created a
-        // larger one — `-`, `*` and `/` read an absent operand as 0 through
-        // `toNum`, so `a - 1` would be -1 while `a + 1` was the string "1".
-        // Excel and Airtable read a blank cell as 0 in arithmetic while
-        // ignoring it inside AVERAGE; those are different questions and
-        // SPEC_MATH_SPREADSHEET_2026-09-02 §2.2 answers the second one.
-        // A PRESENT non-numeric value ("abc") still concatenates.
         const ln = operandNumber(left), rn = operandNumber(right);
         if (ln !== null && rn !== null) return ln + rn;
         if (ln !== null && isAbsentOperand(right)) return ln;
@@ -362,11 +263,8 @@ function evaluateNode(
       }
       case "-": return toNum(left) - toNum(right);
       case "*": return toNum(left) * toNum(right);
-      case "/": {
-        const d = toNum(right);
-        return d === 0 ? null : toNum(left) / d;
-      }
-      default: return null;
+      case "/": { const divisor = toNum(right); return divisor === 0 ? null : toNum(left) / divisor; }
+      default: throw new Error("Unknown formula node or operator");
     }
   }
 
@@ -394,17 +292,15 @@ function evaluateNode(
 
   function iterationList(value: Optional<DataValue>): unknown[] {
     const list: unknown[] = Array.isArray(value) ? value : value != null ? [value] : [];
-    if (list.length > MAX_LIST_ITEMS && pass.semantics === "unified-v1") throw new Error("Formula list limit exceeded");
-    return list.length > MAX_LIST_ITEMS ? list.slice(0, MAX_LIST_ITEMS) : list;
+    if (list.length > MAX_LIST_ITEMS) throw new Error("Formula list limit exceeded");
+    return list;
   }
 
   function callFunction(n: Extract<FormulaNode, { type: "function" }>): Optional<DataValue> {
     const definition = n.name === n.name.toUpperCase() ? getFormulaDefinition(n.name, pass.semantics) : undefined;
     if (!definition) {
-      if (pass.semantics === "legacy-computed") return null;
       throw new Error(`Unknown function: ${n.name}`);
     }
-    if (pass.semantics === "legacy-filter") return definition.invoke(n.args, evaluate, rangeOf, pass);
     if (n.name === "LET") {
       if (n.args.length < 3) return null;
       const nameNode = n.args[0] as FormulaNode;
@@ -427,9 +323,7 @@ function evaluateNode(
         nameArg.type === "field" ? nameArg.name : null;
       if (!fieldName) return null;
       if (scope?.has(fieldName)) return scope.get(fieldName);
-      if (pass.semantics === "unified-v1") return evaluate({ type: "field", name: fieldName });
-      const v = record.values[fieldName];
-      return (v === undefined ? null : v);
+      return evaluate({ type: "field", name: fieldName });
     }
 
     if (n.name === "ID") {
@@ -533,14 +427,7 @@ function evaluateNode(
   return evaluate(node);
 }
 
-function smartEq(a: unknown, b: unknown): boolean {
-  if (a == null && b == null) return true;
-  if (a == null || b == null) return false;
-  if (typeof a === "string" && typeof b === "string") {
-    return a.trim().toLowerCase() === b.trim().toLowerCase();
-  }
-  return a === b;
-}
+
 
 /**
  * Operand for `>`, `<`, `>=`, `<=`, `-`, `*`, `/`. A non-number is 0 here, as

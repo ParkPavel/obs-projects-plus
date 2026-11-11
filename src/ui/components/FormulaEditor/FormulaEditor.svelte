@@ -21,7 +21,7 @@
   /** Optional validator returning string[] error messages. */
   export let validate: ((expr: string) => string[]) | undefined = undefined;
   export let ariaLabel: string = "";
-  export let semantics: import("src/lib/formula/catalog").FormulaSemantics = "legacy-computed";
+  export let semantics: import("src/lib/formula/catalog").FormulaSemantics = "unified-v1";
   /** Field names forwarded to FormulaConstructor for autocomplete. */
   export let fields: string[] = [];
 

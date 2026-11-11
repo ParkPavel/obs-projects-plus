@@ -28,13 +28,13 @@ Use the three assets from **one published release**: `main.js`, `manifest.json` 
 | Board | Move a card and a column; cancel another drag. Check the saved order and that each column returns to its previous collapsed or expanded state. |
 | Phone and tablet | Repeat relevant checks with the keyboard open and closed, portrait and landscape, and your usual zoom. Check that the original field, confirmation action and suggestions stay reachable. |
 
-Check formula results against a known example before changing evaluation rules. Existing formulas retain their compatibility profile unless you explicitly select the new rules. Excessive computations may return an error or a pipeline warning; check the warning before treating a transformed result as complete. A pipeline stopped by its work limit retains its last fully completed step.
+This candidate replaces the previous formula rules with one `unified-v1` engine. Existing definitions migrate automatically; expressions remain unchanged but results can change. Before publishing migrated settings, the plugin writes and verifies `formula-unified-*.data.json` and `.report.json` in its plugin folder. The report lists affected definitions and syntax errors; it does not claim to compare every record result. A failed backup blocks migration. Update every device together and check known examples after updating. Excessive computations may return an error or a pipeline warning; a stopped pipeline retains its last fully completed step.
 
 Regular expression checks apply to existing formulas and filters as well as new ones. A pattern with excessive or unconfirmed complexity is rejected before execution. If an existing expression reports this error, simplify its pattern; changing the formula compatibility profile does not disable the check. Admitted patterns keep native matching and replacement behaviour.
 
 ## Roll back
 
-Disable the plugin and restore the previous **matching set of three assets**, then enable it again. Keep the current `data.json` only if it is compatible with that version; otherwise restore the settings backup made with the previous assets.
+Disable the plugin and close Obsidian. Preserve any settings changed since updating separately. Restore the previous **matching set of three assets** and the original `data.json` from the verified migration or installation backup, then reopen Obsidian. Restoring only old settings under the new engine cannot restore the removed rules. The migration does not rewrite note files.
 
 Replacing plugin files does not undo edits already written to notes. If you need to undo those changes, restore the affected notes from your vault backup after reviewing changes made since the backup. Test the restored copy before replacing working data.
 

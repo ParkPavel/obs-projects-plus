@@ -1,9 +1,10 @@
+// Current expected values captured from unified-v1 at checkpoint 82d, before runtime removal.
 jest.mock("src/lib/stores/i18n", () => ({
   i18n: { subscribe(run: (value: { t: (key: string) => string }) => void) {
     run({ t: (key: string) => key }); return () => {};
   } },
 }));
-import baseline from "./fixtures/legacy-syntax-d3.json";
+import baseline from "./fixtures/unified-syntax-82d.json";
 import { tokenize, parseFormula } from "../syntax";
 import { evaluateFormulaWithError, validateFormulaExpression, createFormulaPass } from "../extendedEvaluator";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
@@ -22,7 +23,7 @@ function encode(value: unknown): unknown {
 function capture(fn: () => unknown): unknown {
   try { return { result: encode(fn()) }; } catch (error) { return { thrown: (error as Error).message }; }
 }
-test.each(baseline.rows)("default syntax keeps its saved behavior: $expression", expected => {
+test.each(baseline.rows)("default syntax matches frozen strict syntax: $expression", expected => {
   const expression = expected.expression;
   expect(encode({ expression, tokens: capture(() => tokenize(expression)), ast: capture(() => parseFormula(expression)),
     validation: validateFormulaExpression(expression, fields), computed: evaluateFormulaWithError(expression, records[0]!, frame, createFormulaPass(frame)) })).toEqual(expected);

@@ -24,7 +24,7 @@ import {
   type DataValue,
   type Optional,
 } from "src/lib/dataframe/dataframe";
-import { createFormulaPass, evaluateFormulaWithError } from "src/lib/formula/extendedEvaluator";
+import { createFormulaPass } from "src/lib/formula/extendedEvaluator";
 import { resolveFieldName } from "src/lib/formula/formulaErrors";
 import { parseFormula, type FormulaNode } from "src/lib/helpers/formulaParser";
 import { evaluateVersionedFormula, formulaSemantics, type VersionedFormula } from "src/lib/formula/version";
@@ -55,10 +55,10 @@ function firstNonNull(
 export function referencedNames(expression: string, formulaVersion?: string): string[] {
   let ast: FormulaNode;
   try {
-    const semantics = formulaSemantics(formulaVersion, "legacy-computed");
-    if (semantics === "unified-v1" && expression.length > MAX_FORMULA_INPUT_LENGTH) return [];
-    ast = parseFormula(expression, undefined, semantics === "unified-v1" ? "strict" : "legacy");
-    if (semantics === "unified-v1") assertFormulaLimits(ast);
+    formulaSemantics(formulaVersion);
+    if (expression.length > MAX_FORMULA_INPUT_LENGTH) return [];
+    ast = parseFormula(expression, undefined, "strict");
+    assertFormulaLimits(ast);
   } catch { return []; }
   const out: string[] = [];
   const pending = [ast];
@@ -66,7 +66,7 @@ export function referencedNames(expression: string, formulaVersion?: string): st
     const n = pending.pop()!;
     if (n.type === "field" || n.type === "column_ref") out.push(n.name);
     else if (n.type === "function") {
-      if (formulaVersion === "unified-v1" && n.name.toUpperCase() === "PROP" && n.args[0]?.type === "literal" && typeof n.args[0].value === "string") out.push(n.args[0].value);
+      if (n.name.toUpperCase() === "PROP" && n.args[0]?.type === "literal" && typeof n.args[0].value === "string") out.push(n.args[0].value);
       for (let i = n.args.length - 1; i >= 0; i--) pending.push(n.args[i]!);
     }
     else if (n.type === "operator") pending.push(n.right, n.left);
@@ -130,30 +130,22 @@ export function applyFormulaFields(
   for (const name of cyclic) for (const r of records) r.values[name] = null;
   for (const def of ordered) {
     // The frame as computed so far: column references read finished columns.
-    const fields = def.formulaVersion === "unified-v1"
-      ? [...frame.fields, ...ordered.slice(0, ordered.indexOf(def))
+    const fields = [...frame.fields, ...ordered.slice(0, ordered.indexOf(def))
         .filter(prior => !existingNames.has(prior.name))
-        .map(prior => ({ name: prior.name, type: inferType(firstNonNull(records, prior.name)), repeated: false, identifier: false, derived: true }))]
-      : frame.fields;
+        .map(prior => ({ name: prior.name, type: inferType(firstNonNull(records, prior.name)), repeated: false, identifier: false, derived: true }))];
     const current: DataFrame = { ...frame, fields, records };
     // i3-final: one pass per formula column — `SUM(@amount)` is computed once
     // for the column, not once per record (was O(N²) on large tables). The
     // pass belongs to `current`, which no later formula reuses.
-    const pass = createFormulaPass(current, def.formulaVersion === "unified-v1" ? "unified-v1" : "legacy-computed");
+    const pass = createFormulaPass(current);
     records = records.map((record) => {
       let value: Optional<DataValue>;
       try {
-        const result = def.formulaVersion === undefined
-          ? evaluateFormulaWithError(def.expression, record, current, pass)
-          : evaluateVersionedFormula(def.expression, def.formulaVersion, { record, frame: current, pass });
+        const result = evaluateVersionedFormula(def.expression, def.formulaVersion, { record, frame: current, pass });
         value = result.value;
         if (result.error) reportError?.(def.name, record.id, result.error);
       } catch {
         value = null;
-      }
-      if (def.formulaVersion === undefined) {
-        record.values[def.name] = value;
-        return record;
       }
       return { ...record, values: { ...record.values, [def.name]: value } };
     });

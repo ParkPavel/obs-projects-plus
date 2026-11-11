@@ -1,3 +1,4 @@
+// Current expected values captured from unified-v1 at checkpoint 82d, before runtime removal.
 // Captured through the actual old public API before the math/workload changes.
 jest.mock("src/lib/stores/i18n", () => ({
   i18n: { subscribe(run: (value: { t: (key: string) => string }) => void) {
@@ -5,7 +6,7 @@ jest.mock("src/lib/stores/i18n", () => ({
     return () => {};
   } },
 }));
-import baseline from "./fixtures/legacy-math-5885.json";
+import baseline from "./fixtures/unified-math-82d.json";
 import { evaluateFormulaWithError } from "../extendedEvaluator";
 
 function encode(value: unknown): unknown {
@@ -15,6 +16,6 @@ function encode(value: unknown): unknown {
   ));
 }
 
-test.each(baseline.rows)("saved mathematical formula retains its old result: $expression", expected => {
+test.each(baseline.rows)("saved mathematical formula matches frozen current-rule mathematics: $expression", expected => {
   expect(encode(evaluateFormulaWithError(expected.expression, { id: "synthetic.md", values: {} }))).toEqual(expected.result);
 });

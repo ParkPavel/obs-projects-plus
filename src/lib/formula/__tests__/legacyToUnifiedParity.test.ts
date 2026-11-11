@@ -1,4 +1,4 @@
-import { evaluateExpression } from "src/lib/formula/extendedEvaluator";
+import { evaluateFormulaWithError, evaluateExpression } from "src/lib/formula/extendedEvaluator";
 import type { DataRecord } from "src/lib/dataframe/dataframe";
 
 /**
@@ -27,11 +27,11 @@ const SAMPLES = [
   {},
 ];
 
-describe("owner demo formulas agree between legacy-computed and unified-v1", () => {
+describe("owner demo formulas agree across the public adapters", () => {
   for (const expression of REAL_FORMULAS) {
     it(expression, () => {
       for (const sample of SAMPLES) {
-        const legacy = evaluateExpression(expression, { record: record(sample), semantics: "legacy-computed" });
+        const legacy = evaluateFormulaWithError(expression, record(sample));
         const unified = evaluateExpression(expression, { record: record(sample), semantics: "unified-v1" });
         expect({ sample, value: unified.value, error: unified.error ?? null }).toEqual({ sample, value: legacy.value, error: legacy.error ?? null });
       }

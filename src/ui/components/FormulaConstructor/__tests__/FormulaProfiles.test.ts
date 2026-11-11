@@ -12,33 +12,19 @@ describe("profile-aware shared formula editor", () => {
   afterEach(() => jest.useRealTimers());
 
   it("uses executable catalogs for each profile without changing the default", () => {
-    expect(getAllFormulaMetadata()).toHaveLength(112);
-    expect(getAllFormulaMetadata("legacy-filter")).toHaveLength(27);
+    expect(getAllFormulaMetadata()).toHaveLength(129);
     expect(getAllFormulaMetadata("unified-v1")).toHaveLength(129);
-    expect(getFormulaMetadata("SUM", "legacy-filter")).toBeUndefined();
+    expect(getAllFormulaMetadata("unified-v1")).toHaveLength(129);
+    expect(getFormulaMetadata("SUM", "unified-v1")?.name).toBe("SUM");
     expect(getFormulaMetadata("IS_OVERDUE", "unified-v1")?.name).toBe("IS_OVERDUE");
   });
-  it("revalidates the same text when the profile changes and cancels pending old validation", async () => {
+  it("validates a field named SUM with the same current syntax as execution", async () => {
     const view = render(FormulaConstructor, { props: { value: "SUM", fields: ["SUM"] } });
     const events: { errors: string[]; pending: boolean; value: string }[] = [];
     view.component.$on("validation", event => events.push(event.detail));
-    jest.advanceTimersByTime(700);
-    await tick();
-    expect(events.at(-1)?.errors.length).toBeGreaterThan(0);
-    view.component.$set({ semantics: "unified-v1" });
-    await tick();
-    expect(events.at(-1)?.pending).toBe(true);
-    jest.advanceTimersByTime(700);
-    await tick();
+    jest.advanceTimersByTime(700); await tick();
     expect(events.at(-1)).toEqual({ errors: [], pending: false, value: "SUM" });
-    view.component.$set({ semantics: "legacy-computed" });
-    await tick();
-    jest.advanceTimersByTime(300);
-    view.component.$set({ semantics: "unified-v1" });
-    await tick();
-    jest.advanceTimersByTime(700);
-    await tick();
-    expect(events.at(-1)).toEqual({ errors: [], pending: false, value: "SUM" });
+    expect(evaluateVersionedFormula("SUM", undefined, { record: { id: "r", values: { SUM: 7 } } })).toEqual({ value: 7 });
   });
   it("forwards the supplied accessible name through FormulaEditor", () => {
     const view = render(FormulaEditor, { props: { ariaLabel: "Revenue formula" } });

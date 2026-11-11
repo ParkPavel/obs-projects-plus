@@ -1,4 +1,4 @@
-// Display adapters retain the previous computed catalog until explicit UI opt-in.
+// Display adapters use the single current formula catalog.
 import { getFormulaDefinition, getFormulaCatalog } from "src/lib/formula/catalog";
 import type { FormulaSemantics } from "src/lib/formula/catalog";
 import { MAX_FORMULA_INPUT_LENGTH } from "src/lib/formula/limits";
@@ -10,7 +10,7 @@ export type { FormulaMetadata, FormulaCategory } from "src/lib/formula/metadata"
  * Look up metadata for a function by name (case-insensitive).
  * Returns undefined if the name is not a recognised formula function.
  */
-export function getFormulaMetadata(name: string, semantics: FormulaSemantics = "legacy-computed"): FormulaMetadata | undefined {
+export function getFormulaMetadata(name: string, semantics: FormulaSemantics = "unified-v1"): FormulaMetadata | undefined {
   if (!name) return undefined;
   return getFormulaDefinition(name, semantics)?.metadata;
 }
@@ -24,11 +24,10 @@ export function localizedFormulaDoc(
   name: string,
   fallback: string,
   t: (key: string, options: { defaultValue: string }) => string,
-  semantics: FormulaSemantics = "legacy-computed",
+  semantics: FormulaSemantics = "unified-v1",
 ): string {
   const functionName = name.toUpperCase();
-  const profileDoc = ["COUNT", "WORKDAYS", "TODAY", "NOW"].includes(functionName)
-    || (semantics === "legacy-filter" && ["AND", "OR"].includes(functionName));
+  const profileDoc = ["COUNT", "WORKDAYS", "TODAY", "NOW"].includes(functionName);
   const key = profileDoc ? `formula-profile-docs.${semantics}.${functionName}` : `formula-docs.${functionName}`;
   const text = t(key, { defaultValue: fallback });
   return text && text !== key ? text : fallback;
@@ -37,7 +36,7 @@ export function localizedFormulaDoc(
 /**
  * All registered formula function metadata entries.
  */
-export function getAllFormulaMetadata(semantics: FormulaSemantics = "legacy-computed"): readonly FormulaMetadata[] {
+export function getAllFormulaMetadata(semantics: FormulaSemantics = "unified-v1"): readonly FormulaMetadata[] {
   return getFormulaCatalog(semantics).map(definition => definition.metadata);
 }
 
@@ -49,47 +48,9 @@ export function getAllFormulaMetadata(semantics: FormulaSemantics = "legacy-comp
  * String-literal aware: skips parentheses that sit inside "..." / '...' spans,
  * respecting backslash escapes.
  */
-export function findEnclosingCall(source: string, cursor: number, semantics: FormulaSemantics = "legacy-computed"): string | null {
-  if (source.length > MAX_FORMULA_INPUT_LENGTH) return null;
-  if (semantics === "unified-v1") return strictEnclosingCall(source, cursor);
-  const end = Math.min(cursor, source.length);
-  // First pass (forward): compute which indices live inside a string literal.
-  const inString = new Array<boolean>(end).fill(false);
-  let quote: '"' | "'" | null = null;
-  for (let i = 0; i < end; i++) {
-    const ch = source[i];
-    if (quote) {
-      inString[i] = true;
-      if (ch === "\\") {
-        // Skip the escaped char.
-        if (i + 1 < end) inString[i + 1] = true;
-        i++;
-        continue;
-      }
-      if (ch === quote) quote = null;
-    } else if (ch === '"' || ch === "'") {
-      inString[i] = true;
-      quote = ch;
-    }
-  }
-
-  let depth = 0;
-  for (let i = end - 1; i >= 0; i--) {
-    if (inString[i]) continue;
-    const ch = source[i];
-    if (ch === ")") {
-      depth++;
-    } else if (ch === "(") {
-      if (depth === 0) {
-        let j = i - 1;
-        while (j >= 0 && /[A-Za-z0-9_]/.test(source[j] as string)) j--;
-        const name = source.substring(j + 1, i);
-        return name.length > 0 ? name : null;
-      }
-      depth--;
-    }
-  }
-  return null;
+export function findEnclosingCall(source: string, cursor: number, semantics: FormulaSemantics = "unified-v1"): string | null {
+  if (!getFormulaCatalog(semantics).length || source.length > MAX_FORMULA_INPUT_LENGTH) return null;
+  return strictEnclosingCall(source, cursor);
 }
 
 /** Incremental call hints tolerate incomplete text while honoring strict comments/strings. */

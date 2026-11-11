@@ -1,28 +1,21 @@
 # Formula runtime
 
 Import public functions from `src/lib/formula`. `syntax.ts` parses one AST;
-`extendedEvaluator.ts` owns the shared evaluator for all profiles. `catalog.ts` binds
-compatibility implementations and metadata. It supplies lexer names, available
+`extendedEvaluator.ts` owns the shared evaluator for every surface. `catalog.ts` binds
+current implementations and metadata. It supplies lexer names, available
 functions, validation and contextual help. The old helper paths are adapters.
 
-## Compatibility is explicit
+## One current rule set
 
-| API/profile | Existing behavior |
-| --- | --- |
-| `evaluateFormula(ast, record, date?)` | Boolean filter result, `legacy-filter` operators and functions |
-| `evaluateFormulaValue` / `evaluateFormulaWithError` | `legacy-computed` values, errors and function availability |
-| `evaluateExpression(source, context)` | Requires an explicit `semantics` profile; returns `{value, error?}` |
+Every public adapter uses `unified-v1`: the filter adapter returns a Boolean;
+the computed adapter returns a value with an optional error. The expression API
+accepts an explicit context carrying the frame, reference date and work budget.
+There is one bounded strict parser, one catalog and one evaluator. Older runtime
+implementations are removed.
 
-`unified-v1` is opt-in. This backend change does not version or migrate saved
-definitions, and does not switch existing editors. Persistence and editor opt-in
-must travel together in the next integration layer; preview must use the same
-profile as the saved computation.
+## Strict syntax
 
-## Strict new-profile syntax
-
-New evaluation and validation both select the strict policy. Low-level syntax
-callers can use `tokenize(source, "strict")` or
-`parseFormula(source, maxDepth, "strict")`; their defaults remain compatible.
+Tokenization, parsing, validation, highlighting and evaluation all use strict syntax.
 Strict finite decimal/scientific literals include `.5`, `1.`, `1e-3`; unary signs
 and subtraction without spaces are supported. Numbers use JavaScript's finite
 double precision. Malformed numbers and unclosed strings produce errors.
@@ -136,52 +129,34 @@ New COUNT also charges its argument and list-item traversal. Binary operator
 evaluation, shape analysis and validation use iterative walks, so long flat
 chains do not consume recursive nesting depth. Every evaluated operator/leaf is
 charged once; static node counts also bound cyclic or expanding external ASTs.
-Lazy branches retain their evaluation behavior. Legacy evaluation defaults and
-all saved compatibility results stay on their old syntax policy.
+Lazy branches retain their evaluation behavior.
 
-Persisted base fields, view formulas, transform columns and Agenda lists may
-carry `formulaVersion: "unified-v1"`. An absent flag retains that surface's old
-rules; ordinary reads and saves do not migrate it. Unsupported or malformed
-versions return no computed value (Agenda excludes the record) rather than
-falling back to compatibility. Preserve unknown flags when retaining definitions.
-Editors expose an explicit Compatibility / New rules choice. Suggestions, help,
-syntax policy and validation use the selected executable catalog. Unknown versions
-show read-only source until a supported choice is made explicitly. The selection
-is explicit; opening an editor does not add a flag. Returning to
-compatibility removes the flag. Field type changes remove expression and version
-together. Mode events carry an object (an empty object means compatibility), since
-DOM CustomEvent normalizes an undefined scalar detail to null.
-Preview accepts an optional versioned draft: omitting it retains the saved mode;
-an explicit empty draft selects compatibility. New computed columns see complete
-earlier columns and their schema. Legacy transform aggregates continue to read
-the original input frame, including in mixed-version steps. Agenda receives its
-record subset and reference date from its caller, not the whole vault or wall clock.
-The actual Agenda list and formula preview receive the same selected-day subset,
-schema and date; preview reports matches within that subset. Visual value suggestions
-retain all project records, so a condition can also target values present on another day.
-FormulaBar retains a draft's mode
-when saving under a new name (a copy), and protects other fields from name collisions.
-The record-only preview fallback reports missing data for new @column expressions.
-Pipeline expressions use the same editor, with Ctrl+Enter or Apply to commit a draft.
-Pipeline mode choices apply like its other settings; property, Dashboard and Agenda
-editors persist choices when their enclosing form is applied. Typed suggestion
-entries distinguish fields from functions even when their labels collide. Non-bare
-property names are inserted as PROP strings in supporting profiles; new static PROP
-dependencies participate in column ordering. @column syntax currently requires a
-bare property name. Compatibility Agenda filters do not support column references;
-their editor explains that new rules must be chosen explicitly.
-Validation badges share the editor's debounced result. Help inserts a call opening
-at the native selection, leaving parameter declarations out of source. Touch and
-high-contrast surfaces paint text and caret in the native textarea; desktop may use
-the synchronized highlight underlay. These implementation checks do not establish
-real Obsidian theme, iPhone, viewport or IME rendering acceptance.
+## Saved settings migration and rollback
 
-Before enabling new rules, update all devices and back up settings. Older plugin
-binaries do not understand this flag and cannot fail closed on it. A rollback
-therefore requires restoring pre-update settings or explicitly converting each
-new-mode formula after comparing its results. The version flag is a compatibility
-contract for supporting binaries, not a guarantee of safe interpretation by old ones.
+On startup and external settings adoption, unversioned formula owners (base
+fieldConfig, view formulaFields, compute columns, nested widgets and Agenda
+filterFormula) acquire `formulaVersion: "unified-v1"`. Expressions remain exact.
+Unknown future versions remain unsupported and return no value; Agenda excludes
+those records. New imports and editor drafts use the same current rules.
 
-The date shorthand used by visual filters (`today+1w`) remains a separate syntax
-for date values. Fixed rollup aggregation operations do not execute custom formula
-source. Neither is presented as another general-purpose formula evaluator.
+Before publishing changed settings, the plugin writes and reads back an exact
+copy of the original data.json and a JSON report beside it in the plugin folder
+(`formula-unified-*.data.json` and `.report.json`). Any backup or report failure
+blocks the migration. Existing checked persistence still checks the original disk
+base before saving. Reports list affected definitions and syntax errors; they do
+not claim to compare all record results. Examples of changed rules include
+numeric strings, Boolean coercion, non-null COUNT and signed WORKDAYS.
+
+For rollback disable the plugin, close Obsidian, preserve later settings separately,
+then restore the original data.json AND the previous main.js, styles.css and
+manifest.json from the installation backup. Restoring JSON alone cannot restore
+the removed evaluator. Update all devices together; do not run old binaries
+against migrated settings. Notes are not rewritten by migration.
+
+Formula preview, transform columns and Agenda use the same current execution.
+Each computed column sees completed earlier columns. Agenda uses its selected-day
+subset and reference date. Static PROP references participate in dependency ordering.
+Desktop tests do not establish iPhone or real Obsidian acceptance.
+
+The visual filter date shorthand and fixed rollup aggregations remain separate
+bounded operations; neither executes another general-purpose formula language.

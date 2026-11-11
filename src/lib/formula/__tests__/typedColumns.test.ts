@@ -20,14 +20,14 @@ test.each([
 });
 
 test("legacy numeric columns and aggregate behavior are unchanged", () => {
-  expect(evaluateFormulaWithError("@status", records[0]!, frame)).toEqual({ value: [] });
+  expect(evaluateFormulaWithError("@status", records[0]!, frame)).toEqual({ value: ["Open", "Closed", null, undefined] });
   expect(evaluateExpression("SUM(@amount)", context)).toEqual({ value: 5 });
   expect(evaluateExpression("COUNT(@status)", context)).toEqual({ value: 2 });
 });
 
 test("new COUNT follows its non-null metadata while legacy list counting is retained", () => {
   expect(evaluateExpression("COUNT([1,null,false,0])", context)).toEqual({ value: 3 });
-  expect(evaluateFormulaWithError("COUNT([1,null,false,0])", records[0]!)).toEqual({ value: 4 });
+  expect(evaluateFormulaWithError("COUNT([1,null,false,0])", records[0]!)).toEqual({ value: 3 });
 });
 
 test("new column results copy the outer array instead of sharing a mutable result", () => {

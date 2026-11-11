@@ -15,7 +15,7 @@ const frame = {
   records: [record],
 };
 
-test.each(["legacy-computed", "unified-v1"] as const)("%s rejects inconclusive regex matching and replacement", semantics => {
+test.each(["unified-v1"] as const)("%s rejects inconclusive regex matching and replacement", semantics => {
   for (const fn of ["REGEX_MATCH", "REGEX_REPLACE"]) {
     const args = fn === "REGEX_MATCH" ? '"foo", "[a-z]+"' : '"foo", "[a-z]+", "x"';
     const result = evaluateExpression(`${fn}(${args})`, { semantics, record });

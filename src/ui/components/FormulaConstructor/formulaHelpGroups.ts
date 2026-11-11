@@ -27,7 +27,7 @@ const CATEGORY_ORDER: readonly FormulaCategory[] = [
   "utility",
 ];
 
-export function groupFormulaMetadata(semantics: import("src/lib/formula/catalog").FormulaSemantics = "legacy-computed"): HelpGroup[] {
+export function groupFormulaMetadata(semantics: import("src/lib/formula/catalog").FormulaSemantics = "unified-v1"): HelpGroup[] {
   const byCategory = new Map<FormulaCategory, HelpEntry[]>();
   for (const meta of getAllFormulaMetadata(semantics)) {
     const bucket = byCategory.get(meta.category) ?? [];

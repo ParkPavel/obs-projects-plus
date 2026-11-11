@@ -14,7 +14,7 @@
   export let version: string | undefined = undefined;
   // Preview and validation must use the same profile as the saved list.
   $: effectiveVersion = version;
-  $: semantics = formulaEditorSemantics(effectiveVersion, 'legacy-filter');
+  $: semantics = formulaEditorSemantics(effectiveVersion);
 
   const dispatch = createEventDispatcher<{
     change: string;
@@ -33,7 +33,7 @@
   // The selected executable profile owns validation as well as help.
   function validatorFor(savedVersion: string | undefined) {
     return (expr: string, availableFields: string[]): string[] =>
-      validateVersionedFormula(expr, availableFields, savedVersion, 'legacy-filter');
+      validateVersionedFormula(expr, availableFields, savedVersion);
   }
   $: calendarValidate = validatorFor(effectiveVersion);
 
@@ -71,7 +71,7 @@
     previewCount = null;
     previewError = null;
     timer = setTimeout(() => {
-      if (!expression.trim() || validateVersionedFormula(expression, schema.map(field => field.name), savedVersion, 'legacy-filter').length) return;
+      if (!expression.trim() || validateVersionedFormula(expression, schema.map(field => field.name), savedVersion).length) return;
       const result = evaluateAgendaFormula(source, expression, savedVersion, date, schema);
       previewCount = result.records.length;
       previewError = result.error;

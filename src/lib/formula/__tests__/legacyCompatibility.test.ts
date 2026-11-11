@@ -1,3 +1,4 @@
+// Current expected values captured from unified-v1 at checkpoint 82d, before runtime removal.
 // Captured from actual public APIs at a56ed9bf before their replacement.
 // Keep the same clock and text boundary as the independent baseline runner.
 jest.mock("src/lib/stores/i18n", () => ({
@@ -7,7 +8,7 @@ jest.mock("src/lib/stores/i18n", () => ({
   } },
 }));
 
-import baseline from "./fixtures/legacy-formulas-a56.json";
+import baseline from "./fixtures/unified-formulas-82d.json";
 type DataFrame = import("src/lib/dataframe/dataframe").DataFrame;
 type DataRecord = import("src/lib/dataframe/dataframe").DataRecord;
 import { DataFieldType } from "src/lib/dataframe/dataframe";
@@ -36,7 +37,7 @@ const frame: DataFrame = {
 beforeAll(() => { jest.useFakeTimers(); jest.setSystemTime(new Date(baseline.reference)); });
 afterAll(() => { jest.useRealTimers(); });
 
-test.each(baseline.rows)("saved public formula keeps its previous results: $expression", expected => {
+test.each(baseline.rows)("saved public formula uses the frozen current-rule reference: $expression", expected => {
   const expression = expected.expression;
   expect({
     expression,

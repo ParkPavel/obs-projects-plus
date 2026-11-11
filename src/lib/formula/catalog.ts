@@ -1,11 +1,11 @@
 import type { FormulaNode } from "./syntax";
 import { COMPUTED_FUNCTIONS, type FormulaFn } from "./computedFunctions";
-import { LEGACY_FUNCTIONS } from "./legacyFunctions";
+import { CALENDAR_FUNCTIONS } from "./calendarFunctions";
 import { UNIFIED_FUNCTIONS } from "./unifiedFunctions";
 import { FORMULA_METADATA, type FormulaMetadata } from "./metadata";
 import dayjs from "dayjs";
 
-const SEMANTICS = ["legacy-filter", "legacy-computed", "unified-v1"] as const;
+const SEMANTICS = ["unified-v1"] as const;
 export type FormulaSemantics = typeof SEMANTICS[number];
 export function isFormulaSemantics(value: unknown): value is FormulaSemantics {
   return SEMANTICS.some(semantics => semantics === value);
@@ -54,27 +54,22 @@ const metadata = { ...FORMULA_METADATA, ...CALENDAR_METADATA };
 const definitions = new Map<string, FormulaDefinition>();
 for (const [name, info] of Object.entries(metadata)) {
   const computed = COMPUTED_FUNCTIONS[name];
-  const legacy = LEGACY_FUNCTIONS[name];
-  if (!computed && !legacy) throw new Error(`Formula metadata without implementation: ${name}`);
+  const calendar = CALENDAR_FUNCTIONS[name];
+  if (!computed && !calendar) throw new Error(`Formula metadata without implementation: ${name}`);
   const profiles: FormulaSemantics[] = ["unified-v1"];
-  if (computed) profiles.push("legacy-computed");
-  if (legacy) profiles.push("legacy-filter");
   definitions.set(name, {
     name, metadata: info, profiles,
     invoke(args, evaluate, range, context) {
-      const unified = context.semantics === "unified-v1" ? UNIFIED_FUNCTIONS[name] : undefined;
+      const unified = UNIFIED_FUNCTIONS[name];
       if (unified) return unified(args, evaluate, range, context.chargeWork);
-      // A shared clock is explicit in the new profile; compatibility APIs
-      // retain their previous implementation of every overlapping function.
-      if (legacy && (context.semantics === "legacy-filter" || !computed ||
-        (context.semantics === "unified-v1" && (name === "TODAY" || name === "NOW")))) {
-        return legacy(args, evaluate, dayjs(context.referenceTime));
+      if (calendar && (!computed || name === "TODAY" || name === "NOW")) {
+        return calendar(args, evaluate, dayjs(context.referenceTime));
       }
       return computed ? computed(args, evaluate, range, context.chargeWork) : null;
     },
   });
 }
-for (const name of new Set([...Object.keys(COMPUTED_FUNCTIONS), ...Object.keys(LEGACY_FUNCTIONS)])) {
+for (const name of new Set([...Object.keys(COMPUTED_FUNCTIONS), ...Object.keys(CALENDAR_FUNCTIONS)])) {
   if (!definitions.has(name)) throw new Error(`Formula implementation without metadata: ${name}`);
 }
 for (const name of Object.keys(UNIFIED_FUNCTIONS)) {
@@ -82,13 +77,6 @@ for (const name of Object.keys(UNIFIED_FUNCTIONS)) {
 }
 
 const profileDocs: Partial<Record<FormulaSemantics, Record<string, string>>> = {
-  "legacy-computed": {
-    COUNT: "Count every position in list arguments, including blanks. Scalar nulls are skipped; compatibility @columns contain numeric values only.",
-  },
-  "legacy-filter": {
-    AND: "True if every argument is the boolean true; other truthy values do not match.",
-    OR: "True if any argument is the boolean true; other truthy values do not match.",
-  },
   "unified-v1": {
     COUNT: "Count non-null values and list items. Null and absent items are skipped; false, zero and empty text count.",
     WORKDAYS: "Signed weekday distance in (earlier day, later day]; reversing dates reverses the sign. Same calendar day is zero.",
@@ -119,7 +107,5 @@ export function getFormulaCatalog(semantics: FormulaSemantics): readonly Formula
 }
 
 export function formulaFunctionNames(semantics: FormulaSemantics): string[] {
-  // Preserve the public computed API's insertion order for existing callers.
-  if (semantics === "legacy-computed") return Object.keys(COMPUTED_FUNCTIONS);
   return getFormulaCatalog(semantics).map(definition => definition.name);
 }

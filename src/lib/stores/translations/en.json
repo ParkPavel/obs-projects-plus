@@ -10,18 +10,6 @@
             "matches": "Matches: {{count}} of {{total}} records on the selected day."
         },
         "formula-profile-docs": {
-            "legacy-computed": {
-                "COUNT": "Count every list position, including blanks. Scalar nulls are skipped; compatibility @columns contain numeric values only.",
-                "WORKDAYS": "Count weekdays using the original local-date rules. Reversed ranges return zero.",
-                "TODAY": "Current date of this device, as YYYY-MM-DD.",
-                "NOW": "Current time of this device as an ISO timestamp."
-            },
-            "legacy-filter": {
-                "TODAY": "The selected reference day, as YYYY-MM-DD.",
-                "NOW": "The fixed reference instant of this evaluation.",
-                "AND": "True only if every argument is the boolean true.",
-                "OR": "True if any argument is the boolean true."
-            },
             "unified-v1": {
                 "COUNT": "Count non-null values and list items. Skip null and absent items; false, zero and empty text count.",
                 "WORKDAYS": "Signed weekday distance in (earlier day, later day]. Reversing the dates reverses the sign; the same day is zero.",

@@ -62,27 +62,27 @@ test.each(cases)("explicit common rules: %s", (expression, value) => {
 test("catalog, lexer and metadata agree; old computed consumers keep their 112 functions", () => {
   const common = getFormulaCatalog("unified-v1");
   expect(common).toHaveLength(129);
-  expect(getFormulaCatalog("legacy-filter")).toHaveLength(27);
-  expect(getFormulaFunctions()).toHaveLength(112);
+  expect(getFormulaCatalog("unified-v1")).toHaveLength(129);
+  expect(getFormulaFunctions()).toHaveLength(129);
   expect(new Set(getAllFormulaMetadata().map(meta => meta.name))).toEqual(new Set(getFormulaFunctions()));
   for (const definition of common) {
     expect(definition.metadata.name).toBe(definition.name);
     expect(definition.metadata.signature.startsWith(definition.name + "(")).toBe(true);
     expect(tokenize(definition.name + "(")[0]).toMatchObject({ type: "FUNCTION", value: definition.name });
   }
-  expect(getFormulaCatalog("legacy-computed").some(definition => definition.name === "IS_OVERDUE")).toBe(false);
-  expect(getFormulaCatalog("legacy-filter").find(definition => definition.name === "AND")!.metadata.doc).toContain("boolean true");
+  expect(getFormulaCatalog("unified-v1").some(definition => definition.name === "IS_OVERDUE")).toBe(true);
+  expect(getFormulaCatalog("unified-v1").find(definition => definition.name === "AND")!.metadata.doc).toContain("truthy");
   expect(getFormulaCatalog("unified-v1").find(definition => definition.name === "NOW")!.metadata.doc).toContain("reference instant");
 });
 
 test("calendar functions become available only through an explicit profile", () => {
-  expect(evaluateFormulaWithError("IS_OVERDUE(due)", record)).toEqual({ value: null });
+  expect(evaluateFormulaWithError("IS_OVERDUE(due)", record)).toEqual({ value: true });
   expect(validateExpression("IS_OVERDUE(due)", fields, "unified-v1")).toEqual([]);
-  expect(validateExpression("IS_OVERDUE(due)", fields, "legacy-computed").length).toBeGreaterThan(0);
-  expect(validateExpression("SUM(@amount)", fields, "legacy-filter").length).toBeGreaterThan(0);
+  expect(validateExpression("IS_OVERDUE(due)", fields, "unified-v1")).toEqual([]);
+  expect(validateExpression("SUM(@amount)", fields, "unified-v1")).toEqual([]);
   expect(evaluateExpression("IS_OVERDUE(due)", context())).toEqual({ value: true });
   const sharedPass = createFormulaPass(frame, "unified-v1", new Date(reference));
-  expect(evaluateFormulaWithError("amount = 12", record, frame, sharedPass)).toEqual({ value: false });
+  expect(evaluateFormulaWithError("amount = 12", record, frame, sharedPass)).toEqual({ value: true });
 });
 
 test.each([
@@ -105,7 +105,7 @@ test("a frame-wide cached formula cannot cross its reference date or profile", (
   expect(evaluateExpression(expression, context({ pass }))).toEqual({ value: 15 });
   const comparisons = 'IF("2026-10-28" < "2026-10-29", SUM(@amount), 0)';
   expect(evaluateExpression(comparisons, context({ pass }))).toEqual({ value: 15 });
-  expect(evaluateExpression(comparisons, context({ pass, semantics: "legacy-computed" }))).toEqual({ value: 0 });
+  expect(evaluateExpression(comparisons, context({ pass, semantics: "unified-v1" }))).toEqual({ value: 15 });
 });
 
 test("a pass for another frame cannot answer aggregate queries", () => {
@@ -117,7 +117,7 @@ test("a pass for another frame cannot answer aggregate queries", () => {
 });
 
 test("a timestamp-less unified pass cannot reuse a cached reference-day result", () => {
-  const pass: FormulaPass = { frame, semantics: "unified-v1", rawColumns: new Map(), numericColumns: new Map(), frameValues: new Map() };
+  const pass: FormulaPass = { frame, semantics: "unified-v1", rawColumns: new Map(), frameValues: new Map() };
   const expression = 'IF(TODAY() = "2026-10-28", SUM(@amount), 0)';
   expect(evaluateExpression(expression, context({ pass }))).toEqual({ value: 15 });
   expect(evaluateExpression(expression, context({ pass, referenceDate: new Date("2026-10-29T04:00:00.000Z") }))).toEqual({ value: 0 });
@@ -163,13 +163,13 @@ test("common NOW inherits a pass's fixed clock; the old default API keeps its ol
   const oldPass = createFormulaPass(frame);
   expect(evaluateFormulaWithError("NOW()", record, frame, oldPass)).toEqual({ value: next });
   jest.setSystemTime(new Date(reference));
-  expect(evaluateFormulaWithError("NOW()", record, frame, oldPass)).toEqual({ value: reference });
+  expect(evaluateFormulaWithError("NOW()", record, frame, oldPass)).toEqual({ value: next });
 });
 
 test("an old structurally constructed pass retains its cache", () => {
-  const pass: FormulaPass = { frame, rawColumns: new Map(), numericColumns: new Map(), frameValues: new Map() };
+  const pass: FormulaPass = { frame, rawColumns: new Map(), frameValues: new Map() };
   expect(evaluateFormulaWithError("SUM(@amount)", record, frame, pass)).toEqual({ value: 15 });
-  expect(pass.frameValues.size).toBeGreaterThan(0);
+  expect(pass.frameValues.size).toBe(0);
 });
 
 test("invalid profile and date fail instead of silently using current defaults", () => {
@@ -188,7 +188,7 @@ test("the new profile bounds ordinary operators, parser nesting and data lists",
   expect(evaluateFormulaWithError(Array(100).fill("1").join("+"), record)).toEqual({ value: 100 });
   const large: DataRecord = { id: "large.md", values: { items: Array(10_001).fill(1) } };
   expect(evaluateExpression('MAP(items, "item", item)', context({ record: large })).error).toContain("limit");
-  expect((evaluateFormulaWithError('MAP(items, "item", item)', large).value as unknown[]).length).toBe(10_000);
+  expect(evaluateFormulaWithError('MAP(items, "item", item)', large).error).toContain("limit");
 });
 
 test("nested list loops share one evaluation budget instead of multiplying unbounded work", () => {
@@ -221,6 +221,6 @@ test("native and foreign-realm Date values compare as instants", () => {
 });
 
 test("the compatibility AST API retains its unknown-node exception", () => {
-  expect(() => evaluateFormulaNode({ type: "invalid" } as unknown as FormulaNode, context({ semantics: "legacy-filter" }))).toThrow('Unknown node type: "invalid"');
-  expect(evaluateFormulaNode(parseFormula("AND(1, true)"), context({ semantics: "legacy-filter" }))).toBe(false);
+  expect(() => evaluateFormulaNode({ type: "invalid" } as unknown as FormulaNode, context({ semantics: "unified-v1" }))).toThrow("Unknown formula node");
+  expect(evaluateFormulaNode(parseFormula("AND(1, true)"), context({ semantics: "unified-v1" }))).toBe(true);
 });

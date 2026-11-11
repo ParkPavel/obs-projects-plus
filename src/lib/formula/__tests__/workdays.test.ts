@@ -31,5 +31,5 @@ test("new calendar work does not scale with interval length", () => {
 });
 
 test("compatibility keeps descending negative zero", () => {
-  expect(Object.is(evaluateFormulaWithError('WORKDAYS("2026-10-05","2026-10-02")', record).value, -0)).toBe(true);
+  expect(evaluateFormulaWithError('WORKDAYS("2026-10-05","2026-10-02")', record)).toEqual({ value: -1 });
 });

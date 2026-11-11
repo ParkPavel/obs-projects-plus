@@ -1,14 +1,10 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
-  import type { FormulaSemantics } from "src/lib/formula/catalog";
   import { formulaEditorSemantics } from "src/lib/formula/version";
   import FormulaEditor from "./FormulaEditor.svelte";
   import { i18n } from "src/lib/stores/i18n";
   export let expression = "";
   export let version: unknown = undefined;
-  /** Only a new definition may acquire a version without a migration action. */
-  export let newDefinition = false;
-  export let legacy: Exclude<FormulaSemantics, "unified-v1"> = "legacy-computed";
   export let fields: string[] = [];
   export let placeholder = "";
   export let ariaLabel = "";
@@ -22,9 +18,9 @@
   let editor: FormulaEditor;
   const dispatch = createEventDispatcher<{ change: string; commit: string; modechange: import("src/lib/formula/version").VersionedFormula }>();
   const CURRENT = "unified-v1";
-  $: semantics = formulaEditorSemantics(newDefinition && version === undefined ? CURRENT : version, legacy);
+  $: semantics = formulaEditorSemantics(version);
   function markCurrent(): void {
-    if (!newDefinition || version !== undefined) return;
+    if (version !== undefined) return;
     version = CURRENT;
     dispatch("modechange", { formulaVersion: CURRENT });
   }

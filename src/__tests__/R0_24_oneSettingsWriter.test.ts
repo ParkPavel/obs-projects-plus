@@ -34,6 +34,8 @@ const SRC = path.join(ROOT, "src");
 const ADAPTER_WRITERS: Readonly<Record<string, string>> = {
   "src/lib/settings/brokenBackup.ts":
     "the forensic copy of unreadable settings, and the conflict copy/note — never data.json itself",
+  "src/lib/formula/settingsMigration.ts":
+    "verified formula migration restore point and report, never data.json itself",
   "src/lib/settingsBackup.ts":
     "#145 restore point for the dashboard migrations — a sibling file, never data.json",
 };

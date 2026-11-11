@@ -72,7 +72,7 @@
   export let value: string = "";
   export let fields: string[] = [];
   /** Custom validator; defaults to the canonical formula validator. */
-  export let semantics: FormulaSemantics = "legacy-computed";
+  export let semantics: FormulaSemantics = "unified-v1";
   export let ariaLabel: string = "";
   export let validate: ((expr: string, fields: string[]) => string[]) | undefined = undefined;
   export let placeholder: string = "";
@@ -160,12 +160,12 @@
 
   // Split `expr` into colored token segments + uncolored gaps (whitespace,
   // comments). Falls back to a single plain segment if the tokenizer throws.
-  function buildHighlightSegments(expr: string, profile: FormulaSemantics): HighlightSegment[] {
+  function buildHighlightSegments(expr: string): HighlightSegment[] {
     // Keep pasted source intact without building an unbounded token/DOM tree.
     if (expr.length > MAX_FORMULA_INPUT_LENGTH) return [{ text: expr, cls: "" }];
     if (expr === "") return [];
     try {
-      const tokens = tokenize(expr, profile === "unified-v1" ? "strict" : "legacy");
+      const tokens = tokenize(expr, "strict");
       const segments: HighlightSegment[] = [];
       let pos = 0;
       for (const tok of tokens) {
@@ -188,7 +188,7 @@
     }
   }
 
-  $: highlightSegments = highlight ? buildHighlightSegments(value, semantics) : [];
+  $: highlightSegments = highlight ? buildHighlightSegments(value) : [];
 
   function syncScroll() {
     if (highlightEl && textareaEl) {
@@ -206,15 +206,12 @@
   let forceOpen = false;
 
   $: allFunctions = getFormulaCatalog(semantics).map(definition => definition.name);
-  const reservedFunctions = new Set(getFormulaCatalog("unified-v1").map(definition => definition.name));
   function bareField(name: string): boolean {
-    return /^[\p{L}_][\p{L}\p{N}_]*$/u.test(name) && !["TRUE", "FALSE", "NULL"].includes(name.toUpperCase())
-      && (semantics === "unified-v1" || !reservedFunctions.has(name.toUpperCase()));
+    return /^[\p{L}_][\p{L}\p{N}_]*$/u.test(name) && !["TRUE", "FALSE", "NULL"].includes(name.toUpperCase());
   }
-  $: suggestibleFields = semantics === "legacy-filter" ? fields.filter(bareField) : fields;
+  $: suggestibleFields = fields;
   const EMPTY_NAMES: readonly string[] = [];
-  $: contextFields = columnContext ? semantics === "legacy-filter" ? EMPTY_NAMES
-    : fields.filter(name => /^[\p{L}_][\p{L}\p{N}_]*$/u.test(name)) : suggestibleFields;
+  $: contextFields = columnContext ? fields.filter(name => /^[\p{L}_][\p{L}\p{N}_]*$/u.test(name)) : suggestibleFields;
 
   // Snippets shown when forceOpen and value is empty; otherwise hidden.
   $: snippetsMode = forceOpen && value.trim() === "" && snippets.length > 0;

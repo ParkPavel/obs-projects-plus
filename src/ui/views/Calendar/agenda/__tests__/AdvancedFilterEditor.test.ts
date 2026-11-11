@@ -55,7 +55,7 @@ describe("AdvancedFilterEditor (Calendar agenda)", () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
 
-  test.each([[undefined, 1], ["unified-v1", 0]])("preview uses exactly the saved profile %s", async (version, count) => {
+  test.each([[undefined, 0], ["unified-v1", 0]])("preview uses exactly the saved profile %s", async (version, count) => {
     const { container } = render(AdvancedFilterEditor, { props: {
       formula: 'flag = "garbage"', version,
       fields: [makeField("flag", DataFieldType.Boolean)], records: [{id: "r", values: {flag: false}}],

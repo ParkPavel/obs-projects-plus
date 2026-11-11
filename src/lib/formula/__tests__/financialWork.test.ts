@@ -62,7 +62,7 @@ test("several cumulative calls share the same work budget", () => {
   expect(evaluateExpression(source, context).error).toContain("limit");
 });
 
-test.each(["unified-v1", "legacy-computed", "legacy-filter"] as const)("a catalog invocation refuses excessive work even with context %s", semantics => {
+test.each(["unified-v1"] as const)("a catalog invocation refuses excessive work even with context %s", semantics => {
   const ast = parseFormula("CUMIPMT(0.01, 1000000000, 1000, 1, 1000000000, 0)");
   if (ast.type !== "function") throw new Error("Expected a cumulative call");
   const pow = jest.spyOn(Math, "pow").mockImplementation(() => { throw new Error("Test harness stopped the financial loop"); });

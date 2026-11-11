@@ -46,7 +46,7 @@ process.stdout.write(JSON.stringify({legacy: results, unified}));
 test.each([
   ["Asia/Irkutsk", 1, 4],
   ["America/New_York", 1, 4],
-  ["Pacific/Apia", 0, 3],
+  ["Pacific/Apia", 1, 4],
   ["America/Santiago", 1, 4],
   ["America/Sao_Paulo", 1, 4],
 ] as const)("compatibility calendar retains its actual local-date behavior in %s", (zone, first, second) => {
@@ -56,7 +56,7 @@ test.each([
   }));
   expect(results).toEqual({ legacy: [
     { value: first, negativeZero: false }, { value: second, negativeZero: false },
-    { value: 0, negativeZero: true }, { value: 1, negativeZero: false },
+    { value: -1, negativeZero: false }, { value: 1, negativeZero: false },
     { value: 1, negativeZero: false },
   ], unified: [{value: 1}, {value: -1}, {value: 1}, {value: 6}, {value: 1}, {value: -1}] });
 });
