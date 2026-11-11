@@ -41,7 +41,8 @@ describe('tokenize', () => {
   it('tokenizes numbers (integer and negative)', () => {
     const tokens = tokenize('priority > -3');
     expect(tokens).toEqual(expect.arrayContaining([
-      expect.objectContaining({ type: 'NUMBER', value: -3 }),
+      expect.objectContaining({ type: 'OPERATOR', value: '-' }),
+      expect.objectContaining({ type: 'NUMBER', value: 3 }),
     ]));
   });
 

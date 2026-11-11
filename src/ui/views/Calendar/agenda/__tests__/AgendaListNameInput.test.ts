@@ -6,6 +6,18 @@ jest.mock("src/lib/stores/ui", () => { const { writable } = require("svelte/stor
 const Editor = require("../AgendaListEditor.svelte").default;
 const flush = async () => { await tick(); await tick(); await tick(); };
 afterEach(cleanup);
+
+test.each([null, "future-v2", "", 0, false])("ordinary Save retains unsupported formula marker %p", async formulaVersion => {
+  const list = { id: "unsupported", name: "Saved", icon: { type: "lucide", value: "list" },
+    filterMode: "advanced", filterFormula: "true", formulaVersion, order: 0 };
+  const view = render(Editor, { props: { list, fields: [], records: [], existingLists: [] } });
+  const saves: Array<{ formulaVersion: unknown; filterFormula: string }> = [];
+  view.component.$on("save", (event: CustomEvent<{ formulaVersion: unknown; filterFormula: string }>) => saves.push(event.detail));
+  await flush();
+  expect(view.container.querySelector("textarea")?.readOnly).toBe(true);
+  view.container.querySelector<HTMLButtonElement>(".header-save")!.click(); await flush();
+  expect(saves).toEqual([expect.objectContaining({ formulaVersion, filterFormula: "true" })]);
+});
 test("the list name uses the common original TextField and IME cannot save the form early", async () => {
   const view = render(Editor, { props: { initialName: "Список", fields: [], records: [], existingLists: [] } });
   const saves: Array<{ name: string }> = []; view.component.$on("save", (event: CustomEvent<{ name: string }>) => saves.push(event.detail));

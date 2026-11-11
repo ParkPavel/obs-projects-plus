@@ -323,8 +323,8 @@ describe("evaluateExpression", () => {
     expect(evaluateExpression("a + b", { a: 1, b: -2 })).toBe(-1);
   });
 
-  test("undefined field returns null", () => {
-    expect(evaluateExpression("a + b", { a: 10 })).toBeNull();
+  test("absent arithmetic operands use the shared zero coercion", () => {
+    expect(evaluateExpression("a + b", { a: 10 })).toBe(10);
   });
 
   test("empty expression returns null", () => {
@@ -335,12 +335,12 @@ describe("evaluateExpression", () => {
     expect(evaluateExpression("a / b", { a: 10, b: 0 })).toBeNull();
   });
 
-  test.each(["(a + b)", "-2", "SUM(1, 2)"])("unsupported legacy syntax returns null: %s", (source) => {
-    expect(evaluateExpression(source, { a: 1, b: 2 })).toBeNull();
+  test.each([["(a + b)", 3], ["-2", -2], ["SUM(1, 2)", 3]] as const)("numeric adapter uses current syntax: %s", (source, expected) => {
+    expect(evaluateExpression(source, { a: 1, b: 2 })).toBe(expected);
   });
 
-  test("legacy field lookup remains exact-case", () => {
-    expect(evaluateExpression("a + 1", { A: 5 })).toBeNull();
+  test("numeric adapter uses shared case-insensitive property lookup", () => {
+    expect(evaluateExpression("a + 1", { A: 5 })).toBe(6);
   });
 });
 
