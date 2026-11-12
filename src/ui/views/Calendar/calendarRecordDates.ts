@@ -29,7 +29,9 @@ export function calendarRecordDates(record: DataRecord, mapping: CalendarDateMap
     return null;
   }
   const startDate = mapping.startDateField
-    ? parse(record.values[mapping.startDateField])
+    ? mapping.startDateField === "name"
+      ? parse(record.values["name"]) ?? filenameDate(record.id, timezone)
+      : parse(record.values[mapping.startDateField])
     : first(["startDate", "date", "deadline", "dueDate", "scheduled", fallbackStartField]) ?? filenameDate(record.id, timezone);
   const endDate = mapping.endDateField
     ? parse(record.values[mapping.endDateField])

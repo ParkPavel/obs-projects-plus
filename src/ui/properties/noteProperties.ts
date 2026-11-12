@@ -20,7 +20,7 @@ import {
   type CellValue,
   type CellListItem,
 } from "src/lib/database/cellEditor";
-import { parseTypedDate } from "src/lib/helpers/typedDate";
+import { parseStoredDate as parseSharedStoredDate } from "src/lib/helpers/dateShape";
 import { formatWikilink, parseWikilink } from "src/lib/engine/wikilink";
 import { isTemplateText } from "src/lib/suggestions/valueSuggestions";
 
@@ -272,16 +272,11 @@ export function draftOf(value: unknown, type: CellEditType): string {
   return formatCellValue(asCellValue(value), type);
 }
 
-const STORED_DATE = /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2})?/;
-
-/** A stored `YYYY-MM-DD[THH:mm]` read as a local date, or null. */
+/** Use the same stored-date dialects as the other date editors. */
 export function parseStoredDate(value: unknown): Date | null {
   if (typeof value !== "string") return null;
-  const m = STORED_DATE.exec(value);
-  if (!m) return null;
-  // The same reader DateField uses for the platform picker's value.
-  const parsed = parseTypedDate(m[0].replace("T", " "));
-  return parsed.kind === "date" ? parsed.date : null;
+  const parsed = parseSharedStoredDate(value);
+  return parsed instanceof Date && Number.isFinite(parsed.getTime()) ? parsed : null;
 }
 
 /** A local date as the text `parseCellInput` stores for date/datetime. */

@@ -9,6 +9,7 @@
   import TwoWeeksBlock from './TwoWeeksBlock.svelte';
   import { getScrollBehavior } from 'src/lib/helpers/animation';
   import { settings } from 'src/lib/stores/settings';
+  import { captureScrollAnchor } from '../../scrollAnchor';
 
   export let groupedRecords: Record<string, DataRecord[]>;
   export let processedData: ProcessedCalendarData | null = null;
@@ -272,8 +273,7 @@
     if (isLoadingPrev || !units[0]) return;
     isLoadingPrev = true;
     
-    const oldScrollHeight = scrollableParent?.scrollHeight ?? 0;
-    const oldScrollTop = scrollableParent?.scrollTop ?? 0;
+    const restoreAnchor = captureScrollAnchor(scrollableParent, unitElements[0]);
     
     const newUnits: dayjs.Dayjs[] = [];
     let current = units[0];
@@ -289,11 +289,7 @@
 
     // Maintain scroll position after DOM update
     requestAnimationFrame(() => {
-      if (scrollableParent) {
-        const newScrollHeight = scrollableParent.scrollHeight;
-        const heightDiff = newScrollHeight - oldScrollHeight;
-        scrollableParent.scrollTop = oldScrollTop + heightDiff;
-      }
+      restoreAnchor();
       isLoadingPrev = false;
     });
   }

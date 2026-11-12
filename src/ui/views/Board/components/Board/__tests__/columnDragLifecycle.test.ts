@@ -34,6 +34,33 @@ function mount() {
 }
 beforeEach(() => jest.useFakeTimers());
 afterEach(() => { for (const component of mounted.splice(0)) component.$destroy(); jest.clearAllTimers(); jest.useRealTimers(); document.body.replaceChildren(); });
+
+test.each(["same", "field", "project"])("touch card drop belongs to its captured grouping/project: %s", async change => {
+  const board = mount(), update = jest.fn();
+  const columns = board.columns.map((column, i) => ({ ...column, collapse: false, records: i ? [] : [{ id: "a.md", values: {} }] }));
+  board.component.$set({ columns, onRecordUpdate: update }); await tick();
+  const place = (el: HTMLElement, left: number, top: number, width: number, height: number) => {
+    el.getBoundingClientRect = () => ({ left, top, width, height, right: left + width, bottom: top + height } as DOMRect);
+  };
+  place(board.target.querySelector(".projects--board--container")!, 0, 0, 600, 500);
+  place(board.target.querySelector(".projects--board--viewport")!, 0, 0, 600, 500);
+  board.target.querySelectorAll<HTMLElement>("section.projects--board--column").forEach((column, i) => {
+    place(column, i * 300, 0, 270, 500);
+    place(column.querySelector(".projects--board--card-list")!, i * 300, 40, 270, 400);
+  });
+  place(board.target.querySelector(".ppp-board-card-slot")!, 0, 40, 270, 80);
+  const pointer = (target: EventTarget, type: string, x: number) => {
+    const event = new Event(type, { bubbles: true, cancelable: true });
+    Object.assign(event, { pointerId: 1, pointerType: "touch", isPrimary: true, clientX: x, clientY: 70 }); target.dispatchEvent(event);
+  };
+  pointer(board.target.querySelector(".board-card-grip")!, "pointerdown", 50);
+  pointer(window, "pointermove", 350); jest.advanceTimersByTime(32);
+  expect(board.target.querySelector(".ppp-board-touch-preview")).not.toBeNull();
+  if (change !== "same") { board.component.$set(change === "field" ? { dragContext: "priority" } : { project: { id: "other", name: "Other" } }); await tick(); }
+  pointer(window, "pointerup", 350); await tick();
+  expect(update).toHaveBeenCalledTimes(change === "same" ? 2 : 0);
+  expect(board.target.querySelector(".ppp-board-touch-preview")).toBeNull();
+});
 test("destroy before the delayed drop cancels the write", async () => {
   const board = mount(); board.event("consider"); board.event("finalize"); await tick(); board.destroy(); jest.runOnlyPendingTimers();
   expect(board.write).not.toHaveBeenCalled();

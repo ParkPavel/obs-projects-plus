@@ -87,6 +87,7 @@
 
   export let app: App;
   export let file: TFile;
+  export let readonly = false;
   export let inverseIndexStore: InverseIndexStore | undefined = undefined;
 
   // A TFile may be renamed before the wrapper retires this interaction.
@@ -210,9 +211,9 @@
   function typeOf(entry: OverlayedEntry): PropertyType {
     return resolveType(entry.key, entry.value, typeOverrides);
   }
-  function editable(entry: OverlayedEntry, type: PropertyType): type is CellEditType {
+  function editable(entry: OverlayedEntry, type: PropertyType, locked = readonly): type is CellEditType {
     // i3-props: a nested value stays read-only whatever type it is given.
-    return !READONLY_TYPES.has(type) && !isReservedPropertyKey(entry.key) && !isNestedValue(entry.value);
+    return !locked && !READONLY_TYPES.has(type) && !isReservedPropertyKey(entry.key) && !isNestedValue(entry.value);
   }
   function isListType(type: PropertyType): type is ListType {
     return type === "list" || type === "tags" || type === "relation";
@@ -220,15 +221,15 @@
 
   // ── Writes (queued; the target file is the one the action was taken on) ──
   function persist(write: (ownerApp: App, target: TFile) => Promise<unknown>): Promise<boolean> {
-    if (!isCurrent()) return Promise.resolve(false);
+    if (readonly || !isCurrent()) return Promise.resolve(false);
     const ownerApp = app, target = file, path = target.path;
     // Accepted writes drain after close against their captured owner. A rename
     // before execution must not redirect the write to another note.
-    return queue.run(() => target.path === path ? write(ownerApp, target) : Promise.resolve(false));
+    return queue.run(() => !readonly && target.path === path ? write(ownerApp, target) : Promise.resolve(false));
   }
 
   async function persistOverlay(next: NoteOverlay): Promise<boolean> {
-    if (!isCurrent()) return false;
+    if (readonly || !isCurrent()) return false;
     overlay = next;
     const saved = await persist((ownerApp, target) => writeOverlay(ownerApp, target, next));
     if (isCurrent() && !saved && overlay === next) {
@@ -377,7 +378,7 @@
   }
 
   function onGripDown(e: PointerEvent, key: string): void {
-    if (e.button !== 0 || dragKey !== null) return;
+    if (readonly || e.button !== 0 || dragKey !== null) return;
     e.preventDefault();
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     if (editingKey !== null) endEdit();
@@ -550,6 +551,8 @@
 
   async function commitDate(entry: OverlayedEntry, type: CellEditType, next: Date | null): Promise<void> {
     const text = next ? dateToCellText(next, type === "datetime") : "";
+    const previous = parseStoredDate(entry.value);
+    if (previous && next && dateToCellText(previous, type === "datetime") === text) return;
     const plan = planValueWrite(entry.value, text, type);
     if (plan.kind === "write") await writeKey(entry.key, plan.value);
   }
@@ -566,7 +569,7 @@
 
   // ── Rename / delete ──────────────────────────────────────
   async function startRename(key: string): Promise<void> {
-    if (!isCurrent()) return;
+    if (readonly || !isCurrent()) return;
     if (editingKey === key) endEdit();
     renameSession += 1;
     renamingKey = key;
@@ -614,7 +617,7 @@
 
   // ── New property ─────────────────────────────────────────
   async function startAdd(): Promise<void> {
-    if (!isCurrent()) return;
+    if (readonly || !isCurrent()) return;
     addRevision += 1;
     adding = true;
     addError = null;
@@ -663,6 +666,7 @@
   function rowMenu(event: MouseEvent, entry: OverlayedEntry, index: number): void {
     event.preventDefault();
     event.stopPropagation();
+    if (readonly) return;
     const current = typeOf(entry);
     const visibleKeys = entries.filter((e) => !e.hidden).map((e) => e.key);
     const items: ContextMenuEntry[] = [
@@ -754,11 +758,18 @@
         onClick: () => void persistOverlay({ hidden: [], pinned: [], order: [] }),
       },
     ];
-    openContextMenu(ownedMenu(items), event.currentTarget as HTMLElement, app);
+    openContextMenu(ownedMenu(readonly ? items.slice(0, 1) : items), event.currentTarget as HTMLElement, app);
+  }
+
+  $: if (readonly) retireEditors();
+  function retireEditors(): void {
+    endEdit(); endRename(); endDrag();
+    adding = false;
+    addRevision++;
   }
 
   function addRelation(): void {
-    if (!isCurrent()) return;
+    if (readonly || !isCurrent()) return;
     new RelationPickerModal(
       app,
       (chosen) => {
@@ -842,7 +853,7 @@
     >
       {#each entries as entry, index (entry.key)}
         {@const type = typeOf(entry)}
-        {@const canEdit = editable(entry, type)}
+        {@const canEdit = editable(entry, type, readonly)}
         <li
           class="ppp-note-props__row"
           class:is-hidden={entry.hidden}
@@ -873,6 +884,7 @@
             <button
               type="button"
               class="ppp-note-props__key"
+              disabled={readonly}
               title={`${entry.key} · ${t(`data-types.${type}`)}`}
               on:click={(e) => rowMenu(e, entry, index)}
             >
@@ -1018,11 +1030,12 @@
           <button
             type="button"
             class="ppp-note-props__icon clickable-icon"
+            disabled={readonly}
             aria-label={t("views.visualizer.block.more")}
             title={t("views.visualizer.block.more")}
             on:click={(e) => rowMenu(e, entry, index)}
           ><Icon name="more-horizontal" size="sm" /></button>
-          {#if entry.hidden}
+          {#if entry.hidden || readonly}
             <span class="ppp-note-props__grip is-placeholder" aria-hidden="true"></span>
           {:else}
             <!-- i3-final: pointer events, so a finger drags as a mouse does; Alt+↑/↓ from the keyboard. -->
@@ -1043,7 +1056,7 @@
       {/each}
     </ul>
 
-    {#if adding}
+    {#if adding && !readonly}
       <div class="ppp-note-props__add-row">
         <TextField
           bind:this={addField}
@@ -1062,7 +1075,7 @@
           <span class="ppp-note-props__error" role="alert">{addError}</span>
         {/if}
       </div>
-    {:else}
+    {:else if !readonly}
       <button type="button" class="ppp-note-props__add" on:click={startAdd}>
         {t("views.visualizer.block.add")}
       </button>

@@ -1,5 +1,19 @@
 import { processCalendarData } from "../processor";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
+import dayjs from "dayjs";
+import { createCalendarDraft, draftRecord, draftMapping } from "../draft/calendarDraft";
+
+test("a filename-mapped draft keeps its start date without a synthetic name property", () => {
+  const ctl = createCalendarDraft();
+  ctl.begin({ owner: "p", day: dayjs("2026-10-26"), durationMinutes: 60,
+    name: "2026-10-26 Visit", templatePath: "", prefill: {}, mapping: draftMapping({ config: { startDateField: "name" }, fields: [] }) });
+  try {
+    const record = draftRecord(ctl.getState().draft!, "Untitled");
+    expect(record.values).not.toHaveProperty("name");
+    const result = processCalendarData({ fields, records: [record] }, { startDateField: "name" });
+    expect(result.processed[0]?.startDate?.format("YYYY-MM-DD")).toBe("2026-10-26");
+  } finally { ctl.destroy(); }
+});
 
 const fields = [{ name: "visit", type: DataFieldType.String, repeated: false, derived: false, identifier: false }];
 test("explicit mapped start values never borrow another property's date or a filename date", () => {

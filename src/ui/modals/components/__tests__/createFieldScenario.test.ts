@@ -14,6 +14,7 @@ const mockNoop = class {
   $on() { return () => {}; }
   $destroy() {}
 };
+let mockOptionsChange: ((values: string[]) => void) | undefined;
 
 jest.mock("obsidian-svelte", () => ({
   Button: require("./mocks/Button.mock.svelte").default,
@@ -28,13 +29,17 @@ jest.mock("obsidian-svelte", () => ({
   Icon: mockNoop,
 }), { virtual: true });
 jest.mock("src/ui/components/TagsInput", () => ({ TagsInput: mockNoop }), { virtual: true });
-jest.mock("src/ui/components/MultiTextInput/MultiTextInput.svelte", () => ({ __esModule: true, default: mockNoop }), { virtual: true });
+jest.mock("src/ui/components/MultiTextInput/MultiTextInput.svelte", () => ({ __esModule: true, default: class extends mockNoop {
+  constructor(options: { props: { onChange: (values: string[]) => void } }) { super(); mockOptionsChange = options.props.onChange; }
+} }), { virtual: true });
 jest.mock("src/ui/components/DateInput.svelte", () => ({ __esModule: true, default: mockNoop }), { virtual: true });
 jest.mock("src/ui/components/DatetimeInput.svelte", () => ({ __esModule: true, default: mockNoop }), { virtual: true });
 
 jest.mock("src/ui/components/fields/SelectField.svelte", () => ({ __esModule: true, default: require("./mocks/Select.mock.svelte").default }));
 
 import { tick } from "svelte";
+import { get } from "svelte/store";
+import { i18n } from "src/lib/stores/i18n";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
 type DataField = import("src/lib/dataframe/dataframe").DataField;
 type DataFrame = import("src/lib/dataframe/dataframe").DataFrame;
@@ -58,6 +63,39 @@ const projects = [
 
 async function settle() { for (let i = 0; i < 4; i++) { await Promise.resolve(); await tick(); } }
 function change(el: HTMLSelectElement, value: string) { el.value = value; el.dispatchEvent(new Event("change")); }
+
+it("new List exposes options and persists their selection in the repeated field", async () => {
+  mockOptionsChange = undefined;
+  const target = document.createElement("div"); document.body.appendChild(target);
+  const onCreate = jest.fn().mockResolvedValue(true);
+  const component = new CreateField({ target, props: { existingFields: [], defaultName: "Choices", onCreate } });
+  try {
+    target.querySelector<HTMLButtonElement>(`button[data-type='${DataFieldType.List}']`)!.click(); await settle();
+    const label = get(i18n).t("modals.field.create.options.name");
+    expect(Array.from(target.querySelectorAll("[data-testid='setting-item']")).some(item => item.getAttribute("data-name") === label)).toBe(true);
+    expect(mockOptionsChange).toBeDefined(); mockOptionsChange!(["A", "B"]); await settle();
+    target.querySelector<HTMLButtonElement>("[data-testid='modal-button-group'] button[data-variant='primary']")!.click(); await settle();
+    expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ type: DataFieldType.String, repeated: true, typeConfig: expect.objectContaining({ options: ["A", "B"] }) }), []);
+  } finally { component.$destroy(); target.remove(); }
+});
+
+it("renaming a rollup to its pending relation blocks both writes until the name is corrected", async () => {
+  const target = document.createElement("div"); document.body.appendChild(target);
+  const onCreate = jest.fn().mockResolvedValue(true), onCreateRelation = jest.fn().mockResolvedValue(true);
+  const component = new CreateField({ target, props: { existingFields: [], defaultName: "Total", onCreate, onCreateRelation,
+    availableProjects: projects, currentProjectId: "clients", resolveFrame: async () => visits } });
+  try {
+    target.querySelector<HTMLButtonElement>(`button[data-type='${DataFieldType.Rollup}']`)!.click(); await settle();
+    change(target.querySelector<HTMLSelectElement>("[data-testid='select']")!, "create:visits"); await settle();
+    const name = target.querySelector<HTMLInputElement>(".ppp-value-field input")!;
+    name.value = "Визиты"; name.dispatchEvent(new Event("input")); await settle();
+    const save = target.querySelector<HTMLButtonElement>("[data-testid='modal-button-group'] button[data-variant='primary']")!;
+    save.click(); await settle(); expect(onCreateRelation).not.toHaveBeenCalled(); expect(onCreate).not.toHaveBeenCalled();
+    name.value = "Total"; name.dispatchEvent(new Event("input")); await settle(); save.click(); await settle();
+    expect(onCreateRelation).toHaveBeenCalledTimes(1); expect(onCreate).toHaveBeenCalledTimes(1);
+    expect(onCreate.mock.calls[0]![0].name).toBe("Total");
+  } finally { component.$destroy(); target.remove(); }
+});
 
 describe("formula property persistence through real field components", () => {
   it.each(["default", "leave"])("creates a field with the one rule set (%s)", async choice => {

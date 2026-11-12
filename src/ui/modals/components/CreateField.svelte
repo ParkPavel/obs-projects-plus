@@ -137,7 +137,8 @@
       return $i18n.t("modals.field.create.empty-name-error");
     }
 
-    if (existingFields.findIndex((field) => field.name === fieldName) !== -1) {
+    if (existingFields.findIndex((field) => field.name === fieldName) !== -1 ||
+      (field.type === DataFieldType.Rollup && pendingRelation?.name === fieldName)) {
       return $i18n.t("modals.field.create.existing-name-error");
     }
 
@@ -826,7 +827,7 @@
         />
       {/if}
     </SettingItem>
-    {#if !field.repeated && (field.type === DataFieldType.String || field.type === DataFieldType.List || field.type === DataFieldType.Select || field.type === DataFieldType.Status)}
+    {#if field.type === DataFieldType.List || (!field.repeated && (field.type === DataFieldType.String || field.type === DataFieldType.Select || field.type === DataFieldType.Status))}
       <SettingItem
         name={$i18n.t("modals.field.create.options.name")}
         description={$i18n.t("modals.field.create.options.description")}

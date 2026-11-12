@@ -7,7 +7,7 @@
 
 import { tick } from "svelte";
 
-export const BLOCK_FILTER_TRIGGER = ".ppp-blockfilter .ppp-filterpills-add";
+export const BLOCK_FILTER_TRIGGER = ".ppp-blockfilter .ppp-blockfilter-button";
 
 export function openBlockFilter(widgetId: string, root: ParentNode = document): Promise<boolean> {
   return tick().then(() => {

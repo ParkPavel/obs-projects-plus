@@ -237,7 +237,7 @@
   {/if}
 
   {#if record && isNote && noteFile}
-    <NotePropertiesBlock app={$appStore} file={noteFile} />
+    <NotePropertiesBlock app={$appStore} file={noteFile} {readonly} />
     {#if computedFields.length > 0}
       <details class="ppp-rcv-computed" open>
         <summary>{$i18n.t("views.dashboard.record-card.computed-properties", { defaultValue: "Computed properties" })}</summary>

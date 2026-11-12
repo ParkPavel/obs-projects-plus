@@ -147,7 +147,10 @@
   $: syncColumnOwner(dragContext, project?.id, columnZoneDisabled);
   let rejectedColumnDrag: DndColumn[] | undefined;
   function syncColumnOwner(context: string | undefined, projectId: string | undefined, disabled: boolean) {
-    if (context !== previousDragContext || projectId !== previousDragProject || disabled) cancelColumnDrag();
+    if (context !== previousDragContext || projectId !== previousDragProject || disabled) {
+      cancelColumnDrag();
+      touchDrag?.cancel();
+    }
     previousDragContext = context;
     previousDragProject = projectId;
   }

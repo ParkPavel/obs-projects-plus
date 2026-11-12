@@ -2,6 +2,7 @@ import "@testing-library/jest-dom";
 import { render } from "@testing-library/svelte";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
 import { app } from "src/lib/stores/obsidian";
+const mockPropertyLocks: boolean[] = [];
 
 jest.mock("src/ui/modals/components/EditNote.svelte", () => {
   class Noop {
@@ -17,7 +18,8 @@ jest.mock("src/ui/modals/components/EditNote.svelte", () => {
 
 jest.mock("src/ui/properties/NotePropertiesBlock.svelte", () => {
   class Noop {
-    constructor() {
+    constructor(options: { props: { readonly: boolean } }) {
+      mockPropertyLocks.push(options.props.readonly);
       Object.assign(this, { $$: { fragment: null, on_mount: [], on_destroy: [], after_update: [], ctx: [] } });
     }
     $set() {}
@@ -42,11 +44,18 @@ const field = (name: string, type: DataField["type"]): DataField => ({
 
 describe("RecordCardView computed values", () => {
   beforeEach(() => {
+    mockPropertyLocks.length = 0;
     const file = new TFile("Notes/example.md");
     app.set({ vault: { getAbstractFileByPath: () => file } } as never);
   });
 
   afterEach(() => app.set(undefined as never));
+
+  it.each([false, true])("passes the panel's readonly=%s to its note properties", readonly => {
+    const view = render(RecordCardView, { props: { record: { id: "Notes/example.md", values: { title: "Original" } }, fields: [], readonly } });
+    try { expect(mockPropertyLocks.at(-1)).toBe(readonly); }
+    finally { view.unmount(); }
+  });
 
   it("shows computed values in an initially expanded, read-only disclosure", () => {
     const record: DataRecord = {

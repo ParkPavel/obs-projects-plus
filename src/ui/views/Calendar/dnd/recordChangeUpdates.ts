@@ -190,15 +190,17 @@ export function buildRecordChangeUpdates(input: RecordChangeInput): RecordChange
     const endFormat = endHasEmbeddedTime ? 'YYYY-MM-DDTHH:mm:ss' : 'YYYY-MM-DD';
 
     if (options?.endTime) {
+      const endDateDay = options.endDate ?? (originalEnd && originalStart
+        ? originalEnd.add(targetDate.diff(originalStart.startOf('day'), 'day'), 'day')
+        : targetDate);
       if (useSeparateTimeFields || hasSeparateEndTime || !endHasEmbeddedTime) {
         // Separate model or date-only end field: time goes to the end-time field
-        const endDateDay = options.endDate ?? targetDate;
         updates[endTimeFieldName] = guardEnd(options.endTime, endDateDay.isSame(targetDate, 'day'));
         updates[endDateFieldName] = endDateDay.format('YYYY-MM-DD');
       } else {
         // Embedded model: combine date+time into the end-date field
         const [eh, em] = options.endTime.split(':').map(Number);
-        let newEndDate = (options.endDate ?? targetDate).hour(eh ?? 0).minute(em ?? 0).second(0);
+        let newEndDate = endDateDay.hour(eh ?? 0).minute(em ?? 0).second(0);
         if (newEndDate.isBefore(newStartDate)) {
           newEndDate = newStartDate;
         }

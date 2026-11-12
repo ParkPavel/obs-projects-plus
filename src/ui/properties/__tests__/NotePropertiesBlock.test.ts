@@ -33,6 +33,7 @@ import "@testing-library/jest-dom";
 import { render, waitFor } from "@testing-library/svelte";
 import { tick } from "svelte";
 import { get } from "svelte/store";
+import { i18n } from "src/lib/stores/i18n";
 import { settings } from "src/lib/stores/settings";
 import { DEFAULT_PROJECT } from "src/settings/settings";
 // Required, not imported: esbuild-jest runs babel hoisting on files with
@@ -42,7 +43,7 @@ type TFile = { path: string };
 
 const NotePropertiesBlock = require("../NotePropertiesBlock.svelte").default;
 
-function setup(fm: Record<string, unknown>, other?: Record<string, unknown>) {
+function setup(fm: Record<string, unknown>, other?: Record<string, unknown>, readonly = false) {
   const file = new TFile("Notes/a.md");
   const getMarkdownFiles = jest.fn(() => [file, new TFile("Notes/b.md")]);
   const listeners = new Set<(f: TFile) => void>();
@@ -63,7 +64,7 @@ function setup(fm: Record<string, unknown>, other?: Record<string, unknown>) {
     vault: { getMarkdownFiles, getAbstractFileByPath: () => null },
     workspace: { openLinkText: jest.fn(), getLeaf: jest.fn() },
   };
-  const result = render(NotePropertiesBlock, { props: { app, file } });
+  const result = render(NotePropertiesBlock, { props: { app, file, readonly } });
   return { ...result, app, file, processFrontMatter, getMarkdownFiles, notifyChanged: (changed: TFile) => listeners.forEach(cb => cb(changed)) };
 }
 
@@ -106,6 +107,46 @@ function type(input: HTMLInputElement, text: string): void {
   input.value = text;
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
+
+it("a stored day-first date remains visible and unchanged on an untouched Enter", async () => {
+  const fm = { due: "14.10.2026", pp_types: { due: "date" } }, view = setup(fm);
+  try {
+    await flush(); const input = row("due").querySelector<HTMLInputElement>(".ppp-date-field__text")!;
+    expect(input.value).toBe("14.10.2026"); input.focus(); key(input, "Enter"); await flush();
+    expect(fm.due).toBe("14.10.2026"); expect(view.processFrontMatter).not.toHaveBeenCalled();
+  } finally { view.unmount(); }
+});
+
+it("readonly properties expose no writers, and a previously opened mutation menu cannot write after locking", async () => {
+  const fm = { title: "Original", done: false, due: "2026-10-14" }, view = setup(fm);
+  try {
+    await flush(); mockMenus.length = 0;
+    row("title").querySelector<HTMLButtonElement>("button.ppp-note-props__icon")!.click();
+    const staleDelete = mockMenus[0]!.find(entry => entry.title === get(i18n).t("views.visualizer.block.actions.delete", { defaultValue: "Delete property" }))!;
+    view.component.$set({ readonly: true }); await flush();
+    staleDelete.onClick!(); await flush();
+    expect(view.container.querySelector(".ppp-note-props__add, [data-row-grip], input, textarea")).toBeNull();
+    row("title").querySelector<HTMLElement>(".ppp-note-props__display")!.click(); await flush();
+    expect(row("title").querySelector("input")).toBeNull();
+    keyWith(row("title"), "ArrowDown", { altKey: true }); await flush();
+    expect(fm).toEqual({ title: "Original", done: false, due: "2026-10-14" });
+    expect(view.processFrontMatter).not.toHaveBeenCalled();
+    view.component.$set({ readonly: false }); await flush();
+    row("title").querySelector<HTMLElement>(".ppp-note-props__display")!.click(); await flush();
+    const input = editorOf("title")!; type(input, "Changed"); key(input, "Enter"); await flush();
+    expect(fm.title).toBe("Changed");
+  } finally { view.unmount(); }
+});
+
+it("an initially readonly note never opens a value editor", async () => {
+  const view = setup({ title: "Original", done: false }, undefined, true);
+  try {
+    await flush();
+    row("title").querySelector<HTMLElement>(".ppp-note-props__display")!.click(); await flush();
+    expect(view.container.querySelector("input, textarea, .ppp-note-props__add, [data-row-grip]")).toBeNull();
+    expect(view.processFrontMatter).not.toHaveBeenCalled();
+  } finally { view.unmount(); }
+});
 
 afterEach(() => {
   document.body.innerHTML = "";

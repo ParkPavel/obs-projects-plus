@@ -4,6 +4,12 @@ import { draftMapping, createCalendarDraft, draftPayload } from "../draft/calend
 import dayjs from "dayjs";
 
 const view = (name: string, type = "calendar") => ({ type, config: { eventColorField: name } });
+it("refuses array-valued color fields for explicit, inherited and default mappings", () => {
+  const field = { name: "eventColor", type: DataFieldType.String, repeated: true, derived: false, identifier: false };
+  for (const [config, views] of [[{ eventColorField: "eventColor" }, []], [{}, [view("eventColor")]], [{}, []]] as const) {
+    expect(resolveCalendarColorField(config, views, [field])).toBeUndefined();
+  }
+});
 it("uses this view's exact property before any project mapping", () => {
   expect(resolveCalendarColorField({ eventColorField: "Color" }, [view("color")])).toBe("Color");
 });

@@ -196,6 +196,7 @@ export interface TouchCardDragOptions {
 
 export interface TouchCardDragHandle {
   isActive: () => boolean;
+  cancel: () => void;
   destroy: () => void;
 }
 
@@ -534,6 +535,7 @@ export function createTouchCardDrag(options: TouchCardDragOptions): TouchCardDra
 
   return {
     isActive: () => state.kind === "active",
+    cancel: reset,
     destroy() {
       reset();
       container.removeEventListener("pointerdown", onPointerDown);
@@ -576,15 +578,4 @@ export function blockLibraryTouchGrip(node: HTMLElement): { destroy: () => void 
  * alone), origin top-left: its box on screen is the card's box again, and the
  * library's hit-test, which reads that box, aims where the preview is.
  */
-export function scaleDraggedClone(element: HTMLElement | undefined, zoom: number): void {
-  if (!element || zoom === 1 || !(zoom > 0)) return;
-  if (element.dataset["pppScaled"] === String(zoom)) return;
-  const rect = element.getBoundingClientRect();
-  element.dataset["pppScaled"] = String(zoom);
-  const rootPx = rootFontPx(element.ownerDocument);
-  element.style.width = remAt(rect.width / zoom, rootPx);
-  element.style.height = remAt(rect.height / zoom, rootPx);
-  // box-sizing and origin: `.ppp-board-scaled-clone` (Board.svelte).
-  element.classList.add("ppp-board-scaled-clone");
-  element.style.scale = String(zoom);
-}
+export { scaleDraggedClone } from "./cardClone";

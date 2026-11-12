@@ -5,6 +5,7 @@
 
   export let app: App;
   export let file: TFile;
+  export let readonly = false;
   export let inverseIndexStore: InverseIndexStore | undefined = undefined;
 </script>
 
@@ -12,6 +13,6 @@
      metadata/file objects of the same path preserve the original input. -->
 {#key app}
   {#key file.path}
-    <NotePropertiesSession {app} {file} {inverseIndexStore} />
+    <NotePropertiesSession {app} {file} {inverseIndexStore} {readonly} />
   {/key}
 {/key}

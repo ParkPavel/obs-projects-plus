@@ -147,7 +147,19 @@ export function coverOf(
 export function firstParagraph(markdown: string, max = 280): string {
   let text = markdown.replace(/^\uFEFF/, "");
   text = text.replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/, "");
-  text = text.replace(/```[\s\S]*?(?:```|$)/g, "\n\n").replace(/%%[\s\S]*?%%/g, "").replace(/<!--[\s\S]*?-->/g, "");
+  let fence: { character: string; length: number } | null = null;
+  text = text.split(/\r?\n/).map(line => {
+    const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    if (fence) {
+      if (marker && marker[1]![0] === fence.character && marker[1]!.length >= fence.length && !marker[2]!.trim()) fence = null;
+      return "";
+    }
+    if (marker && (marker[1]![0] === "~" || !marker[2]!.includes("`"))) {
+      fence = { character: marker[1]![0]!, length: marker[1]!.length };
+      return "";
+    }
+    return line;
+  }).join("\n").replace(/%%[\s\S]*?%%/g, "").replace(/<!--[\s\S]*?-->/g, "");
   for (const block of text.split(/\r?\n\s*\r?\n/)) {
     const lines = block
       .split(/\r?\n/)

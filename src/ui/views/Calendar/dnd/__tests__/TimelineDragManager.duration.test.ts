@@ -10,6 +10,7 @@ import dayjs from "dayjs";
 import type { DataRecord } from "src/lib/dataframe/dataframe";
 import { TimelineDragManager, type OnDragCommit } from "../TimelineDragManager";
 import { EventRenderType, type ProcessedRecord } from "../../types";
+import { buildRecordChangeUpdates } from "../recordChangeUpdates";
 
 const REM_PX = 16;
 const HOUR_PX = 3 * REM_PX;
@@ -109,6 +110,28 @@ describe("TimelineDragManager — duration from the processed start/end differen
     expect(options).toEqual(expect.objectContaining({ startTime: "14:00", endTime: "17:00" }));
   });
 
+  it("resizes the end fragment of an overnight event and writes its next-day clock", () => {
+    const nextDay = day.add(1, "day");
+    const column = placed(document.createElement("div"), rect(0, 0, 100, 24 * HOUR_PX));
+    manager.setDayColumns([{ day: nextDay, element: column }]);
+    const values = { date: "2026-10-02", endDate: "2026-10-03", startTime: "22:00", endTime: "02:00" };
+    const item = { ...record, values };
+    const processed = processedFor(day.hour(22), nextDay.hour(2), item);
+    manager.initiate(item, processed, mouse("mousedown", 2 * HOUR_PX), "resize-bottom", bar);
+    document.dispatchEvent(mouse("mousemove", 2 * HOUR_PX + 20));
+    document.dispatchEvent(mouse("mousemove", 3 * HOUR_PX));
+    document.dispatchEvent(mouse("mouseup", 3 * HOUR_PX));
+    expect(onCommit).toHaveBeenCalledTimes(1);
+    const [targetDate, , options] = onCommit.mock.calls[0]!;
+    expect(targetDate.format("YYYY-MM-DD")).toBe("2026-10-02");
+    expect(options?.endTime).toBe("03:00");
+    expect(options?.endDate?.format("YYYY-MM-DD")).toBe("2026-10-03");
+    const { updates } = buildRecordChangeUpdates({ values, dateFieldName: "date", endDateFieldName: "endDate",
+      startTimeFieldName: "startTime", endTimeFieldName: "endTime", targetDate, options,
+      originalStart: day.hour(22), originalEnd: nextDay.hour(2) });
+    expect(updates).toEqual({ date: "2026-10-02", endDate: "2026-10-03", endTime: "03:00" });
+  });
+
   it("moves an overnight event (22:00 to 02:00) keeping its 4 hours", () => {
     // The clock faces alone say 22:00 -> 02:00 = -1200 minutes.
     const options = drag(
@@ -170,12 +193,16 @@ describe("TimelineDragManager — duration from the processed start/end differen
   });
 
   it("resize-bottom of an overnight event never ends before its start", () => {
-    const options = drag(
-      processedFor(day.hour(22), day.add(1, "day").hour(2), record),
-      "resize-bottom",
-      9
-    );
-    // The bar's start is 22:00; the end cannot go above start + the minimum.
-    expect(options["endTime"]).toBe("22:15");
+    const nextDay = day.add(1, "day");
+    const column = placed(document.createElement("div"), rect(0, 0, 100, 24 * HOUR_PX));
+    manager.setDayColumns([{ day: nextDay, element: column }]);
+    manager.initiate(record, processedFor(day.hour(22), nextDay.hour(2), record), mouse("mousedown", 2 * HOUR_PX), "resize-bottom", bar);
+    document.dispatchEvent(mouse("mousemove", 2 * HOUR_PX + 20));
+    document.dispatchEvent(mouse("mousemove", 0));
+    document.dispatchEvent(mouse("mouseup", 0));
+    const options = onCommit.mock.calls[0]![2]!;
+    expect(options.endTime).toBe("00:00");
+    expect(options.endDate?.format("YYYY-MM-DD")).toBe(nextDay.format("YYYY-MM-DD"));
+    expect(options.endDate!.isAfter(day.hour(22))).toBe(true);
   });
 });

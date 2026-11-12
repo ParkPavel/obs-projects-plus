@@ -15,6 +15,15 @@ const END = "endTime";
 
 const day = (iso: string): dayjs.Dayjs => dayjs(iso).startOf("day");
 
+it.each([false, true])("preserves the original overnight end day for a time-only resize (embedded=%s)", embedded => {
+  const values = embedded
+    ? { date: "2026-10-02T22:00:00", endDate: "2026-10-03T02:00:00" }
+    : { date: "2026-10-02", endDate: "2026-10-03", startTime: "22:00", endTime: "02:00" };
+  const { updates } = build({ values, target: "2026-10-02", withEndDateField: true, options: { endTime: "03:00" } });
+  expect(updates["endDate"]).toBe(embedded ? "2026-10-03T03:00:00" : "2026-10-03");
+  if (!embedded) expect(updates["endTime"]).toBe("03:00");
+});
+
 function build(args: {
   values: Record<string, unknown>;
   target: string;

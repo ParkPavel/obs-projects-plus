@@ -84,6 +84,10 @@ describe("B2 planValueWrite", () => {
 });
 
 describe("B2 dates", () => {
+  it.each(["14.10.2026", "2026/10/14", "2026年10月14日"])("reads the shared supported stored date format %s", value => {
+    const date = parseStoredDate(value);
+    expect(date && dateToCellText(date, false)).toBe("2026-10-14");
+  });
   it("round-trips a stored day and a stored datetime", () => {
     const d = parseStoredDate("2026-10-14");
     expect(d).not.toBeNull();

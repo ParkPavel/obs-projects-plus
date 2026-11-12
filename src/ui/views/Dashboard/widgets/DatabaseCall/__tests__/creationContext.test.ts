@@ -19,6 +19,21 @@ jest.mock("src/lib/stores/i18n", () => ({ i18n: require("svelte/store").writable
 afterEach(cleanup);
 const condition = (field: string, value: string): FilterCondition => ({ field, value, operator: "is", enabled: true });
 
+it("passes the table tab's filtered records to its displayed table", async () => {
+  const project = { ...DEFAULT_PROJECT, id: "own", name: "Own", views: [] };
+  settings.set({ ...DEFAULT_SETTINGS, projects: [project] });
+  const fields = [{ name: "status", type: DataFieldType.String, repeated: false, derived: false, identifier: false }];
+  const frame = { fields, records: [
+    { id: "open.md", values: { status: "open" } }, { id: "closed.md", values: { status: "closed" } },
+  ] };
+  const view = render(DatabaseCallBlock, { props: { project, frame, fields, api: {} as never, readonly: false, getRecordColor: () => null,
+    sourceState: { kind: "parent", frame }, sourceReadOnly: false,
+    config: { activeTabId: "tab", viewTabs: [{ id: "tab", label: "Table", viewType: "table", config: {},
+      filter: { conjunction: "and", conditions: [condition("status", "open")] } }] } } });
+  await tick(); await tick();
+  expect(JSON.parse(view.container.querySelector("[data-record-ids]")!.textContent!)).toEqual(["open.md"]);
+});
+
 it.each<ViewTab["viewType"]>(["table", "board", "calendar", "gallery"])("%s receives required block and nested tab constraints for creation", async viewType => {
   const tab = { id: "tab", label: viewType, viewType, config: {}, filter: { conjunction: "and", conditions: [condition("status", "open")], groups: [{ conjunction: "and", conditions: [condition("channel", "web")] }] } };
   const project = { ...DEFAULT_PROJECT, id: "own", name: "Own project", views: [] };

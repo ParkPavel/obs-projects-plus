@@ -396,7 +396,9 @@ export class TimelineDragManager {
       const { startHour, hourHeightRem, remPx = 16 } = this.config;
       const pressY = point.clientY - pressColumn.getBoundingClientRect().top;
       grabOffsetPx = pressY - minutesToRem(originalStartMinutes, startHour, hourHeightRem) * remPx;
-      grabFromEndPx = pressY - minutesToRem(originalEndMinutes, startHour, hourHeightRem) * remPx;
+      const visibleEndMinutes = mode === 'resize-bottom' && timedSpanDays > 0
+        ? originalEndClockMinutes : originalEndMinutes;
+      grabFromEndPx = pressY - minutesToRem(visibleEndMinutes, startHour, hourHeightRem) * remPx;
     }
 
     // Auto-detect scroll container if not explicitly set
@@ -740,10 +742,12 @@ export class TimelineDragManager {
 
       case 'resize-bottom': {
         const pointerMinutes = yPositionToMinutes(relativeY - s.grabFromEndPx, startHour, endHour, hourHeightRem, remPx, snapInterval);
-        newEndMinutes = Math.max(pointerMinutes, s.originalStartMinutes + DND_CONSTANTS.MIN_DURATION_MINUTES);
+        const minimumEnd = sameDay ? s.originalStartMinutes + DND_CONSTANTS.MIN_DURATION_MINUTES : startHour * 60;
+        newEndMinutes = Math.max(pointerMinutes, minimumEnd);
         newEndMinutes = Math.min(endHour * 60, newEndMinutes);
         newStartMinutes = s.originalStartMinutes;
-        if (isMobile && pointerMinutes <= s.originalStartMinutes + DND_CONSTANTS.MIN_DURATION_MINUTES) {
+        endDayOffset = s.timedSpanDays;
+        if (isMobile && pointerMinutes <= minimumEnd) {
           hapticResizeLimit();
         }
         break;
@@ -764,9 +768,12 @@ export class TimelineDragManager {
     s.lastSnappedMinutes = newStartMinutes;
 
     // Build ghost position
+    const endFragment = s.mode === 'resize-bottom' && !sameDay;
+    const visibleStart = endFragment ? startHour * 60 : newStartMinutes;
+    const visibleEnd = endFragment ? newEndMinutes : endDayOffset > 0 ? endHour * 60 : newEndMinutes;
     const ghost: GhostPosition = {
-      topRem: minutesToRem(newStartMinutes, startHour, hourHeightRem),
-      heightRem: ((endDayOffset > 0 ? endHour * 60 : newEndMinutes) - newStartMinutes) * (hourHeightRem / 60),
+      topRem: minutesToRem(visibleStart, startHour, hourHeightRem),
+      heightRem: (visibleEnd - visibleStart) * (hourHeightRem / 60),
       dayColumnIndex: clampedIndex,
       time: minutesToTime(newStartMinutes),
       endTime: minutesToTime(newEndMinutes),
@@ -1234,6 +1241,7 @@ export class TimelineDragManager {
         break;
       case 'resize-bottom':
         options.endTime = ghost.endTime;
+        if (s.timedSpanDays > 0) options.endDate = timedTargetDate.add(ghost.endDayOffset ?? 0, 'day');
         break;
     }
 

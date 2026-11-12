@@ -14,6 +14,17 @@ import { tick } from "svelte";
 
 import { DataFieldType } from "src/lib/dataframe/dataframe";
 import { coverOf, coverText, firstEmbeddedImage, firstParagraph, getCoverRealPath } from "../gallery";
+
+it.each([
+  "~~~js\nhidden code\n~~~\n\nVisible prose.",
+  "````js\nhidden code\n```\nstill code\n````\n\nVisible prose.",
+  "~~~\nhidden code\n~~~~~\n\nVisible prose.",
+])("skips Markdown fences before content previews: %s", markdown => {
+  expect(firstParagraph(markdown)).toBe("Visible prose.");
+});
+it("does not display the contents of an unclosed fence", () => {
+  expect(firstParagraph("~~~js\nhidden code\n\nstill code")).toBe("");
+});
 import { GALLERY_WINDOW_STEP, NO_VALUE_GROUP, groupGalleryRecords, initialWindow, windowGroups } from "../galleryGroups";
 import { clampCardWidth, dropIncludedField, normalizeGalleryConfig, toggleCollapsedGroup } from "../galleryOptions";
 

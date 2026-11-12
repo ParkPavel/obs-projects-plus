@@ -24,7 +24,7 @@ export function resolveCalendarColorField(
     candidate = inherited.values().next().value ?? "eventColor";
   }
   const field = fields.find(field => field.name === candidate);
-  if (field && (field.derived || field.identifier || !COLOR_CARRIERS.has(field.type))) return undefined;
+  if (field && (field.repeated || field.derived || field.identifier || !COLOR_CARRIERS.has(field.type))) return undefined;
   return candidate;
 }
 

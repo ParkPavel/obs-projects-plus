@@ -102,12 +102,14 @@ describe("computeDropWrites", () => {
 describe("scaleDraggedClone", () => {
   it("gives the mouse clone the logical size at the board's scale", () => {
     const el = document.createElement("div");
+    document.body.appendChild(el);
     el.getBoundingClientRect = () => ({ width: 135, height: 27, left: 0, top: 0, right: 135, bottom: 27, x: 0, y: 0, toJSON: () => ({}) });
     scaleDraggedClone(el, 0.54);
     expect(parseFloat(el.style.width) * 16).toBeCloseTo(250, 0);
     expect(parseFloat(el.style.height) * 16).toBeCloseTo(50, 0);
     // jsdom drops the CSS `scale` property; the size and origin carry the check.
     expect(el.classList.contains("ppp-board-scaled-clone")).toBe(true);
+    document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true })); el.remove();
   });
 
   it("leaves a clone at 100% alone", () => {

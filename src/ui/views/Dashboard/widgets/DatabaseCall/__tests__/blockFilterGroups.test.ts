@@ -6,6 +6,7 @@ import { i18n } from "src/lib/stores/i18n";
 import { applyFilter } from "src/lib/engine/filterEvaluator";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
 import type { FilterCondition, FilterDefinition } from "src/settings/base/settings";
+import { openBlockFilter } from "../../blockFilterEntry";
 
 const BlockFilterBar = require("../BlockFilterBar.svelte").default;
 const fields = [{ name: "status", type: DataFieldType.String, repeated: false, identifier: false, derived: false }];
@@ -13,6 +14,19 @@ const cond = (value: string, enabled = true): FilterCondition => ({ field: "stat
 const group: FilterDefinition = { conjunction: "or", conditions: [cond("open"), cond("planned")] };
 const flush = async () => { await tick(); await tick(); await tick(); };
 afterEach(cleanup);
+
+test("the widget menu opens the actual block filter control in its own widget", async () => {
+  const owner = document.createElement("section"); owner.dataset["widgetId"] = "wanted"; document.body.appendChild(owner);
+  const other = document.createElement("section"); other.dataset["widgetId"] = "other"; document.body.appendChild(other);
+  try {
+    const view = render(BlockFilterBar, { target: owner, props: { fields } });
+    render(BlockFilterBar, { target: other, props: { fields } });
+    expect(await openBlockFilter("wanted")).toBe(true); await flush();
+    expect(view.container.querySelector(".ppp-blockfilter-button")).toHaveAttribute("aria-expanded", "true");
+    expect(other.querySelector(".ppp-blockfilter-button")).toHaveAttribute("aria-expanded", "false");
+    expect(document.querySelector(".ppp-blockfilter-popover")).not.toBeNull();
+  } finally { owner.remove(); other.remove(); }
+});
 
 async function open(view: { container: HTMLElement }) { view.container.querySelector<HTMLButtonElement>(".ppp-blockfilter-button")!.click(); await flush(); }
 

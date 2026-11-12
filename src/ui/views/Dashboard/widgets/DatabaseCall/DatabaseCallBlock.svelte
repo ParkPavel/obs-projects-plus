@@ -360,7 +360,7 @@
     // offer the action here either; this is the second lock.
     if (namedSource.kind === "broken") return;
     if (activeTab && activeTab.viewType !== "table") return;
-    if (effectiveFrame.records.length > 0) newRowSignal += 1;
+    if (viewFrame.records.length > 0) newRowSignal += 1;
     else openFirstRecordDraft();
   }
 
@@ -718,7 +718,7 @@
                 </button>
               </svelte:fragment>
             </EmptyState>
-          {:else if effectiveFrame.records.length === 0 && firstRecordDraftOpen && project}
+          {:else if viewFrame.records.length === 0 && firstRecordDraftOpen && project}
             <div class="ppp-dbc-first-record-draft">
               {#key firstRecordVersion}
               <NoteDraft
@@ -728,7 +728,7 @@
               />
               {/key}
             </div>
-          {:else if effectiveFrame.records.length === 0}
+          {:else if viewFrame.records.length === 0}
             <EmptyState
               icon="database"
               title={$i18n.t("views.dashboard.database-call.no-records", {
@@ -750,7 +750,7 @@
             </EmptyState>
           {:else}
             {#key activeTab.id}<DataTableContent
-              frame={effectiveFrame}
+              frame={viewFrame}
               {api}
               readonly={readonly || sourceReadOnly}
               {getRecordColor}

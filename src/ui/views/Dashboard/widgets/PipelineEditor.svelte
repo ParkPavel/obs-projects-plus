@@ -96,6 +96,7 @@
   // after a 250 ms pause in typing. Re-running every prefix on each keystroke
   // cost 107 / 527 ms per key at 1k / 5k records.
   let stepCounts: Array<{ rowsIn: number; rowsOut: number }> = [];
+  let stepInputFields: string[][] = [];
   let previewStopped: TransformStopReason | undefined;
   let countsTimer: ReturnType<typeof setTimeout> | null = null;
   $: scheduleCounts(source as DataFrame | null, steps, rightFrames);
@@ -105,16 +106,23 @@
   }
   function countSteps(frame: DataFrame | null, list: typeof steps, right: typeof rightFrames): Array<{ rowsIn: number; rowsOut: number }> {
     previewStopped = undefined;
-    if (!frame || list.length === 0) return [];
+    if (!frame || list.length === 0) {
+      if (stepInputFields.length) stepInputFields = [];
+      return [];
+    }
     const budget = createTransformBudget(undefined, performance.now());
     const out: Array<{ rowsIn: number; rowsOut: number }> = [];
     let current = frame;
+    const schemas: string[][] = [];
     for (const step of list) {
+      schemas.push(current.fields.map(field => field.name));
       const result = executeTransform(current, { steps: [step] }, { rightFrames: right, budget });
       if (result.meta.stopped) { previewStopped = result.meta.stopped; break; }
       out.push({ rowsIn: current.records.length, rowsOut: result.meta.outputRowCount });
       current = result.data;
     }
+    if (schemas.length !== stepInputFields.length || schemas.some((names, i) =>
+      names.length !== stepInputFields[i]?.length || names.some((name, j) => name !== stepInputFields[i]?.[j]))) stepInputFields = schemas;
     return out;
   }
   onDestroy(() => { if (countsTimer) clearTimeout(countsTimer); });
@@ -380,10 +388,11 @@
     updateStep(stepIndex, { ...step, columns: cols });
   }
 
-  function computeFieldNames(list: readonly TransformStep[], names: string[], stepIndex: number, columnIndex: number): string[] {
-    const prior = list.slice(0, stepIndex).flatMap(step => step.type === "compute" ? step.columns.map(column => column.name) : []);
+  function computeFieldNames(list: readonly TransformStep[], names: string[], schemas: string[][], stepIndex: number, columnIndex: number): string[] {
+    const prior = list.slice(0, stepIndex).flatMap(step => !step.disabled && step.type === "compute" ? step.columns.map(column => column.name) : []);
+    const inputs = schemas[stepIndex] ?? [...names, ...prior];
     const current = (list[stepIndex] as ComputeStep).columns.slice(0, columnIndex).map(column => column.name);
-    return [...new Set([...names, ...prior, ...current])];
+    return [...new Set([...inputs, ...current])];
   }
 
   function removeComputeColumn(stepIndex: number, colIndex: number) {
@@ -765,7 +774,7 @@
                     <VersionedFormulaEditor
                       expression={col.expression}
                       version={col.formulaVersion}
-                      fields={computeFieldNames(steps, fieldNames, i, ci)}
+                      fields={computeFieldNames(steps, fieldNames, stepInputFields, i, ci)}
                       rows={3}
                       showApply
                       placeholder={$i18n.t("views.dashboard.pipeline.formula-placeholder")}
