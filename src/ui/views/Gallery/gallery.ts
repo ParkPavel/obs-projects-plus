@@ -149,7 +149,8 @@ export function firstParagraph(markdown: string, max = 280): string {
   text = text.replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/, "");
   let fence: { character: string; length: number } | null = null;
   text = text.split(/\r?\n/).map(line => {
-    const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    const fenceLine = line.replace(/^(?: {0,3}>[\t ]?)+/, "");
+    const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(fenceLine);
     if (fence) {
       if (marker && marker[1]![0] === fence.character && marker[1]!.length >= fence.length && !marker[2]!.trim()) fence = null;
       return "";

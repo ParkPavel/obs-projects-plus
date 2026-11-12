@@ -19,6 +19,8 @@ it.each([
   "~~~js\nhidden code\n~~~\n\nVisible prose.",
   "````js\nhidden code\n```\nstill code\n````\n\nVisible prose.",
   "~~~\nhidden code\n~~~~~\n\nVisible prose.",
+  "> ```js\n> hidden code\n> ```\n\nVisible prose.",
+  "> > ~~~~js\n> > hidden code\n> > ~~~\n> > still hidden\n> > ~~~~\n\nVisible prose.",
 ])("skips Markdown fences before content previews: %s", markdown => {
   expect(firstParagraph(markdown)).toBe("Visible prose.");
 });

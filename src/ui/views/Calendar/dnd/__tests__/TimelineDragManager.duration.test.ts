@@ -205,4 +205,16 @@ describe("TimelineDragManager — duration from the processed start/end differen
     expect(options.endDate?.format("YYYY-MM-DD")).toBe(nextDay.format("YYYY-MM-DD"));
     expect(options.endDate!.isAfter(day.hour(22))).toBe(true);
   });
+
+  it("an overnight fragment keeps the full minimum duration across midnight", () => {
+    const nextDay = day.add(1, "day");
+    const column = placed(document.createElement("div"), rect(0, 0, 100, 24 * HOUR_PX));
+    manager.setDayColumns([{ day: nextDay, element: column }]);
+    manager.initiate(record, processedFor(day.hour(23).minute(55), nextDay.minute(30), record), mouse("mousedown", 0.5 * HOUR_PX), "resize-bottom", bar);
+    document.dispatchEvent(mouse("mousemove", 0.5 * HOUR_PX + 20));
+    document.dispatchEvent(mouse("mousemove", 0)); document.dispatchEvent(mouse("mouseup", 0));
+    const options = onCommit.mock.calls[0]![2]!;
+    expect(options.endTime).toBe("00:10");
+    expect(options.endDate?.format("YYYY-MM-DD")).toBe("2026-10-03");
+  });
 });

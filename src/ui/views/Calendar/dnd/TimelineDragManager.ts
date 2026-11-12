@@ -742,7 +742,8 @@ export class TimelineDragManager {
 
       case 'resize-bottom': {
         const pointerMinutes = yPositionToMinutes(relativeY - s.grabFromEndPx, startHour, endHour, hourHeightRem, remPx, snapInterval);
-        const minimumEnd = sameDay ? s.originalStartMinutes + DND_CONSTANTS.MIN_DURATION_MINUTES : startHour * 60;
+        const minimumEnd = Math.max(startHour * 60,
+          s.originalStartMinutes + DND_CONSTANTS.MIN_DURATION_MINUTES - s.timedSpanDays * DAY_MINUTES);
         newEndMinutes = Math.max(pointerMinutes, minimumEnd);
         newEndMinutes = Math.min(endHour * 60, newEndMinutes);
         newStartMinutes = s.originalStartMinutes;
