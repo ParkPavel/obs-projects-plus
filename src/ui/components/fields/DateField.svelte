@@ -102,8 +102,12 @@
 
   function onPicked(e: Event): void {
     if (!alive || disabled || readOnly) return;
-    const raw = (e.currentTarget as HTMLInputElement).value;
-    if (!raw) { emit(null); return; }
+    const input = e.currentTarget as HTMLInputElement;
+    const raw = input.value;
+    if (!raw) {
+      if (required) { input.value = nativeValue; return; }
+      emit(null); return;
+    }
     const parsed = parseTypedDate(raw.replace("T", " "));
     if (parsed.kind === "date") emit(parsed.date);
     dispatch("blur");

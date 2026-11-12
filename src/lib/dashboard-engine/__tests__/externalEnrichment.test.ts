@@ -131,16 +131,5 @@ describe("#138 join output widens when right frames are enriched", () => {
   });
 });
 
-describe("#138 the resolver is where enrichment happens", () => {
-  it("externalFrameResolver enriches, rather than each widget doing it again", () => {
-    // App caches the resolver's promise per project id, so enriching here costs
-    // once per source instead of once per canvas or once per widget.
-    const source = require("fs").readFileSync(
-      require("path").resolve(__dirname, "..", "..", "externalFrameResolver.ts"),
-      "utf8"
-    ) as string;
-
-    expect(source).toContain("enrichWithBacklinks");
-    expect(source).toMatch(/return enrichWithBacklinks\(frame, relationFieldNames\(frame\)\)/);
-  });
-});
+// Actual resolver ownership and cross-source backlinks are exercised through
+// resolveExternalFrame in lib/__tests__/externalFrameResolver.test.ts.

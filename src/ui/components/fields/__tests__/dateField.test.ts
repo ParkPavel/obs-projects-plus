@@ -16,11 +16,12 @@ jest.mock("obsidian-svelte", () => ({
 
 const DateInput = require("src/ui/components/DateInput.svelte").default;
 const DatetimeInput = require("src/ui/components/DatetimeInput.svelte").default;
+const DateField = require("../DateField.svelte").default;
 
-function mount(Component: any, value: Date | null) {
+function mount(Component: any, value: Date | null, options: Record<string, unknown> = {}) {
   const target = document.createElement("div");
   document.body.appendChild(target);
-  const component = new Component({ target, props: { value } });
+  const component = new Component({ target, props: { value, ...options } });
   const changes: Array<Date | null> = [];
   let blurs = 0;
   component.$on("change", (e: CustomEvent<Date | null>) => changes.push(e.detail));
@@ -38,6 +39,24 @@ function type(el: HTMLInputElement, value: string) {
 }
 const key = (el: HTMLInputElement, k: string, extra: KeyboardEventInit = {}) =>
   el.dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true, cancelable: true, ...extra }));
+
+it.each([false, true])("native Clear preserves a required date and containing-form acceptance (withTime=%s)", async withTime => {
+  const m = mount(DateField, new Date(2026, 9, 14, 9, 30), { required: true, withTime });
+  try {
+    await tick(); const before = m.native().value, text = m.text().value;
+    m.native().value = ""; m.native().dispatchEvent(new Event("change", { bubbles: true })); await tick();
+    expect(m.changes).toEqual([]); expect(m.native().value).toBe(before); expect(m.text().value).toBe(text);
+    expect(m.component.commitDraft()).toBe(true);
+  } finally { m.destroy(); }
+});
+
+it("native Clear still clears an optional date", async () => {
+  const m = mount(DateField, new Date(2026, 9, 14));
+  try {
+    await tick(); m.native().value = ""; m.native().dispatchEvent(new Event("change", { bubbles: true })); await tick();
+    expect(m.changes).toEqual([null]); expect(m.text().value).toBe("");
+  } finally { m.destroy(); }
+});
 
 describe("DateInput — typed date with a calendar button (C4)", () => {
   it("does not open a deferred picker or dispatch a queued blur after destruction", async () => {

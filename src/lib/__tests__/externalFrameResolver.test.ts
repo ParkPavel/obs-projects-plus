@@ -23,6 +23,20 @@ const { DataviewDataSource } = require("src/lib/datasources/dataview/datasource"
 
 const EMPTY_FRAME = { fields: [], records: [] } as const;
 
+it("external project enrichment finds backlinks across acquired source boundaries", async () => {
+  FolderDataSource.mockImplementation((_fileSystem: unknown, project: { dataSource: { config: { path: string } } }) => ({
+    queryAll: async () => ({
+      fields: [{ name: "owner", type: "relation", identifier: false, derived: false, repeated: false }],
+      records: project.dataSource.config.path === "A" ? [{ id: "A.md", values: { owner: "[[B]]" } }] : [{ id: "B.md", values: {} }],
+    }),
+  }));
+  const project = makeProject("p", "folder");
+  project.dataSource = { kind: "folder", config: { path: "A", recursive: true } };
+  project.additionalSources = [{ kind: "folder", id: "extra", config: { path: "B", recursive: true } }];
+  const frame = await resolveExternalFrame("p", makeDeps({ projects: [project] }));
+  expect(frame?.records.find(row => row.id === "B.md")?.values["owner_backlinks"]).toEqual(["[[A]]"]);
+});
+
 it("derived selections retain additional-source records and project computations", async () => {
   FolderDataSource.mockImplementation((_fileSystem: unknown, project: { dataSource: { config: { path: string } } }) => ({
     queryAll: async () => ({ fields: [], records: [{ id: project.dataSource.config.path + ".md", values: {} }] }),
