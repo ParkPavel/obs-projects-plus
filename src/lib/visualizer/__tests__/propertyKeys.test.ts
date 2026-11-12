@@ -5,6 +5,24 @@
 import { deleteKeyIn, renameKeyIn, reorderKeysIn } from "../propertyKeys";
 import { deleteProperty, renameProperty, reorderProperties } from "../propertyKeysWriter";
 
+it.each(["__proto__", "constructor", "toString"])("renaming to %s preserves a literal own YAML key and the object prototype", key => {
+  const value = { nested: ["retained"] }, fm: Record<string, unknown> = { status: value };
+  const prototype = Object.getPrototypeOf(fm) as unknown;
+  expect(renameKeyIn(fm, "status", key)).toBe(true);
+  expect(Object.hasOwn(fm, key)).toBe(true);
+  expect(fm[key]).toBe(value);
+  expect(Object.getPrototypeOf(fm)).toBe(prototype);
+  expect(JSON.parse(JSON.stringify(fm)) as unknown).toEqual(Object.fromEntries([[key, value]]));
+});
+
+it("reordering preserves an existing own __proto__ key", () => {
+  const fm = JSON.parse('{"first":1,"__proto__":{"kept":true},"last":3}') as Record<string, unknown>;
+  expect(reorderKeysIn(fm, ["last", "__proto__", "first"])).toBe(true);
+  expect(Object.keys(fm)).toEqual(["last", "__proto__", "first"]);
+  expect(fm["__proto__"]).toEqual({ kept: true });
+  expect(Object.getPrototypeOf(fm)).toBe(Object.prototype);
+});
+
 function sample(): Record<string, unknown> {
   return {
     title: "A",

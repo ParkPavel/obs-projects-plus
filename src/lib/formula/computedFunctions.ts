@@ -1,4 +1,4 @@
-// Computed compatibility implementations. The catalog selects the profile;
+// Current general-purpose formula implementations; the catalog binds one handler per name.
 // the shared runtime owns AST traversal, scope and frame caches.
 
 import type { DataValue, Optional } from "src/lib/dataframe/dataframe";
@@ -397,10 +397,6 @@ export const COMPUTED_FUNCTIONS: Record<string, FormulaFn> = {
     if (val == null) return "";
     return String(val);
   },
-
-  // ── Date ───────────────────────────────────────────────────
-  TODAY: () => dayjs().format("YYYY-MM-DD"),
-  NOW: () => dayjs().toISOString(),
 
   DATE_ADD: (args, evaluate) => {
     const date = dayjs(String(evaluate(args[0] as FormulaNode)));
@@ -982,26 +978,6 @@ export const COMPUTED_FUNCTIONS: Record<string, FormulaFn> = {
     return isNaN(val) ? null : val * 24;
   },
 
-  WORKDAYS: (args, evaluate, _range, chargeWork) => {
-    const startStr = String(evaluate(args[0] as FormulaNode));
-    const endStr = String(evaluate(args[1] as FormulaNode));
-    const start = dayjs(startStr), end = dayjs(endStr);
-    if (!start.isValid() || !end.isValid()) return null;
-    let count = 0;
-    const limit = Math.abs(end.diff(start, "day")) + 1;
-    if (limit > 36600) return null;
-    if (end.isBefore(start)) return -count;
-    // Keep the old day-by-day semantics across skipped local calendar dates.
-    (chargeWork ?? chargeStandaloneFinancialWork)(limit);
-    let current = start.add(1, "day");
-    while (current.isBefore(end, "day") || current.isSame(end, "day")) {
-      const dow = current.day();
-      if (dow !== 0 && dow !== 6) count++;
-      current = current.add(1, "day");
-    }
-    return count;
-  },
-
   // ── Conditional Aggregation ────────────────────────────────
   // i3-final: Excel criteria (">10", "done", "a*", "<>x") over @columns.
   SUMIF: singleCriterion("sum"),
@@ -1016,16 +992,6 @@ export const COMPUTED_FUNCTIONS: Record<string, FormulaFn> = {
   // ── Aggregate-aware functions (REFACTOR-103: delegate to aggregate kernel) ──
   SUM: (args, evaluate) => kernelAggregate(args, evaluate, "sum"),
   AVG: (args, evaluate) => kernelAggregate(args, evaluate, "avg"),
-
-  COUNT: (args, evaluate) => {
-    let count = 0;
-    for (const a of args) {
-      const val = evaluate(a);
-      if (Array.isArray(val)) count += val.length;
-      else if (val != null) count++;
-    }
-    return count;
-  },
 
   MIN: (args, evaluate) => kernelAggregate(args, evaluate, "min"),
   MAX: (args, evaluate) => kernelAggregate(args, evaluate, "max"),

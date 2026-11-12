@@ -55,14 +55,14 @@ const definitions = new Map<string, FormulaDefinition>();
 for (const [name, info] of Object.entries(metadata)) {
   const computed = COMPUTED_FUNCTIONS[name];
   const calendar = CALENDAR_FUNCTIONS[name];
-  if (!computed && !calendar) throw new Error(`Formula metadata without implementation: ${name}`);
+  const unified = UNIFIED_FUNCTIONS[name];
+  if ([computed, calendar, unified].filter(Boolean).length !== 1) throw new Error(`Formula must have exactly one implementation: ${name}`);
   const profiles: FormulaSemantics[] = ["unified-v1"];
   definitions.set(name, {
     name, metadata: info, profiles,
     invoke(args, evaluate, range, context) {
-      const unified = UNIFIED_FUNCTIONS[name];
       if (unified) return unified(args, evaluate, range, context.chargeWork);
-      if (calendar && (!computed || name === "TODAY" || name === "NOW")) {
+      if (calendar) {
         return calendar(args, evaluate, dayjs(context.referenceTime));
       }
       return computed ? computed(args, evaluate, range, context.chargeWork) : null;

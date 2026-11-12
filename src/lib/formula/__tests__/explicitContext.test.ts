@@ -7,6 +7,15 @@ import {
   type FormulaEvaluationContext, type FormulaPass, type FormulaSemantics, type FormulaNode,
 } from "src/lib/formula";
 import { getAllFormulaMetadata } from "src/lib/dashboard-engine/formulaMetadata";
+import { COMPUTED_FUNCTIONS } from "../computedFunctions";
+import { CALENDAR_FUNCTIONS } from "../calendarFunctions";
+import { UNIFIED_FUNCTIONS } from "../unifiedFunctions";
+
+test("each formula has exactly one implementation rather than a hidden compatibility override", () => {
+  const names = [...Object.keys(COMPUTED_FUNCTIONS), ...Object.keys(CALENDAR_FUNCTIONS), ...Object.keys(UNIFIED_FUNCTIONS)];
+  expect(new Set(names).size).toBe(names.length);
+  expect(new Set(getFormulaFunctions())).toEqual(new Set(names));
+});
 
 const reference = "2026-10-28T04:00:00.000Z";
 const record: DataRecord = { id: "one.md", values: { amount: "12", due: "2026-10-01", tags: ["urgent"], zero: 0, flag: false } };

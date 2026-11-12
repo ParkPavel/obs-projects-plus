@@ -23,6 +23,7 @@ import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
 import type { TransformPipeline } from "src/lib/dashboard-engine/transformTypes";
 import type { DerivedDataSource } from "src/settings/v3/settings";
 import type { FormulaFieldDef } from "src/ui/views/Dashboard/types";
+import { mergeDataFrames } from "src/lib/datasources/mergeFrames";
 
 export interface ResolverDeps {
   readonly fileSystem: IFileSystem;
@@ -102,7 +103,7 @@ export async function resolveExternalFrame(
   const ref = parseBaseRef(projectId);
   if (ref.sourceId?.startsWith(BLOCK_SOURCE_PREFIX)) return resolveBlockFrame(projectId, deps, ctx);
   if (ref.sourceId) return resolveSourceFrame(ref.projectId, ref.sourceId, deps, ctx);
-  const base = await acquire(projectId, deps, ctx);
+  const base = await acquireProjectFrame(projectId, deps, ctx);
   const project = deps.projects.find((p) => p.id === projectId);
   const fieldConfig = project?.fieldConfig as FieldConfigRelationMap | undefined;
   if (!base || !fieldConfig) return base;
@@ -117,13 +118,28 @@ export async function resolveExternalFrame(
   for (const id of extractRelationTargetIds(projectId, fieldConfig)) {
     const plain = !parseBaseRef(id).sourceId;
     const frame = cut || trail.includes(id)
-      ? (plain ? await acquire(id, deps, ctx) : null)
+      ? (plain ? await acquireProjectFrame(id, deps, ctx) : null)
       : await resolveExternalFrame(id, deps, { ...ctx, trail }).catch(() => null);
     if (frame) targets.set(id, frame);
   }
   // i2-data (R3) / i3-data / w4-p01b: the base's formulas and rollups in
   // dependency order — as View.svelte computes them for the host frame.
   return applyComputedColumns(base, fieldConfig, projectId, targets);
+}
+
+/** Match the host project's union, enriching backlinks only after all parts are present. */
+async function acquireProjectFrame(projectId: string, deps: ResolverDeps, ctx: ResolveContext): Promise<DataFrame | null> {
+  const project = deps.projects.find(project => project.id === projectId);
+  const primary = await acquire(projectId, deps, ctx);
+  if (!project || !primary) return null;
+  const extras = await Promise.all((project.additionalSources ?? []).filter(isAcquirable).map(source => {
+    const override = { ...project, dataSource: source } as ProjectDefinition;
+    // Legacy unnamed sources cannot share the primary source's cache key.
+    return source.id ? acquire(baseRefId({ projectId, sourceId: source.id }), deps, ctx, override)
+      : resolveDeclaredFrame(projectId, deps, override);
+  }));
+  const merged = mergeDataFrames([primary, ...extras.filter((frame): frame is DataFrame => frame !== null)]);
+  return enrichWithBacklinks(merged, relationFieldNames(merged));
 }
 
 /**
@@ -136,7 +152,10 @@ async function resolveSourceFrame(projectId: string, sourceId: string, deps: Res
   const source = project?.additionalSources?.find((s) => (s as { id?: string }).id === sourceId);
   if (!project || !source) return null;
   const asProject = (src: typeof source) => ({ ...project, dataSource: src }) as ProjectDefinition;
-  if (isAcquirable(source)) return acquire(baseRefId({ projectId, sourceId }), deps, ctx, asProject(source));
+  if (isAcquirable(source)) {
+    const frame = await acquire(baseRefId({ projectId, sourceId }), deps, ctx, asProject(source));
+    return frame ? enrichWithBacklinks(frame, relationFieldNames(frame)) : null;
+  }
   const derived = source as DerivedDataSource;
   const enriched = await resolveExternalFrame(projectId, deps, ctx);
   if (!enriched) return null;
@@ -205,13 +224,13 @@ async function resolveBlockFrame(ref: string, deps: ResolverDeps, ctx: ResolveCo
 function acquire(key: string, deps: ResolverDeps, ctx: ResolveContext, override?: ProjectDefinition): Promise<DataFrame | null> {
   const known = ctx.acquired.get(key);
   if (known) return known;
-  const pending = resolveEnrichedFrame(parseBaseRef(key).projectId, deps, override);
+  const pending = resolveDeclaredFrame(parseBaseRef(key).projectId, deps, override);
   ctx.acquired.set(key, pending);
   return pending;
 }
 
-/** A project's frame with its declared types and backlinks, before rollups. */
-async function resolveEnrichedFrame(
+/** One acquired source with declared types; project union owns backlink enrichment. */
+async function resolveDeclaredFrame(
   projectId: string,
   deps: ResolverDeps,
   override?: ProjectDefinition
@@ -236,17 +255,9 @@ async function resolveEnrichedFrame(
       project.fieldConfig
     );
 
-    // #138: enrich here, so every frame reaching a widget has the same shape
-    // regardless of origin. Previously only the parent frame got backlinks
-    // (WidgetHost did it per widget), so a relation view over an external
-    // source was missing derived fields the identical view over the parent
-    // project had — and a block could tell where its records came from by
-    // which fields existed.
-    //
-    // This point rather than the canvas preloader or the widget host: App
-    // already caches this promise per project id, so the work happens once per
-    // source instead of once per canvas or once per widget.
-    return enrichWithBacklinks(frame, relationFieldNames(frame));
+    // Cache declared source data; backlink enrichment happens after the
+    // project's parts are merged, so cross-part links can see their targets.
+    return frame;
   } catch (err) {
     warnThrottled(projectId, err);
     return null;

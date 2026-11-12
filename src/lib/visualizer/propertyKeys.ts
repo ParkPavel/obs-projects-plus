@@ -21,7 +21,7 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 /** Rewrite `fm` in place with `entries`, keeping the object identity. */
 function replaceAll(fm: Record<string, unknown>, entries: [string, unknown][]): void {
   for (const k of Object.keys(fm)) delete fm[k];
-  for (const [k, v] of entries) fm[k] = v;
+  for (const [k, v] of entries) Object.defineProperty(fm, k, { value: v, enumerable: true, configurable: true, writable: true });
 }
 
 /** Map every overlay list through `fn`; drops `pp_overlay` once nothing is left in it. */

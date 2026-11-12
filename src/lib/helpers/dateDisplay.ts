@@ -1,6 +1,10 @@
 import type { DataValue, Optional } from "src/lib/dataframe/dataframe";
 import { toNumber } from "src/lib/engine/numeric";
 import type { DateFormatConfig } from "src/settings/v3/settings";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+
+dayjs.extend(utc);
 
 const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/;
 type Parts = { y: number; m: number; d: number; time?: [number, number] };
@@ -25,7 +29,12 @@ export function formatDateCell(value: Optional<DataValue>, opts: { withTime: boo
   if (!parts) return String(value);
   const p = (n: number) => String(n).padStart(2, "0");
   const f = opts.displayFormat;
-  const day = f ? f.replace(/YYYY/g, String(parts.y)).replace(/MM/g, p(parts.m)).replace(/DD/g, p(parts.d)) : `${p(parts.d)}.${p(parts.m)}.${parts.y}`;
+  // Format the already selected calendar components, without converting their
+  // instant or normalizing a skipped local day through the device timezone.
+  const calendar = dayjs.utc(0).date(1).year(parts.y).month(parts.m - 1).date(parts.d)
+    .hour(parts.time?.[0] ?? 0).minute(parts.time?.[1] ?? 0);
+  if (f && (calendar.year() !== parts.y || calendar.month() + 1 !== parts.m || calendar.date() !== parts.d)) return String(value);
+  const day = f ? calendar.format(f) : `${p(parts.d)}.${p(parts.m)}.${parts.y}`;
   return parts.time ? `${day} ${p(parts.time[0])}:${p(parts.time[1])}` : day;
 }
 
