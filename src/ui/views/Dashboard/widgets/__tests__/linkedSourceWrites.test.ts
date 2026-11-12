@@ -223,9 +223,11 @@ describe("#137 the pipeline editor reads the block's own source", () => {
     const frame = { fields: [{ name: "key" }], records: [{ id: "a.md", values: { key: "a" } }, { id: "b.md", values: { key: "b" } }] };
     const right = new Map([["right", { fields: [{ name: "key" }, { name: "label" }], records: [{ id: "right.md", values: { key: "a", label: "A" } }] }]]);
     const steps = [{ type: "join", rightSourceId: "right", on: { leftKey: "key", rightKey: "key" }, how: "inner" }];
-    const counts = vm.runInNewContext(`${compiled}; countSteps(frame, steps, right);`, { frame, steps, right,
-      executeTransform, createTransformBudget, performance, previewStopped: undefined }, { timeout: 1000 });
+    const env = { frame, steps, right, executeTransform, createTransformBudget, performance,
+      previewStopped: undefined, stepInputFields: [] as string[][] };
+    const counts = vm.runInNewContext(`${compiled}; countSteps(frame, steps, right);`, env, { timeout: 1000 });
     expect(counts).toEqual([{ rowsIn: 2, rowsOut: 1 }]);
+    expect(env.stepInputFields).toEqual([["key"]]);
   });
 
   it("the editor says so when there is no schema to configure against", () => {

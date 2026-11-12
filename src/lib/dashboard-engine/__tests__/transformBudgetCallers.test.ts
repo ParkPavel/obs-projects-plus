@@ -44,7 +44,8 @@ test("the actual PipelineEditor preview shares a budget across its step counter 
   if (!node) throw new Error("Missing production countSteps");
   const compiled = ts.transpileModule(node.getText(ast), { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText;
   const env = { executeTransform, createTransformBudget: () => createTransformBudget({ workLimit: 55 }, performance.now()), performance,
-    frame, steps: [step("first"), step("second")], right: new Map(), previewStopped: undefined };
+    frame, steps: [step("first"), step("second")], right: new Map(), previewStopped: undefined, stepInputFields: [] as string[][] };
   const counts = vm.runInNewContext(`${compiled}; countSteps(frame, steps, right);`, env, { timeout: 1000 });
   expect(counts).toHaveLength(1); expect(env.previewStopped).toBe("work-limit");
+  expect(env.stepInputFields).toEqual([["amount"], ["amount", "first"]]);
 });

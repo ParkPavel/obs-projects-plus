@@ -126,7 +126,7 @@ describe("A168 — scene 3: the record says which frontmatter keys it writes", (
     // The dump of «Frontmatter keys» under a second editor is gone: the same
     // block as in the note shows each key as its label and writes only it.
     const s = source();
-    expect(s).toMatch(/<NotePropertiesBlock app=\{\$appStore\} file=\{noteFile\} \/>/);
+    expect(s).toMatch(/<NotePropertiesBlock app=\{\$appStore\} file=\{noteFile\} \{readonly\} \/>/);
     expect(s).not.toMatch(/ppp-rcv-frontmatter">/);
   });
 
