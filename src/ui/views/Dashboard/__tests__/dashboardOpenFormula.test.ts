@@ -12,7 +12,7 @@ jest.mock("../DashboardCanvas.svelte", () => ({
 jest.mock("src/lib/settingsBackup", () => ({writeMigrationBackup: jest.fn(async () => "backup")}));
 const { DashboardView } = require("../dashboardView");
 
-test("opening a saved dashboard preserves unversioned formula semantics and does not save a new version", () => {
+test("opening a dashboard uses current computation without mutating its input", () => {
   const config: DatabaseViewConfig = {
     widgets: [], layoutMode: "stack", layoutVersion: 1, table: {},
     showWidgetToolbar: true, compactMode: false,
@@ -26,6 +26,6 @@ test("opening a saved dashboard preserves unversioned formula semantics and does
   expect(JSON.stringify(config)).toBe(before);
   const mounted = mockMounts[mockMounts.length - 1]!.props.config;
   const result = applyFormulaFields({fields: [], records: [{id: "r", values: {}}]}, mounted.formulaFields!);
-  expect(result.records[0]!.values["Answer"]).toBe(true);
+  expect(result.records[0]!.values["Answer"]).toBe(false);
   view.onClose();
 });

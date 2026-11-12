@@ -1,5 +1,8 @@
 ﻿{
     "translation": {
+        "formula-migration": {
+            "completed": "Projects+：公式已迁移到统一规则。已验证的备份和报告：{{path}}"
+        },
         "formula-mode": {
             "prepare": "使用新规则前，请更新所有设备并备份设置。",
             "label": "公式规则",

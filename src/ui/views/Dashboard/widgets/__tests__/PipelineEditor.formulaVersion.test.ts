@@ -5,7 +5,7 @@ describe("PipelineEditor preserves saved formula rules", () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
 
-  it("Apply saves an existing unversioned draft without changing its profile", async () => {
+  it("Apply saves an existing draft under current rules", async () => {
     const target = document.createElement("div"); document.body.appendChild(target);
     const applied: TransformPipeline[] = [];
     const component = new PipelineEditor({ target, props: { pipeline: { steps: [{ type: "compute", columns: [{ name: "Answer", expression: "1 + 1" }] }] }, fields: [], availableSources: [] } });
@@ -20,7 +20,7 @@ describe("PipelineEditor preserves saved formula rules", () => {
       expect(textarea.value).toBe("3 + 4");
       target.querySelector<HTMLButtonElement>(".ppp-versioned-formula-editor > button")!.click(); await Promise.resolve();
       jest.advanceTimersByTime(400);
-      expect((applied.at(-1)!.steps[0] as ComputeStep).columns[0]).toEqual({ name: "Answer", expression: "3 + 4" });
+      expect((applied.at(-1)!.steps[0] as ComputeStep).columns[0]).toEqual({ name: "Answer", expression: "3 + 4", formulaVersion: "unified-v1" });
     } finally { component.$destroy(); target.remove(); }
   });
 
@@ -56,7 +56,7 @@ describe("PipelineEditor preserves saved formula rules", () => {
       await Promise.resolve();
       jest.advanceTimersByTime(400);
       expect((applied.at(-1)!.steps[0] as ComputeStep).columns[0]).toEqual({
-        ...column, name: "renamed", expression: "3 + 4",
+        ...column, name: "renamed", expression: "3 + 4", formulaVersion: "unified-v1",
       });
       expect(column).toEqual({ name: "answer", expression: "1 + 1", ...(version === undefined ? {} : { formulaVersion: version }) });
     } finally {

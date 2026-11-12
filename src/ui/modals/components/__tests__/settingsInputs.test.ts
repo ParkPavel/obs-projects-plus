@@ -88,11 +88,11 @@ test.each(["create", "configure"])("%s cannot save a formula during composition 
     input.value = "1 + 4"; input.dispatchEvent(new Event("input", { bubbles: true })); await settle();
     button.click(); await settle(); expect(save).toHaveBeenCalledTimes(1);
     expect(save.mock.calls[0][0].typeConfig.formula).toBe("1 + 4");
-    expect(save.mock.calls[0][0].typeConfig.formulaVersion).toBe(kind === "create" ? "unified-v1" : undefined);
+    expect(save.mock.calls[0][0].typeConfig.formulaVersion).toBe("unified-v1");
   } finally { m.destroy(); }
 });
 
-test("clearing and retyping an existing formula never makes it a new definition", async () => {
+test("clearing and retyping preserves the expression and uses current rules", async () => {
   const onSave = jest.fn().mockResolvedValue(true);
   const expression = '"2" < "10"';
   const m = mount(ConfigureField, { title: "Formula", existingFields: [], editable: true, onSave,
@@ -104,7 +104,7 @@ test("clearing and retyping an existing formula never makes it a new definition"
     input.value = expression; input.dispatchEvent(new Event("input", {bubbles:true})); await settle();
     m.target.querySelector<HTMLButtonElement>("[data-variant='primary']")!.click(); await settle();
     expect(onSave).toHaveBeenCalledTimes(1);
-    expect(onSave.mock.calls[0][0].typeConfig).toEqual({formula: expression});
+    expect(onSave.mock.calls[0][0].typeConfig).toEqual({formula: expression, formulaVersion: "unified-v1"});
   } finally {m.destroy();}
 });
 

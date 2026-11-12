@@ -1,5 +1,8 @@
 ﻿{
     "translation": {
+        "formula-migration": {
+            "completed": "Projects+: formula rules migrated. Verified backup and report: {{path}}"
+        },
         "formula-mode": {
             "prepare": "Before using new rules, update all devices and back up settings.",
             "label": "Formula rules",

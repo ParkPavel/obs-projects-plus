@@ -1307,7 +1307,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       throw new Error("Cannot verify original formula settings; reopen the plugin");
     }
     const migration = await prepareFormulaMigration(this.app.vault.adapter, dir, rawText, value);
-    if (migration.reportPath) new Notice(`Projects+: formula rules migrated. Backup and report: ${migration.reportPath}`, 15000);
+    if (migration.reportPath) new Notice(get(i18n).t("formula-migration.completed", { path: migration.reportPath }), 15000);
     return migration.settings;
   }
 
