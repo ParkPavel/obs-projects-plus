@@ -176,6 +176,7 @@ export default class ProjectsPlusPlugin extends Plugin {
     settings: LatestProjectsPluginSettings;
     base: string | null;
     carried: boolean;
+    formulasMigrated: boolean;
   } | null = null;
 
   /**
@@ -814,11 +815,13 @@ export default class ProjectsPlusPlugin extends Plugin {
     this.confirmedOnDisk = adoption.base;
     this.confirmedRawOnDisk = null;
     settings.set(adoption.settings);
-    if (adoption.carried) {
+    if (adoption.carried || adoption.formulasMigrated) {
       // The one merged field (user's decision, 2026-09-07): a project's
       // `uniqueIdCounter` was higher here than on disk. Memory now holds the
       // higher one, and the file must too — otherwise the next window to adopt
-      // this file reissues identifiers that are already in notes.
+      // this file reissues identifiers that are already in notes. A verified
+      // formula migration also owes a write; the store subscription skips the
+      // just-adopted reference. The existing checked writer retains disk guards.
       writer.pushNow(adoption.settings);
     }
     console.debug("[Projects+] settings adopted from disk");
@@ -829,6 +832,7 @@ export default class ProjectsPlusPlugin extends Plugin {
     settings: LatestProjectsPluginSettings;
     base: string | null;
     carried: boolean;
+    formulasMigrated: boolean;
   } | null {
     const adoption = this.pendingAdoption;
     this.pendingAdoption = null;
@@ -926,6 +930,7 @@ export default class ProjectsPlusPlugin extends Plugin {
           settings: adopted,
           base: canonical(JSON.parse(raw)),
           carried: episode.outcome.carried,
+          formulasMigrated: adopted !== resolved.right,
         };
         return { kind: "adopted", settings: adopted };
       }

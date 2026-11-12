@@ -51,7 +51,11 @@ function firstNonNull(
   return null;
 }
 
-/** Every field or column name an expression mentions (unparseable → none). */
+function bindingName(node: FormulaNode | undefined, fallback?: string): string | undefined {
+  return node?.type === "literal" ? String(node.value) : node?.type === "field" ? node.name : fallback;
+}
+
+/** Record/column dependencies, excluding lexically scoped names (unparseable → none). */
 export function referencedNames(expression: string, formulaVersion?: string): string[] {
   let ast: FormulaNode;
   try {
@@ -61,17 +65,40 @@ export function referencedNames(expression: string, formulaVersion?: string): st
     assertFormulaLimits(ast);
   } catch { return []; }
   const out: string[] = [];
-  const pending = [ast];
+  const pending: Array<{ node: FormulaNode; scope: ReadonlySet<string> }> = [{ node: ast, scope: new Set() }];
   while (pending.length) {
-    const n = pending.pop()!;
-    if (n.type === "field" || n.type === "column_ref") out.push(n.name);
+    const { node: n, scope } = pending.pop()!;
+    if (n.type === "column_ref" || (n.type === "field" && !scope.has(n.name))) out.push(n.name);
     else if (n.type === "function") {
-      if (n.name.toUpperCase() === "PROP" && n.args[0]?.type === "literal" && typeof n.args[0].value === "string") out.push(n.args[0].value);
-      for (let i = n.args.length - 1; i >= 0; i--) pending.push(n.args[i]!);
+      if (n.name === "PROP") {
+        const name = bindingName(n.args[0]);
+        if (name && !scope.has(name)) out.push(name);
+      } else if (n.name === "LET" || n.name === "LETS") {
+        const visits: typeof pending = [];
+        let local: ReadonlySet<string> = scope;
+        const pairs = n.name === "LET" ? 1 : Math.floor((n.args.length - 1) / 2);
+        for (let i = 0; i < pairs; i++) {
+          const value = n.args[i * 2 + 1], name = bindingName(n.args[i * 2]);
+          if (value) visits.push({ node: value, scope: local });
+          if (name) local = new Set([...local, name]);
+        }
+        const result = n.args[n.name === "LET" ? 2 : n.args.length - 1];
+        if (result) visits.push({ node: result, scope: local });
+        pending.push(...visits.reverse());
+      } else if (["MAP", "FILTER", "REDUCE"].includes(n.name)) {
+        const local = new Set(scope);
+        local.add(bindingName(n.args[1], "item")!);
+        const reduce = n.name === "REDUCE";
+        if (reduce) local.add(bindingName(n.args[2], "acc")!);
+        const result = n.args[reduce ? 4 : 2];
+        if (result) pending.push({ node: result, scope: local });
+        if (reduce && n.args[3]) pending.push({ node: n.args[3], scope });
+        if (n.args[0]) pending.push({ node: n.args[0], scope });
+      } else for (let i = n.args.length - 1; i >= 0; i--) pending.push({ node: n.args[i]!, scope });
     }
-    else if (n.type === "operator") pending.push(n.right, n.left);
+    else if (n.type === "operator") pending.push({ node: n.right, scope }, { node: n.left, scope });
     else if (n.type === "array") {
-      for (let i = n.items.length - 1; i >= 0; i--) pending.push(n.items[i]!);
+      for (let i = n.items.length - 1; i >= 0; i--) pending.push({ node: n.items[i]!, scope });
     }
   }
   return out;

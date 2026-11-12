@@ -5,7 +5,7 @@
  * to a file that does not exist. The note a row came from is its source; a
  * row that is not a note is read-only.
  */
-const DERIVED_SUFFIX = /(\.md)__(?:unnest_)?\d+$/;
+const DERIVED_SUFFIX = /(\.md)(?:__(?:unnest_)?\d+)+$/;
 
 /** The note a pipeline row came from, or the id itself for a note. */
 export function sourceIdOf(id: string): string {
