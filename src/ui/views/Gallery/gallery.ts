@@ -147,16 +147,21 @@ export function coverOf(
 export function firstParagraph(markdown: string, max = 280): string {
   let text = markdown.replace(/^\uFEFF/, "");
   text = text.replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/, "");
-  let fence: { character: string; length: number } | null = null;
+  let fence: { character: string; length: number; quoteDepth: number } | null = null;
   text = text.split(/\r?\n/).map(line => {
-    const fenceLine = line.replace(/^(?: {0,3}>[\t ]?)+/, "");
-    const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(fenceLine);
     if (fence) {
+      // Only strip the quote containers that held the opening fence. A '>'
+      // inside an ordinary code block (or an extra nested '>') is code.
+      const content = peelQuotes(line, fence.quoteDepth);
+      const marker = content.depth === fence.quoteDepth
+        ? /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(content.text) : null;
       if (marker && marker[1]![0] === fence.character && marker[1]!.length >= fence.length && !marker[2]!.trim()) fence = null;
       return "";
     }
+    const content = peelQuotes(line);
+    const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(content.text);
     if (marker && (marker[1]![0] === "~" || !marker[2]!.includes("`"))) {
-      fence = { character: marker[1]![0]!, length: marker[1]!.length };
+      fence = { character: marker[1]![0]!, length: marker[1]!.length, quoteDepth: content.depth };
       return "";
     }
     return line;
@@ -186,4 +191,14 @@ export function firstParagraph(markdown: string, max = 280): string {
     if (plain) return plain.length > max ? `${plain.slice(0, max - 1).trimEnd()}…` : plain;
   }
   return "";
+}
+
+function peelQuotes(line: string, limit = Infinity): { text: string; depth: number } {
+  let depth = 0, text = line;
+  while (depth < limit) {
+    const prefix = /^ {0,3}>[\t ]?/.exec(text);
+    if (!prefix) break;
+    text = text.slice(prefix[0].length); depth++;
+  }
+  return { text, depth };
 }
