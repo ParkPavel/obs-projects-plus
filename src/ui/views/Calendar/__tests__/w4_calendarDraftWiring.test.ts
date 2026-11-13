@@ -77,7 +77,10 @@ describe("calendar creation opens an in-view draft, not a modal", () => {
 
   it("the draft's color picker offers the same shared favorites as every other palette", () => {
     expect(view).not.toMatch(/getProjectPalette/);
-    expect(sheet).toMatch(/\{#if colorOpen && !state\.saving\}\s*<div class="ppp-draft-sheet__palette"[^>]*>\s*<ColorPicker scrollable=\{false\} value=\{draft\.color \|\| "#808080"\} on:change/);
+    expect(sheet).toMatch(/\{#if colorOpen && !state\.saving && \$isMobile\}\s*<div class="ppp-draft-sheet__palette"[^>]*>\s*<ColorPicker scrollable=\{false\} value=\{draft\.color \|\| "#808080"\} on:change/);
+    const desktop = sheet.match(/\{#if colorOpen && !state\.saving && !\$isMobile\}\s*(<FloatingPopup[\s\S]*?<\/FloatingPopup>)/)?.[1] ?? "";
+    expect(desktop).toMatch(/triggerEl=\{colorTrigger\}/);
+    expect(desktop).toMatch(/<ColorPicker scrollable=\{false\} value=\{draft\.color \|\| "#808080"\} on:change/);
   });
 });
 

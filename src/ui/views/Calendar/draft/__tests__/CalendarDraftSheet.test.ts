@@ -9,9 +9,7 @@ import { fireEvent, render } from "@testing-library/svelte";
 import dayjs from "dayjs";
 import { tick } from "svelte";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
-import { isMobile as mobileStore } from "src/lib/stores/ui";
-import type { Writable } from "svelte/store";
-const isMobile = mobileStore as Writable<boolean>;
+const isMobile: {set(value: boolean): void} = require("src/lib/stores/ui").isMobile;
 jest.mock("src/lib/stores/ui", () => ({isMobile:require("svelte/store").writable(false)}));
 // The Svelte CJS test compiler reads .default; the browser build imports dayjs normally.
 jest.mock("dayjs", () => { const actual = jest.requireActual("dayjs"); return Object.assign(actual, { default: actual }); });
