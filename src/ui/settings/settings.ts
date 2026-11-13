@@ -10,6 +10,7 @@ import type {
   ProjectsPluginPreferences,
 } from "src/settings/settings";
 import { i18n } from "src/lib/stores/i18n";
+import { preferenceChoice, preferenceNumber } from "./preferenceFields";
 
 /**
  * ProjectsSettingTab builds the plugin settings tab.
@@ -17,12 +18,14 @@ import { i18n } from "src/lib/stores/i18n";
 export class ProjectsSettingTab extends PluginSettingTab {
   /** Svelte components mounted by display(); destroyed before the next display and on hide. */
   private mounted: Array<{ $destroy(): void }> = [];
+  private displayRevision = 0;
 
   constructor(app: App, readonly plugin: ProjectsPlugin) {
     super(app, plugin);
   }
 
   private destroyMounted(): void {
+    this.displayRevision += 1;
     for (const component of this.mounted) component.$destroy();
     this.mounted = [];
   }
@@ -33,106 +36,46 @@ export class ProjectsSettingTab extends PluginSettingTab {
 
   // display runs when the user opens the settings tab.
   display(): void {
+    this.destroyMounted();
+    const owner = this.displayRevision;
     let { preferences } = get(settings);
 
     const save = (prefs: ProjectsPluginPreferences) => {
+      if (owner !== this.displayRevision) return;
       preferences = prefs;
       settings.updatePreferences(prefs);
     };
 
     const { containerEl } = this;
 
-    this.destroyMounted();
     containerEl.empty();
 
-    new Setting(containerEl)
-      .setName(get(i18n).t("settings.general.size-limit.name"))
-      .setDesc(get(i18n).t("settings.general.size-limit.desc"))
-      .addText((text) =>
-        text
-          .setValue(preferences.projectSizeLimit.toString())
-          .setPlaceholder("1000")
-          .onChange((value) => {
-            save({
-              ...preferences,
-              // coercion-exempt: Class C - plugin/widget configuration from a form control, not record data
-              projectSizeLimit: parseInt(value) || 1000,
-            });
-          })
-      );
+    const t = (key: string) => get(i18n).t(key);
+    const preferenceBindings: Array<(prefs: ProjectsPluginPreferences) => void> = [];
+    const choices = (prefix: string, values: readonly string[]) => values.map(value => ({ value, label: t(prefix + ".options." + value) }));
+    const choice = (key: string, read: (prefs: ProjectsPluginPreferences) => string, options: readonly { value: string; label: string }[], write: (value: string) => void, description = false) => {
+      const row = new Setting(containerEl).setName(t(key + ".name"));
+      if (description) row.setDesc(t(key + ".desc"));
+      const field = preferenceChoice(row.controlEl, t(key + ".name"), read(preferences), options, write);
+      this.mounted.push(field);
+      preferenceBindings.push(prefs => field.$set({ value: read(prefs) }));
+    };
+    const limitKey = "settings.general.size-limit";
+    const limitRow = new Setting(containerEl).setName(t(limitKey + ".name")).setDesc(t(limitKey + ".desc"));
+    const limitField = preferenceNumber(limitRow.controlEl, t(limitKey + ".name"), preferences.projectSizeLimit,
+      value => save({ ...preferences, projectSizeLimit: value }));
+    this.mounted.push(limitField);
+    preferenceBindings.push(prefs => limitField.$set({ value: prefs.projectSizeLimit }));
 
-    new Setting(containerEl)
-      .setName(get(i18n).t("settings.general.start-of-week.name"))
-      .addDropdown((dropdown) =>
-        dropdown
-          .addOption(
-            "default",
-            get(i18n).t("settings.general.start-of-week.options.default")
-          )
-          .addOption(
-            "sunday",
-            get(i18n).t("settings.general.start-of-week.options.sunday")
-          )
-          .addOption(
-            "monday",
-            get(i18n).t("settings.general.start-of-week.options.monday")
-          )
-          .setValue(
-            preferences.locale.firstDayOfWeek
-              ? preferences.locale.firstDayOfWeek.toString()
-              : "default"
-          )
-          .onChange((value) => {
-            save({
-              ...preferences,
-              locale: {
-                firstDayOfWeek: value as FirstDayOfWeek,
-              },
-            });
-          })
-      );
-
-    new Setting(containerEl)
-      .setName(get(i18n).t("settings.general.mobile-calendar.name"))
-      .setDesc(get(i18n).t("settings.general.mobile-calendar.desc"))
-      .addDropdown((dropdown) =>
-        dropdown
-          .addOption(
-            "month",
-            get(i18n).t("settings.general.mobile-calendar.options.month")
-          )
-          .addOption(
-            "week",
-            get(i18n).t("settings.general.mobile-calendar.options.week")
-          )
-          .addOption(
-            "day",
-            get(i18n).t("settings.general.mobile-calendar.options.day")
-          )
-          .setValue(preferences.mobileCalendarView || "month")
-          .onChange((value) => {
-            save({
-              ...preferences,
-              mobileCalendarView: value as "month" | "week" | "day",
-            });
-          })
-      );
-
-    new Setting(containerEl)
-      .setName(get(i18n).t("settings.general.animation-behavior.name"))
-      .setDesc(get(i18n).t("settings.general.animation-behavior.desc") || "Control scrolling animations throughout the plugin")
-      .addDropdown((dropdown) =>
-        dropdown
-          .addOption("smooth", get(i18n).t("settings.general.animation-behavior.options.smooth") || "Smooth (animated)")
-          .addOption("instant", get(i18n).t("settings.general.animation-behavior.options.instant") || "Instant (no animation)")
-          .setValue(preferences.animationBehavior || "smooth")
-          .onChange((value) => {
-            save({
-              ...preferences,
-              animationBehavior: value as "smooth" | "instant",
-            });
-          })
-      );
+    const weekKey = "settings.general.start-of-week";
+    choice(weekKey, prefs => prefs.locale.firstDayOfWeek || "default", choices(weekKey, ["default", "sunday", "monday"]),
+      value => save({ ...preferences, locale: { firstDayOfWeek: value as FirstDayOfWeek } }));
+    const calendarKey = "settings.general.mobile-calendar";
+    choice(calendarKey, prefs => prefs.mobileCalendarView || "month", choices(calendarKey, ["month", "week", "day"]),
+      value => save({ ...preferences, mobileCalendarView: value as "month" | "week" | "day" }), true);
+    const animationKey = "settings.general.animation-behavior";
+    choice(animationKey, prefs => prefs.animationBehavior || "smooth", choices(animationKey, ["smooth", "instant"]),
+      value => save({ ...preferences, animationBehavior: value as "smooth" | "instant" }), true);
 
     new Setting(containerEl)
       .setName(get(i18n).t("settings.general.disable-haptic.name"))
@@ -153,11 +96,11 @@ export class ProjectsSettingTab extends PluginSettingTab {
       .setDesc(get(i18n).t("settings.general.replace-properties.desc"))
       .addToggle((toggle) =>
         toggle
-          .setValue(preferences.replaceObsidianProperties ?? false)
+          .setValue(preferences.propertiesInNoteHeader ?? true)
           .onChange((value) => {
             save({
               ...preferences,
-              replaceObsidianProperties: value,
+              propertiesInNoteHeader: value,
             });
           })
       );
@@ -166,32 +109,13 @@ export class ProjectsSettingTab extends PluginSettingTab {
       .setName(get(i18n).t("settings.front-matter.heading"))
       .setHeading();
 
-    new Setting(containerEl)
-      .setName(get(i18n).t("settings.front-matter.quote-strings.name"))
-      .addDropdown((dropdown) =>
-        dropdown
-          .addOption(
-            "PLAIN",
-            get(i18n).t("settings.front-matter.quote-strings.options.plain")
-          )
-          .addOption(
-            "QUOTE_DOUBLE",
-            get(i18n).t(
-              "settings.front-matter.quote-strings.options.quote-double"
-            )
-          )
-          .setValue(preferences.frontmatter.quoteStrings)
-          .onChange((value) => {
-            if (value === "PLAIN" || value === "QUOTE_DOUBLE") {
-              save({
-                ...preferences,
-                frontmatter: {
-                  quoteStrings: value,
-                },
-              });
-            }
-          })
-      );
+    const quoteKey = "settings.front-matter.quote-strings";
+    choice(quoteKey, prefs => prefs.frontmatter.quoteStrings, [
+      { value: "PLAIN", label: t(quoteKey + ".options.plain") },
+      { value: "QUOTE_DOUBLE", label: t(quoteKey + ".options.quote-double") },
+    ], value => {
+      if (value === "PLAIN" || value === "QUOTE_DOUBLE") save({ ...preferences, frontmatter: { quoteStrings: value } });
+    });
 
     new Setting(containerEl)
       .setName(get(i18n).t("settings.commands.name"))
@@ -229,6 +153,14 @@ export class ProjectsSettingTab extends PluginSettingTab {
       },
     });
     this.mounted.push(archivesManager);
+    const unsubscribePreferences = settings.subscribe(current => {
+      if (owner !== this.displayRevision) return;
+      preferences = current.preferences;
+      for (const refresh of preferenceBindings) refresh(preferences);
+      projectsManager.$set({ preferences });
+    });
+    // Unsubscribe before destroying controls, so a retiring child cannot refresh them.
+    this.mounted.unshift({ $destroy: unsubscribePreferences });
 
     // About comes last, under the tab's only plugin-level heading.
     new Setting(containerEl)

@@ -2,10 +2,10 @@
   import IconButton from "src/ui/components/IconButton/IconButton.svelte";
   import { i18n } from "src/lib/stores/i18n";
 
-  export let onAdd: () => void;
+  export let onAdd: (event: MouseEvent) => void;
 
-  function handleClick() {
-    onAdd?.();
+  function handleClick(event: MouseEvent) {
+    onAdd?.(event);
   }
 </script>
 

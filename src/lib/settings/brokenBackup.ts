@@ -37,6 +37,21 @@ export interface BrokenCopyAdapter {
   mkdir?(path: string): Promise<void>;
 }
 
+/** A resolved host write is insufficient: the recovery bytes must be readable. */
+async function writeVerifiedCopy(
+  adapter: BrokenCopyAdapter,
+  path: string,
+  contents: string,
+  write: (path: string, data: string) => Promise<unknown> = (path, data) => adapter.write(path, data)
+): Promise<boolean> {
+  try {
+    await write(path, contents);
+    return await adapter.read(path) === contents;
+  } catch {
+    return false;
+  }
+}
+
 /** Timestamp in a form that is legal in a filename on every host. */
 function stamp(at: Date): string {
   return at.toISOString().replace(/[:.]/g, "-");
@@ -182,12 +197,7 @@ export async function writeBrokenCopy(
     null,
     2
   );
-  try {
-    await adapter.write(path, contents);
-    return path;
-  } catch {
-    return null;
-  }
+  return await writeVerifiedCopy(adapter, path, contents) ? path : null;
 }
 
 /**
@@ -295,22 +305,11 @@ export async function writeConflictNote(
     fence,
     "",
   ].join("\n");
-  try {
-    await write(notePath, contents);
-    return notePath;
-  } catch {
-    // The folder could not be written to — most likely it was never created.
-    // The root is the fallback's fallback: worse placed, still readable on a
-    // phone, which is the whole reason this path exists.
-    const rootPath = await freeName(adapter, conflictNoteRootPath(at));
-    if (rootPath === null) return null;
-    try {
-      await write(rootPath, contents);
-      return rootPath;
-    } catch {
-      return null;
-    }
-  }
+  if (await writeVerifiedCopy(adapter, notePath, contents, write)) return notePath;
+  // Missing folder, refused write, or incomplete readback: try the vault root.
+  const rootPath = await freeName(adapter, conflictNoteRootPath(at));
+  if (rootPath === null) return null;
+  return await writeVerifiedCopy(adapter, rootPath, contents, write) ? rootPath : null;
 }
 
 /**
@@ -338,10 +337,5 @@ export async function writeConflictCopy(
   // was built rather than of what the file system says.
   const path = await freeName(adapter, base);
   if (path === null) return null;
-  try {
-    await adapter.write(path, payload);
-    return path;
-  } catch {
-    return null;
-  }
+  return await writeVerifiedCopy(adapter, path, payload) ? path : null;
 }

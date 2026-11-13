@@ -35,11 +35,12 @@ export type CellEditType =
   | "email"
   | "phone";
 
+export type CellListItem = string | number | boolean | null;
 export type CellValue =
   | string
   | number
   | boolean
-  | string[]
+  | CellListItem[]
   | null;
 
 export interface CellEditError {

@@ -1,7 +1,4 @@
 export { default as DuplicatePopup } from './DuplicatePopup.svelte';
-export { default as DuplicateHeader } from './DuplicateHeader.svelte';
-export { default as DuplicateTimeEditor } from './DuplicateTimeEditor.svelte';
-export { default as DuplicateFooter } from './DuplicateFooter.svelte';
 export { default as DuplicateCalendarView } from './DuplicateCalendarView.svelte';
 export { default as DuplicateMonthBlock } from './DuplicateMonthBlock.svelte';
 export { default as DuplicateWeek } from './DuplicateWeek.svelte';

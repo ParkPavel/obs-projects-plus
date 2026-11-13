@@ -323,6 +323,9 @@ export type RollupFieldConfig = {
   readonly orderBy?: string;
 };
 
+/** Project-only automatic fields are not writable note pp_types overrides. */
+export type ProjectPropertyType = import("src/lib/visualizer/propertyTypes").PropertyType | "autotime" | "unique_id";
+
 export type FieldConfig = StringFieldConfig &
   DateFieldConfig & {
     readonly relation?: RelationFieldConfig;
@@ -336,7 +339,7 @@ export type FieldConfig = StringFieldConfig &
      *
      * @since 3.4.2 (R2.1b)
      */
-    readonly type?: import("src/lib/visualizer/propertyTypes").PropertyType;
+    readonly type?: ProjectPropertyType;
     /**
      * NPLAN-A3 — Status semantic groups (overlay only).
      *
@@ -365,6 +368,8 @@ export type FieldConfig = StringFieldConfig &
      * on `ProjectDefinition.uniqueIdCounter`.
      */
     readonly uniqueIdPrefix?: string;
+    /** Missing retains compatibility rules; unknown versions must survive ordinary saves. */
+    readonly formulaVersion?: string;
     /**
      * #077 — Formula expression for a Formula-typed field. Edited via the
      * ConfigureField formula sub-panel; consumed by the formula evaluator.
@@ -386,7 +391,11 @@ export type MobileCalendarView = "month" | "week" | "day";
 
 export type AnimationBehavior = "smooth" | "instant";
 
+export interface ColorFavorite { readonly color: string; readonly name: string; }
+
 export type ProjectsPluginPreferences = {
+  /** Shared fallback palette, synced by the ordinary settings writer. */
+  readonly colorFavorites?: ColorFavorite[];
   readonly projectSizeLimit: number;
   readonly frontmatter: {
     readonly quoteStrings: "PLAIN" | "QUOTE_DOUBLE";
@@ -402,12 +411,12 @@ export type ProjectsPluginPreferences = {
   /** v4.0.3: Disable haptic (vibration) feedback on mobile devices */
   readonly disableHapticFeedback: boolean;
   /**
-   * R5-012 — When true, the plugin closes Obsidian's built-in
-   * `file-properties` leaves on every active-leaf-change and surfaces
-   * the YAML Visualizer pane instead. Default false to keep the native
-   * pane available out of the box.
+   * 3.7.2 B2 — show the plugin's properties block in the header of every
+   * Markdown note and hide Obsidian's built-in Properties block there.
+   * Default true. (Replaces R5-012 `replaceObsidianProperties`, which swapped
+   * the sidebar pane; a stored value of that key is ignored.)
    */
-  readonly replaceObsidianProperties: boolean;
+  readonly propertiesInNoteHeader: boolean;
 };
 
 export type UnsavedViewDefinition = Omit<

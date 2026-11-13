@@ -120,6 +120,8 @@
     inset-block: 0;
     inset-inline-end: 0;
     max-inline-size: 100%;
+    box-sizing: border-box;
+    min-block-size: 0;
     pointer-events: auto;
     background: var(--ppp-db-panel-bg, var(--background-primary));
     border-left: 0.0625rem solid var(--ppp-db-panel-border, var(--background-modifier-border));
@@ -129,6 +131,7 @@
     display: flex;
     flex-direction: column;
     z-index: var(--ppp-z-raised);
+    /* The leaf overlay already starts below the app/header safe area. */
   }
 
   .ppp-slide-in-panel--open {
@@ -178,8 +181,17 @@
 
   .ppp-slide-in-body {
     flex: 1;
+    min-block-size: 0;
+    min-inline-size: 0;
     overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 1rem;
+  }
+
+  .ppp-slide-in-body::after {
+    content: "";
+    display: block;
+    block-size: max(env(safe-area-inset-bottom, 0rem), var(--view-bottom-spacing, 0rem));
   }
 
   @media (prefers-reduced-motion: reduce) {

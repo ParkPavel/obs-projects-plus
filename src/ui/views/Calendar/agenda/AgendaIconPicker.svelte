@@ -2,7 +2,9 @@
   import { createEventDispatcher } from 'svelte';
   import { Icon } from 'obsidian-svelte';
   import { i18n } from 'src/lib/stores/i18n';
+  import SearchField from 'src/ui/components/fields/SearchField.svelte';
   import type { AgendaIcon } from 'src/settings/v3/settings';
+  import { AGENDA_EMOJIS, agendaEmoji } from './agendaEmoji';
   
   const dispatch = createEventDispatcher<{
     select: AgendaIcon;
@@ -30,21 +32,13 @@
     'home', 'briefcase', 'shopping-cart', 'coffee',
   ];
   
-  // Popular emojis for agenda lists
-  const emojis = [
-    'рџ”Ґ', 'в­ђ', 'рџ’Є', 'рџЋЇ', 'вљЎ', 'рџ’Ћ', 'рџЏ†', 'рџ‘‘',
-    'рџ“‹', 'рџ“ќ', 'вњ…', 'вќЊ', 'вЏ°', 'рџ“…', 'рџ””', 'рџ’Ў',
-    'рџљЂ', 'рџЋ‰', 'рџЋЉ', 'рџЋ€', 'рџЋЃ', 'рџЋЇ', 'рџ”®', 'рџЊџ',
-    'рџ“Њ', 'рџ“Ќ', 'рџ”—', 'вљ™пёЏ', 'рџ› пёЏ', 'рџ”§', 'вљЎ', 'рџ’¬',
-    'рџ“§', 'рџ“¬', 'рџ“Є', 'рџ“«', 'рџ“®', 'рџ“¤', 'рџ“Ґ', 'рџ“¦',
-    'рџЋЁ', 'рџЋ­', 'рџЋЄ', 'рџЋ¬', 'рџЋµ', 'рџЋё', 'рџЋ№', 'рџЋ¤',
-  ];
-  
-  $: filteredLucide = searchQuery
-    ? lucideIcons.filter(icon => icon.includes(searchQuery.toLowerCase()))
+  $: normalizedSearch = searchQuery.trim().toLowerCase();
+  $: filteredLucide = normalizedSearch
+    ? lucideIcons.filter(icon => icon.includes(normalizedSearch))
     : lucideIcons;
-    
-  $: filteredEmojis = emojis; // Emoji search can be added later
+  $: filteredEmojis = searchQuery.trim()
+    ? AGENDA_EMOJIS.filter(emoji => emoji.includes(searchQuery.trim()))
+    : AGENDA_EMOJIS;
   
   function selectIcon(type: 'lucide' | 'emoji', value: string) {
     const icon: AgendaIcon = { type, value };
@@ -52,7 +46,8 @@
   }
   
   function isSelected(type: string, value: string): boolean {
-    return currentIcon?.type === type && currentIcon?.value === value;
+    if (currentIcon?.type !== type) return false;
+    return (type === 'emoji' ? agendaEmoji(currentIcon.value) : currentIcon.value) === value;
   }
 </script>
 
@@ -70,11 +65,10 @@
   
   <div class="modal-content">
     <div class="search-box">
-      <Icon name="search" size="sm" />
-      <input 
-        type="text"
+      <SearchField
+        query={searchQuery}
         placeholder={t('search-placeholder')}
-        bind:value={searchQuery}
+        on:queryChange={(e) => (searchQuery = e.detail)}
       />
     </div>
     
@@ -158,28 +152,18 @@
   
   .modal-content {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     padding: 1rem;
     overscroll-behavior: contain;
   }
   
   .search-box {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
+    position: sticky;
+    top: 0;
+    z-index: 1;
     margin-bottom: 1rem;
-    border: 0.0625rem solid var(--background-modifier-border);
-    border-radius: var(--radius-s);
     background: var(--background-primary);
-  }
-  
-  .search-box input {
-    flex: 1;
-    border: none;
-    background: transparent;
-    color: var(--text-normal);
-    font-size: 0.875rem;
   }
   
   .icon-section {

@@ -1,23 +1,35 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
+  import { Platform } from "obsidian";
+  import { moveToViewHeader } from "src/ui/actions/moveToViewHeader";
   import type { ViewDefinition, ViewId } from "src/settings/settings";
   import AddViewButton from "./AddViewButton.svelte";
   import ViewSwitcher from "./ViewSwitcher.svelte";
   import SettingsMenuButton from "./SettingsMenuButton.svelte";
   import ViewSpecificActions from "./ViewSpecificActions.svelte";
   import SaveStatusChip from "src/ui/components/SaveStatus/SaveStatusChip.svelte";
+  import BlockOutlineButton from "src/ui/views/Dashboard/layout/BlockOutlineButton.svelte";
+  import { i18n } from "src/lib/stores/i18n";
+  import { blockOutlineStore } from "src/ui/views/Dashboard/layout/blockOutline";
+
+  // w4-p10a (N15): a dashboard's table of contents, when the view publishes one.
+  const outlineStore = blockOutlineStore();
+  $: outline = outlineStore ? $outlineStore : null;
+  let addBlockEl: HTMLButtonElement | null = null;
 
   export let views: ViewDefinition[] = [];
   export let viewId: ViewId | undefined;
   export let view: ViewDefinition | undefined = undefined;
+  export let newView: { name: string; commit: (name: string) => void; cancel: () => void } | null = null;
   /** Agenda state for the icon/label; undefined falls back to the view config. */
   export let agendaOpen: boolean | undefined = undefined;
 
   const dispatch = createEventDispatcher<{
-    addView: void;
+    addView: MouseEvent;
     openSettings: MouseEvent;
     centerToday: void;
     toggleAgenda: void;
+    setInterval: string;
     freezeColumns: void;
     viewChange: ViewId;
   }>();
@@ -39,15 +51,30 @@
   this decision scans the file for them and cannot tell a mention from a use.
 -->
 <nav class="compact-navbar">
-  <ViewSwitcher
-    {views}
-    activeViewId={viewId}
-    onSelect={(id) => dispatch("viewChange", id)}
-  />
+  <!-- i3-nav: on a phone the tabs live in the leaf header (moveToViewHeader). -->
+  <div class="compact-navbar-tabs" use:moveToViewHeader={Platform.isPhone === true}>
+    <ViewSwitcher
+      {views}
+      {newView}
+      activeViewId={viewId}
+      onSelect={(id) => dispatch("viewChange", id)}
+    />
+  </div>
+
+  {#if outline && outline.items.length > 1}
+    <BlockOutlineButton {outline} />
+  {/if}
+  {#if outline?.insert}
+    <!-- w4-p10 (N7): «+ Block» after the selected block, else the one on screen. -->
+    <button bind:this={addBlockEl} type="button" class="ppp-block-add clickable-icon" data-block-add
+      aria-label={$i18n.t("views.dashboard.insert.add", { defaultValue: "Add block" })}
+      title={$i18n.t("views.dashboard.insert.add", { defaultValue: "Add block" })}
+      on:click={() => outline?.insert?.(addBlockEl)}>+ {$i18n.t("views.dashboard.insert.block", { defaultValue: "Block" })}</button>
+  {/if}
 
   <div class="right">
     <SaveStatusChip />
-    <AddViewButton onAdd={() => dispatch("addView")}/>
+    <AddViewButton onAdd={(event) => dispatch("addView", event)}/>
     <SettingsMenuButton onOpen={(event) => dispatch("openSettings", event)}/>
     <ViewSpecificActions
       {view}
@@ -55,6 +82,7 @@
       onCenterToday={() => dispatch("centerToday")}
       onToggleAgenda={() => dispatch("toggleAgenda")}
       onFreezeColumns={() => dispatch("freezeColumns")}
+      onSetInterval={(interval) => dispatch("setInterval", interval)}
     />
   </div>
 </nav>
@@ -75,6 +103,50 @@
     -webkit-backdrop-filter: blur(0.625rem) saturate(180%);
     border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
     flex-shrink: 0;
+  }
+
+  /* The tab strip's wrapper takes the room the strip took before it. */
+  .compact-navbar-tabs {
+    display: flex;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  /* i3-nav: in the leaf header (a phone) the strip fills the title's place
+     and the plugin bar keeps only the tools, at the end of the row. */
+  :global(.ppp-tabs-in-header .view-header-title) {
+    display: none;
+  }
+  :global(.ppp-tabs-in-header .view-header) {
+    min-height: var(--ppp-touch-target-min);
+    height: auto;
+  }
+  :global(.ppp-tabs-in-header .compact-navbar-tabs .view-item) {
+    flex-direction: row;
+    min-width: var(--ppp-touch-target-min);
+    min-height: var(--ppp-touch-target-min);
+    box-sizing: border-box;
+    padding: 0.25em 0.5em;
+    gap: 0.375em;
+  }
+  :global(.ppp-tabs-in-header .compact-navbar-tabs .view-item span) {
+    white-space: nowrap;
+  }
+  /* w4-p09 (N1): a theme may style the header, not hide the strip in it.
+     Things shows the title container only on hover (a phone has none);
+     Minimal hides it with "hide tab title" and in focus mode. */
+  :global(.ppp-tabs-in-header .view-header-title-container) {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+  :global(.ppp-tabs-in-header .view-header-title-container > .compact-navbar-tabs) {
+    width: 100%;
+  }
+  :global(.ppp-tabs-in-header .compact-navbar) {
+    justify-content: flex-end;
   }
 
   /* ios-l1 L3: the actions take their own width first and never shrink; the

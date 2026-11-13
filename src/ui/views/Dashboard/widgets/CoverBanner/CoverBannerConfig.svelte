@@ -1,6 +1,8 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
+  import TextField from "src/ui/components/fields/TextField.svelte";
+  import NumberField from "src/ui/components/fields/NumberField.svelte";
   import type { CoverBannerConfig } from "../../types";
 
   export let config: Record<string, unknown>;
@@ -25,8 +27,7 @@
     update({ position: (e.currentTarget as HTMLSelectElement).value as "top" | "center" | "bottom" });
   }
 
-  function handleOverlayChange(e: Event) {
-    const v = (e.currentTarget as HTMLInputElement).value;
+  function handleOverlayChange(v: string) {
     if (v) {
       update({ overlay: v });
     } else {
@@ -39,12 +40,11 @@
 <div class="ppp-cb-cfg">
   <div class="ppp-cb-cfg-row">
     <label for="cb-src">{$i18n.t("views.dashboard.cover-banner-config.src", { defaultValue: "Image source" })}</label>
-    <input
+    <TextField
       id="cb-src"
-      type="text"
       placeholder={$i18n.t("views.dashboard.cover-banner-config.src-placeholder", { defaultValue: "vault path or URL" })}
       value={cfg.src ?? ""}
-      on:change={(e) => update({ src: e.currentTarget.value })}
+      on:commit={(e) => update({ src: e.detail.value })}
     />
   </div>
 
@@ -64,13 +64,13 @@
   {#if cfg.widthMode === "custom"}
     <div class="ppp-cb-cfg-row">
       <label for="cb-widthrem">{$i18n.t("views.dashboard.cover-banner-config.width-rem", { defaultValue: "Width (rem)" })}</label>
-      <input
+      <NumberField
         id="cb-widthrem"
-        type="number"
-        min="4"
-        step="1"
+        min={4}
+        integer
+        allowEmpty
         value={cfg.widthRem ?? 32}
-        on:change={(e) => update({ widthRem: /* coercion-exempt: a number input's own value, min=4 step=1 above — a widget setting, not record data */ Number(e.currentTarget.value) || 32 })}
+        on:commit={(e) => update({ widthRem: e.detail ?? 32 })}
       />
     </div>
   {/if}
@@ -102,12 +102,11 @@
 
   <div class="ppp-cb-cfg-row">
     <label for="cb-overlay">{$i18n.t("views.dashboard.cover-banner-config.overlay", { defaultValue: "Overlay caption" })}</label>
-    <input
+    <TextField
       id="cb-overlay"
-      type="text"
       placeholder={$i18n.t("views.dashboard.cover-banner-config.overlay-placeholder", { defaultValue: "optional" })}
       value={cfg.overlay ?? ""}
-      on:change={handleOverlayChange}
+      on:commit={(e) => handleOverlayChange(e.detail.value)}
     />
   </div>
 
@@ -141,7 +140,7 @@
     color: var(--text-muted);
   }
 
-  .ppp-cb-cfg-row input,
+  .ppp-cb-cfg-row :global(input.ppp-text-field),
   .ppp-cb-cfg-row select {
     flex: 1;
     font-size: var(--font-ui-small);

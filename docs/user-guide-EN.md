@@ -2,7 +2,7 @@
 
 [Русский](user-guide.md) · [Documentation](README.md) · [Installation and first project](../README.md)
 
-This guide describes the current source code. Some labels may differ in older builds; check the installed plugin version in its settings.
+This guide describes Projects Plus 3.7.2. Some labels may differ in older builds; check the installed plugin version in its settings.
 
 ## Understanding your data
 
@@ -54,7 +54,7 @@ Also check the new-note folder, templates, default name, and excluded files. The
 
 ## Creating and editing records
 
-Use the project's create-note action or **Create new note plus**. Check the selected project in the dialog, enter a name, and choose a template if needed. In the calendar, double-clicking an empty cell can create a note.
+Use the project's create-note action or **Create new note plus**. Check the selected project in the dialog, enter a name, and choose a template if needed. On a computer, double-click an empty calendar cell. On a phone, hold an empty slot and move your finger to set the duration; releasing opens the bottom form. Move or resize the draft before confirming. Confirm creates the file; Cancel discards the draft.
 
 These properties are enough to begin:
 
@@ -84,7 +84,19 @@ Open a record through its name or card. In the Dashboard table, a normal click o
 
 A Dashboard is a workspace made of blocks. Start with one data block: select its source and display mode, such as a table. Add charts, metrics, and other blocks as you need them.
 
-In a table you can edit writable cells, choose columns, sort, and filter records. The schema configures field types, including text, number, checkbox, status, list, formula, and relation. Older saved Table and Database views are converted to Dashboard on load; they are not separate new installation modes.
+In a table you can edit writable cells, choose columns, sort, and filter records. A block's “Properties” entry configures field types, including text, number, checkbox, status, list, formula, and relation. Older saved Table and Database views are converted to Dashboard on load; they are not separate new installation modes.
+
+Enter commits an edit and Escape cancels it; accepting an IME candidate does not close the cell. For numbers, use a decimal point without thousands separators. A malformed number or incomplete date is marked invalid and does not erase the stored value; intentionally clearing a valid control is still allowed. The record name opens the note, Alt-click opens its preview, and the name is keyboard accessible.
+
+Text lists use per-item editing in the shared popup: Add item, remove the chosen row, Apply or Cancel. On a phone this uses the shared bottom sheet. Commas, quotes, duplicate and empty strings remain part of their values; a list never becomes a scalar string. Applying unchanged does not write the note; removing every item stores an empty list. Non-text entries in a mixed list retain their types and can be removed, but not edited as text. Numeric/date/boolean arrays in scalar columns are protected from such editing; a dedicated typed-array editor is not implemented yet. Mobile form and keyboard workflows are included in the release's iPhone acceptance.
+
+Large-table search runs in chunks: “…” replaces the count while waiting, followed by the complete result of the latest query. Changing or clearing the query cancels the previous search. “No matches” means a completed search with zero results, not a frozen table.
+
+Add widget immediately opens the type menu without an intermediate Widgets panel. A new tile is appended, focused and scrolled into view without rearranging existing tiles. The tile menu's lock pins its index in the vertical stack: it has no drag grip, and moving neighbors cannot change its index. This does not prevent editing, deletion or collapse. Title editing supports IME; Enter commits once and Escape cancels.
+
+Stats is a numeric summary, not a diagram. First configuration seeds editable cards for record count and, if a numeric field exists, its sum and average. Settings choose each card's field/operation, remove cards and select 2/3/4 columns. Narrow tiles reduce the grid to two or one column; clearing all cards leaves an explanation instead of resurrecting totals. A sparkline is a bounded preview of up to 200 points; the numeric aggregate uses every value. For a full diagram, add Chart. Read-only mode offers no configuration action for an unconfigured widget.
+
+Shared popups and suggestions use the visible window area when `visualViewport` exists; the first Escape closes inner suggestions, the next closes the window. With two popups open, only the topmost handles Escape and outside presses. Release checks cover modeled viewport transitions and iPhone keyboard workflows. Test your own popout and device configuration when updating.
 
 Each block can have its own source and filters. If two blocks show different records, compare those settings first. To link blocks, configure a dependency on a selected record: selecting a client in one block can then limit another block's data. Placing blocks next to each other does not create a link.
 
@@ -96,6 +108,8 @@ Use the grip to move cards and columns: a card's grip is the strip along its lef
 
 In the view settings (gear → View) a board can show a cover from an image field on each card: on top, as a small square at the left, or none. A card without an image shows no thumbnail. Use consistent values for a shared process: `todo`, `doing`, and `done` are easier to maintain than several spellings of the same status.
 
+Boolean properties in a board card's body and the separate header checkbox toggle without opening the YAML inspector. Computed properties and records from a read-only source cannot be changed.
+
 ### Calendar and Agenda
 
 Explicitly select event start and end fields in calendar settings. For the example above, use `startDate` and `endDate`; map the time fields to `startTime` and `endTime`, and color to `color`.
@@ -105,6 +119,8 @@ When a start field is not configured or is absent, the calendar tries common fie
 Switch between year-to-day scales. In week and day modes, timed events appear on a timeline; dragging changes their date or time, and resizing a bar changes its duration. In month and 2-weeks modes, drag a record onto another day to change its date. Use **Today** to return to the current date.
 
 Agenda is a sidebar with event lists. You can select a day and configure filters for individual lists. If an event appears in the calendar but not in Agenda, check the selected date and the list's filter.
+
+The new-event form starts with its color palette expanded. It scrolls with the form's other fields and can be collapsed with the color button. In the note inspector, ordinary properties and computed results share one scroll area. Formula and rollup results remain read-only.
 
 ### Gallery
 
@@ -118,6 +134,10 @@ A filter limits displayed records; it does not delete notes. A view's filter liv
 
 Formulas calculate values from fields. Begin with a small expression over numeric fields, such as `budget - spent`. Check the result against a known record before using it in summary statistics. The built-in editor helps you choose fields and functions; valid operations depend on data types.
 
+**Project formulas and dashboard calculated fields.** A formula configured on a project property belongs to that property and is available in the project's views. The dashboard's “Calculated fields” toolbar control creates a computed column for that page only. It is a working calculation, rather than a separate preview calculator: Apply saves its definition in the view settings and recalculates it for the records. It does not rewrite Markdown properties.
+
+In the dashboard panel, enter a new name such as `Remaining` and the expression `budget - spent`. Preview shows the first record in the dashboard's data. A reference such as `budget` reads the current record; `SUM(@budget)` aggregates that column across the dashboard's complete dataset, rather than just the first row. Check the filters and source first. After applying, the field is available to that page's tables and widgets. Saved fields appear in the panel: select a name to edit its expression, or use the adjacent delete button to remove it from the page. Update any other formulas that depend on a deleted field. An empty name, a collision with an ordinary property, invalid syntax or a circular dependency cannot be applied.
+
 A relation points to notes in another project. For example, a YAML link can look like this:
 
 ```yaml
@@ -126,7 +146,7 @@ client: "[[Clients/Maria Ivanova]]"
 
 The links in your frontmatter are the relation's data. Configuring a relation leaves them alone: it only tells the plugin where to resolve them. The plugin rewrites a link only when you change the value yourself — in a table cell or in the record editor — and then it writes the new one back to the frontmatter.
 
-**From links to a relation.** Open “Schema,” find the row of the field you want, and choose “Configure.” Set “Type” to “Relation,” then pick the “Target project” — the base its links resolve in. The “Link database…” button opens the wizard, which previews the outcome before anything is saved — “Matched: 3; Not found: 0; Ambiguous: 0” — so a mismatch is visible in advance. A property that already exists as text becomes a relation; your notes are not rewritten.
+**From links to a relation.** In the menu of a block that reads the project, choose “Properties of «project»…”, find the row of the field you want, and choose “Configure.” Set “Type” to “Relation,” then pick the “Target project” — the base its links resolve in. The “Link database…” button opens the wizard, which previews the outcome before anything is saved — “Matched: 3; Not found: 0; Ambiguous: 0” — so a mismatch is visible in advance. A property that already exists as text becomes a relation; your notes are not rewritten.
 
 A formula, a rollup, the record's identifier and a derived property cannot become a relation: their values are computed or belong elsewhere, and a relation would overwrite what produces them. The wizard refuses with one wording for all four — computed, or identifying the record — without naming which case applied.
 
@@ -135,6 +155,10 @@ If several notes share a filename, include the folder in the link. A missing or 
 **A summary over related records.** With the relation configured, add a field of type “Rollup”: pick the relation column under “Through relation” and a function such as “Count all.” The card then shows how many records are related — `2` for a client with two sessions, `0` for a client with none. No data pipeline is needed for this.
 
 **A chart over related data.** The “+” in the block palette adds a “Chart”; its settings choose the type and the X and Y axes. Dates on the X axis group by day, week, month, quarter or year, and the Y axis can take a sum, an average, a min, a max, a median, a count or a unique count.
+
+**A first verifiable chart.** Use three records with text field `status` and numeric `amount`: A/10, A/30, B/20. Add a chart, choose bars, X = `status`, Y = `amount`, aggregation “Sum”: expect A = 40 and B = 20. Switching to a line chart preserves these values. Operations depend on field type: text does not offer sum, while “Count all” counts records, including empty values, rather than adding numbers. A hint explains the chosen operation. If an old configuration is incompatible with its field, it remains visible with a warning: opening it does not change it; explicitly choose a supported operation. Explicitly changing Y preserves a compatible operation or selects “Count all”. Scatter does not use this aggregation choice.
+
+**Agenda filter operator.** Press the operator button in a filter row. The menu uses the shared popup: arrows move focus, Enter/Space or pressing a button selects an item, and Escape cancels and restores focus to the trigger. Escape during IME composition does not dismiss input. Choosing an operator without a value clears the old value; opening and cancelling leave it unchanged. Actual soft-keyboard and separate Obsidian-window behavior still needs device verification.
 
 ## Computation across tables and projects
 
@@ -178,6 +202,16 @@ The default note-name setting supports date and time, for example `{{date:YYYY-M
 ### Templater
 
 Files in the [templates folder](../templates/README.md) use Templater syntax (`<% ... %>`) and require the separately enabled Templater plugin. Create the note using its command and place the result in the project's folder. Projects Plus's built-in substitution does not execute Templater code.
+
+## Saved colors
+
+Click a color swatch in the note header. Under “Saved colors”, choose “Shared” or a project name. A project without its own set starts from the shared colors; adding or removing a saved color after selecting a project changes only that project's set. Choosing a set does not recolor the note.
+
+Inside a project view, the palette keeps that project's context. A standalone note header offers an explicit choice and returns to Shared when you switch notes. A note's folder is not treated as proof of membership in a query project.
+
+For an exact color, enter `#RGB` or `#RRGGBB` (the `#` is optional) and apply. Four, five and eight digits are rejected. The color is preserved as normalized six-digit HEX, without rounding (`#ABC` becomes `#aabbcc`); moving a slider chooses a new shade. Existing CSS colors update the preview and sliders. An incoming transparent color keeps its alpha until you choose an opaque replacement; saved colors accept opaque HEX only. Switching notes closes the palette and cancels an unfinished gesture.
+
+Sets are stored in plugin settings. Transfer those settings with your chosen sync tool to use them on another device; there is no separate palette server. If saving fails, check the plugin's notice and do not reload with unsaved changes.
 
 ## Keyboard and touch
 

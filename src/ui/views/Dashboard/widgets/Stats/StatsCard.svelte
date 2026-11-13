@@ -5,7 +5,8 @@
   import type { Optional } from "src/lib/dataframe/dataframe";
   import { sanitizeColor } from "src/lib/dashboard-engine/conditionalFormat";
   import { computeAggregateValue } from "src/lib/dashboard-engine/aggregation";
-  import { toNumbers } from "src/lib/engine/numeric";
+  import { buildStatsSparkline } from "./statsSparkline";
+  import { aggregationLabel, aggregationConsequence } from "src/lib/dashboard-engine/aggregationOptions";
 
   export let config: StatsCardConfig;
   export let values: Optional<DataValue>[];
@@ -20,7 +21,9 @@
   $: safeColor = config.color ? sanitizeColor(config.color) : null;
   $: result = computeAggregateValue(values, config.aggregation);
   $: formatted = formatResult(result, config.format, config.currencySymbol);
-  $: sparklinePath = config.sparkline ? buildSparkline(values) : "";
+  $: sparklinePath = config.sparkline ? buildStatsSparkline(values) : "";
+  $: tr = (key: string, defaultValue: string) => $i18n.t(key, { defaultValue });
+  $: explanation = `${config.field} · ${aggregationLabel(config.aggregation, tr)} — ${aggregationConsequence(config.aggregation, tr)}`;
 
   function formatResult(
     val: number | string | null,
@@ -44,30 +47,13 @@
     }
   }
 
-  function buildSparkline(vals: Optional<DataValue>[]): string {
-    // #180a: the sparkline drew a point for "12abc" at 12 while the card's own
-    // number ignored it. One rule, so the shape agrees with the value above it.
-    const nums = toNumbers(vals);
-    if (nums.length < 2) return "";
-    const min = Math.min(...nums);
-    const max = Math.max(...nums);
-    const range = max - min || 1;
-    const w = 80;
-    const h = 24;
-    const step = w / (nums.length - 1);
-    return nums.map((v, i) => {
-      const x = i * step;
-      const y = h - ((v - min) / range) * h;
-      return `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
-    }).join(" ");
-  }
 </script>
 
 <div
   class="ppp-stats-card"
   class:ppp-stats-card--missing={fieldMissing}
   style={safeColor ? `border-left: 0.1875rem solid ${safeColor}` : ""}
-  title={fieldMissing ? `Field "${config.field}" not found in data. Edit the widget config to pick an existing field.` : ""}
+  title={fieldMissing ? $i18n.t("views.dashboard.stats.missing-field-hint", { field: config.field }) : explanation}
 >
   {#if fieldMissing}
     <span class="ppp-stats-value ppp-stats-value--missing" aria-label={$i18n.t("views.dashboard.stats.field-not-found")}>⚠</span>
@@ -90,6 +76,7 @@
 </div>
 
 <style>
+  .ppp-stats-card { min-width: 0; overflow-wrap: anywhere; }
   .ppp-stats-sparkline {
     width: 5rem;
     height: 1.5rem;

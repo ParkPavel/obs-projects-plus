@@ -10,6 +10,7 @@
 
   export let icon: string;
   export let message: string;
+  export let readonly = false;
 
   const dispatch = createEventDispatcher<{ configure: void }>();
 </script>
@@ -17,9 +18,11 @@
 <div class="ppp-widget-setup-wizard">
   <span class="ppp-widget-setup-icon"><Icon name={icon} size="lg" /></span>
   <span>{message}</span>
-  <button class="ppp-widget-setup-btn" on:click={() => dispatch("configure")}>
+  {#if !readonly}
+  <button class="ppp-widget-setup-btn" on:click={() => { if (!readonly) dispatch("configure"); }}>
     {$i18n.t("views.dashboard.widget.configure", { defaultValue: "Configure" })}
   </button>
+  {/if}
 </div>
 
 <style>

@@ -1,11 +1,3 @@
-<!--
-  RESERVED, NOT DEAD — do not delete on an "unused imports" sweep.
-
-  Nothing imports this yet by design. #082 (typed record card, open) names
-  RecordCardView/SlideInPanel as the foundation for the typed-card design that
-  superseded #011/#012. A 2026-08-25 audit listed it as dead on import count
-  alone; import count is not the same question as whether anything is planned.
--->
 <script lang="ts">
   /**
    * NPLAN-V7.3 — RecordCardView (full implementation)
@@ -21,7 +13,12 @@
    */
   import { createEventDispatcher } from "svelte";
   import SlideInPanel from "src/ui/components/SlideInPanel/SlideInPanel.svelte";
+  import TextField from "src/ui/components/fields/TextField.svelte";
   import EditNote from "src/ui/modals/components/EditNote.svelte";
+  import NotePropertiesBlock from "src/ui/properties/NotePropertiesBlock.svelte";
+  import { app as appStore } from "src/lib/stores/obsidian";
+  import { TFile } from "obsidian";
+  import { formatDisplayValue } from "src/lib/helpers/dateDisplay";
   import PageIcon from "src/ui/components/PageIcon/PageIcon.svelte";
   import { DataFieldType, type DataField, type DataRecord } from "src/lib/dataframe/dataframe";
   import { normalizeRelationValue } from "src/lib/relations/relationContract";
@@ -42,7 +39,7 @@
   export let onRenameNote: ((newName: string) => void) | undefined = undefined;
   /**
    * Name of the field whose value is used as the record icon.
-   * Auto-detects "icon", "cover", or "thumbnail" when omitted.
+   * Auto-detects an "icon" field when omitted.
    */
   export let iconField: string | undefined = undefined;
 
@@ -85,20 +82,21 @@
   $: relationFields = fields.filter((f) => f.type === DataFieldType.Relation && !f.derived);
 
   /** The fields that really become frontmatter keys — see the block below. */
-  $: writtenFields = fields.filter((f) => !f.derived);
+  // i2-record (D07/N05): the peek shows the SAME properties block as the note
+  // itself — the keys are its labels — and the computed properties (rollups,
+  // formulas) read-only beneath it. A row that is not a note keeps the old editor.
+  $: noteFile = (() => {
+    const f = record && $appStore?.vault ? $appStore.vault.getAbstractFileByPath(record.id) : null;
+    return f instanceof TFile ? f : null;
+  })();
+  $: isNote = noteFile !== null;
+  $: computedFields = fields.filter((f) =>
+    (f.type === DataFieldType.Formula || f.type === DataFieldType.Rollup || !!f.typeConfig?.rollup) && record?.values[f.name] != null);
 
-  /**
-   * A value as frontmatter would carry it — the point of the block is that it
-   * matches the file, so a list stays a list and an absent key says so rather
-   * than rendering as an empty string that looks like an empty value.
-   */
-  function formatKeyValue(v: unknown): string {
-    if (v === undefined || v === null) return "—";
-    if (Array.isArray(v)) return v.map(String).join(", ");
-    return String(v);
-  }
 
-  const ICON_CANDIDATES = ["icon", "cover", "thumbnail"];
+  // N06: a cover is an image, not an icon — «[[Обложка….svg]]» was drawn as an
+  // emoji over the title. Only an icon field gives the header its icon.
+  const ICON_CANDIDATES = ["icon"];
   const DESC_CANDIDATES = ["description", "summary", "excerpt"];
 
   $: title = record
@@ -128,10 +126,16 @@
 
   // #038: when the side panel closes, clear local picker state so the next
   // record doesn't open with a stuck-open picker or stale input value.
-  $: if (!open) {
+  // Assigned in a function the `$:` calls, never in the statement: the picker
+  // input is bound to `pickerInput`, and in Svelte 3 a binding to a variable
+  // assigned inside a `$:` statement re-runs that statement on the next flush
+  // (R0.34). The picker is seeded by `openPicker` alone.
+  function resetPickerWhenClosed(isOpen: boolean): void {
+    if (isOpen) return;
     pickerOpen = false;
     pickerInput = "";
   }
+  $: resetPickerWhenClosed(open);
 
   function openPicker() {
     pickerInput = typeof iconValue === "string" ? iconValue : "";
@@ -159,8 +163,8 @@
     if (e.key === "Escape") { e.stopPropagation(); closePicker(); }
   }
 
-  function focusInput(node: HTMLInputElement) {
-    requestAnimationFrame(() => node.focus());
+  function focusInput(node: HTMLElement) {
+    requestAnimationFrame(() => node.querySelector("input")?.focus());
   }
 
   // ── Save passthrough ───────────────────────────────────────
@@ -207,14 +211,18 @@
         {#if pickerOpen}
           <!-- svelte-ignore a11y-no-static-element-interactions -->
           <div class="ppp-rcv-icon-picker" on:keydown={handlePickerKeydown}>
-            <input
-              bind:value={pickerInput}
-              class="ppp-rcv-icon-input"
-              use:focusInput
-              placeholder={$i18n.t("components.record-card-view.icon-placeholder")}
-              aria-label={$i18n.t("views.dashboard.record-card.icon-input", { defaultValue: "Emoji or icon name" })}
-              on:keydown={handlePickerKeydown}
-            />
+            <!-- Enter (via the wrapper) confirms; Escape closes. A blur alone
+                 writes nothing: the picker has its own ✓ and ✕. -->
+            <span class="ppp-rcv-icon-field" use:focusInput>
+              <TextField
+                value={pickerInput}
+                inputClass="ppp-rcv-icon-input"
+                placeholder={$i18n.t("components.record-card-view.icon-placeholder")}
+                ariaLabel={$i18n.t("views.dashboard.record-card.icon-input", { defaultValue: "Emoji or icon name" })}
+                on:input={(e) => (pickerInput = e.detail)}
+                on:cancel={closePicker}
+              />
+            </span>
             <button class="ppp-rcv-icon-confirm" on:click={confirmPicker} aria-label={$i18n.t("common.confirm")}>✓</button>
             <button class="ppp-rcv-icon-cancel" on:click={closePicker} aria-label={$i18n.t("common.cancel")}>✕</button>
           </div>
@@ -228,45 +236,33 @@
     <div class="ppp-rcv-desc">{descText}</div>
   {/if}
 
-  {#if record}
+  {#if record && isNote && noteFile}
+    <NotePropertiesBlock app={$appStore} file={noteFile} {readonly} />
+    {#if computedFields.length > 0}
+      <details class="ppp-rcv-computed" open>
+        <summary>{$i18n.t("views.dashboard.record-card.computed-properties", { defaultValue: "Computed properties" })}</summary>
+        <dl class="ppp-rcv-computed-values">
+          {#each computedFields as field (field.name)}
+            <div class="ppp-rcv-fm-row">
+              <dt>{field.name}</dt>
+              <dd>{formatDisplayValue(record.values[field.name]) || "—"}</dd>
+            </div>
+          {/each}
+        </dl>
+      </details>
+    {/if}
+  {:else if record}
     <EditNote
       {fields}
       {record}
       {allRecords}
       {autosave}
-      {readonly}
+      readonly={true}
       {projectName}
       onSave={handleSave}
       onOpenNote={onOpenNote}
       onRenameNote={onRenameNote}
     />
-
-    <!--
-      Vision scene 3. Its readiness criterion is "hover/inspect shows the
-      frontmatter key", and nothing in the product showed one: the editor
-      renders view fields and the sidebar pane renders raw keys, and neither
-      says they are the same thing. They are — `dataApi` writes
-      `frontmatter[field.name]`, so a field's name IS its key — and this says so
-      where a person is already looking at the record. It is the smallest
-      honest form of the promise: the file, as it will be on disk.
-
-      DERIVED fields are excluded, and that is not a detail: `dataApi` skips
-      them when it writes (`updateFrontMatter`), so a formula column, a rollup
-      and a relation's `__resolved__…` companion have names that are NOT keys.
-      Listing them under "frontmatter" would have made the panel say something
-      false about the file — found by the adversarial review of step (b).
-    -->
-    <details class="ppp-rcv-frontmatter">
-      <summary>{$i18n.t("views.dashboard.record-card.frontmatter", { defaultValue: "Frontmatter keys" })}</summary>
-      <dl>
-        {#each writtenFields as field (field.name)}
-          <div class="ppp-rcv-fm-row">
-            <dt>{field.name}</dt>
-            <dd>{formatKeyValue(record.values[field.name])}</dd>
-          </div>
-        {/each}
-      </dl>
-    </details>
 
     <!--
       #151 / #168(c): which links found their target. Only the ones that did
@@ -302,35 +298,52 @@
     font-size: 0.85em;
   }
 
-  .ppp-rcv-frontmatter {
-    margin: 0.75em 0 0;
-    font-size: 0.85em;
-    color: var(--text-muted);
+  /* The native disclosure starts open, preserving the existing view while
+     letting a phone reader collapse long computed results when needed. */
+  .ppp-rcv-computed {
+    min-width: 0;
+    max-width: 100%;
+    margin: 0 0 0.75rem;
+    font-size: var(--font-ui-small);
+    /* Both property blocks contribute their full height to the panel scroller. */
+    overflow-anchor: none;
   }
 
-  .ppp-rcv-frontmatter summary {
+  .ppp-rcv-computed > summary {
     cursor: pointer;
-    padding: 0.25em 0;
+    color: var(--text-muted);
+    padding-bottom: 0.25rem;
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
+    margin-bottom: 0.25rem;
   }
 
-  .ppp-rcv-frontmatter dl {
-    margin: 0.25em 0 0;
+  .ppp-rcv-computed-values {
     display: grid;
-    grid-template-columns: minmax(6em, auto) 1fr;
-    gap: 0.125em 0.75em;
+    grid-template-columns: minmax(7rem, 30%) minmax(0, 1fr);
+    gap: 0.25rem 0.5rem;
+    min-width: 0;
+    max-width: 100%;
+    margin: 0.375rem 0 0;
+    padding: 0 0.25rem;
   }
+
+
 
   .ppp-rcv-fm-row {
     display: contents;
   }
 
-  .ppp-rcv-frontmatter dt {
-    font-family: var(--font-monospace);
-    color: var(--text-normal);
+  .ppp-rcv-computed dt {
+    min-width: 0;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  .ppp-rcv-frontmatter dd {
+  .ppp-rcv-computed dd {
     margin: 0;
+    min-width: 0;
     overflow-wrap: anywhere;
   }
 
@@ -409,7 +422,13 @@
     to   { opacity: 1; transform: translateY(0); }
   }
 
-  .ppp-rcv-icon-input {
+  .ppp-rcv-icon-field {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ppp-rcv-icon-field :global(.ppp-rcv-icon-input) {
     width: 9rem;
     padding: 0.25rem 0.375rem;
     font-size: var(--font-ui-small);
@@ -419,7 +438,7 @@
     color: var(--text-normal);
   }
 
-  .ppp-rcv-icon-input:focus {
+  .ppp-rcv-icon-field :global(.ppp-rcv-icon-input):focus {
     outline: 0.125rem solid var(--interactive-accent);
     outline-offset: -0.0625rem;
   }

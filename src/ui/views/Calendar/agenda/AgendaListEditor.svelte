@@ -1,6 +1,8 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
+  import dayjs from 'dayjs';
   import { Icon } from 'obsidian-svelte';
+  import TextField from 'src/ui/components/fields/TextField.svelte';
   import { i18n } from 'src/lib/stores/i18n';
   import type { DataField, DataRecord } from 'src/lib/dataframe/dataframe';
   import type { AgendaCustomList, AgendaIcon, AgendaFilterGroup, AgendaFilterMode } from 'src/settings/v3/settings';
@@ -8,8 +10,9 @@
   import AgendaFilterEditor from './AgendaFilterEditor.svelte';
   import AdvancedFilterEditor from './AdvancedFilterEditor.svelte';
   import AgendaIconPicker from './AgendaIconPicker.svelte';
+  import { agendaEmoji } from './agendaEmoji';
   import { calendarLogger } from '../logger';
-  import { toRem } from 'src/ui/utils/cssLength';
+  
   
   // Generate unique ID
   function generateId(): string {
@@ -27,7 +30,13 @@
   export let list: AgendaCustomList | null = null;
   export let fields: DataField[] = [];
   export let records: DataRecord[] = [];
+  /** Formula preview uses the selected day; visual value suggestions retain all project records. */
+  export let previewRecords: DataRecord[] | undefined = undefined;
+  export let referenceDate: dayjs.Dayjs = dayjs();
+  let formulaVersion: string | undefined = list?.formulaVersion !== undefined ? list.formulaVersion : "unified-v1";
   export let existingLists: AgendaCustomList[] = [];
+  /** w4-input2: a new list's name already typed in place (the row's gear). */
+  export let initialName = '';
   
   let showIconPicker = false;
   let showColorPicker = false;
@@ -79,7 +88,7 @@
     filterFormula: list.filterFormula || '',
     ...(list.color ? { color: list.color } : {}),
   } : {
-    name: '',
+    name: initialName,
     icon: { type: 'lucide', value: 'clipboard-list' },
     filterMode: 'visual',
     filterGroup: {
@@ -92,6 +101,8 @@
   };
   
   let nameError = '';
+  let nameField: TextField;
+  let nameBaseline = formData.name;
   
   $: {
     // Validate name
@@ -124,6 +135,7 @@
   }
   
   function handleSave() {
+    if (nameField?.isComposing()) return;
     if (!isValid) {
       calendarLogger.warn('[AgendaListEditor] Cannot save - validation failed: ' + nameError);
       return;
@@ -134,6 +146,7 @@
       name: formData.name.trim(),
       icon: formData.icon,
       filterMode: formData.filterMode,
+      ...(formulaVersion !== undefined ? { formulaVersion } : {}),
       ...(formData.filterMode === 'visual' 
         ? { filterGroup: formData.filterGroup }
         : { filterFormula: formData.filterFormula || '' }
@@ -150,32 +163,9 @@
     dispatch('cancel');
   }
 
-  // Keyboard-aware content padding: adds bottom padding to .editor-content
-  // so focused inputs scroll above the mobile keyboard.
-  import { onMount, onDestroy } from 'svelte';
-  let contentEl: HTMLElement | null = null;
+  // The outer editor overlay owns keyboard-visible sizing and focused scrolling.
+  // Do not add keyboard-height padding to an already-shrunken scroll container.
 
-  function updateContentForKeyboard() {
-    if (!contentEl) return;
-    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
-    if (!vv) return;
-    const keyboardHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-    contentEl.style.paddingBottom = keyboardHeight > 0
-      ? toRem(keyboardHeight + 16, contentEl.ownerDocument)
-      : '';
-  }
-
-  onMount(() => {
-    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
-    vv?.addEventListener('resize', updateContentForKeyboard);
-    vv?.addEventListener('scroll', updateContentForKeyboard);
-  });
-
-  onDestroy(() => {
-    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
-    vv?.removeEventListener('resize', updateContentForKeyboard);
-    vv?.removeEventListener('scroll', updateContentForKeyboard);
-  });
 </script>
 
 <div class="agenda-list-editor">
@@ -200,18 +190,21 @@
   </header>
   
   <!-- Content -->
-  <div class="editor-content" bind:this={contentEl}>
+  <div class="ppp-agenda-editor-body" data-ppp-popup-boundary>
     <!-- Name Field -->
     <div class="field-group">
       <label class="field-label" for="list-name">{t('name-label')}</label>
-      <input
+      <TextField
+        bind:this={nameField}
         id="list-name"
-        type="text"
-        class="field-input"
-        class:has-error={nameError}
-        aria-invalid={!!nameError}
+        inputClass="field-input {nameError ? 'has-error' : ''}"
+        error={!!nameError}
         aria-describedby={nameError ? 'list-name-error' : undefined}
-        bind:value={formData.name}
+        value={formData.name}
+        on:focus={() => nameBaseline = formData.name}
+        on:commit={(event) => nameBaseline = event.detail.value}
+        on:cancel={() => formData.name = nameBaseline}
+        on:input={(event) => formData.name = event.detail}
         placeholder={t('name-placeholder')}
       />
       {#if nameError}
@@ -230,7 +223,7 @@
       >
         <span class="icon-preview">
           {#if formData.icon.type === 'emoji'}
-            <span class="icon-emoji">{formData.icon.value}</span>
+            <span class="icon-emoji">{agendaEmoji(formData.icon.value)}</span>
           {:else}
             <Icon name={formData.icon.value} size="md" />
           {/if}
@@ -279,6 +272,7 @@
       {#if showColorPicker}
         <div class="color-picker-wrapper">
           <ColorPicker 
+            scrollable={false}
             value={formData.color ?? '#7c3aed'}
             projectPalette={existingLists.map((l) => l.color ?? '').filter(Boolean)}
             on:change={handleColorChange}
@@ -292,7 +286,7 @@
           <span class="preview-label">{$i18n.t('views.calendar.agenda.custom.list-editor.preview')}</span>
           <div class="preview-card">
             {#if formData.icon.type === 'emoji'}
-              <span class="preview-icon">{formData.icon.value}</span>
+              <span class="preview-icon">{agendaEmoji(formData.icon.value)}</span>
             {:else}
               <Icon name={formData.icon.value} size="sm" />
             {/if}
@@ -347,6 +341,10 @@
       {:else}
         <AdvancedFilterEditor
           {fields}
+          records={previewRecords ?? records}
+          {referenceDate}
+          version={formulaVersion}
+          on:modechange={(event) => { formulaVersion = event.detail.formulaVersion; }}
           bind:formula={formData.filterFormula}
         />
       {/if}
@@ -481,7 +479,7 @@
   }
   
   /* === Content === */
-  .editor-content {
+  .ppp-agenda-editor-body {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
@@ -567,7 +565,7 @@
     line-height: 1.4;
   }
   
-  .field-input {
+  .agenda-list-editor :global(.field-input) {
     width: 100%;
     padding: 0.35rem 0.6rem;
     min-height: 2rem;
@@ -579,12 +577,12 @@
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
   
-  .field-input:focus {
+  .agenda-list-editor :global(.field-input:focus) {
     border-color: var(--interactive-accent);
     box-shadow: 0 0 0 0.125rem color-mix(in srgb, var(--interactive-accent) 15%, transparent);
   }
   
-  .field-input.has-error {
+  .agenda-list-editor :global(.field-input.has-error) {
     border-color: var(--text-error);
   }
   
@@ -804,21 +802,30 @@
   @media (max-width: 37.5rem) {
     .agenda-list-editor {
       max-height: none;
-      height: 100%;
+      height: auto;
+      flex: 1 1 auto;
       border-radius: 0;
+      overflow: hidden;
     }
     
     .editor-header {
       padding: var(--ppp-spacing-sm, 0.5rem) var(--ppp-spacing-md, 0.75rem);
+      background: var(--background-primary);
+      border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
     }
     
     .editor-title {
       font-size: var(--ppp-font-size-md, 1rem);
     }
     
-    .editor-content {
+    .ppp-agenda-editor-body {
       padding: var(--ppp-spacing-md, 0.75rem);
       gap: var(--ppp-spacing-md, 0.75rem);
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
     }
 
     /* Show header save/cancel on mobile, hide the X close */
@@ -843,7 +850,7 @@
     
     .icon-trigger,
     .color-trigger,
-    .field-input {
+    .agenda-list-editor :global(.field-input) {
       min-height: 2.75rem;
     }
   }

@@ -71,16 +71,19 @@ function createSettings() {
      * NPLAN-A2 — atomically increments `uniqueIdCounter` for the given
      * project and returns the new counter value. Returns 1 if no counter
      * exists yet. Side-effects: triggers the settings write cycle.
+     * `minimumCounter` reconciles IDs already stored in this project's notes.
      */
-    bumpUniqueId(projectId: ProjectId): number {
+    bumpUniqueId(projectId: ProjectId, minimumCounter = 0): number {
       let next = 1;
       update((state) =>
         produce(state, (draft) => {
           const project = draft.projects.find((p) => p.id === projectId);
-          if (project) {
-            next = (project.uniqueIdCounter ?? 0) + 1;
-            project.uniqueIdCounter = next;
-          }
+          if (!project) throw new Error("Cannot reserve a unique ID for a project that is not saved");
+          const counter = project.uniqueIdCounter ?? 0;
+          if (!Number.isSafeInteger(counter) || counter < 0 || !Number.isSafeInteger(minimumCounter) || minimumCounter < 0 ||
+            Math.max(counter, minimumCounter) >= Number.MAX_SAFE_INTEGER) throw new Error("The project's unique ID counter must be a non-negative safe integer");
+          next = Math.max(counter, minimumCounter) + 1;
+          project.uniqueIdCounter = next;
         })
       );
       return next;

@@ -1,4 +1,4 @@
-﻿// src/ui/views/Dashboard/engine/transformExecutor.ts
+// src/ui/views/Dashboard/engine/transformExecutor.ts
 
 import type {
   DataFrame,
@@ -23,12 +23,14 @@ import type {
   AggregationFunction,
 } from "./transformTypes";
 import { matchesFilterConditions } from "src/lib/engine/filterEvaluator";
-import { isNumeric, toNumber, toNumbers } from "src/lib/engine/numeric";
+import { isNumeric, toNumbers } from "src/lib/engine/numeric";
 import { aggregate, type RollupFunction } from "src/lib/engine/aggregate";
-import { evaluateFormulaValue } from "./formulaEngine";
-import { isUnsafePattern, MAX_REGEX_PATTERN_LENGTH } from "src/lib/helpers/regexSafety";
+import { createFormulaPass } from "./formulaEngine";
+import { evaluateVersionedFormula } from "src/lib/formula/version";
+import { compileSafeRegex } from "src/lib/helpers/regexSafety";
 import { joinKey } from "./joinKey";
-import dayjs from "dayjs";
+import { dateBucket as truncateDate } from "./dateBucket";
+import { createTransformBudget, type TransformBudget } from "./transformBudget";
 
 /** Canonical step order for validation */
 const STEP_ORDER: Record<TransformStep["type"], number> = {
@@ -42,8 +44,8 @@ const STEP_ORDER: Record<TransformStep["type"], number> = {
   pivot: 5,
 };
 
-const PIPELINE_TIMEOUT_MS = 2000;
 const MAX_OUTPUT_RECORDS = 100_000;
+const MAX_UNPIVOT_FIELD_NAME_LENGTH = 256;
 
 /**
  * Validate that pipeline steps follow canonical order.
@@ -73,6 +75,7 @@ export function executeTransform(
   context?: TransformContext
 ): TransformResult {
   const startTime = performance.now();
+  const budget = createTransformBudget(context, startTime);
   const warnings: string[] = [];
 
   // #099 — disabled steps are skipped non-destructively (they remain in the
@@ -87,16 +90,19 @@ export function executeTransform(
   let stepsExecuted = 0;
 
   for (const step of activeSteps) {
-    // Failsafe timeout
-    if (performance.now() - startTime > PIPELINE_TIMEOUT_MS) {
-      warnings.push(
-        `Pipeline aborted: exceeded ${PIPELINE_TIMEOUT_MS}ms timeout after ${stepsExecuted} steps`
-      );
+    try {
+      budget.charge();
+      const next = executeStep(current, step, warnings, budget, context);
+      // Formula surfaces may catch evaluation errors; retain the terminal
+      // budget failure and never publish a partially evaluated step.
+      budget.check();
+      current = next;
+      stepsExecuted++;
+    } catch (error) {
+      if (!budget.failure) throw error;
+      warnings.push(budget.failure.message);
       break;
     }
-
-    current = executeStep(current, step, warnings, context);
-    stepsExecuted++;
   }
 
   const derivedFields = current.fields.filter(
@@ -107,6 +113,7 @@ export function executeTransform(
     data: current,
     derivedFields,
     meta: {
+      ...(budget.stopped ? { stopped: budget.stopped } : {}),
       stepsExecuted,
       executionTimeMs: performance.now() - startTime,
       inputRowCount: source.records.length,
@@ -120,25 +127,27 @@ function executeStep(
   df: DataFrame,
   step: TransformStep,
   warnings: string[],
+  budget: TransformBudget,
+
   context?: TransformContext
 ): DataFrame {
   switch (step.type) {
     case "unnest":
-      return executeUnnest(df, step, warnings);
+      return executeUnnest(df, step, warnings, budget);
     case "unpivot":
-      return executeUnpivot(df, step, warnings);
+      return executeUnpivot(df, step, warnings, budget);
     case "compute":
-      return executeCompute(df, step, warnings);
+      return executeCompute(df, step, warnings, budget);
     case "filter":
-      return executeFilter(df, step, warnings);
+      return executeFilter(df, step, warnings, budget);
     case "group-by":
-      return executeGroupBy(df, step, warnings);
+      return executeGroupBy(df, step, warnings, budget);
     case "aggregate":
-      return executeAggregate(df, step, warnings);
+      return executeAggregate(df, step, warnings, budget);
     case "pivot":
-      return executePivot(df, step, warnings);
+      return executePivot(df, step, warnings, budget);
     case "join":
-      return executeJoin(df, step, warnings, context);
+      return executeJoin(df, step, warnings, budget, context);
   }
 }
 
@@ -157,7 +166,8 @@ function executeStep(
 function executeUnnest(
   df: DataFrame,
   step: UnnestStep,
-  warnings: string[]
+  warnings: string[],
+  budget: TransformBudget
 ): DataFrame {
   const sourceField = step.field;
   const prefix = step.prefix ?? "";
@@ -169,6 +179,7 @@ function executeUnnest(
   const arrayData: Array<{ record: DataRecord; items: unknown[] }> = [];
 
   for (const record of df.records) {
+    budget.charge();
     const raw = record.values[sourceField];
     if (!Array.isArray(raw) || raw.length === 0) {
       // Non-array or empty → keep as single row with nulls for nested fields
@@ -177,8 +188,10 @@ function executeUnnest(
     }
     arrayData.push({ record, items: raw });
     for (const item of raw) {
+      budget.charge();
       if (item != null && typeof item === "object" && !Array.isArray(item) && !(item instanceof Date)) {
         for (const key of Object.keys(item)) {
+          budget.charge();
           if (!pickFields || pickFields.has(key)) {
             discoveredKeys.add(key);
           }
@@ -195,18 +208,24 @@ function executeUnnest(
 
   // Build new fields list
   const parentFields = df.fields.filter(
-    (f) => keepOriginal || f.name !== sourceField
+    (f) => {
+      budget.charge();
+      return keepOriginal || f.name !== sourceField;
+    }
   );
   const newFields: DataField[] = [
     ...parentFields,
     { name: `${prefix}_index`, type: DataFieldType.Number, repeated: false, identifier: false, derived: true },
-    ...newFieldNames.map((key): DataField => ({
+    ...newFieldNames.map((key): DataField => {
+      budget.charge();
+      return ({
       name: `${prefix}${key}`,
       type: DataFieldType.Unknown,
       repeated: false,
       identifier: false,
       derived: true,
-    })),
+    });
+    }),
   ];
 
   // Build expanded records
@@ -214,12 +233,15 @@ function executeUnnest(
   let rowIdx = 0;
 
   for (const { record, items } of arrayData) {
+    budget.charge();
     for (let i = 0; i < items.length; i++) {
+      budget.charge();
       const item = items[i];
       const parentValues: Record<string, DataValue | undefined> = {};
 
       // Copy parent fields
       for (const f of parentFields) {
+        budget.charge();
         parentValues[f.name] = record.values[f.name] as DataValue | undefined;
       }
 
@@ -232,6 +254,7 @@ function executeUnnest(
       } else if (isObjectArray && typeof item === "object" && !Array.isArray(item) && !(item instanceof Date)) {
         const obj = item as Record<string, unknown>;
         for (const key of newFieldNames) {
+          budget.charge();
           const val = obj[key];
           if (val !== undefined && (typeof val === "string" || typeof val === "number" || typeof val === "boolean")) {
             parentValues[`${prefix}${key}`] = val;
@@ -266,36 +289,24 @@ function executeUnnest(
 
 // ── UNPIVOT ──────────────────────────────────────────────────
 
-/**
- * Safe regex execution with ReDoS mitigation.
- */
 function safeRegexExec(
-  pattern: string,
+  regex: RegExp,
   input: string
 ): RegExpExecArray | null {
-  // Check pattern safety BEFORE constructing RegExp
-  if (isUnsafePattern(pattern)) return null;
-
-  // Field names should be short
-  if (input.length > 256) return null;
-
-  let regex: RegExp;
-  try {
-    regex = new RegExp(`^${pattern}$`);
-  } catch {
-    return null;
-  }
-
+  if (input.length > MAX_UNPIVOT_FIELD_NAME_LENGTH) return null;
   return regex.exec(input);
 }
 
 function findFieldByIndex(
   fields: readonly DataField[],
-  pattern: string,
-  index: string
+  regex: RegExp,
+  index: string,
+
+  budget: TransformBudget
 ): string | null {
   for (const field of fields) {
-    const match = safeRegexExec(pattern, field.name);
+    budget.charge();
+    const match = safeRegexExec(regex, field.name);
     if (match?.[1] === index) {
       return field.name;
     }
@@ -306,19 +317,46 @@ function findFieldByIndex(
 function executeUnpivot(
   df: DataFrame,
   step: UnpivotStep,
-  warnings: string[]
+  warnings: string[],
+  budget: TransformBudget
 ): DataFrame {
-  const compiledPatterns = step.fieldGroups.map((fg) => ({
-    regex: safeRegexCompile(fg.pattern),
-    outputName: fg.outputName,
-  }));
+  const compiledPatterns = step.fieldGroups.map((fg) => {
+    budget.charge();
+    const result = compileSafeRegex(fg.pattern, "", { fullMatch: true });
+    if (!result.ok) {
+      warnings.push(
+        `Unpivot: skipped regex pattern ${JSON.stringify(fg.pattern.slice(0, 80))} (${result.issue})`
+      );
+    }
+    return {
+      pattern: fg.pattern,
+      regex: result.ok ? result.regex : null,
+    };
+  });
+
+  if (
+    compiledPatterns.some((pattern) => {
+      budget.charge();
+      return pattern.regex;
+    }) &&
+    df.fields.some((field) => {
+      budget.charge();
+      return field.name.length > MAX_UNPIVOT_FIELD_NAME_LENGTH;
+    })
+  ) {
+    warnings.push(
+      `Unpivot: field names longer than ${MAX_UNPIVOT_FIELD_NAME_LENGTH} characters were skipped`
+    );
+  }
 
   // Discover all indices
   const indicesSet = new Set<string>();
   for (const field of df.fields) {
+    budget.charge();
     for (const cp of compiledPatterns) {
+      budget.charge();
       if (!cp.regex) continue;
-      const match = cp.regex.exec(field.name);
+      const match = safeRegexExec(cp.regex, field.name);
       if (match?.[1]) {
         indicesSet.add(match[1]);
       }
@@ -328,7 +366,10 @@ function executeUnpivot(
   const indices = [...indicesSet].sort();
   if (indices.length === 0) {
     warnings.push(
-      `Unpivot: no fields matched patterns ${step.fieldGroups.map((g) => g.pattern).join(", ")}`
+      `Unpivot: no fields matched patterns ${step.fieldGroups.map((g) => {
+        budget.charge();
+        return g.pattern;
+      }).join(", ")}`
     );
     return df;
   }
@@ -336,19 +377,24 @@ function executeUnpivot(
   // Pre-compute field name mapping: [groupIdx][indexStr] → fieldName
   // Eliminates repeated regex matching inside the hot loop
   const fieldMap = new Map<string, string | null>();
-  for (const fg of step.fieldGroups) {
+  for (const fg of compiledPatterns) {
+    budget.charge();
     for (const idx of indices) {
+      budget.charge();
       const key = `${fg.pattern}\0${idx}`;
-      fieldMap.set(key, findFieldByIndex(df.fields, fg.pattern, idx));
+      fieldMap.set(key, fg.regex ? findFieldByIndex(df.fields, fg.regex, idx, budget) : null);
     }
   }
 
   const newRecords: DataRecord[] = [];
 
   for (const record of df.records) {
+    budget.charge();
     for (const idx of indices) {
+      budget.charge();
       // Skip if all group fields are empty for this index
       const allEmpty = step.fieldGroups.every((fg) => {
+        budget.charge();
         const fieldName = fieldMap.get(`${fg.pattern}\0${idx}`);
         return (
           fieldName == null ||
@@ -363,11 +409,13 @@ function executeUnpivot(
 
       // Copy keepFields
       for (const kf of step.keepFields) {
+        budget.charge();
         newValues[kf] = record.values[kf];
       }
 
       // Map group fields
       for (const fg of step.fieldGroups) {
+        budget.charge();
         const fieldName = fieldMap.get(`${fg.pattern}\0${idx}`);
         newValues[fg.outputName] = fieldName
           ? record.values[fieldName]
@@ -392,33 +440,23 @@ function executeUnpivot(
     if (newRecords.length >= MAX_OUTPUT_RECORDS) break;
   }
 
-  const newFields = buildUnpivotFields(df.fields, step);
+  const newFields = buildUnpivotFields(df.fields, step, budget);
   return { fields: newFields, records: newRecords };
-}
-
-function safeRegexCompile(pattern: string): RegExp | null {
-  try {
-    // CV-2 — this call site skipped the length bound that the other two regex
-    // sites apply. The bound is the blunt second line of defence against the
-    // alternation backtracking `isUnsafePattern` cannot see (#126), so leaving
-    // it out here made unpivot the softest of the three surfaces.
-    if (pattern.length > MAX_REGEX_PATTERN_LENGTH) return null;
-    if (isUnsafePattern(pattern)) return null;
-    return new RegExp(`^${pattern}$`);
-  } catch {
-    return null;
-  }
 }
 
 function buildUnpivotFields(
   originalFields: readonly DataField[],
-  step: UnpivotStep
+  step: UnpivotStep, budget: TransformBudget
 ): DataField[] {
   const fields: DataField[] = [];
 
   // Keep fields (preserve original types)
   for (const kf of step.keepFields) {
-    const orig = originalFields.find((f) => f.name === kf);
+    budget.charge();
+    const orig = originalFields.find((f) => {
+      budget.charge();
+      return f.name === kf;
+    });
     if (orig) {
       fields.push({ ...orig });
     }
@@ -426,6 +464,7 @@ function buildUnpivotFields(
 
   // Output fields from groups
   for (const fg of step.fieldGroups) {
+    budget.charge();
     fields.push({
       name: fg.outputName,
       type: DataFieldType.String,
@@ -467,143 +506,40 @@ function inferFieldType(value: DataValue | undefined | null): DataFieldType {
   return DataFieldType.String;
 }
 
-function executeCompute(
-  df: DataFrame,
-  step: ComputeStep,
-  warnings: string[]
-): DataFrame {
-  // First pass: compute all values to infer types
-  const columnValues: (DataValue | undefined | null)[][] = step.columns.map(() => []);
 
-  const newRecords = df.records.map((record) => {
-    const newValues = { ...record.values };
 
-    for (let ci = 0; ci < step.columns.length; ci++) {
-      const col = step.columns[ci]!;
-      try {
-        // Build a DataRecord that includes previously computed columns in this step
-        const evalRecord: DataRecord = { id: record.id, values: newValues };
-        const result = evaluateFormulaValue(col.expression, evalRecord, df);
-        newValues[col.name] = result;
-        columnValues[ci]!.push(result);
-      } catch {
-        newValues[col.name] = undefined;
-        columnValues[ci]!.push(undefined);
-        warnings.push(
-          `Compute error for '${col.name}' on record '${record.id}': invalid expression`
-        );
-      }
-    }
-
-    return { ...record, values: newValues };
-  });
-
-  // Infer field types from first non-null value
-  const newFields: DataField[] = [
-    ...df.fields,
-    ...step.columns.map((col, ci) => {
-      const firstVal = columnValues[ci]!.find((v) => v != null);
-      return {
-        name: col.name,
-        type: inferFieldType(firstVal),
-        repeated: false,
-        identifier: false,
-        derived: true,
-      };
-    }),
-  ];
-
-  return { fields: newFields, records: newRecords };
+/** New columns see complete earlier columns; legacy aggregates still read the input frame. */
+/** Every calculated column reads the completed earlier columns under the same rules. */
+function executeCompute(df: DataFrame, step: ComputeStep, warnings: string[], budget: TransformBudget): DataFrame {
+  let records = df.records.map(record => { budget.charge(); return { ...record, values: { ...record.values } }; });
+  const fields = [...df.fields];
+  const referenceDate = new Date();
+  for (const column of step.columns) {
+    budget.charge();
+    const frame = { fields: [...fields], records };
+    const pass = createFormulaPass(frame, "unified-v1", referenceDate, budget.charge);
+    records = records.map(record => {
+      budget.charge();
+      const result = evaluateVersionedFormula(column.expression, column.formulaVersion, { record, frame, pass, referenceDate });
+      if (result.error) warnings.push(`Compute error for '${column.name}' on record '${record.id}': ${result.error}`);
+      return { ...record, values: { ...record.values, [column.name]: result.value } };
+    });
+    fields.push({ name: column.name, type: inferFieldType(records.find(record => {
+      budget.charge(); return record.values[column.name] != null;
+    })?.values[column.name]), repeated: false, identifier: false, derived: true });
+  }
+  return { fields, records };
 }
 
 /**
- * @deprecated Legacy arithmetic evaluator — kept for backward compatibility.
- * New code must use evaluateFormulaValue() from "src/lib/formula" (canonical path).
- * The formulaEngine.ts re-export wrapper is a transitional alias — prefer the direct import.
+ * @deprecated Compatibility adapter for the old numeric-only API. Arithmetic
+ * evaluation is delegated to the canonical formula runtime.
  */
-export function evaluateExpression(
-  expression: string,
-  values: Record<string, DataValue | undefined | null>
-): number | null {
-  // Tokenize: split by operators, preserving them
-  const tokens = expression
-    .trim()
-    .split(/\s*([+\-*/()])\s*/)
-    .filter((t) => t.length > 0);
-
-  if (tokens.length === 0) return null;
-
-  // Simple two-pass evaluator (no parentheses for Phase 1)
-  const resolvedTokens: (number | string)[] = tokens.map((token) => {
-    // Numeric literal. The token comes from the user's expression text, but the
-    // grammar it must satisfy is the same one their data satisfies, so there is
-    // no reason for this to be a second rule — and it was: this branch carried
-    // a `token !== ""` guard that the field-reference branch ten lines below
-    // did not (#180a).
-    const literal = toNumber(token);
-    if (literal !== null) return literal;
-
-    // Operator
-    if (["+", "-", "*", "/"].includes(token)) return token;
-
-    // Field reference
-    const fieldValue = toNumber(values[token]);
-    if (fieldValue !== null) return fieldValue;
-
-    return NaN;
-  });
-
-  // Evaluate: first pass * and /, second pass + and -
-  return evaluateTokens(resolvedTokens);
+/** Numeric adapter over the same bounded evaluator used by formulas and filters. */
+export function evaluateExpression(expression: string, values: Record<string, DataValue | undefined | null>): number | null {
+  const result = evaluateVersionedFormula(expression, "unified-v1", {record: {id: "numeric-expression", values}});
+  return typeof result.value === "number" && Number.isFinite(result.value) ? result.value : null;
 }
-
-function evaluateTokens(tokens: (number | string)[]): number | null {
-  // Convert to numbers and operators
-  const nums: number[] = [];
-  const ops: string[] = [];
-
-  for (const token of tokens) {
-    if (typeof token === "number") {
-      nums.push(token);
-    } else if (typeof token === "string" && ["+", "-", "*", "/"].includes(token)) {
-      ops.push(token);
-    } else {
-      return null; // Invalid token
-    }
-  }
-
-  if (nums.length === 0) return null;
-  if (nums.length !== ops.length + 1) return null;
-
-  // First pass: * and /
-  let i = 0;
-  while (i < ops.length) {
-    if (ops[i] === "*" || ops[i] === "/") {
-      const left = nums[i] as number;
-      const right = nums[i + 1] as number;
-      if (ops[i] === "/" && right === 0) return null; // Division by zero
-      nums[i] = ops[i] === "*" ? left * right : left / right;
-      nums.splice(i + 1, 1);
-      ops.splice(i, 1);
-    } else {
-      i++;
-    }
-  }
-
-  // Second pass: + and -
-  let result = nums[0] as number;
-  for (let j = 0; j < ops.length; j++) {
-    const right = nums[j + 1] as number;
-    result = ops[j] === "+" ? result + right : result - right;
-  }
-
-  // `result` is already a number; this asks whether the arithmetic produced a
-  // real one. `Number.isFinite` rather than `!isNaN` so an overflow to
-  // ±Infinity is rejected too, matching `toNumber`'s finiteness rule (#180a).
-  return Number.isFinite(result) ? result : null;
-}
-
-// ── FILTER ───────────────────────────────────────────────────
 
 /**
  * Apply FilterDefinition to DataFrame.
@@ -612,16 +548,18 @@ function evaluateTokens(tokens: (number | string)[]): number | null {
 function executeFilter(
   df: DataFrame,
   step: FilterStep,
-  warnings: string[]
+  warnings: string[],
+  budget: TransformBudget
 ): DataFrame {
   if (!step.conditions.conditions.length && !step.conditions.groups?.length) {
     warnings.push("Filter step: empty conditions, returning unchanged data");
     return df;
   }
 
-  const filtered = df.records.filter((record) =>
-    matchesFilterConditions(step.conditions, record)
-  );
+  const filtered = df.records.filter((record) => {
+    budget.charge();
+    return matchesFilterConditions(step.conditions, record, undefined, { chargeWork: budget.charge });
+  });
 
   return { fields: df.fields, records: filtered };
 }
@@ -629,51 +567,17 @@ function executeFilter(
 // ── GROUP BY ─────────────────────────────────────────────────
 
 /**
- * Truncate a date to the specified granularity.
- */
-function truncateDate(dateVal: DataValue | undefined | null, granularity: string): string {
-  if (dateVal == null) return "__empty__";
-
-  const d = dateVal instanceof Date ? dateVal : dayjs(String(dateVal)).toDate();
-  if (isNaN(d.getTime())) return "__invalid__";
-
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-
-  switch (granularity) {
-    case "year":
-      return `${year}`;
-    case "quarter":
-      return `${year}-Q${Math.ceil((d.getMonth() + 1) / 3)}`;
-    case "month":
-      return `${year}-${month}`;
-    case "week": {
-      // ISO 8601 week: Thursday rule
-      const thu = new Date(d.getTime());
-      thu.setDate(thu.getDate() + 3 - ((thu.getDay() + 6) % 7));
-      const isoYear = thu.getFullYear();
-      const jan4 = new Date(isoYear, 0, 4);
-      const weekNum = 1 + Math.round(((thu.getTime() - jan4.getTime()) / 86400000 - 3 + ((jan4.getDay() + 6) % 7)) / 7);
-      return `${isoYear}-W${String(weekNum).padStart(2, "0")}`;
-    }
-    case "day":
-    default:
-      return `${year}-${month}-${day}`;
-  }
-}
-
-/**
  * Compute a group key for a record.
  */
 function computeGroupKey(
   record: DataRecord,
   fields: readonly string[],
-  dateGrouping: GroupByStep["dateGrouping"]
+  dateGrouping: GroupByStep["dateGrouping"], budget: TransformBudget
 ): string {
   const parts: string[] = [];
 
   for (const field of fields) {
+    budget.charge();
     if (dateGrouping && field === dateGrouping.field) {
       parts.push(truncateDate(record.values[field], dateGrouping.granularity));
     } else {
@@ -693,7 +597,8 @@ function computeGroupKey(
 function executeGroupBy(
   df: DataFrame,
   step: GroupByStep,
-  warnings: string[]
+  warnings: string[],
+  budget: TransformBudget
 ): DataFrame {
   if (step.fields.length === 0) {
     warnings.push("Group-by step: no fields specified, returning unchanged data");
@@ -703,7 +608,8 @@ function executeGroupBy(
   const groups = new Map<string, DataRecord[]>();
 
   for (const record of df.records) {
-    const key = computeGroupKey(record, step.fields, step.dateGrouping);
+    budget.charge();
+    const key = computeGroupKey(record, step.fields, step.dateGrouping, budget);
     const arr = groups.get(key);
     if (arr) {
       arr.push(record);
@@ -718,7 +624,11 @@ function executeGroupBy(
     (step.dateGrouping ? `${step.dateGrouping.field}_${step.dateGrouping.granularity}` : null);
 
   for (const fieldName of step.fields) {
-    const orig = df.fields.find((f) => f.name === fieldName);
+    budget.charge();
+    const orig = df.fields.find((f) => {
+      budget.charge();
+      return f.name === fieldName;
+    });
     if (dateOutputField && step.dateGrouping && fieldName === step.dateGrouping.field) {
       // Date grouping produces a derived string field
       outFields.push({
@@ -743,11 +653,21 @@ function executeGroupBy(
 
   // Also carry forward all non-group fields as arrays (for AGGREGATE step)
   const nonGroupFieldNames = df.fields
-    .filter((f) => !step.fields.includes(f.name))
-    .map((f) => f.name);
+    .filter((f) => {
+      budget.charge();
+      return !step.fields.includes(f.name);
+    })
+    .map((f) => {
+      budget.charge();
+      return f.name;
+    });
 
   for (const fn of nonGroupFieldNames) {
-    const orig = df.fields.find((f) => f.name === fn);
+    budget.charge();
+    const orig = df.fields.find((f) => {
+      budget.charge();
+      return f.name === fn;
+    });
     if (orig) {
       outFields.push({ ...orig, repeated: true, identifier: false });
     }
@@ -756,10 +676,12 @@ function executeGroupBy(
   // Build output records
   const outRecords: DataRecord[] = [];
   for (const [key, records] of groups) {
+    budget.charge();
     const representative = records[0] as DataRecord;
     const values: Record<string, DataValue | undefined | null> = {};
 
     for (const fieldName of step.fields) {
+      budget.charge();
       if (dateOutputField && step.dateGrouping && fieldName === step.dateGrouping.field) {
         values[dateOutputField] = truncateDate(representative.values[fieldName], step.dateGrouping.granularity);
       } else {
@@ -771,7 +693,11 @@ function executeGroupBy(
 
     // Collect arrays for non-group fields
     for (const fn of nonGroupFieldNames) {
-      values[fn] = records.map((r) => r.values[fn]);
+      budget.charge();
+      values[fn] = records.map((r) => {
+        budget.charge();
+        return r.values[fn];
+      });
     }
 
     outRecords.push({
@@ -828,9 +754,12 @@ const KERNEL_FN: Partial<Record<AggregationFunction, RollupFunction>> = {
 function computeAggFn(
   fn: AggregationFunction,
   val: DataValue | undefined | null,
-  warnings: string[]
+  warnings: string[],
+  budget: TransformBudget
 ): DataValue | null {
   const arr = Array.isArray(val) ? val : (val != null ? [val] : []);
+  // Native/kernel reductions are charged before entering them, including sort work.
+  budget.charge(arr.length * (fn === "MEDIAN" ? Math.max(1, Math.ceil(Math.log2(arr.length + 1))) : 1));
 
   const kernelFn = KERNEL_FN[fn];
   if (kernelFn) {
@@ -838,7 +767,10 @@ function computeAggFn(
     // pipeline — a multi-value field with nothing in it. Normalising it to
     // null at the boundary keeps `PCT_EMPTY` answering what it always has,
     // which is the one place the two vocabularies genuinely differed.
-    const normalised = arr.map((v) => (Array.isArray(v) && v.length === 0 ? null : v));
+    const normalised = arr.map((v) => {
+      budget.charge();
+      return (Array.isArray(v) && v.length === 0 ? null : v);
+    });
     const result = aggregate(normalised, {
       relationField: "",
       targetField: "",
@@ -857,8 +789,14 @@ function computeAggFn(
     case "STD_DEV": {
       const nums = toNumbers(arr);
       if (nums.length === 0) return null;
-      const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
-      const variance = nums.reduce((sum, x) => sum + (x - avg) ** 2, 0) / nums.length;
+      const avg = nums.reduce((a, b) => {
+        budget.charge();
+        return a + b;
+      }, 0) / nums.length;
+      const variance = nums.reduce((sum, x) => {
+        budget.charge();
+        return sum + (x - avg) ** 2;
+      }, 0) / nums.length;
       return Math.sqrt(variance);
     }
 
@@ -879,16 +817,27 @@ const GROUP_SIZE_FIELD = "_group_size";
  * [[1,2], 3] sum to 6 here and to 3 everywhere else (math-review). Non-
  * aggregated fields are dropped: across the table they have no single value.
  */
-function collapseToOneGroup(df: DataFrame, step: AggregateStep): DataFrame {
-  const sources = [...new Set(step.columns.map((c) => c.sourceField))];
+function collapseToOneGroup(df: DataFrame, step: AggregateStep, budget: TransformBudget): DataFrame {
+  const sources = [...new Set(step.columns.map((c) => {
+    budget.charge();
+    return c.sourceField;
+  }))];
   const values: Record<string, DataValue | undefined | null> = { [GROUP_SIZE_FIELD]: df.records.length };
   for (const name of sources) {
-    values[name] = df.records.map((r) => r.values[name]);
+    budget.charge();
+    values[name] = df.records.map((r) => {
+      budget.charge();
+      return r.values[name];
+    });
   }
   const fields: DataField[] = [
     { name: GROUP_SIZE_FIELD, type: DataFieldType.Number, repeated: false, identifier: false, derived: true },
     ...sources.map((name) => {
-      const orig = df.fields.find((f) => f.name === name);
+      budget.charge();
+      const orig = df.fields.find((f) => {
+        budget.charge();
+        return f.name === name;
+      });
       return { ...(orig ?? { name, type: DataFieldType.Number, identifier: false, derived: false }), repeated: true };
     }),
   ];
@@ -902,7 +851,8 @@ function collapseToOneGroup(df: DataFrame, step: AggregateStep): DataFrame {
 function executeAggregate(
   df: DataFrame,
   step: AggregateStep,
-  warnings: string[]
+  warnings: string[],
+  budget: TransformBudget
 ): DataFrame {
   if (step.columns.length === 0) {
     warnings.push("Aggregate step: no columns specified");
@@ -915,41 +865,59 @@ function executeAggregate(
   // fields each hold a list: that list is the population to reduce (the
   // "sum this record's list" case). A single scalar — null included — is a
   // population of one, and collapses like any other frame (math-recheck2).
-  const grouped = df.fields.some((f) => f.name === GROUP_SIZE_FIELD);
+  const grouped = df.fields.some((f) => {
+    budget.charge();
+    return f.name === GROUP_SIZE_FIELD;
+  });
   const listRow =
     df.records.length === 1 &&
-    step.columns.every((c) => Array.isArray(df.records[0]!.values[c.sourceField]));
-  const input = grouped || listRow ? df : collapseToOneGroup(df, step);
+    step.columns.every((c) => {
+      budget.charge();
+      return Array.isArray(df.records[0]!.values[c.sourceField]);
+    });
+  const input = grouped || listRow ? df : collapseToOneGroup(df, step, budget);
 
   // Build new fields: keep existing non-aggregated fields, add aggregated ones
-  const aggregatedSourceFields = new Set(step.columns.map((c) => c.sourceField));
-  const keptFields = input.fields.filter((f) => !aggregatedSourceFields.has(f.name));
+  const aggregatedSourceFields = new Set(step.columns.map((c) => {
+    budget.charge();
+    return c.sourceField;
+  }));
+  const keptFields = input.fields.filter((f) => {
+    budget.charge();
+    return !aggregatedSourceFields.has(f.name);
+  });
 
   const newFields: DataField[] = [
     ...keptFields,
-    ...step.columns.map((col) => ({
+    ...step.columns.map((col) => {
+      budget.charge();
+      return ({
       name: col.outputName,
       type: DataFieldType.Number,
       repeated: false,
       identifier: false,
       derived: true,
-    })),
+    });
+    }),
   ];
 
   const newRecords = input.records.map((record) => {
+    budget.charge();
     const values: Record<string, DataValue | undefined | null> = {};
 
     // Copy non-aggregated fields
     for (const f of keptFields) {
+      budget.charge();
       values[f.name] = record.values[f.name];
     }
 
     // Compute aggregations
     for (const col of step.columns) {
+      budget.charge();
       values[col.outputName] = computeAggFn(
         col.function,
         record.values[col.sourceField],
-        warnings
+        warnings, budget
       );
     }
 
@@ -969,15 +937,22 @@ function executeAggregate(
 function executePivot(
   df: DataFrame,
   step: PivotStep,
-  warnings: string[]
+  warnings: string[],
+  budget: TransformBudget
 ): DataFrame {
   if (!step.categoryField || !step.valueField) {
     warnings.push("Pivot step: categoryField and valueField are required");
     return df;
   }
 
-  const catFieldExists = df.fields.some((f) => f.name === step.categoryField);
-  const valFieldExists = df.fields.some((f) => f.name === step.valueField);
+  const catFieldExists = df.fields.some((f) => {
+    budget.charge();
+    return f.name === step.categoryField;
+  });
+  const valFieldExists = df.fields.some((f) => {
+    budget.charge();
+    return f.name === step.valueField;
+  });
 
   if (!catFieldExists) {
     warnings.push(`Pivot step: categoryField '${step.categoryField}' not found`);
@@ -991,6 +966,7 @@ function executePivot(
   // 1. Collect unique category values (become column headers)
   const categoryValues = new Set<string>();
   for (const record of df.records) {
+    budget.charge();
     const cv = record.values[step.categoryField];
     if (cv != null) categoryValues.add(String(cv));
   }
@@ -1006,20 +982,31 @@ function executePivot(
   }
 
   const sortedCategories = Array.from(categoryValues).sort((a, b) =>
-    a.localeCompare(b, undefined, { numeric: true })
+    {
+      budget.charge();
+    return a.localeCompare(b, undefined, { numeric: true });
+  }
   );
 
   // 2. Identify row-key fields (everything except category + value fields)
   const rowKeyFieldNames = df.fields
-    .filter((f) => f.name !== step.categoryField && f.name !== step.valueField)
-    .map((f) => f.name);
+    .filter((f) => {
+      budget.charge();
+      return f.name !== step.categoryField && f.name !== step.valueField;
+    })
+    .map((f) => {
+      budget.charge();
+      return f.name;
+    });
 
   // 3. Group records by row-key
   const rowKeyMap = new Map<string, Map<string, (DataValue | undefined | null)[]>>();
   const rowKeyValues = new Map<string, Record<string, DataValue | undefined | null>>();
 
   for (const record of df.records) {
+    budget.charge();
     const keyParts = rowKeyFieldNames.map((fn) => {
+      budget.charge();
       const v = record.values[fn];
       return v == null ? "__null__" : String(v);
     });
@@ -1029,6 +1016,7 @@ function executePivot(
       rowKeyMap.set(rowKey, new Map());
       const kv: Record<string, DataValue | undefined | null> = {};
       for (const fn of rowKeyFieldNames) {
+        budget.charge();
         kv[fn] = record.values[fn];
       }
       rowKeyValues.set(rowKey, kv);
@@ -1046,18 +1034,24 @@ function executePivot(
 
   // 4. Build output fields: row-key fields + pivoted category columns
   const rowKeyFields = df.fields.filter(
-    (f) => f.name !== step.categoryField && f.name !== step.valueField
+    (f) => {
+      budget.charge();
+      return f.name !== step.categoryField && f.name !== step.valueField;
+    }
   );
 
   const newFields: DataField[] = [
     ...rowKeyFields,
-    ...sortedCategories.map((cat) => ({
+    ...sortedCategories.map((cat) => {
+      budget.charge();
+      return ({
       name: cat,
       type: DataFieldType.Number,
       repeated: false,
       identifier: false,
       derived: true,
-    })),
+    });
+    }),
   ];
 
   // 5. Build output records
@@ -1065,15 +1059,17 @@ function executePivot(
   let rowIdx = 0;
 
   for (const [rowKey, catMap] of rowKeyMap) {
+    budget.charge();
     const baseValues = rowKeyValues.get(rowKey)!;
     const values: Record<string, DataValue | undefined | null> = { ...baseValues };
 
     for (const cat of sortedCategories) {
+      budget.charge();
       const cellValues = catMap.get(cat);
       if (!cellValues || cellValues.length === 0) {
         values[cat] = null;
       } else {
-        values[cat] = computeAggFn(step.aggregation, cellValues, warnings);
+        values[cat] = computeAggFn(step.aggregation, cellValues, warnings, budget);
       }
     }
 
@@ -1117,6 +1113,8 @@ function executeJoin(
   df: DataFrame,
   step: JoinStep,
   warnings: string[],
+  budget: TransformBudget,
+
   context?: TransformContext
 ): DataFrame {
   const rightFrame = context?.rightFrames?.get(step.rightSourceId);
@@ -1130,11 +1128,17 @@ function executeJoin(
   const { leftKey, rightKey } = step.on;
   const suffix = step.suffix ?? "__r";
 
-  if (!df.fields.some((f) => f.name === leftKey)) {
+  if (!df.fields.some((f) => {
+    budget.charge();
+    return f.name === leftKey;
+  })) {
     warnings.push(`Join step: leftKey '${leftKey}' not found in current frame`);
     return df;
   }
-  if (!rightFrame.fields.some((f) => f.name === rightKey)) {
+  if (!rightFrame.fields.some((f) => {
+    budget.charge();
+    return f.name === rightKey;
+  })) {
     warnings.push(
       `Join step: rightKey '${rightKey}' not found in right frame '${step.rightSourceId}'`
     );
@@ -1142,10 +1146,14 @@ function executeJoin(
   }
 
   // Build new field list: left ⊕ right (excluding right-key, suffixing collisions).
-  const leftNames = new Set(df.fields.map((f) => f.name));
+  const leftNames = new Set(df.fields.map((f) => {
+    budget.charge();
+    return f.name;
+  }));
   const rightOutFields: DataField[] = [];
   const rightNameMap = new Map<string, string>(); // original → output
   for (const f of rightFrame.fields) {
+    budget.charge();
     if (f.name === rightKey) continue;
     const outName = leftNames.has(f.name) ? `${f.name}${suffix}` : f.name;
     rightNameMap.set(f.name, outName);
@@ -1156,6 +1164,7 @@ function executeJoin(
   // Build hash index on right frame.
   const bucket = new Map<string, DataRecord[]>();
   for (const r of rightFrame.records) {
+    budget.charge();
     const k = joinKeyOf(r.values[rightKey]);
     const list = bucket.get(k);
     if (list) list.push(r);
@@ -1166,13 +1175,14 @@ function executeJoin(
   let joinedRowIdx = 0;
 
   for (const left of df.records) {
+    budget.charge();
     const k = joinKeyOf(left.values[leftKey]);
     const matches = bucket.get(k);
 
     if (!matches || matches.length === 0) {
       if (step.how === "left") {
         const values: Record<string, DataValue | undefined | null> = { ...left.values };
-        for (const [, outName] of rightNameMap) values[outName] = null;
+        for (const [, outName] of rightNameMap) { budget.charge(); values[outName] = null; }
         newRecords.push({ id: `${left.id}__joinL`, values });
       }
       continue;
@@ -1182,8 +1192,10 @@ function executeJoin(
       // Reduce matches → single merged row.
       const values: Record<string, DataValue | undefined | null> = { ...left.values };
       for (const [orig, outName] of rightNameMap) {
+        budget.charge();
         const gathered: DataValue[] = [];
         for (const m of matches) {
+          budget.charge();
           const v = m.values[orig];
           if (v != null) gathered.push(v);
         }
@@ -1196,13 +1208,14 @@ function executeJoin(
         // aggregate about what a number is.
         const allNumeric = gathered.every(isNumeric);
         values[outName] = allNumeric
-          ? computeAggFn(step.aggregation, gathered, warnings)
+          ? computeAggFn(step.aggregation, gathered, warnings, budget)
           : (gathered[0] ?? null);
       }
       newRecords.push({ id: `${left.id}__joinA`, values });
     } else {
       // Cartesian expansion.
       for (const right of matches) {
+        budget.charge();
         if (newRecords.length >= MAX_JOIN_OUTPUT_RECORDS) {
           warnings.push(
             `Join truncated: output exceeds ${MAX_JOIN_OUTPUT_RECORDS} records`
@@ -1211,6 +1224,7 @@ function executeJoin(
         }
         const values: Record<string, DataValue | undefined | null> = { ...left.values };
         for (const [orig, outName] of rightNameMap) {
+          budget.charge();
           values[outName] = right.values[orig];
         }
         newRecords.push({ id: `${left.id}__join_${joinedRowIdx++}`, values });
@@ -1220,4 +1234,3 @@ function executeJoin(
 
   return { fields: newFields, records: newRecords };
 }
-

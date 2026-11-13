@@ -29,6 +29,7 @@ import { writable, derived, get } from 'svelte/store';
 import type { Readable, Writable } from 'svelte/store';
 import type dayjs from 'dayjs';
 import dayjsFactory from 'dayjs';
+import { bindDragSessionEnd } from 'src/ui/utils/dragSessionLifecycle';
 import type { DataRecord } from '../../../../lib/dataframe/dataframe';
 import type { ProcessedRecord } from '../types';
 import {
@@ -166,17 +167,26 @@ interface DragSession {
   mode: DragMode;
   barElement: HTMLElement;
   listenerDoc: Document;
+  listenerWindow: Window;
+  releaseEvents?: () => void;
   isTouchDrag: boolean;
 
   // Pointer coordinates
   startX: number;
   startY: number;
+  /** Press distance below the event start on the time axis: a move or top resize keeps the start under the same point */
+  grabOffsetPx: number;
+  /** Press distance below the event end (negative above it): a bottom resize keeps the end under the same point */
+  grabFromEndPx: number;
   lastX: number;
   lastY: number;
 
   // Original record geometry
   originalStartMinutes: number;
   originalEndMinutes: number;
+  /** End clock time (minutes from its own midnight) and whole days from the start day to the end day */
+  originalEndClockMinutes: number;
+  timedSpanDays: number;
   originalDayIndex: number;
   currentDayIndex: number;
 
@@ -250,6 +260,7 @@ export class TimelineDragManager {
   // on the same bar skips the long-press delay (quick re-grab).
   private lastActivatedRecordId: string | null = null;
   private lastActivatedTimer: number | null = null;
+  private lastActivatedWindow: Window | null = null;
 
   // ── Per-drag session (created in initiate, cleared in cleanup) ──
   private session: DragSession | null = null;
@@ -259,7 +270,7 @@ export class TimelineDragManager {
   private readonly handlePointerUpBound = this.handlePointerUp.bind(this);
   private readonly handleKeyDownBound = this.handleKeyDown.bind(this);
   private readonly handleContextMenuBound = this.handleContextMenu.bind(this);
-  private readonly handleOrientationChangeBound = this.handleOrientationChange.bind(this);
+  private readonly handleSessionCancelBound = this.cancel.bind(this);
 
   /** Whether a drag is actively in progress */
   get isActive(): boolean {
@@ -278,10 +289,6 @@ export class TimelineDragManager {
   configure(config: TimelineConfig, onCommit: OnDragCommit): void {
     this.config = config;
     this.onCommit = onCommit;
-    if (typeof window !== 'undefined') {
-      window.removeEventListener('orientationchange', this.handleOrientationChangeBound);
-      window.addEventListener('orientationchange', this.handleOrientationChangeBound);
-    }
   }
 
   /** Register day columns for cross-day detection. */
@@ -343,10 +350,23 @@ export class TimelineDragManager {
     // Compute original time data
     let originalStartMinutes = 0;
     let originalEndMinutes = 0;
+    let originalEndClockMinutes = 0;
+    let timedSpanDays = 0;
     const timeInfo = processedRecord.timeInfo;
     if (timeInfo) {
       originalStartMinutes = timeInfo.startTime.hour() * 60 + timeInfo.startTime.minute();
-      originalEndMinutes = timeInfo.endTime.hour() * 60 + timeInfo.endTime.minute();
+      // The duration comes from the processed start/end difference, not from the
+      // clock faces: an overnight or multi-hour event would otherwise get a
+      // negative or wrapped duration.
+      const durationMinutes = Math.max(
+        DND_CONSTANTS.MIN_DURATION_MINUTES,
+        timeInfo.endTime.diff(timeInfo.startTime, 'minute')
+      );
+      originalEndMinutes = originalStartMinutes + durationMinutes;
+      // A move shifts both clock times by one delta and keeps the days between
+      // them (overnight = 1, multi-day timed events more).
+      originalEndClockMinutes = timeInfo.endTime.hour() * 60 + timeInfo.endTime.minute();
+      timedSpanDays = Math.max(0, timeInfo.endTime.startOf('day').diff(timeInfo.startTime.startOf('day'), 'day'));
     }
 
     // Strip span info
@@ -364,6 +384,22 @@ export class TimelineDragManager {
     // Find which day column the bar belongs to
     const barRect = barElement.getBoundingClientRect();
     const originalDayIndex = this.findDayIndex(barRect.left + barRect.width / 2);
+
+    // Where the press sits relative to the event's start and end on the time
+    // axis (not the bar box: a short bar is drawn taller than its duration on
+    // touch). A drag moves the grabbed point; the start or end does not jump
+    // to the pointer.
+    const pressColumn = this.dayColumns[originalDayIndex]?.element;
+    let grabOffsetPx = point.clientY - barRect.top;
+    let grabFromEndPx = point.clientY - barRect.bottom;
+    if (pressColumn && timeInfo) {
+      const { startHour, hourHeightRem, remPx = 16 } = this.config;
+      const pressY = point.clientY - pressColumn.getBoundingClientRect().top;
+      grabOffsetPx = pressY - minutesToRem(originalStartMinutes, startHour, hourHeightRem) * remPx;
+      const visibleEndMinutes = mode === 'resize-bottom' && timedSpanDays > 0
+        ? originalEndClockMinutes : originalEndMinutes;
+      grabFromEndPx = pressY - minutesToRem(visibleEndMinutes, startHour, hourHeightRem) * remPx;
+    }
 
     // Auto-detect scroll container if not explicitly set
     if (!this.scrollContainer) {
@@ -388,6 +424,8 @@ export class TimelineDragManager {
     }
 
     const doc = barElement.ownerDocument;
+    const view = doc.defaultView;
+    if (!view) return;
 
     // Create session — all per-drag state in one place
     this.session = {
@@ -396,13 +434,18 @@ export class TimelineDragManager {
       mode,
       barElement,
       listenerDoc: doc,
+      listenerWindow: view,
       isTouchDrag,
       startX: point.clientX,
       startY: point.clientY,
+      grabOffsetPx,
+      grabFromEndPx,
       lastX: point.clientX,
       lastY: point.clientY,
       originalStartMinutes,
       originalEndMinutes,
+      originalEndClockMinutes,
+      timedSpanDays,
       originalDayIndex,
       currentDayIndex: originalDayIndex,
       originalSpanDays,
@@ -430,11 +473,9 @@ export class TimelineDragManager {
 
     // Register global listeners (store doc ref in session for cleanup)
     doc.addEventListener('mousemove', this.handlePointerMoveBound);
-    doc.addEventListener('mouseup', this.handlePointerUpBound);
     doc.addEventListener('touchmove', this.handlePointerMoveBound, { passive: false });
-    doc.addEventListener('touchend', this.handlePointerUpBound);
-    doc.addEventListener('touchcancel', this.handlePointerUpBound);
-    doc.addEventListener('keydown', this.handleKeyDownBound);
+    this.session.releaseEvents = bindDragSessionEnd(doc, this.handlePointerUpBound, this.handleSessionCancelBound);
+    doc.addEventListener('keydown', this.handleKeyDownBound, true);
     // A held finger makes the platform offer a context menu (Android, Electron)
     // or a callout; either would cancel the touch the drag is about to own.
     if (isTouchDrag) doc.addEventListener('contextmenu', this.handleContextMenuBound);
@@ -449,10 +490,11 @@ export class TimelineDragManager {
         if (this.config?.isMobile) hapticDragStart();
         pauseGestures();
       } else {
-        this.session.longPressTimer = window.setTimeout(() => {
-          if (!this.session) return;
-          this.session.longPressConfirmed = true;
-          this.session.armedByLongPress = true;
+        const session = this.session;
+        session.longPressTimer = view.setTimeout(() => {
+          if (this.session !== session) return;
+          session.longPressConfirmed = true;
+          session.armedByLongPress = true;
           this.longPressActive.set(true);
           if (this.config?.isMobile) hapticDragStart();
           pauseGestures();
@@ -475,27 +517,22 @@ export class TimelineDragManager {
   /** Clean up all references. Call when TimelineView unmounts. */
   destroy(): void {
     this.cleanup();
-    if (typeof window !== 'undefined') {
-      window.removeEventListener('orientationchange', this.handleOrientationChangeBound);
-    }
     this.config = null;
     this.onCommit = null;
     this.dayColumns = [];
+    this.scrollContainer = null;
     this.horizontalScrollContainer = null;
-    if (this.lastActivatedTimer) {
-      window.clearTimeout(this.lastActivatedTimer);
+    if (this.lastActivatedTimer !== null) {
+      this.lastActivatedWindow?.clearTimeout(this.lastActivatedTimer);
       this.lastActivatedTimer = null;
     }
+    this.lastActivatedWindow = null;
     this.lastActivatedRecordId = null;
   }
 
   // ══════════════════════════════════════════════════════════════════════════
   //  EVENT HANDLERS
   // ══════════════════════════════════════════════════════════════════════════
-
-  private handleOrientationChange(): void {
-    if (this.isActive) this.cancel();
-  }
 
   private handlePointerMove(event: MouseEvent | TouchEvent): void {
     const s = this.session;
@@ -531,17 +568,10 @@ export class TimelineDragManager {
       const thresholdPx = DND_CONSTANTS.DRAG_THRESHOLD_REM * (this.config.remPx ?? 16);
       if (distance < thresholdPx) return;
 
-      // Threshold crossed — on mobile, re-evaluate the mode with the larger
-      // touch zones, evaluated ONCE (mode is final after this point).
-      // ios-d1: from where the finger PRESSED, not where it is now. The user
-      // aims at a handle or at the body before pressing; by the time the
-      // threshold is crossed the finger has already travelled in the drag
-      // direction, and on a one-hour bar a downward move from its middle landed
-      // in the bottom zone — a "move" became a resize of the end time.
-      if (s.isTouchDrag && s.barElement && this.config.isMobile) {
-        s.mode = this.evaluateModeFromPosition(s.startY, s.barElement);
-        this.activeMode.set(s.mode);
-      }
+      // The mode is the one EventBar chose at pointerDown (dnd/pressMode.ts)
+      // and stays until release. ios-d1 re-evaluated it here for touch; with
+      // one press-time rule there is nothing left to re-decide, and a second
+      // decision from a fresh bar box could disagree with the first.
 
       s.thresholdCrossed = true;
       this.state.set('dragging');
@@ -608,38 +638,6 @@ export class TimelineDragManager {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  //  MODE EVALUATION
-  // ══════════════════════════════════════════════════════════════════════════
-
-  /**
-   * Evaluate drag mode from current finger position relative to bar.
-   * Uses generous thirds: top third = resize-top, bottom third = resize-bottom, middle = move.
-   * Strip modes are never re-evaluated.
-   */
-  private evaluateModeFromPosition(clientY: number, barElement: HTMLElement): DragMode {
-    const s = this.session;
-    if (!s) return 'move';
-
-    // Strip modes are set by the initiator and never changed
-    if (s.mode === 'strip-move' || s.mode === 'strip-resize-start' || s.mode === 'strip-resize-end') {
-      return s.mode;
-    }
-
-    // v4.0.2: Use 40% zones from each edge (overlapping in the middle).
-    // This gives resize a generous target while keeping a move zone in center.
-    const rect = barElement.getBoundingClientRect();
-    const relY = clientY - rect.top;
-    const barH = rect.height;
-    const remPx = this.config?.remPx ?? 16;
-    // Zone: 1.25rem or 40% of bar height
-    const zone = Math.min(1.25 * remPx, barH * 0.4);
-
-    if (relY <= zone) return 'resize-top';
-    if (relY >= barH - zone) return 'resize-bottom';
-    return 'move';
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════
   //  GHOST POSITION — TIMED EVENTS
   // ══════════════════════════════════════════════════════════════════════════
 
@@ -695,16 +693,30 @@ export class TimelineDragManager {
     // Calculate time from Y position relative to column
     const columnRect = columnRef.element.getBoundingClientRect();
     const relativeY = clientY - columnRect.top;
-    const duration = s.originalEndMinutes - s.originalStartMinutes;
+    const DAY_MINUTES = 24 * 60;
+    // A same-day event stays inside the visible range. An event that ends on a
+    // later day (overnight, multi-day) shifts both clock times by one delta
+    // and keeps its days; the end may carry over midnight.
+    const sameDay = s.timedSpanDays === 0;
+    const duration = Math.min(s.originalEndMinutes - s.originalStartMinutes, (endHour - startHour) * 60);
+    let endDayOffset = 0;
 
     let newStartMinutes: number;
     let newEndMinutes: number;
 
     switch (s.mode) {
       case 'move': {
-        const pointerMinutes = yPositionToMinutes(relativeY, startHour, endHour, hourHeightRem, remPx, snapInterval);
+        // From the bar top, not the pointer: grabbing the middle must not jump the start to the pointer.
+        const pointerMinutes = yPositionToMinutes(relativeY - s.grabOffsetPx, startHour, endHour, hourHeightRem, remPx, snapInterval);
         newStartMinutes = pointerMinutes;
         newEndMinutes = newStartMinutes + duration;
+        if (!sameDay) {
+          newStartMinutes = Math.max(startHour * 60, Math.min(newStartMinutes, endHour * 60 - DND_CONSTANTS.MIN_DURATION_MINUTES));
+          const endClock = s.originalEndClockMinutes + (newStartMinutes - s.originalStartMinutes);
+          endDayOffset = s.timedSpanDays + Math.floor(endClock / DAY_MINUTES);
+          newEndMinutes = ((endClock % DAY_MINUTES) + DAY_MINUTES) % DAY_MINUTES;
+          break;
+        }
         // Clamp to visible range
         if (newEndMinutes > endHour * 60) {
           newEndMinutes = endHour * 60;
@@ -718,10 +730,10 @@ export class TimelineDragManager {
       }
 
       case 'resize-top': {
-        const pointerMinutes = yPositionToMinutes(relativeY, startHour, endHour, hourHeightRem, remPx, snapInterval);
-        newStartMinutes = Math.min(pointerMinutes, s.originalEndMinutes - DND_CONSTANTS.MIN_DURATION_MINUTES);
+        const pointerMinutes = yPositionToMinutes(relativeY - s.grabOffsetPx, startHour, endHour, hourHeightRem, remPx, snapInterval);
+        newEndMinutes = Math.min(s.originalEndMinutes, endHour * 60);
+        newStartMinutes = Math.min(pointerMinutes, newEndMinutes - DND_CONSTANTS.MIN_DURATION_MINUTES);
         newStartMinutes = Math.max(startHour * 60, newStartMinutes);
-        newEndMinutes = s.originalEndMinutes;
         if (isMobile && pointerMinutes >= s.originalEndMinutes - DND_CONSTANTS.MIN_DURATION_MINUTES) {
           hapticResizeLimit();
         }
@@ -729,11 +741,14 @@ export class TimelineDragManager {
       }
 
       case 'resize-bottom': {
-        const pointerMinutes = yPositionToMinutes(relativeY, startHour, endHour, hourHeightRem, remPx, snapInterval);
-        newEndMinutes = Math.max(pointerMinutes, s.originalStartMinutes + DND_CONSTANTS.MIN_DURATION_MINUTES);
+        const pointerMinutes = yPositionToMinutes(relativeY - s.grabFromEndPx, startHour, endHour, hourHeightRem, remPx, snapInterval);
+        const minimumEnd = Math.max(startHour * 60,
+          s.originalStartMinutes + DND_CONSTANTS.MIN_DURATION_MINUTES - s.timedSpanDays * DAY_MINUTES);
+        newEndMinutes = Math.max(pointerMinutes, minimumEnd);
         newEndMinutes = Math.min(endHour * 60, newEndMinutes);
         newStartMinutes = s.originalStartMinutes;
-        if (isMobile && pointerMinutes <= s.originalStartMinutes + DND_CONSTANTS.MIN_DURATION_MINUTES) {
+        endDayOffset = s.timedSpanDays;
+        if (isMobile && pointerMinutes <= minimumEnd) {
           hapticResizeLimit();
         }
         break;
@@ -754,12 +769,16 @@ export class TimelineDragManager {
     s.lastSnappedMinutes = newStartMinutes;
 
     // Build ghost position
+    const endFragment = s.mode === 'resize-bottom' && !sameDay;
+    const visibleStart = endFragment ? startHour * 60 : newStartMinutes;
+    const visibleEnd = endFragment ? newEndMinutes : endDayOffset > 0 ? endHour * 60 : newEndMinutes;
     const ghost: GhostPosition = {
-      topRem: minutesToRem(newStartMinutes, startHour, hourHeightRem),
-      heightRem: (newEndMinutes - newStartMinutes) * (hourHeightRem / 60),
+      topRem: minutesToRem(visibleStart, startHour, hourHeightRem),
+      heightRem: (visibleEnd - visibleStart) * (hourHeightRem / 60),
       dayColumnIndex: clampedIndex,
       time: minutesToTime(newStartMinutes),
       endTime: minutesToTime(newEndMinutes),
+      endDayOffset,
       date: columnRef.day,
       title: getRecordTitle(s.record),
     };
@@ -1188,8 +1207,11 @@ export class TimelineDragManager {
         return;
     }
 
-    this.onCommit!(newStart, s.record, { endDate: newEnd });
-    this.cleanup();
+    let submitted = false;
+    try {
+      this.onCommit!(newStart, s.record, { endDate: newEnd });
+      submitted = true;
+    } finally { this.cleanup(submitted); }
   }
 
   private commitTimed(s: DragSession): void {
@@ -1210,9 +1232,9 @@ export class TimelineDragManager {
       case 'move': {
         options.startTime = ghost.time;
         options.endTime = ghost.endTime;
-        // Preserve multi-day span during timed moves
-        const origEnd = s.processedRecord.spanInfo?.endDate ?? s.processedRecord.endDate;
-        if (origEnd) options.endDate = origEnd.add(timedDayDelta, 'day');
+        // The end day follows the new start: the original span plus any carry
+        // over midnight (ghost.endDayOffset).
+        options.endDate = timedTargetDate.add(ghost.endDayOffset ?? 0, 'day');
         break;
       }
       case 'resize-top':
@@ -1220,11 +1242,15 @@ export class TimelineDragManager {
         break;
       case 'resize-bottom':
         options.endTime = ghost.endTime;
+        if (s.timedSpanDays > 0) options.endDate = timedTargetDate.add(ghost.endDayOffset ?? 0, 'day');
         break;
     }
 
-    this.onCommit!(timedTargetDate, s.record, options);
-    this.cleanup();
+    let submitted = false;
+    try {
+      this.onCommit!(timedTargetDate, s.record, options);
+      submitted = true;
+    } finally { this.cleanup(submitted); }
   }
 
   /**
@@ -1283,7 +1309,7 @@ export class TimelineDragManager {
     // the visible area, the zone must still be within the reachable pointer area.
     // v4.0.2: Use visualViewport on mobile — window.innerHeight includes iOS safe area
     // and Obsidian toolbar, making the bottom zone unreachable by touch.
-    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const viewportHeight = s.listenerWindow.visualViewport?.height ?? s.listenerWindow.innerHeight;
     const top = Math.max(0, rawRect.top);
     const bottom = Math.min(viewportHeight, rawRect.bottom);
     const remPx = this.config?.remPx ?? 16;
@@ -1301,13 +1327,15 @@ export class TimelineDragManager {
 
   private startVerticalAutoScroll(direction: 'up' | 'down'): void {
     const s = this.session;
-    if (!s || s.verticalScrollDir === direction) return;
+    const container = this.scrollContainer;
+    if (!s || !container || s.verticalScrollDir === direction) return;
     this.stopVerticalAutoScroll();
     s.verticalScrollDir = direction;
     s.verticalScrollStartTime = performance.now();
 
     const tick = (): void => {
-      if (!s || !this.scrollContainer || !s.verticalScrollDir) return;
+      if (this.session !== s || this.scrollContainer !== container || !s.verticalScrollDir) return;
+      if (!container.isConnected) { this.cancel(); return; }
 
       // Time-based acceleration: ramp from 1x to 4x over 2 seconds
       const elapsed = performance.now() - s.verticalScrollStartTime;
@@ -1315,11 +1343,11 @@ export class TimelineDragManager {
       const remPx = this.config?.remPx ?? 16;
       const speed = DND_CONSTANTS.AUTO_SCROLL_SPEED_REM * remPx * 2 * accel;
 
-      const prevScrollTop = this.scrollContainer.scrollTop;
-      this.scrollContainer.scrollTop += s.verticalScrollDir === 'up' ? -speed : speed;
+      const prevScrollTop = container.scrollTop;
+      container.scrollTop += s.verticalScrollDir === 'up' ? -speed : speed;
 
       // Stop if scroll didn't actually move (reached boundary)
-      if (this.scrollContainer.scrollTop === prevScrollTop) {
+      if (container.scrollTop === prevScrollTop) {
         this.stopVerticalAutoScroll();
         return;
       }
@@ -1327,17 +1355,17 @@ export class TimelineDragManager {
       // Re-evaluate ghost position as content shifts under the pointer
       this.updateGhostPosition(s.lastX, s.lastY);
 
-      s.verticalScrollRAF = window.requestAnimationFrame(tick);
+      if (this.session === s && s.verticalScrollDir) s.verticalScrollRAF = s.listenerWindow.requestAnimationFrame(tick);
     };
 
-    s.verticalScrollRAF = window.requestAnimationFrame(tick);
+    s.verticalScrollRAF = s.listenerWindow.requestAnimationFrame(tick);
   }
 
   private stopVerticalAutoScroll(): void {
     const s = this.session;
     if (!s) return;
     if (s.verticalScrollRAF !== null) {
-      cancelAnimationFrame(s.verticalScrollRAF);
+      s.listenerWindow.cancelAnimationFrame(s.verticalScrollRAF);
       s.verticalScrollRAF = null;
     }
     s.verticalScrollDir = null;
@@ -1366,39 +1394,42 @@ export class TimelineDragManager {
 
   private startHorizontalAutoScroll(direction: 'left' | 'right'): void {
     const s = this.session;
-    if (!s || s.horizontalScrollDir === direction) return;
+    const container = this.horizontalScrollContainer;
+    if (!s || !container || s.horizontalScrollDir === direction) return;
     this.stopHorizontalAutoScroll();
     s.horizontalScrollDir = direction;
     s.horizontalScrollStartTime = performance.now();
     s.lastDndCheckLoadTime = performance.now();
 
     // Signal to InfiniteHorizontalCalendar that DnD auto-scroll is active
-    this.horizontalScrollContainer?.setAttribute('data-dnd-scrolling', 'true');
+    container.setAttribute('data-dnd-scrolling', 'true');
 
     const tick = (): void => {
-      if (!s || !this.horizontalScrollContainer || !s.horizontalScrollDir) return;
+      if (this.session !== s || this.horizontalScrollContainer !== container || !s.horizontalScrollDir) return;
+      if (!container.isConnected) { this.cancel(); return; }
 
       // Time-based acceleration: ramp from 1x to 4x over 2 seconds
       const elapsed = performance.now() - s.horizontalScrollStartTime;
       const accel = Math.min(4, 1 + (elapsed / 2000) * 3);
       const remPx = this.config?.remPx ?? 16;
       const speed = DND_CONSTANTS.AUTO_SCROLL_SPEED_REM * remPx * 2 * accel;
-      this.horizontalScrollContainer.scrollLeft += s.horizontalScrollDir === 'left' ? -speed : speed;
+      container.scrollLeft += s.horizontalScrollDir === 'left' ? -speed : speed;
 
       // Re-evaluate ghost position
       this.updateGhostPosition(s.lastX, s.lastY);
+      if (this.session !== s || !s.horizontalScrollDir) return;
 
       // Time-based period loading (~every 250ms)
       const now = performance.now();
       if (now - s.lastDndCheckLoadTime >= 250) {
-        this.horizontalScrollContainer.dispatchEvent(new CustomEvent('dnd-check-load'));
+        container.dispatchEvent(new (s.listenerDoc.defaultView?.CustomEvent ?? CustomEvent)('dnd-check-load'));
         s.lastDndCheckLoadTime = now;
       }
 
-      s.horizontalScrollRAF = window.requestAnimationFrame(tick);
+      if (this.session === s && s.horizontalScrollDir) s.horizontalScrollRAF = s.listenerWindow.requestAnimationFrame(tick);
     };
 
-    s.horizontalScrollRAF = window.requestAnimationFrame(tick);
+    s.horizontalScrollRAF = s.listenerWindow.requestAnimationFrame(tick);
   }
 
   private stopHorizontalAutoScroll(): void {
@@ -1406,7 +1437,7 @@ export class TimelineDragManager {
     const s = this.session;
     if (!s) return;
     if (s.horizontalScrollRAF !== null) {
-      cancelAnimationFrame(s.horizontalScrollRAF);
+      s.listenerWindow.cancelAnimationFrame(s.horizontalScrollRAF);
       s.horizontalScrollRAF = null;
     }
     s.horizontalScrollDir = null;
@@ -1535,20 +1566,18 @@ export class TimelineDragManager {
   //  CLEANUP
   // ══════════════════════════════════════════════════════════════════════════
 
-  private cleanup(): void {
+  private cleanup(submitted = false): void {
     const s = this.session;
 
     if (s) {
       // Clear long-press timer
-      if (s.longPressTimer !== null) window.clearTimeout(s.longPressTimer);
+      if (s.longPressTimer !== null) s.listenerWindow.clearTimeout(s.longPressTimer);
 
       // Remove global listeners
       s.listenerDoc.removeEventListener('mousemove', this.handlePointerMoveBound);
-      s.listenerDoc.removeEventListener('mouseup', this.handlePointerUpBound);
       s.listenerDoc.removeEventListener('touchmove', this.handlePointerMoveBound);
-      s.listenerDoc.removeEventListener('touchend', this.handlePointerUpBound);
-      s.listenerDoc.removeEventListener('touchcancel', this.handlePointerUpBound);
-      s.listenerDoc.removeEventListener('keydown', this.handleKeyDownBound);
+      s.releaseEvents?.();
+      s.listenerDoc.removeEventListener('keydown', this.handleKeyDownBound, true);
       s.listenerDoc.removeEventListener('contextmenu', this.handleContextMenuBound);
 
       // Stop auto-scroll (must happen before session = null)
@@ -1561,7 +1590,7 @@ export class TimelineDragManager {
 
     // v4.0.2: If this was a successful drag (threshold crossed), remember the
     // record so the next touch on the same bar skips long-press.
-    const wasActiveDrag = s?.thresholdCrossed && s?.record;
+    const wasActiveDrag = submitted && s?.thresholdCrossed && s?.record;
     const activatedRecordId = wasActiveDrag ? s.record.id : null;
 
     // Clear session
@@ -1583,20 +1612,23 @@ export class TimelineDragManager {
       this.lastActivatedRecordId = activatedRecordId;
       this.dragRecordId.set(activatedRecordId);
       // longPressActive stays true — handles remain visible
-      if (this.lastActivatedTimer) window.clearTimeout(this.lastActivatedTimer);
-      this.lastActivatedTimer = window.setTimeout(() => {
+      if (this.lastActivatedTimer !== null) this.lastActivatedWindow?.clearTimeout(this.lastActivatedTimer);
+      this.lastActivatedWindow = s!.listenerWindow;
+      this.lastActivatedTimer = this.lastActivatedWindow.setTimeout(() => {
         this.lastActivatedRecordId = null;
         this.lastActivatedTimer = null;
+        this.lastActivatedWindow = null;
         this.longPressActive.set(false);
         this.dragRecordId.set(null);
       }, 4000);
     } else {
       this.longPressActive.set(false);
       this.lastActivatedRecordId = null;
-      if (this.lastActivatedTimer) {
-        window.clearTimeout(this.lastActivatedTimer);
+      if (this.lastActivatedTimer !== null) {
+        this.lastActivatedWindow?.clearTimeout(this.lastActivatedTimer);
         this.lastActivatedTimer = null;
       }
+      this.lastActivatedWindow = null;
     }
   }
 }

@@ -18,6 +18,7 @@
 import type { DataRecord } from "src/lib/dataframe/dataframe";
 import { canonicalLinkKey, parseRelationLinks } from "src/lib/relations/parseRelationLinks";
 import { dataTableSourceId, chartSourceId, type SelectionState } from "../../canvasSelectionStore";
+import { filterSelectionDates } from "../_shared/selectionDates";
 
 /**
  * Stable source-id prefix reserved for a future Stats driver (v2 drill-down).
@@ -79,6 +80,9 @@ export function filterRecordsBySelection(args: {
 	if (selection.source === statsSourceId(myWidgetId)) {
 		return records;
 	}
+	if (selection.dateGrouping) return filterSelectionDates(records, {
+		field: selection.field, operator: "is-any-of", value: JSON.stringify(selection.values), enabled: true,
+	}, selection.dateGrouping);
 
 	// Local match — kept duplicated with dataTableSelectionReceiver's check to
 	// avoid coupling the two receivers through a third helper module. Both

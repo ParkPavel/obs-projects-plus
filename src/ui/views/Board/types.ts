@@ -57,5 +57,12 @@ export interface ColumnSettings {
     readonly weight?: number;
     readonly records?: string[];
     readonly collapse?: boolean;
+    /**
+     * i3-board — pinned to the left and locked (no column or card drag), set
+     * only by the column's Pin action. It used to be read from the status
+     * field's options, which every added column and every defined status
+     * joins, so nearly every column was pinned and none could be moved.
+     */
+    readonly pinned?: boolean;
   };
 }

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Projects Plus 3.7.2"><meta name="color-scheme" content="light dark">
+<meta name="referrer" content="strict-origin-when-cross-origin"><title>Projects Plus 3.7.2 · Projects Plus</title>
+<meta property="og:type" content="website"><meta property="og:title" content="Projects Plus 3.7.2"><meta property="og:description" content="Projects Plus 3.7.2"><meta property="og:url" content="https://parkpavel.github.io/obs-projects-plus/read/release-3.7.2.html"><meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://parkpavel.github.io/obs-projects-plus/read/release-3.7.2.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/site.css">
+<script type="module" src="../assets/site.js"></script></head>
+<body data-prefix="../" data-language="en"><a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header"><a class="wordmark" href="../en.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
+<nav aria-label="Main navigation"><a href="../en.html#ideas">Garden of ideas</a><a href="../read/user-guide-en.html">Documentation</a><a class="language" href="../read/release-3.7.2-ru.html" hreflang="ru">Русский</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../en.html">← Explore the plugin</a><strong>On this page</strong><nav aria-label="On this page"><a href="#what-changes-in-daily-use">What changes in daily use</a><a href="#formula-migration-needs-attention">Formula migration needs attention</a><a href="#install-or-update">Install or update</a><a href="#validation-and-support">Validation and support</a></nav></aside><article class="doc-article"><p class="doc-version">Documentation follows the source code; an installed release may differ.</p><h1 id="projects-plus-372">Projects Plus 3.7.2</h1>
+<p><a href="../read/release-3.7.2-ru.html">Русский</a> · <a href="https://github.com/ParkPavel/obs-projects-plus/releases/tag/3.7.2">Download</a> · <a href="../read/changelog.html">Changelog</a></p>
+<p>Released November 14, 2026. Requires Obsidian <strong>1.8.7 or newer</strong>. This release combines the stabilization work on editing, mobile forms, calendars, boards and calculated data. Notes remain Markdown files in your vault.</p>
+<h2 id="what-changes-in-daily-use">What changes in daily use</h2>
+<ul>
+<li>Toggle writable Boolean properties directly on board cards without opening the note inspector. Computed and read-only values remain protected.</li>
+<li>Use the palette and its favorite colors within the form&#39;s main scroll area. New event forms start with the palette expanded.</li>
+<li>Edit an Agenda list on iPhone with the keyboard open: the fields remain visible, suggestions stay within their available area, and Save/Cancel remain reachable. Repeated keyboard opening no longer collapses the form.</li>
+<li>Reach computed properties in the note inspector after collapsing ordinary properties, using the same scroll area.</li>
+<li>Edit text, numbers, dates and lists through shared draft controls, with explicit confirmation/cancellation and IME handling. A failed write retains the draft for retry.</li>
+<li>Use Agenda lists as the selected date intersected with the list&#39;s conditions. On mobile, hold empty calendar time, stretch the range and release to open event creation. Board columns temporarily fold during a drag and restore their previous state afterwards.</li>
+<li>Configure embedded views locally and use linked projects, relations, rollups, charts and computed columns on a Dashboard. See the <a href="../read/user-guide-en.html">user guide</a> for the supported controls and limits.</li>
+</ul>
+<h2 id="formula-migration-needs-attention">Formula migration needs attention</h2>
+<p>Formulas, calculated transform columns and Agenda filters now use one strict <strong><code>unified-v1</code></strong> evaluator. Expressions remain unchanged, but results can change because the old rules are removed. For example, the previous numeric interpretation of <code>&quot;2&quot; &lt; &quot;10&quot;</code> becomes strict string comparison and returns <code>false</code>.</p>
+<p>The plugin verifies a settings backup before publishing migrated settings. Backup files named <code>formula-unified-*.data.json</code> and migration reports named <code>formula-unified-*.report.json</code> are kept in its plugin folder. A failed backup blocks migration. The report identifies migrated definitions and syntax errors; it is not a comparison of every record&#39;s old and new result.</p>
+<p>Update all devices together, retain these files, and check known examples in your own data. Formula results are computed values and do not overwrite the source notes. Unknown future formula versions fail closed. Regular expressions with excessive or unconfirmed complexity are rejected before execution.</p>
+<h2 id="install-or-update">Install or update</h2>
+<ol>
+<li>Back up your vault, including its configuration folder, the previous plugin assets and <code>data.json</code>.</li>
+<li>From the same release, download <code>main.js</code>, <code>manifest.json</code> and <code>styles.css</code>. Replace those three files in <code>.obsidian/plugins/obs-projects-plus/</code>, or your custom configuration folder. Keep <code>data.json</code>.</li>
+<li>Restart Obsidian, confirm version <strong>3.7.2</strong>, then check editing, saved settings and formula examples. If you synchronize plugin files, run synchronization on the sending and receiving devices and restart the receiving app; a copied archive alone does not install the plugin.</li>
+</ol>
+<p>For rollback, restore the previous matching plugin assets <strong>and</strong> the original settings while Obsidian is closed. Preserve any newer settings separately first. Restoring only old settings under the new engine cannot restore the removed formula rules. See <a href="../read/upgrade.html">Updating and rolling back</a> for the full procedure.</p>
+<h2 id="validation-and-support">Validation and support</h2>
+<p>The release&#39;s editing and layout scenarios passed automated checks and maintainer testing on desktop and a physical iPhone. This describes that tested scope, not every possible device, theme or vault configuration.</p>
+<p>Report a reproducible problem through <a href="https://github.com/ParkPavel/obs-projects-plus/issues">Issues</a>, with plugin/Obsidian versions, device, steps and expected/actual behavior. Remove personal note content from examples. Internal development contracts and old stabilization matrices are historical records; use this guide and the current user guide for release behavior.</p>
+<p class="doc-source"><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/docs/release-3.7.2.md">Page source ↗</a></p></article></main>
+<footer class="site-footer"><a class="wordmark" href="../en.html">Projects Plus</a><p>An open-source project by Park Pavel. Based on Obsidian Projects by Marcus Olsson.</p><div><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache-2.0</a><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE">Attribution</a><a href="https://github.com/ParkPavel/obs-projects-plus/issues">Feedback</a></div></footer>
+<aside class="search-panel" aria-label="Search documentation"><label for="doc-search">Search documentation</label><div class="search-input-wrap"><input id="doc-search" type="search" placeholder="Search…" autocomplete="off" aria-controls="search-results"><kbd>/</kbd></div><ul id="search-results" hidden></ul><p id="search-status" role="status" aria-live="polite" data-empty="No matches. Try “calendar”, “formula” or “source”."></p></aside>
+</body></html>

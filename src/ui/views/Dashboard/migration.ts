@@ -1,4 +1,4 @@
-﻿// src/ui/views/Dashboard/migration.ts
+// src/ui/views/Dashboard/migration.ts
 
 import type { DatabaseViewConfig, DataTableConfig, WidgetDefinition } from "./types";
 import { migrateTransformToViewLevel } from "./widgets/legacyMigration";
@@ -49,19 +49,6 @@ export function migrateTableConfig(
     table: tableConfig,
     showWidgetToolbar: true,
     compactMode: false,
-    // #191: one quick action, not two. The "Overview Preset" button applied a
-    // dashboard template and went with that mechanism; `toggle-formula-bar` is
-    // a live path and the only hint a migrated user gets that quick actions
-    // exist at all, so the row keeps a member and does not become an empty
-    // stripe.
-    quickActions: [
-      {
-        id: "qa-formula",
-        label: "Formula Builder",
-        labelKey: "views.dashboard.quick.formula",
-        kind: "toggle-formula-bar",
-      },
-    ],
   };
 }
 
@@ -76,12 +63,26 @@ export function isLegacyTableConfig(
     return false;
   }
   // LegacyTableConfig has fieldConfig/sortField/orderFields at top level
+  // i2-model (D10/N24): an EMPTY config is a page just created, not a legacy
+  // table. Read as legacy it gained a block named «Table» on first open, so a
+  // new page never showed its empty state with the one «Add a database» button.
   return (
     config["fieldConfig"] !== undefined ||
     config["sortField"] !== undefined ||
-    config["orderFields"] !== undefined ||
-    Object.keys(config).length === 0
+    config["orderFields"] !== undefined
   );
+}
+
+/** The config of a page that has no blocks yet. */
+export function emptyDashboardConfig(): DatabaseViewConfig {
+  return {
+    widgets: [],
+    layoutMode: "stack",
+    layoutVersion: 1,
+    table: { aggregations: {}, showAggregationRow: false },
+    showWidgetToolbar: true,
+    compactMode: false,
+  };
 }
 
 /**
@@ -180,30 +181,23 @@ export function migrateDashboardTransforms(config: DatabaseViewConfig): {
 }
 
 /**
- * #191 — drop a quick action that points at a mechanism that no longer exists.
+ * The formula toolbar supersedes legacy dashboard quick-action buttons.
  *
- * Dashboard templates were removed, and `migrateTableConfig` had been *writing*
- * an `apply-template` action into every dashboard it migrated. Those live in
- * real vaults right now. Leaving one would leave a button that does nothing —
- * the visible-promise-without-effect defect this project keeps catching — and
- * disabling it is the same defect in a politer wrapper: it tells the reader
- * something used to be there and gives them nothing to do about it.
+ * Old vaults can contain an `apply-template` action (its feature was removed)
+ * and a `toggle-formula-bar` action (now duplicated by the toolbar). Remove
+ * those known actions during the ordinary read-time migration; retain
+ * unrecognized future actions rather than discarding data we cannot interpret.
  *
  * **Read-time, not a forced rewrite.** The view's existing chain saves when
- * `migrated` is set, so a vault cleans itself the first time the dashboard is
- * opened and saved, and the #145 restore point is taken upstream of all of it.
+ * `migrated` is set, so duplicate controls disappear on the next save, and
+ * the #145 restore point is taken upstream of all of it.
  * Rewriting every stored view up front would buy nothing and would touch that
- * path for the sake of one button.
- *
- * **Filtered on `kind`, never on a list of known ids.** `CX-MAP-191` recorded
- * that quick actions hold a `templateId` as a string and static reading cannot
- * enumerate what real vaults contain. An id nobody in this codebase has ever
- * heard of must be dropped too, or the unknown stays a hole.
+ * path for the sake of a redundant button.
  *
  * Idempotent: the same config in twice returns the same reference the second
  * time, so the view does not save on every open.
  */
-export function dropTemplateQuickActions(config: DatabaseViewConfig): {
+export function dropObsoleteQuickActions(config: DatabaseViewConfig): {
   config: DatabaseViewConfig;
   migrated: boolean;
 } {
@@ -211,9 +205,10 @@ export function dropTemplateQuickActions(config: DatabaseViewConfig): {
   // Persisted JSON, so the guard is against the shape and not against the type:
   // an older or hand-edited vault can hold anything here.
   if (!Array.isArray(actions)) return { config, migrated: false };
-  const kept = actions.filter(
-    (action) => (action as { kind?: unknown } | null)?.kind !== "apply-template"
-  );
+  const kept = actions.filter((action) => {
+    const kind = (action as { kind?: unknown } | null)?.kind;
+    return kind !== "apply-template" && kind !== "toggle-formula-bar";
+  });
   if (kept.length === actions.length) return { config, migrated: false };
   return {
     config: { ...config, quickActions: kept as NonNullable<DatabaseViewConfig["quickActions"]> },

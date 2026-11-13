@@ -1,10 +1,15 @@
-import dayjs from "dayjs";
 import type { DataValue, Optional } from "src/lib/dataframe/dataframe";
+import { dateAsText } from "src/lib/helpers/dateShape";
 import { isDataviewLink } from "./api";
 
 /**
  * standardizeValues converts a Dataview data structure of values to the common
  * DataValue format.
+ *
+ * w4-p01 (F05): only an absent value is skipped. `0`, `false` and `""` are
+ * values, and an empty property stays `null` (present, empty) — this used to
+ * drop every falsy value, so a zero balance or an unticked box vanished before
+ * any filter or aggregate saw it.
  */
 export function standardizeValues(
   values: Record<string, unknown>
@@ -14,11 +19,13 @@ export function standardizeValues(
   Object.keys(values).forEach((field) => {
     const value = values[field];
 
-    if (!value) {
+    if (value === undefined) {
       return;
     }
 
-    if (Array.isArray(value)) {
+    if (value === null) {
+      res[field] = null;
+    } else if (Array.isArray(value)) {
       res[field] = value.map((v: unknown) =>
         typeof v === "object" && v !== null ? standardizeObject(v) : v
       ) as DataValue;
@@ -38,12 +45,9 @@ function standardizeObject(value: object): string | undefined {
     return value.toString();
   }
   if ("ts" in value) {
-    const d = dayjs(value.ts as number);
-    // Preserve time component if present (non-midnight)
-    if (d.hour() !== 0 || d.minute() !== 0 || d.second() !== 0) {
-      return d.format("YYYY-MM-DD HH:mm");
-    }
-    return d.format("YYYY-MM-DD");
+    // Seconds are kept; a value at exact midnight reads as its day (Luxon
+    // does not say whether it was written with a time).
+    return dateAsText(new Date(value.ts as number));
   }
   return undefined;
 }

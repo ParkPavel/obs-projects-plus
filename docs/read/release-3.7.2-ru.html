@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Projects Plus 3.7.2"><meta name="color-scheme" content="light dark">
+<meta name="referrer" content="strict-origin-when-cross-origin"><title>Projects Plus 3.7.2 · Projects Plus</title>
+<meta property="og:type" content="website"><meta property="og:title" content="Projects Plus 3.7.2"><meta property="og:description" content="Projects Plus 3.7.2"><meta property="og:url" content="https://parkpavel.github.io/obs-projects-plus/read/release-3.7.2-ru.html"><meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://parkpavel.github.io/obs-projects-plus/read/release-3.7.2-ru.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/site.css">
+<script type="module" src="../assets/site.js"></script></head>
+<body data-prefix="../" data-language="ru"><a class="skip-link" href="#main">К содержимому</a>
+<header class="site-header"><a class="wordmark" href="../index.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
+<nav aria-label="Основная навигация"><a href="../index.html#ideas">Сад идей</a><a href="../read/user-guide.html">Документация</a><a class="language" href="../read/release-3.7.2.html" hreflang="en">English</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../index.html">← Все возможности</a><strong>На этой странице</strong><nav aria-label="На этой странице"><a href="#что-изменилось-в-работе">Что изменилось в работе</a><a href="#важное-при-переходе-формул">Важное при переходе формул</a><a href="#установка-и-обновление">Установка и обновление</a><a href="#проверка-и-поддержка">Проверка и поддержка</a></nav></aside><article class="doc-article"><p class="doc-version">Документация исходного кода; установленный выпуск может отличаться.</p><h1 id="projects-plus-372">Projects Plus 3.7.2</h1>
+<p><a href="../read/release-3.7.2.html">English</a> · <a href="https://github.com/ParkPavel/obs-projects-plus/releases/tag/3.7.2">Скачать</a> · <a href="../read/changelog-ru.html">История изменений</a></p>
+<p>Выпуск от 14 ноября 2026 года. Нужен Obsidian <strong>1.8.7 или новее</strong>. Версия объединяет стабилизацию редактирования, мобильных форм, календарей, досок и вычисляемых данных. Записи остаются Markdown-файлами в вашем хранилище.</p>
+<h2 id="что-изменилось-в-работе">Что изменилось в работе</h2>
+<ul>
+<li>Записываемые Boolean-свойства переключаются прямо на карточках доски без открытия просмотрщика заметки. Вычисляемые значения и источники только для чтения защищены.</li>
+<li>Палитра и избранные цвета используют основную прокрутку формы. В форме нового события палитра раскрыта сразу.</li>
+<li>Список Agenda на iPhone можно редактировать при открытой клавиатуре: поля видны, подсказки размещаются в доступной области, кнопки сохранения и отмены доступны. Повторное открытие клавиатуры больше не схлопывает форму.</li>
+<li>Вычисляемые свойства в просмотрщике заметки доступны после сворачивания обычных свойств в той же области прокрутки.</li>
+<li>Текст, числа, даты и списки редактируются общими контролами черновика с подтверждением, отменой и обработкой IME. При ошибке записи черновик сохраняется для повторной попытки.</li>
+<li>Списки Agenda сочетают выбранную дату с условиями списка. На телефоне удерживайте пустое время календаря, растяните диапазон и отпустите для открытия формы события. Колонки доски временно сворачиваются при переносе и затем возвращаются к прежнему состоянию.</li>
+<li>Встроенные виды имеют локальные настройки; Dashboard объединяет связанные проекты, связи, rollup, графики и вычисляемые столбцы. Поддерживаемые настройки и ограничения описаны в <a href="../read/user-guide.html">руководстве</a>.</li>
+</ul>
+<h2 id="важное-при-переходе-формул">Важное при переходе формул</h2>
+<p>Формулы, вычисляемые столбцы преобразований и фильтры Agenda используют один строгий исполнитель <strong><code>unified-v1</code></strong>. Выражения сохраняются, но результаты могут измениться из-за удаления прежних правил. Например, прежняя числовая интерпретация <code>&quot;2&quot; &lt; &quot;10&quot;</code> сменяется строгим сравнением строк с результатом <code>false</code>.</p>
+<p>Перед публикацией перенесённых настроек плагин проверяет их резервную копию. Файлы <code>formula-unified-*.data.json</code> и отчёты <code>formula-unified-*.report.json</code> сохраняются в папке плагина. Ошибка резервного копирования блокирует миграцию. Отчёт перечисляет перенесённые определения и ошибки синтаксиса, но не сравнивает старые и новые результаты каждой записи.</p>
+<p>Обновите все устройства вместе, сохраните эти файлы и проверьте известные примеры на своих данных. Результаты формул вычисляются и не перезаписывают исходные заметки. Неизвестные будущие версии формул не вычисляются. Регулярные выражения с чрезмерной или неподтверждённой сложностью отклоняются до исполнения.</p>
+<h2 id="установка-и-обновление">Установка и обновление</h2>
+<ol>
+<li>Скопируйте хранилище вместе с папкой конфигурации, прежними файлами плагина и <code>data.json</code>.</li>
+<li>Скачайте <code>main.js</code>, <code>manifest.json</code> и <code>styles.css</code> из одного выпуска. Замените три файла в <code>.obsidian/plugins/obs-projects-plus/</code> или своей папке конфигурации. Сохраните <code>data.json</code>.</li>
+<li>Перезапустите Obsidian, проверьте версию <strong>3.7.2</strong>, редактирование, сохранение настроек и примеры формул. Если файлы плагина синхронизируются, выполните отправку и получение на обоих устройствах и перезапустите принимающее приложение: само появление ZIP ещё не устанавливает плагин.</li>
+</ol>
+<p>Для отката при закрытом Obsidian верните прежние согласованные файлы плагина <strong>и</strong> исходные настройки. Более новые изменения настроек сначала сохраните отдельно. Старые настройки под новым исполнителем не возвращают удалённые правила формул. Полная процедура — в <a href="../read/upgrade-ru.html">руководстве по обновлению и откату</a>.</p>
+<h2 id="проверка-и-поддержка">Проверка и поддержка</h2>
+<p>Сценарии редактирования и размещения интерфейса прошли автоматические проверки и приёмку сопровождающего на ПК и настоящем iPhone. Это описание проверенного объёма, а не всех возможных устройств, тем и конфигураций хранилища.</p>
+<p>О воспроизводимой проблеме сообщайте в <a href="https://github.com/ParkPavel/obs-projects-plus/issues">Issues</a>: версии плагина и Obsidian, устройство, шаги, ожидаемый и фактический результат. Удаляйте личное содержимое из примеров. Внутренние контракты разработки и прежние матрицы стабилизации остаются историческими документами; актуальное поведение описывают этот обзор и руководство пользователя.</p>
+<p class="doc-source"><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/docs/release-3.7.2-RU.md">Исходник страницы ↗</a></p></article></main>
+<footer class="site-footer"><a class="wordmark" href="../index.html">Projects Plus</a><p>Открытый проект Park Pavel. Основан на Obsidian Projects Маркуса Олссона.</p><div><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache-2.0</a><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE">Attribution</a><a href="https://github.com/ParkPavel/obs-projects-plus/issues">Обратная связь</a></div></footer>
+<aside class="search-panel" aria-label="Поиск по документации"><label for="doc-search">Поиск по документации</label><div class="search-input-wrap"><input id="doc-search" type="search" placeholder="Поиск…" autocomplete="off" aria-controls="search-results"><kbd>/</kbd></div><ul id="search-results" hidden></ul><p id="search-status" role="status" aria-live="polite" data-empty="Ничего не найдено. Попробуйте «календарь», «formula» или «источник»."></p></aside>
+</body></html>

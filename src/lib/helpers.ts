@@ -2,9 +2,10 @@ import { normalizePath, TFile } from "obsidian";
 import { get } from "svelte/store";
 
 import { app } from "src/lib/stores/obsidian";
-import type { FilterCondition, ProjectDefinition, ViewDefinition } from "src/settings/settings";
+import type { FilterCondition, FilterDefinition, ProjectDefinition, ViewDefinition } from "src/settings/settings";
 import { getContext, setContext } from "svelte";
 import type { DataField } from "./dataframe/dataframe";
+import { toNumber } from "./engine/numeric";
 
 // Export date formatting utilities
 export {
@@ -177,8 +178,13 @@ export function makeContext<T>(): Context<T> {
 }
 
 /**
- * Extract frontmatter values from active "is" filter conditions.
- * Only equality filters can reliably map to record values.
+ * Frontmatter values a new note takes from the view's filter, so it shows in
+ * the view it was created from. Only conditions that name ONE value map to a
+ * value: `is` (text), `eq` (number), checked / not checked. Pass the
+ * conditions from `prefillConditions`, which leaves out an «or».
+ *
+ * w4-p03 (acceptance 26.10, N14): a number and a checkbox are written too,
+ * as a number and a boolean, not only text equality.
  *
  * @param conditions - Enabled filter conditions from the view
  * @param excludeField - Optional field name to exclude (e.g., Board groupBy field)
@@ -187,12 +193,39 @@ export function makeContext<T>(): Context<T> {
 export function getFilterValuesFromConditions(
   conditions: FilterCondition[],
   excludeField?: string
-): Record<string, string> {
-  const values: Record<string, string> = {};
+): Record<string, string | number | boolean> {
+  const values = new Map<string, string | number | boolean>();
+  const conflicts = new Set<string>();
   for (const c of conditions) {
-    if (c.operator === "is" && c.value !== undefined && c.field !== excludeField) {
-      values[c.field] = c.value;
+    if (c.enabled === false || c.field === excludeField || conflicts.has(c.field)) continue;
+    const n = c.operator === "eq" ? toNumber(c.value) : null;
+    let value: string | number | boolean | undefined;
+    if (c.operator === "is" && c.value !== undefined) {
+      value = c.value;
+    } else if (n !== null) {
+      value = n;
+    } else if (c.operator === "is-checked") {
+      value = true;
+    } else if (c.operator === "is-not-checked") {
+      value = false;
     }
+    if (value === undefined) continue;
+    if (values.has(c.field) && !Object.is(values.get(c.field), value)) {
+      values.delete(c.field); conflicts.add(c.field);
+    } else values.set(c.field, value);
   }
-  return values;
+  return Object.fromEntries(values);
+}
+
+/**
+ * w4-p03 (N14) — the enabled conditions every record of the view must meet:
+ * those of an «and», nested groups included. An «or» of two or more parts
+ * names no single value to write, so it gives none.
+ */
+export function prefillConditions(filter: FilterDefinition | undefined): FilterCondition[] {
+  if (!filter) return [];
+  const own = (filter.conditions ?? []).filter((c) => c.enabled !== false);
+  const groups = filter.groups ?? [];
+  if (filter.conjunction === "or" && own.length + groups.length > 1) return [];
+  return [...own, ...groups.flatMap(prefillConditions)];
 }

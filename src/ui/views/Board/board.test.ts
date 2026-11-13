@@ -124,3 +124,30 @@ describe("getColumns — semantic group mode (NPLAN-C1)", () => {
     expect(ids).not.toContain("views.board.no-status");
   });
 });
+
+describe("getColumns — pinning is a view setting (i3-board)", () => {
+  const field: DataField = {
+    name: "status",
+    type: DataFieldType.String,
+    repeated: false,
+    identifier: false,
+    derived: false,
+    typeConfig: { options: ["Todo", "Doing", "Done"] },
+  };
+  const records = [makeRecord("a", "Todo"), makeRecord("b", "Doing"), makeRecord("c", "Done")];
+
+  test("a status defined in the field's options is not pinned, so it can be dragged", () => {
+    const cols = getColumns(records, {}, field, undefined, false, ["Todo", "Doing", "Done"]);
+    expect(cols.map((c) => c.pinned)).toEqual([false, false, false]);
+  });
+
+  test("only a column the view pinned is pinned", () => {
+    const cols = getColumns(records, { Doing: { pinned: true } }, field, undefined, false, []);
+    expect(cols.filter((c) => c.pinned).map((c) => c.id)).toEqual(["Doing"]);
+  });
+
+  test("the saved weights order the columns", () => {
+    const settings = { Todo: { weight: 2 }, Doing: { weight: 0 }, Done: { weight: 1 } };
+    expect(getColumns(records, settings, field).map((c) => c.id)).toEqual(["Doing", "Done", "Todo"]);
+  });
+});

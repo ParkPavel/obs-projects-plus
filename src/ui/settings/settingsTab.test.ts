@@ -43,6 +43,14 @@ jest.mock("obsidian", () => {
 
 // Every component the tab mounts, so a test can see which were destroyed.
 const mockMounted: Array<{ $destroy: jest.Mock }> = [];
+// This suite isolates catalogue order/lifecycle; preferenceFields.test uses the real kit.
+jest.mock("src/ui/settings/preferenceFields", () => ({
+  preferenceNumber: () => { const field = { $destroy: jest.fn(), $set: jest.fn() }; mockMounted.push(field); return field; },
+  preferenceChoice: (_target: unknown, _label: string, _value: string, options: Array<{ value: string }>) => {
+    for (const option of options) mockRendered.push(`option:${option.value}`);
+    const field = { $destroy: jest.fn(), $set: jest.fn() }; mockMounted.push(field); return field;
+  },
+}));
 jest.mock("src/ui/settings/Projects.svelte", () =>
   jest.fn().mockImplementation(() => { const c = { $set: jest.fn(), $destroy: jest.fn() }; mockMounted.push(c); return c; }));
 jest.mock("src/ui/settings/Archives.svelte", () =>

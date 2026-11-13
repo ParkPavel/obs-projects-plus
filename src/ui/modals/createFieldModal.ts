@@ -6,6 +6,7 @@ import { nextUniqueFieldName } from "src/lib/helpers";
 
 import CreateField from "./components/CreateField.svelte";
 import type {
+  DataFrame,
   DataField,
   DataValue,
   Optional,
@@ -18,7 +19,14 @@ export class CreateFieldModal extends Modal {
   constructor(
     app: App,
     readonly fields: DataField[],
-    readonly onCreate: (field: DataField, value: Optional<DataValue>) => void | Promise<void>,
+    /**
+     * Resolves to `false` (or throws) when the write failed: the modal stays
+     * open with the draft. M03 (C03): it used to close before the write ended.
+     */
+    readonly onCreate: (
+      field: DataField,
+      value: Optional<DataValue>
+    ) => void | boolean | Promise<void | boolean>,
     readonly availableProjects: ProjectDefinition[] = [],
     readonly currentProjectId: string = "",
     readonly onSetupRelation?: (field: DataField) => void,
@@ -27,7 +35,12 @@ export class CreateFieldModal extends Modal {
      * on click with no statement of the consequence; Vision scene 2 asks for
      * exactly this sentence before the write.
      */
-    readonly recordCount: number = 0
+    readonly recordCount: number = 0,
+    /** B5 — target-project pickers, the rollup example and the inline relation. */
+    readonly flow: {
+      readonly resolveFrame?: (projectId: string) => Promise<DataFrame | null>;
+      readonly onCreateRelation?: (field: DataField) => Promise<boolean>;
+    } = {}
   ) {
     super(app);
     // Shared plugin modal root: phone input size, reduced motion (tokens.css).
@@ -47,9 +60,12 @@ export class CreateFieldModal extends Modal {
         currentProjectId: this.currentProjectId,
         onSetupRelation: this.onSetupRelation,
         recordCount: this.recordCount,
-        onCreate: (field: DataField, value: Optional<DataValue>) => {
-          void this.onCreate(field, value);
-          this.close();
+        resolveFrame: this.flow.resolveFrame,
+        onCreateRelation: this.flow.onCreateRelation,
+        onCreate: async (field: DataField, value: Optional<DataValue>) => {
+          const outcome = await this.onCreate(field, value);
+          if (outcome !== false) this.close();
+          return outcome;
         },
       },
     });

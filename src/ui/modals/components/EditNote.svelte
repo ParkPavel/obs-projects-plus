@@ -14,11 +14,14 @@
   import { FieldControl } from "src/ui/components/FieldControl";
   import { isColorFieldName } from "src/lib/colors/recordColor";
   import type { DataField, DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
-  import { DataFieldType, isString } from "src/lib/dataframe/dataframe";
+  import { DataFieldType } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
+  import { app } from "src/lib/stores/obsidian";
+  import { templateFoldersOf, valueSuggestions } from "src/lib/suggestions/valueSuggestions";
   import { isTouchDevice } from "src/lib/stores/ui";
   import { dataFrame } from "src/lib/stores/dataframe";
   import { mergeExternal } from "./editNoteMerge";
+  import { OVERLAY_KEY } from "src/lib/visualizer/overlay";
   import { onMount, onDestroy } from "svelte";
   import { Notice } from "obsidian";
   import { openContextMenu } from "src/lib/contextMenu";
@@ -74,36 +77,19 @@
     }
   }
   
-  // ========================================
-  // FIELD VALUE SUGGESTIONS
-  // Собираем уникальные значения для каждого поля из всех записей
-  // ========================================
-  $: fieldSuggestions = (() => {
+  // Field value suggestions share the filter/agenda pool; templates are left out.
+  $: fieldSuggestions = suggestionsByField(fields, allRecords, $app);
+  function suggestionsByField(list: DataField[], source: DataRecord[], obsidianApp: unknown): Record<string, string[]> {
     const suggestions: Record<string, string[]> = {};
-    
-    fields.forEach(field => {
-      // Пропускаем поля с уже настроенными опциями
-      if (field.typeConfig?.options?.length) return;
-      // Только для строковых полей без повторений
-      if (field.type !== DataFieldType.String || field.repeated) return;
-      
-      const uniqueValues = new Set<string>();
-      
-      allRecords.forEach(rec => {
-        const val = rec.values[field.name];
-        if (isString(val) && val.trim() !== '') {
-          uniqueValues.add(val);
-        }
-      });
-      
-      // Только если есть хотя бы 2 уникальных значения для подсказок
-      if (uniqueValues.size >= 2) {
-        suggestions[field.name] = Array.from(uniqueValues).sort();
-      }
-    });
-    
+    const templateFolders = templateFoldersOf(obsidianApp);
+    for (const field of list) {
+      if (field.derived) continue;
+      if (![DataFieldType.String, DataFieldType.List, DataFieldType.Select, DataFieldType.Status, DataFieldType.Number, DataFieldType.Date].includes(field.type)) continue;
+      const values = valueSuggestions(source, field, { templateFolders, purpose: "edit" });
+      if (values.length) suggestions[field.name] = values;
+    }
     return suggestions;
-  })();
+  }
   
   // ========================================
   // REACTIVITY FIX: Force UI updates on value changes
@@ -301,7 +287,11 @@
     return categoryPriority[category] ?? 99;
   }
 
-  $: editableFields = fields
+  // M03 (S05): the structured overlay arrives as a JSON string; typing into it
+  // would replace the object in frontmatter. Only this exact key is withheld.
+  $: noteFields = fields.filter((field) => field.name !== OVERLAY_KEY);
+
+  $: editableFields = noteFields
     .filter((field) => !field.derived)
     .sort((a, b) => {
       const priorityDiff = getFieldPriority(a) - getFieldPriority(b);
@@ -309,7 +299,7 @@
       return a.name.localeCompare(b.name);
     });
 
-  $: readonlyFields = fields.filter((field) => field.derived);
+  $: readonlyFields = noteFields.filter((field) => field.derived);
 
   // R3 (UT-R3): the Colors section must exist even when the note has no
   // color field yet — picking a color CREATES the `color` frontmatter key.

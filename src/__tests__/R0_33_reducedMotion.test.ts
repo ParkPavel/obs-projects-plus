@@ -64,8 +64,8 @@ const TOKENS = "ui/tokens/tokens.css";
 const ROOTS: ReadonlyArray<{ root: string; owner: string }> = [
   // The view root of every leaf: views, navbar, settings panel, filter sheet.
   { root: ".projects-container", owner: "ui/app/App.svelte" },
-  // EditNote (and CreateNote) modal containers.
-  { root: ".projects-modal", owner: "ui/modals/editNoteModal.ts" },
+  // The CreateNote modal container (the EditNote modal is retired, i3).
+  { root: ".projects-modal", owner: "ui/modals/createNoteModal.ts" },
   { root: ".ppp-add-view-modal", owner: "ui/modals/addViewModal.ts" },
   // The shared root of every plugin modal (ios-m1); each modal file is checked
   // separately below, this owner is one of them.
@@ -73,9 +73,7 @@ const ROOTS: ReadonlyArray<{ root: string; owner: string }> = [
   // FloatingPopup: the desktop branch is portalled to <body>.
   { root: ".ppp-popup", owner: "ui/components/FloatingPopup/FloatingPopup.svelte" },
   // Hand-appended to <body>.
-  { root: ".ppp-popover-container", owner: "ui/views/Calendar/agenda/FilterRow.svelte" },
   { root: ".ppp-list-editor-overlay", owner: "ui/views/Calendar/components/Timeline/AgendaSidebar.svelte" },
-  { root: ".obsidian-projects-popup-portal", owner: "ui/views/Calendar/components/DayPopup/DayPopup.svelte" },
   // Drag ghosts portalled to <body>.
   { root: ".ppp-strip-ghost-portal", owner: "ui/views/Calendar/components/Calendar/TimelineView.svelte" },
   { root: ".ppp-timed-ghost-portal", owner: "ui/views/Calendar/components/Calendar/TimelineView.svelte" },
@@ -365,6 +363,23 @@ describe("R0.33 — the tree", () => {
     expect(stale).toEqual([]);
   });
 
+  it("Agenda operators cannot restore the retired hand-appended popup outside the shared root", () => {
+    // w4-filters: the agenda edits its conditions in the shared FilterPanel.
+    const editor = stripComponentComments(readText(join(SRC_ROOT, "ui/views/Calendar/agenda/AgendaFilterEditor.svelte")));
+    expect(editor).toContain("<FilterPanel");
+    const panel = stripComponentComments(readText(join(SRC_ROOT, "ui/components/FilterPanel/FilterPanel.svelte")));
+    expect(panel).toContain("<OptionField");
+    const option = stripComponentComments(readText(join(SRC_ROOT, "ui/components/fields/OptionField.svelte")));
+    expect(option).toContain("<ComboField");
+    const combo = stripComponentComments(readText(join(SRC_ROOT, "ui/components/fields/ComboField.svelte")));
+    expect(combo).toContain('class="ppp-popup ppp-combo-popup"');
+    expect(combo).toContain('use:portal={{ to: "document-body" }}');
+    for (const source of [panel, option, combo]) {
+      expect(source).not.toContain("ppp-popover-container");
+      expect(source).not.toContain("activeDocument.body.appendChild");
+    }
+  });
+
   it("every node portalled to <body> carries a plugin root", () => {
     const roots = new Set(ROOTS.map((r) => r.root.slice(1)));
     const sites = collectSourceFiles(SRC_ROOT, [".svelte"]).flatMap((full) =>
@@ -387,8 +402,22 @@ describe("R0.33 — the tree", () => {
       .filter((full) => !full.endsWith(".test.ts"))
       .map((full) => ({ file: relToSrc(full), ...modalRootCount(stripComponentComments(readText(full))) }))
       .filter(({ classes }) => classes > 0);
-    // Twelve plugin modals when ios-m1 landed; an empty scan would be vacuous.
-    expect(modals.length).toBeGreaterThanOrEqual(12);
+    // The exact set, not a floor: adding or removing a modal must be a visible
+    // edit here (editNoteModal left in w4-p00; a floor of twelve then failed
+    // for the wrong reason and said nothing about which modal went missing); the
+    // name-only inputDialog left in w4-input2 — names are typed in place).
+    expect(modals.map(({ file }) => file.replace(/\\/g, "/")).sort()).toEqual([
+      "ui/app/onboarding/onboardingModal.ts",
+      "ui/modals/addViewModal.ts",
+      "ui/modals/configureField.ts",
+      "ui/modals/confirmDialog.ts",
+      "ui/modals/createFieldModal.ts",
+      "ui/modals/createNoteModal.ts",
+      "ui/modals/createProjectModal.ts",
+      "ui/modals/relationSetupModal.ts",
+      "ui/modals/schemaModal.ts",
+      "ui/views/VisualizerPane/RelationPickerModal.ts",
+    ]);
     const bare = modals.filter(({ classes, roots }) => roots < classes).map(({ file }) => file);
     expect(bare).toEqual([]);
   });

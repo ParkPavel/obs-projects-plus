@@ -14,6 +14,10 @@
 
 import { readFileSync } from "fs";
 import { resolve } from "path";
+import ts from "typescript";
+import vm from "vm";
+import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
+import { createTransformBudget } from "src/lib/dashboard-engine/transformBudget";
 
 const WIDGETS = resolve(__dirname, "..");
 const read = (rel: string) => readFileSync(resolve(WIDGETS, rel), "utf8");
@@ -97,8 +101,9 @@ describe("#142/#C4 the gallery branch is guarded too", () => {
     expect(gallery).toMatch(/export let dataReadOnly = false;/);
   });
 
-  it("record creation is gated on the generic flag, unchanged since #142", () => {
-    expect(gallery).toMatch(/\{#if !readonly\}\s*\n\s*<IconButton\s*\n\s*icon="plus"/);
+  it("all record-creation entry points require writable data", () => {
+    expect(gallery).toMatch(/\$: canCreate = !readonly && !dataReadOnly;/);
+    expect(gallery.match(/\{#if canCreate\b/g) ?? []).toHaveLength(3);
   });
 
   it("the edit modal keys on dataReadOnly, not the generic flag — #C4", () => {
@@ -108,12 +113,10 @@ describe("#142/#C4 the gallery branch is guarded too", () => {
     // sets restores that standalone editing while keeping the external-block
     // guarantee: viewing stays available, only the editor whose writes would
     // land in the wrong project is withheld.
-    expect(gallery).toMatch(
-      /if \(dataReadOnly\) \{[\s\S]*?openRecord\(\{ id: record\.id \}, PLAIN_MODE[\s\S]*?return;/
-    );
-    expect(gallery).not.toMatch(
-      /if \(readonly\) \{[\s\S]*?openRecord\(\{ id: record\.id \}, PLAIN_MODE/
-    );
+    // i3-close: the editor is the properties block in the peek; its read-only
+    // flag is dataReadOnly alone, never the generic flag.
+    expect(gallery).toMatch(/function handleRecordClick\(record: DataRecord\) \{\s*void openRecord\(\{ id: record\.id, readonly: dataReadOnly \}, "peek"/);
+    expect(gallery).not.toMatch(/readonly: dataReadOnly \|\| readonly \}, "peek"/);
   });
 
   it("the block hands the gallery the same combined readonly as the others, plus dataReadOnly", () => {
@@ -145,12 +148,18 @@ describe("#C4 Board and Calendar consume the guard, not just receive it", () => 
 
   it("Board declares the prop and guards click, check and drag-update", () => {
     expect(boardView).toMatch(/export let dataReadOnly: boolean = false;/);
-    expect(boardView).toMatch(/if \(dataReadOnly\) \{[\s\S]*?openRecord\(\{ id: record\.id \}, PLAIN_MODE/);
+    // i3-close: the pencil opens the properties block in the peek, read-only on read-only data.
+    expect(boardView).toMatch(/const handleRecordEdit: OnRecordClick = \(record\) => \{\s*void activateRecord\(\{ id: record\.id, readonly: dataReadOnly \}/);
   });
 
   it("Calendar declares the prop and guards click, check and drag-change", () => {
     expect(calendarView).toMatch(/export let dataReadOnly: boolean = false;/);
-    expect(calendarView).toMatch(/if \(dataReadOnly\) \{[\s\S]*?openRecord\(\{ id: entry\.id \}, PLAIN_MODE/);
+    // B10: a click opens a read-only peek on a read-only source; the editor
+    // (day window settings) still falls back to opening the note.
+    expect(calendarView).toMatch(/activateRecord\(\{ id: entry\.id, readonly: dataReadOnly \|\| readonly \}/);
+    // i3-calendar: the day window's settings open the same peek, so its
+    // read-only flag covers them too (no separate editor any more).
+    expect(calendarView).toMatch(/function handleDayPopupRecordSettings\(record: DataRecord\) \{\s*showDayPopup = false;\s*handleRecordClick\(record\);/);
   });
 
   it("Calendar's infinite views lose onRecordChange/onRecordAdd, not just gain a Notice", () => {
@@ -200,8 +209,25 @@ describe("#137 the pipeline editor reads the block's own source", () => {
   it("live counters execute with the same right-frames the runtime uses", () => {
     // Without them a `join` preview resolves no right frame and reports
     // different numbers than the widget behind the popup.
-    expect(host).toMatch(/<PipelineEditor[\s\S]*?\{rightFrames\}/);
-    expect(editor).toMatch(/executeTransform\(frame, \{ steps: steps\.slice\(0, i \+ 1\) \}, \{ rightFrames \}\)/);
+    // i3-data: the runtime's right-frames are the preloaded ones merged with
+    // live block sources (`io`), and the editor gets exactly those.
+    expect(host).toMatch(/rightFrames: io\.rightFrames/);
+    expect(host).toMatch(/<PipelineEditor[\s\S]*?rightFrames=\{io\.rightFrames\}/);
+    // Run the actual preview: dropping rightFrames would keep two rows instead of one.
+    expect(editor).toMatch(/scheduleCounts\(source as DataFrame \| null, steps, rightFrames\)/);
+    const script = editor.slice(editor.indexOf(">") + 1, editor.indexOf("</script>"));
+    const ast = ts.createSourceFile("preview.ts", script, ts.ScriptTarget.Latest, true);
+    const node = ast.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "countSteps");
+    if (!node) throw new Error("Missing production countSteps");
+    const compiled = ts.transpileModule(node.getText(ast), { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText;
+    const frame = { fields: [{ name: "key" }], records: [{ id: "a.md", values: { key: "a" } }, { id: "b.md", values: { key: "b" } }] };
+    const right = new Map([["right", { fields: [{ name: "key" }, { name: "label" }], records: [{ id: "right.md", values: { key: "a", label: "A" } }] }]]);
+    const steps = [{ type: "join", rightSourceId: "right", on: { leftKey: "key", rightKey: "key" }, how: "inner" }];
+    const env = { frame, steps, right, executeTransform, createTransformBudget, performance,
+      previewStopped: undefined, stepInputFields: [] as string[][] };
+    const counts = vm.runInNewContext(`${compiled}; countSteps(frame, steps, right);`, env, { timeout: 1000 });
+    expect(counts).toEqual([{ rowsIn: 2, rowsOut: 1 }]);
+    expect(env.stepInputFields).toEqual([["key"]]);
   });
 
   it("the editor says so when there is no schema to configure against", () => {
@@ -212,8 +238,11 @@ describe("#137 the pipeline editor reads the block's own source", () => {
 
 // Codex review of 23d98a6: the assertions above name "check" and "drag" but
 // only pinned the click guard — deleting the checkbox or drag guards left every
-// test green. Each write handler must open with the guard, before any write,
-// and every drag path must be disabled by it.
+// test green. Each shared-data write handler must open with the guard, before
+// any write, and every drag path must be disabled by it. Column sort now also
+// saves local presentation config: embeddedBoardConfig.test.ts exercises its
+// actual callback for embedded and standalone read-only sources, ensuring that
+// local weights never mutate the source schema.
 describe("#C4 every write path is guarded, handler by handler", () => {
   const read = (rel: string) => readFileSync(resolve(WIDGETS, rel), "utf8");
   const boardView = read("../../Board/BoardView.svelte");
@@ -224,17 +253,23 @@ describe("#C4 every write path is guarded, handler by handler", () => {
     const at = src.search(signature);
     if (at < 0) throw new Error(`handler not found: ${signature}`);
     const body = src.slice(at, at + 600);
-    const guard = body.search(/if \(dataReadOnly\) return;/);
+    const guard = body.search(/if \(dataReadOnly\) return(?: false)?;/);
     // Settings writes count too: a sort or rename can persist config before any
     // record is touched (recheck of 5f331b7).
     const write = body.search(/\bapi\.|await |updateRecord|\.process\(|updateFieldConfig|saveConfig|settings\./);
     return guard >= 0 && (write < 0 || guard < write);
   }
 
+  it("recognises a negative write acknowledgement while still rejecting late or inverted guards", () => {
+    const signature = /async function save\(/;
+    expect(opensWithGuard("async function save() { if (dataReadOnly) return false; await api.updateRecord(); }", signature)).toBe(true);
+    expect(opensWithGuard("async function save() { await api.updateRecord(); if (dataReadOnly) return false; }", signature)).toBe(false);
+    expect(opensWithGuard("async function save() { if (!dataReadOnly) return false; await api.updateRecord(); }", signature)).toBe(false);
+  });
+
   it.each([
     ["check", /const handleRecordCheck =/],
     ["drag-update", /const handleRecordUpdate =/],
-    ["column sort", /const handleSortColumns =/],
     ["column delete", /const handleColumnDelete =/],
     ["column rename", /const handleColumnRename =/],
   ])("Board %s opens with the guard", (_name, signature) => {

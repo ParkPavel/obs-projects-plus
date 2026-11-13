@@ -22,6 +22,7 @@ import type { DatabaseViewConfig, WidgetDefinition, WidgetType } from "./types";
 interface WidgetControllerOptions {
   getConfig: () => DatabaseViewConfig | undefined;
   saveConfig: (cfg: DatabaseViewConfig) => void;
+  onAdded?: (id: string) => void;
   /** Lazily read — avoids capturing a stale store reference at construction time. */
   i18nStore: typeof I18nStore;
 }
@@ -34,20 +35,24 @@ export interface WidgetController {
    * made (Svelte's `$:` block that refreshes it runs on the next tick, not
    * synchronously). Every other caller ignores the return value.
    */
-  addWidget(type: WidgetType, initialConfig?: Partial<Omit<WidgetDefinition, "id" | "type">>): DatabaseViewConfig | undefined;
+  addWidget(type: WidgetType, initialConfig?: Partial<Omit<WidgetDefinition, "id" | "type">>, index?: number): DatabaseViewConfig | undefined;
+  /** B7: a copy with a fresh id, right after the original. */
+  duplicateWidget(id: string): void;
   removeWidget(id: string): void;
   /** CustomEvent handler: widget's own config changed (title, layout, type-specific options). */
   handleWidgetConfigChange(e: CustomEvent<{ id: string; changes: Partial<WidgetDefinition> }>): void;
   /** CustomEvent handler: primary DataTable config changed. */
   handleTableConfigChange(e: CustomEvent<unknown>): void;
   /** FormulaBar apply: upsert a view-level formula field by name. */
-  applyFormulaField(name: string, expression: string): void;
+  applyFormulaField(name: string, expression: string, draft?: import("src/lib/formula/version").VersionedFormula): void;
+  removeFormulaField(name: string): void;
 }
 
 export function createWidgetController({
   getConfig,
   saveConfig,
   i18nStore,
+  onAdded,
 }: WidgetControllerOptions): WidgetController {
   function cfg() {
     return getConfig();
@@ -55,7 +60,8 @@ export function createWidgetController({
 
   function addWidget(
     type: WidgetType,
-    initialConfig?: Partial<Omit<WidgetDefinition, "id" | "type">>
+    initialConfig?: Partial<Omit<WidgetDefinition, "id" | "type">>,
+    index?: number
   ): DatabaseViewConfig | undefined {
     const config = cfg();
     if (!config) return undefined;
@@ -72,9 +78,22 @@ export function createWidgetController({
       config: {},
       ...initialConfig,
     };
-    const next: DatabaseViewConfig = { ...config, widgets: [...config.widgets, newWidget] };
+    const next: DatabaseViewConfig = { ...config, widgets: insertAt(config.widgets, newWidget, index) };
     saveConfig(next);
+    onAdded?.(id);
     return next;
+  }
+
+  function duplicateWidget(id: string): void {
+    const config = cfg();
+    if (!config) return;
+    const index = config.widgets.findIndex((w) => w.id === id);
+    const source = config.widgets[index];
+    if (!source) return;
+    // A structured copy: nested config/transform must not be shared with the original.
+    const copy: WidgetDefinition = { ...(JSON.parse(JSON.stringify(source)) as WidgetDefinition), id: `w-${crypto.randomUUID().slice(0, 8)}` };
+    saveConfig({ ...config, widgets: insertAt(config.widgets, copy, index + 1) });
+    onAdded?.(copy.id);
   }
 
   function removeWidget(id: string): void {
@@ -107,15 +126,33 @@ export function createWidgetController({
     saveConfig({ ...config, table: e.detail as DatabaseViewConfig["table"] });
   }
 
-  function applyFormulaField(name: string, expression: string): void {
+  function applyFormulaField(name: string, expression: string, draft?: import("src/lib/formula/version").VersionedFormula): void {
     const config = cfg();
     if (!config) return;
     const existing = config.formulaFields ?? [];
+    const applyDraft = (definition: import("./types").FormulaFieldDef) => {
+      if (!draft) return { ...definition, expression };
+      const { formulaVersion: _oldVersion, ...rest } = definition;
+      return { ...rest, expression, ...(draft.formulaVersion !== undefined ? { formulaVersion: draft.formulaVersion } : {}) };
+    };
     const updated = existing.some((f) => f.name === name)
-      ? existing.map((f) => (f.name === name ? { ...f, expression } : f))
-      : [...existing, { name, expression }];
+      ? existing.map((f) => (f.name === name ? applyDraft(f) : f))
+      : [...existing, applyDraft({ name, expression })];
     saveConfig({ ...config, formulaFields: updated });
   }
 
-  return { addWidget, removeWidget, handleWidgetConfigChange, handleTableConfigChange, applyFormulaField };
+  function removeFormulaField(name: string): void {
+    const config = cfg();
+    if (!config?.formulaFields?.some((definition) => definition.name === name)) return;
+    const formulaFields = config.formulaFields.filter((definition) => definition.name !== name);
+    saveConfig({ ...config, formulaFields });
+  }
+
+  return { addWidget, duplicateWidget, removeWidget, handleWidgetConfigChange, handleTableConfigChange, applyFormulaField, removeFormulaField };
+}
+
+/** B7: insert at `index` (clamped); no index means "at the end", as before. */
+function insertAt(list: readonly WidgetDefinition[], item: WidgetDefinition, index?: number): WidgetDefinition[] {
+  const at = index === undefined ? list.length : Math.max(0, Math.min(index, list.length));
+  return [...list.slice(0, at), item, ...list.slice(at)];
 }

@@ -1,16 +1,19 @@
 <script lang="ts">
+  import { provideFormFields } from "src/ui/components/fields/formFields";
+  const formFields = provideFormFields();
+  import { sourceCatalogue } from "src/lib/relations/baseRef";
   import {
     Button,
     ModalButtonGroup,
     ModalContent,
     ModalLayout,
-    Select,
     SettingItem,
     Switch,
-    TextInput,
   } from "obsidian-svelte";
+  import TextInput from "src/ui/components/fields/ValueSuggestField.svelte";
+  import Select from "src/ui/components/fields/SelectField.svelte";
   import MultiTextInput from "src/ui/components/MultiTextInput/MultiTextInput.svelte";
-  import FormulaEditor from "src/ui/components/FormulaEditor/FormulaEditor.svelte";
+  import FormulaEditor from "src/ui/components/FormulaEditor/VersionedFormulaEditor.svelte";
   import { DataFieldType, type DataField } from "src/lib/dataframe/dataframe";
   import type {
     RelationFieldConfig,
@@ -36,7 +39,7 @@
   export let field: DataField;
   export let editable: boolean;
   export let existingFields: DataField[];
-  export let onSave: (field: DataField) => void;
+  export let onSave: (field: DataField) => void | Promise<void>;
   /**
    * Catalogue of all known projects in the vault. Used by Relation/Rollup
    * sub-panels to populate the target-project picker. Defaults to an empty
@@ -59,8 +62,15 @@
   if (field.typeConfig?.rollup && field.type !== DataFieldType.Rollup) {
     field = { ...field, type: DataFieldType.Rollup };
   }
+  // Computed columns retain their result type for filters/charts; editing
+  // their definition must open the formula controls, as rollups do above.
+  if (field.typeConfig?.formula && field.type !== DataFieldType.Formula) {
+    field = { ...field, type: DataFieldType.Formula };
+  }
 
   $: fieldNameError = validateFieldName(field.name);
+  let saving = false;
+  let saveError = "";
 
   function validateFieldName(fieldName: string) {
     if (fieldName.trim() === "") {
@@ -113,6 +123,9 @@
         keep("options");
         keep("statusGroups");
         break;
+      case DataFieldType.List:
+        keep("options");
+        break;
       case DataFieldType.Date:
         keep("time");
         break;
@@ -124,6 +137,7 @@
         break;
       case DataFieldType.Formula:
         keep("formula");
+        keep("formulaVersion");
         break;
       case DataFieldType.UniqueId:
         keep("uniqueIdPrefix");
@@ -181,6 +195,11 @@
   // ── Formula sub-panel (#077) ─────────────────────────────
   $: formulaExpression = (field.typeConfig?.formula ?? "") as string;
   $: formulaFieldNames = existingFields.map((f) => f.name);
+
+  function handleFormulaModeChange(event: CustomEvent<import("src/lib/formula/version").VersionedFormula>) {
+    const { formulaVersion: _previousVersion, ...config } = field.typeConfig ?? {};
+    field = { ...field, typeConfig: { ...config, ...(event.detail.formulaVersion !== undefined ? { formulaVersion: event.detail.formulaVersion } : {}) } };
+  }
 
   function handleFormulaChange(ev: CustomEvent<string>) {
     const expr = ev.detail;
@@ -302,12 +321,16 @@
 
   $: projectOptions = [
     { label: $i18n.t("modals.field.configure.relation.no-project"), value: "" },
-    ...effectiveProjects.map((p) => ({
+    // D19: a project's own sources are bases too. i3-data: and every
+    // dashboard block, as a filtered source (the one source catalogue).
+    ...sourceCatalogue(effectiveProjects, {
+      blockLabel: (title) => $i18n.t("views.dashboard.source-catalogue.block", { defaultValue: "Block «{{title}}» (filtered)", title }),
+    }).map((o) => ({
       label:
-        p.id === currentProjectId
-          ? `${p.name} ${$i18n.t("modals.field.configure.relation.this-project-suffix", { defaultValue: "(this project)" })}`
-          : p.name,
-      value: p.id,
+        o.value === currentProjectId
+          ? `${o.label} ${$i18n.t("modals.field.configure.relation.this-project-suffix", { defaultValue: "(this project)" })}`
+          : o.label,
+      value: o.value,
     })),
   ];
 
@@ -567,13 +590,42 @@
   }
 
   $: options = dataFieldTypeOptions((key) => $i18n.t(key));
+
+  async function handleSave() {
+    if (saving || !formFields.syncForSubmit()) return;
+    fieldNameError = validateFieldName(field.name);
+    if (fieldNameError) return;
+    if (field?.typeConfig && field.typeConfig?.options) {
+      const options = field.typeConfig.options;
+      field = {
+        ...field,
+        typeConfig: {
+          ...field.typeConfig,
+          options: [...new Set(options)].filter((value) => value !== ""),
+        },
+      };
+    }
+
+    saving = true;
+    saveError = "";
+    try {
+      await onSave(field);
+    } catch (error) {
+      saveError = $i18n.t("modals.field.configure.save-error", {
+        message: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      saving = false;
+    }
+  }
 </script>
 
 <ModalLayout {title}>
   <ModalContent>
     <SettingItem name={$i18n.t("modals.field.configure.name.name")}>
       <TextInput
-        readonly={!editable}
+        readOnly={!editable}
+        ariaLabel={$i18n.t("modals.field.configure.name.name")}
         value={field.name}
         error={!!fieldNameError}
         helperText={fieldNameError}
@@ -585,6 +637,8 @@
       description={$i18n.t("modals.field.configure.type.description")}
     >
       <Select
+        contextKey={currentProjectId}
+        tooltip={$i18n.t("modals.field.configure.type.name")}
         value={field.type}
         {options}
         on:change={handleTypeChange}
@@ -597,6 +651,7 @@
         vertical
       >
         <MultiTextInput
+          contextKey={JSON.stringify([currentProjectId, field.name, field.type])}
           options={field.typeConfig?.options ?? []}
           onChange={handleOptionsChange}
         />
@@ -617,6 +672,19 @@
         <Switch
           checked={field.typeConfig?.fileLinks ?? false}
           on:check={handleFileLinksChange}
+        />
+      </SettingItem>
+    {/if}
+    {#if field.type === DataFieldType.List && !field.identifier}
+      <SettingItem
+        name={$i18n.t("modals.field.configure.options.name")}
+        description={$i18n.t("modals.field.configure.options.description")}
+        vertical
+      >
+        <MultiTextInput
+          contextKey={JSON.stringify([currentProjectId, field.name, field.type])}
+          options={field.typeConfig?.options ?? []}
+          onChange={handleOptionsChange}
         />
       </SettingItem>
     {/if}
@@ -660,6 +728,7 @@
             <div class="ppp-status-groups-row">
               <span class="ppp-status-groups-label">{opt}</span>
               <Select
+                contextKey={currentProjectId}
                 value={bucket}
                 options={[
                   { label: "—", value: "" },
@@ -711,6 +780,7 @@
           />
         {:else}
           <Select
+            contextKey={currentProjectId}
             value={relationCfg?.targetProjectId ?? ""}
             options={projectOptions}
             allowEmpty
@@ -808,6 +878,7 @@
           </p>
         {:else}
           <Select
+            contextKey={currentProjectId}
             value={rollupSourceValue(rollupCfg)}
             options={rollupRelationOptions}
             allowEmpty
@@ -829,6 +900,7 @@
         >
           {#if rollupTargetFieldOptions.length > 1}
             <Select
+              contextKey={currentProjectId}
               value={rollupCfg?.targetField ?? ""}
               options={rollupTargetFieldOptions}
               allowEmpty
@@ -851,6 +923,7 @@
           )}
         >
           <Select
+            contextKey={currentProjectId}
             value={rollupCfg?.function ?? "count"}
             options={rollupFunctionOptions}
             on:change={handleRollupFunctionChange}
@@ -863,6 +936,7 @@
           >
             {#if !orderByCustom}
               <Select
+                contextKey={currentProjectId}
                 value={rollupCfg?.orderBy ?? ""}
                 options={rollupOrderByOptions}
                 allowEmpty
@@ -903,6 +977,8 @@
         vertical
       >
         <FormulaEditor
+          version={field.typeConfig?.formulaVersion}
+          on:modechange={handleFormulaModeChange}
           expression={formulaExpression}
           fields={formulaFieldNames}
           placeholder={$i18n.t("modals.field.configure.formula.placeholder", {
@@ -916,11 +992,12 @@
     <!-- NPLAN-A2 — UniqueId sub-panel -->
     {#if field.type === DataFieldType.UniqueId && !field.identifier}
       <SettingItem
-        name={$i18n.t("modals.field.configure.uniqueid.prefix.name", { defaultValue: "ID prefix" })}
-        description={$i18n.t("modals.field.configure.uniqueid.prefix.description", { defaultValue: 'Optional prefix for generated IDs (e.g. "TASK-"). Counter is appended automatically.' })}
+        name={$i18n.t("automatic-fields.prefix-label")}
+        description={$i18n.t("automatic-fields.prefix-hint")}
       >
         <TextInput
           value={uniqueIdPrefixValue}
+          ariaLabel={$i18n.t("automatic-fields.prefix-label")}
           placeholder={$i18n.t("modals.configure-field.prefix-placeholder")}
           on:input={handleUniqueIdPrefixChange}
         />
@@ -928,24 +1005,16 @@
     {/if}
   </ModalContent>
   <ModalButtonGroup>
+    {#if saveError}
+      <p class="ppp-configure-field-save-error" role="alert">{saveError}</p>
+    {/if}
     <Button
       variant="primary"
-      disabled={!!fieldNameError}
-      on:click={() => {
-        // uniquify options items and omit empty
-        if (field?.typeConfig && field.typeConfig?.options) {
-          const options = field.typeConfig.options;
-          field = {
-            ...field,
-            typeConfig: {
-              ...field.typeConfig,
-              options: [...new Set(options)].filter((v) => v !== ""),
-            },
-          };
-        }
-
-        onSave(field);
-      }}>{$i18n.t("modals.field.configure.save")}</Button
+      disabled={!!fieldNameError || saving}
+      on:click={() => void handleSave()}
+      >{saving
+        ? $i18n.t("modals.field.configure.saving")
+        : $i18n.t("modals.field.configure.save")}</Button
     >
   </ModalButtonGroup>
 </ModalLayout>
@@ -955,6 +1024,11 @@
     margin: 0;
     color: var(--text-muted);
     font-size: var(--font-ui-smaller, 0.75rem);
+  }
+  .ppp-configure-field-save-error {
+    margin: 0;
+    color: var(--text-error);
+    font-size: var(--font-ui-smaller);
   }
   .ppp-status-groups {
     display: flex;

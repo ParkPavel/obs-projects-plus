@@ -76,6 +76,12 @@ describe("evaluateFilter — engine surface", () => {
   test("ends-with — case-insensitive", () => {
     expect(stringFns["ends-with"]("ProjectX", "ECTX")).toBe(true);
   });
+  test("regex rejects ambiguity introduced by case-insensitive matching", () => {
+    expect(stringFns.regex("a", "^(a|A)+$")).toBe(false);
+  });
+  test("regex keeps ordinary case-insensitive matching", () => {
+    expect(stringFns.regex("ALPHA", "^alpha$")).toBe(true);
+  });
   test("starts-with — false", () => {
     expect(stringFns["starts-with"]("foo", "bar")).toBe(false);
   });

@@ -2,8 +2,8 @@
  * cards-g3 — the one reading of a saved gallery config.
  *
  * Every renderer and the settings tab read a gallery config through
- * `normalizeGalleryConfig`; these pin what absent, legacy and invalid values
- * mean, so an old config renders exactly as it did before the options existed.
+ * `normalizeGalleryConfig`; these pin absent, legacy and invalid values.
+ * Explicit mappings survive; an unset mapping uses the conventional cover.
  */
 
 import {
@@ -45,7 +45,7 @@ describe("chrome-filters — card fields in the saved order", () => {
 });
 
 const DEFAULTS = {
-  coverField: undefined,
+  coverField: "cover",
   iconField: undefined,
   fitStyle: "cover",
   cardWidth: 300,
@@ -53,10 +53,15 @@ const DEFAULTS = {
   layout: "grid",
   coverAspectRatio: "16/10",
   showFieldLabels: true,
+  // i3-gallery: no sections, nothing folded, the cover preview, full cards.
+  groupByField: undefined,
+  collapsedGroups: [],
+  cardPreview: "cover",
+  compact: false,
 };
 
 describe("normalizeGalleryConfig — absent config", () => {
-  it("undefined, null and {} all read as the pre-cards-g3 gallery", () => {
+  it("undefined, null and {} share defaults including the conventional cover property", () => {
     expect(normalizeGalleryConfig(undefined)).toEqual(DEFAULTS);
     expect(normalizeGalleryConfig(null)).toEqual(DEFAULTS);
     expect(normalizeGalleryConfig({})).toEqual(DEFAULTS);

@@ -1,5 +1,5 @@
 import type { TransformPipeline } from "src/lib/dashboard-engine/transformTypes";
-import type { FilterOperator, FilterDefinition } from "src/settings/base/settings";
+import type { FilterOperator, FilterDefinition, SortDefinition } from "src/settings/base/settings";
 import type { DataSource } from "src/settings/v3/settings";
 
 // ── Widget Types ──────────────────────────────────────────────
@@ -31,6 +31,14 @@ export type WidgetType =
   | "text"
   | "divider";
 
+/**
+ * i3-dash: a block's cell in the dashboard tile grid (layout/tileGrid.ts).
+ * `w` is in twelfths of a row (the screen shows N columns chosen from the
+ * container's width and the block spans w/12 of them, snapped to whole
+ * columns); `h` is in grid rows. `x`/`y` are the block's place in the 12-column
+ * packing of the list order, rewritten on every reorder or resize — order is
+ * the source of truth, so the narrow stack and the wide tiles agree.
+ */
 export interface WidgetLayout {
   x: number;
   y: number;
@@ -160,6 +168,19 @@ export interface ViewTab {
     | "stats";
   /** View-specific settings (DataTableConfig | BoardConfig | ...). */
   readonly config: Record<string, unknown>;
+  /**
+   * i3-final (B3): a project view this tab follows, like Notion's linked view
+   * or a Bases `![[File.base#View]]` embed. While set, the tab's config, sort
+   * and filter are read live from that view of the source project, and config
+   * edits are written back to it; `config` above is left as it was. Unlinking
+   * copies the view's config, sort and filter into the tab (`linkedView.ts`).
+   * Absent on every tab stored before it — those keep working unchanged.
+   */
+  readonly linkedViewId?: string;
+  /** i3-final (B3): the tab's own sort, set when a linked view is unlinked. */
+  readonly sort?: SortDefinition;
+  /** i3-final (B3): the tab's own filter, AND-ed under the block's filter. */
+  readonly filter?: FilterDefinition;
 }
 
 // ── DataTable Config ──────────────────────────────────────────
@@ -331,11 +352,14 @@ export interface AggregationResult {
 // ── Database View Config ─────────────────────────────────────
 
 export interface FormulaFieldDef {
+  /** Absent retains compatibility rules; only explicit unified-v1 selects new rules. */
+  readonly formulaVersion?: string;
   readonly name: string;
   readonly expression: string;
   readonly resultType?: "string" | "number" | "date" | "boolean";
 }
 
+/** Deprecated persisted action; the toolbar is now the sole formula entry point. */
 export interface ToggleFormulaQuickAction {
   readonly id: string;
   readonly label: string;
@@ -343,34 +367,22 @@ export interface ToggleFormulaQuickAction {
   readonly kind: "toggle-formula-bar";
 }
 
-/**
- * #191 — a union of one, and deliberately still a union.
- *
- * `ApplyTemplateQuickAction` left when dashboard templates were removed. The
- * alias stays because the concept is "a quick action", which is extensible;
- * collapsing it to the interface would say the opposite.
- *
- * Removing the member is what makes the deletion complete rather than hopeful:
- * `migration.ts` could not compile until it stopped generating the artefact,
- * and nothing can reintroduce `kind: "apply-template"` without the compiler
- * objecting. That is stronger and cheaper than any text scan.
- *
- * The `DataTableConfig.subBases` precedent does NOT apply here, and the
- * difference matters: that key is carried untouched because removing it would
- * make existing user data unmodellable. This was never user data — it was a
- * button our own migration generated, pointing at our own mechanism. The
- * mechanism goes, so the button goes with it.
- */
 export type QuickActionConfig = ToggleFormulaQuickAction;
 
 export interface DatabaseViewConfig {
   readonly widgets: WidgetDefinition[];
+  /**
+   * i3-dash: carried, not read. Tiles or stack is decided by the canvas's
+   * width at render time (WidgetGrid), so one stored page reads well in a wide
+   * pane and on a phone; stored values of both kinds stay as they are.
+   */
   readonly layoutMode: "free" | "stack";
   readonly layoutVersion: number;
   readonly table: DataTableConfig;
   readonly showWidgetToolbar: boolean;
   readonly compactMode: boolean;
   readonly formulaFields?: FormulaFieldDef[];
+  /** @deprecated Legacy quick actions are removed by the dashboard migration. */
   readonly quickActions?: QuickActionConfig[];
   /**
    * User-saved column-layout snapshots for the DataTable inside this view.
@@ -443,6 +455,8 @@ export interface ChartConfig {
   readonly series?: readonly ChartSeriesConfig[];
   /** 3.6.0 — narrowed to the record picked in another block, through a relation (selectionFollow.ts). */
   readonly linkedSelection?: LinkedSelectionConfig;
+  /** 3.7.2 B6 — a caption drawn above the chart; none when absent. */
+  readonly title?: string;
 }
 
 /** One extra series of a chart (3.6.0). */

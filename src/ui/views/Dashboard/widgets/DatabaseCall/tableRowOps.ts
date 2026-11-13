@@ -27,17 +27,10 @@ export function duplicateRecord(
   api: ViewApi
 ): void {
   const copy = createDataRecord(`${recordBaseName(record)} (copy)`, project, { ...record.values });
-  api.addRecord(copy, fields, "");
+  void api.addRecord(copy, fields, "");
 }
 
-export function createNamedRecord(
-  name: string,
-  project: ProjectDefinition,
-  fields: DataField[],
-  api: ViewApi
-): void {
-  api.addRecord(createDataRecord(name, project), fields, "");
-}
+export { createNamedRecord } from "./tableCreation";
 
 // ── Selection Bus driver (R3 — Table V2 finally drives linked blocks) ──
 // V1 resolution kept: the driver is a labeled row-menu entry (toggle), so

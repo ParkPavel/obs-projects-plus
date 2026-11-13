@@ -26,12 +26,16 @@
   // Shell → UI → Engine → Data dependency direction.
   import { invalidateAll as invalidateTransformAll } from "src/lib/dashboard-engine/transformCache";
   import { dataSource, registerDataFrameInvalidation } from "src/lib/stores/dataframe";
-  import { getAPI, isPluginEnabled } from "obsidian-dataview";
+  import { getAPI, isPluginEnabled } from "src/lib/datasources/dataview/host";
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import { CreateProjectModal } from "src/ui/modals/createProjectModal";
-  import { AddViewModal } from "src/ui/modals/addViewModal";
+  import { customViews } from "src/lib/stores/customViews";
+  import { nextUniqueViewName } from "src/lib/helpers";
+  import { openContextMenu, type ContextMenuAnchor } from "src/lib/contextMenu";
+  import { DEFAULT_VIEW } from "src/settings/settings";
   import { ConfirmDialogModal } from "src/ui/modals/confirmDialog";
   import CompactNavBar from "src/ui/components/Navigation/CompactNavBar.svelte";
+  import { provideBlockOutline } from "src/ui/views/Dashboard/layout/blockOutline";
   import SettingsMenuPopover from "src/ui/components/Navigation/SettingsMenu/SettingsMenuPopover.svelte";
   import { createDemoWithNotices } from "./onboarding/demoRun";
   import ProjectsEmptyState from "./ProjectsEmptyState.svelte";
@@ -48,9 +52,11 @@
     ViewId,
   } from "src/settings/settings";
 
+  // w4-p10a (N15): the bar shows a dashboard's "Blocks · N"; the view publishes them.
+  provideBlockOutline();
+
   export let projectId: ProjectId | undefined;
   export let viewId: ViewId | undefined;
-
   const dispatch = createEventDispatcher();
 
   $: ({ projects } = $settings);
@@ -210,11 +216,19 @@
 
   onMount(() => {
     const appInstance = $app;
+    // i2-perf (C3): a burst of writes (a bulk field write: 193 notes) cleared
+    // the sibling frames and re-loaded every one of them once per file. The
+    // burst is coalesced: one invalidation 300 ms after the last change.
+    let invalidateTimer: number | null = null;
+    const invalidateSoon = () => {
+      if (invalidateTimer !== null) window.clearTimeout(invalidateTimer);
+      invalidateTimer = window.setTimeout(() => { invalidateTimer = null; invalidateExternalFrameCache(); }, 300);
+    };
     const events = [
-      appInstance.vault.on("modify", invalidateExternalFrameCache),
-      appInstance.vault.on("create", invalidateExternalFrameCache),
-      appInstance.vault.on("delete", invalidateExternalFrameCache),
-      appInstance.vault.on("rename", invalidateExternalFrameCache),
+      appInstance.vault.on("modify", invalidateSoon),
+      appInstance.vault.on("create", invalidateSoon),
+      appInstance.vault.on("delete", invalidateSoon),
+      appInstance.vault.on("rename", invalidateSoon),
     ];
     // #016 — atomic transform-cache invalidation tied to dataFrame mutations.
     // Returns an unsubscribe handle; idempotent for the same callback ref so
@@ -223,6 +237,7 @@
       invalidateTransformAll,
     );
     return () => {
+      if (invalidateTimer !== null) window.clearTimeout(invalidateTimer);
       for (const ref of events) appInstance.vault.offref(ref);
       unregisterTransformInvalidation();
     };
@@ -265,6 +280,12 @@
       // Dataview loading) can be retried on next access.
       if (df === null) externalFrameCache.delete(id);
       return df;
+    }, (error: unknown) => {
+      // i3-close: a rejected resolution (a circular block source) is not
+      // cached either; it reads as no frame, so no caller waits on it forever.
+      externalFrameCache.delete(id);
+      console.warn("[Projects+] external frame unavailable:", id, error);
+      return null;
     });
     externalFrameCache.set(id, promise);
     return promise;
@@ -335,13 +356,42 @@
     settings.updateView(project.id, updatedView);
   }
 
-  function handleAddView(project: ProjectDefinition | undefined) {
+  let newView: { name: string; commit: (name: string) => void; cancel: () => void } | null = null;
+  let newViewProjectId: ProjectId | undefined;
+  $: if (newView && newViewProjectId !== project?.id) newView = null;
+  function isCurrentProject(id: ProjectId): boolean { return project?.id === id; }
+
+  function handleAddView(project: ProjectDefinition | undefined, anchor: ContextMenuAnchor = null) {
     if (!project) return;
-    new AddViewModal($app, project, (projectId, view) => {
-      settings.addView(projectId, view);
-      dispatch("viewIdChange", view.id);
-      viewId = view.id;
-    }).open();
+    const targetId = project.id;
+    const seen = new Set<string>();
+    const choices = Object.values($customViews).flatMap((implementation) => {
+      const raw = implementation.getViewType();
+      const type = raw === "database" ? "dashboard" : raw;
+      if (seen.has(type)) return [];
+      seen.add(type);
+      const builtIn = ["table", "board", "calendar", "gallery", "dashboard"].includes(type);
+      const title = builtIn ? $i18n.t(`views.${type}.name`) : implementation.getDisplayName();
+      return [{ title, icon: implementation.getIcon(), onClick: () => {
+        const target = $settings.projects.find((item) => item.id === targetId);
+        if (!target || !isCurrentProject(targetId)) return;
+        newViewProjectId = targetId;
+        newView = {
+          name: nextUniqueViewName(target.views, title),
+          cancel: () => (newView = null),
+          commit: (name) => {
+            const current = $settings.projects.find((item) => item.id === targetId);
+            if (!current || !isCurrentProject(targetId) || current.views.some((item) => item.name === name)) return;
+            const created = { ...DEFAULT_VIEW, id: uuidv4(), name, type: type === "table" ? "database" : type };
+            settings.addView(targetId, created);
+            newView = null;
+            dispatch("viewIdChange", created.id);
+            viewId = created.id;
+          },
+        };
+      } }];
+    });
+    openContextMenu(choices, anchor);
   }
 
   let settingsMenuOpen = false;
@@ -381,7 +431,8 @@
       dispatch("toggleAgenda", { projectId: project?.id, viewId: view?.id, open });
       return;
     }
-    const current = view?.config?.["agendaOpen"] ?? false;
+    // Desktop agenda is open unless explicitly collapsed (agendaOpen === false)
+    const current = view?.config?.["agendaOpen"] !== false;
     mergeViewConfig({ agendaOpen: !current });
     dispatch("toggleAgenda", { projectId: project?.id, viewId: view?.id, open: !current });
   }
@@ -403,15 +454,17 @@
 <div class="projects-container" style:--ppp-below-nav-h={belowNav}>
   <CompactNavBar
     {views}
+    {newView}
     viewId={view?.id}
     {view}
     agendaOpen={navAgendaOpen}
     on:viewChange={(event) => (viewId = event.detail)}
-    on:addView={() => handleAddView(project)}
+    on:addView={(event) => handleAddView(project, event.detail)}
     on:openSettings={(event) => handleOpenSettings(event.detail)}
     on:centerToday={handleCenterToday}
     on:toggleAgenda={handleToggleAgenda}
     on:freezeColumns={handleFreezeColumns}
+    on:setInterval={(event) => mergeViewConfig({ interval: event.detail, centerOn: "today" })}
   />
 
   <div class="projects-main" bind:this={mainEl}>
@@ -598,7 +651,7 @@
   .projects-main :global(.view-layer--month.view-layer--active),
   .projects-main :global(.view-layer--year.view-layer--active) {
     box-sizing: border-box;
-    padding-bottom: var(--view-bottom-spacing, 0);
+    padding-bottom: var(--ppp-calendar-bottom-spacing, var(--view-bottom-spacing, 0));
   }
 
   /* ios-s1: on touch the settings panel is capped at the window below the

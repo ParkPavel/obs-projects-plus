@@ -7,7 +7,8 @@
     - `triggerEl` HTMLElement is the anchor. If null at mount, no positioning.
     - `open` controls visibility (two-way bind supported via dispatch('close')).
     - Desktop: fixed position with flip + clamp inside viewport.
-    - Mobile (`$isMobile`): bottom sheet with backdrop.
+    - Mobile (`$isMobile`): bottom sheet with backdrop by default; anchored
+      popovers can opt into viewport-positioned floating mode.
     - Close paths: Escape, outside-mousedown, optional close-on-inner-click.
     - Focus: traps Tab inside popup, restores to trigger on close.
 
@@ -18,6 +19,11 @@
   import { portal } from "src/ui/portal";
   import { isMobile } from "src/lib/stores/ui";
   import { remAt, rootFontPx } from "src/ui/utils/cssLength";
+  import { isImeKey, recordImeCompositionEnd } from "src/ui/components/fields/draftController";
+  import { fitVisibleViewport } from "src/ui/actions/fitVisibleViewport";
+  import { onKeyboardChange, visibleViewport } from "src/ui/utils/visibleViewport";
+  import { placeAboveField } from "src/ui/components/fields/placeAboveField";
+  import { followFieldAnchor } from "src/ui/actions/followFieldAnchor";
 
   // ── Public types ───────────────────────────────────────────
   type PopupPlacement =
@@ -26,30 +32,47 @@
     | "top-start"
     | "top-end"
     | "right-start"
-    | "left-start";
+    | "left-start"
+    | "above-field"
+    // w4-p07 (N13): beside the anchor — right, else left; under it, else over
+    // it, only when neither side has room. Chosen once per opening.
+    | "side-start";
+  type ResolvedPlacement = Exclude<PopupPlacement, "side-start" | "above-field">;
 
   // ── Props ──────────────────────────────────────────────────
 
   /** Element-anchor the popup positions relative to. May be null for programmatic open. */
   export let triggerEl: HTMLElement | null = null;
+  /** Sibling controls of the input belong to this interaction, not an outside tap. */
+  export let interactionEl: HTMLElement | null = null;
 
   /** Popup open. */
   export let open: boolean = false;
 
-  /** Preferred placement; flip kicks in when no space. */
+  /** General placements flip; above-field uses the shared strict upper input policy. */
   export let placement: PopupPlacement = "bottom-start";
 
-  /** Gap from trigger in rem (default 0.25rem). */
+  /** Mobile presentation; use `anchored` for inline suggestions near an input. */
+  export let mobilePresentation: "sheet" | "anchored" = "sheet";
+
+  /** Gap for general popups; above-field uses the shared input gap. */
   export let offsetRem: number = 0.25;
 
   /** Close when a click lands inside the popup (action menus). */
   export let closeOnInnerClick: boolean = false;
+  /** Pending writes retain the open draft until their result is known. */
+  export let dismissible = true;
+  /** Containing forms can commit valid drafts or retain invalid/composing ones. */
+  export let beforeClose: (() => boolean) | undefined = undefined;
 
   /** ARIA role. */
-  export let role: "menu" | "listbox" | "dialog" | "tooltip" = "dialog";
+  export let role: "menu" | "listbox" | "dialog" | "tooltip" | "presentation" = "dialog";
 
   /** Accessible label for the popup container. */
   export let ariaLabel: string = "";
+  export let id: string | undefined = undefined;
+  /** Optional preferred desktop width, still capped to the visible viewport. */
+  export let width: string | undefined = undefined;
 
   /**
    * Auto-focus the first interactive element when the popup opens.
@@ -60,10 +83,21 @@
   export let autoFocus: boolean = true;
 
   // ── Internal ───────────────────────────────────────────────
-  const dispatch = createEventDispatcher<{ close: void }>();
+  // w4-p06 (N9): the tallest a list or menu grows — about ten rows.
+  const LIST_MAX_REM = 20;
+  const dispatch = createEventDispatcher<{ close: void; position: { visible: boolean } }>();
 
   let popupEl: HTMLDivElement | null = null;
   let style = "";
+  let insetEl: HTMLSpanElement | null = null;
+  let roomAttempt = "", placementVersion = 0, placementHidden = true;
+  $: if (!open) { roomAttempt = ""; placementVersion++; placementHidden = true; }
+  // The side a "side-start" popup took on this opening: a list that grows or
+  // shrinks afterwards does not carry the window across its anchor.
+  let sideTaken: ResolvedPlacement | null = null;
+  $: if (!open) sideTaken = null;
+  let composing = false;
+  $: if (!open) composing = false;
 
   // Track previous open to fire focus-restore exactly once on close.
   let wasOpen = false;
@@ -98,6 +132,8 @@
   let boundDoc: Document = document;
   let boundView: Window = window;
   let listening = false;
+  // w4-input: the keyboard Obsidian reports moves the visible area's bottom.
+  let unwatchKeyboard: (() => void) | null = null;
 
   /**
    * Put the listeners on `doc`, taking them off whatever held them before.
@@ -111,17 +147,25 @@
   function bindTo(doc: Document): void {
     if (listening && doc === boundDoc) return;
     if (listening) {
-      boundDoc.removeEventListener("keydown", handleKeydown, true);
+      boundDoc.removeEventListener("keydown", handleKeydown);
+      boundDoc.removeEventListener("compositionend", recordImeCompositionEnd, true);
       boundDoc.removeEventListener("mousedown", handleOutsideMouseDown, true);
       boundView.removeEventListener("resize", handleReposition);
       boundView.removeEventListener("scroll", handleReposition, true);
+      boundView.visualViewport?.removeEventListener("resize", handleReposition);
+      boundView.visualViewport?.removeEventListener("scroll", handleReposition);
+      unwatchKeyboard?.();
     }
     boundDoc = doc;
     boundView = doc.defaultView ?? window;
-    boundDoc.addEventListener("keydown", handleKeydown, true);
+    boundDoc.addEventListener("keydown", handleKeydown);
+    boundDoc.addEventListener("compositionend", recordImeCompositionEnd, true);
     boundDoc.addEventListener("mousedown", handleOutsideMouseDown, true);
     boundView.addEventListener("resize", handleReposition);
     boundView.addEventListener("scroll", handleReposition, true);
+    boundView.visualViewport?.addEventListener("resize", handleReposition);
+    boundView.visualViewport?.addEventListener("scroll", handleReposition);
+    unwatchKeyboard = onKeyboardChange(boundView, handleReposition);
     listening = true;
   }
 
@@ -135,10 +179,15 @@
 
   onDestroy(() => {
     if (!listening) return;
-    boundDoc.removeEventListener("keydown", handleKeydown, true);
+    boundDoc.removeEventListener("keydown", handleKeydown);
+    boundDoc.removeEventListener("compositionend", recordImeCompositionEnd, true);
     boundDoc.removeEventListener("mousedown", handleOutsideMouseDown, true);
     boundView.removeEventListener("resize", handleReposition);
     boundView.removeEventListener("scroll", handleReposition, true);
+    boundView.visualViewport?.removeEventListener("resize", handleReposition);
+    boundView.visualViewport?.removeEventListener("scroll", handleReposition);
+    unwatchKeyboard?.();
+    unwatchKeyboard = null;
     listening = false;
   });
 
@@ -148,21 +197,46 @@
     if (open && popupEl && triggerEl) void recompute();
   }
 
+  function measurePopup(node: HTMLElement) {
+    const previousMaxWidth = node.style.maxWidth;
+    try {
+      if (width) node.style.maxWidth = "";
+      // coercion-exempt: Class C - a computed CSS length, never record data
+      return { rect: node.getBoundingClientRect(), cssMaxWidth: parseFloat(node.ownerDocument.defaultView!.getComputedStyle(node).maxWidth) };
+    } finally {
+      if (width) node.style.maxWidth = previousMaxWidth;
+    }
+  }
+
   // ── Positioning ────────────────────────────────────────────
   async function recompute(): Promise<void> {
+    const version = ++placementVersion;
     // Wait one tick so the popup is laid out and we can measure.
     await tick();
-    if (!open || !popupEl || !triggerEl) return;
+    if (version !== placementVersion || !open || !popupEl || !triggerEl) return;
+    if (placement === "above-field") {
+      const result = placeAboveField(triggerEl, popupEl, insetEl, roomAttempt);
+      if (version !== placementVersion || !open) return;
+      roomAttempt = result.roomAttempt; style = result.style; placementHidden = !result.visible;
+      dispatch("position", { visible: result.visible });
+      return;
+    }
+    // An anchor re-rendered away measures as a zero box at the corner; the
+    // window stays where it was instead of jumping there.
+    if (!triggerEl.isConnected && style) return;
 
+    // Re-measure a preferred width after resize rather than retaining our
+    // previous viewport cap. Its CSS variable supplies the caller's limit.
     const tRect = triggerEl.getBoundingClientRect();
-    const pRect = popupEl.getBoundingClientRect();
+    const { rect: pRect, cssMaxWidth } = measurePopup(popupEl);
     // #192: measured against the window the popup is actually in. The main
     // window's viewport would clamp a popout's popup to coordinates from a
     // different screen area entirely.
     const doc = popupEl.ownerDocument;
     const view = doc.defaultView ?? window;
-    const vw = view.innerWidth;
-    const vh = view.innerHeight;
+    const bounds = visibleViewport(view);
+    const vw = bounds.right;
+    const vh = bounds.bottom;
 
     // The root of the popup's own document (#192), read once for the offsets
     // below and for writing the result back in rem; 16 when it reports none.
@@ -171,7 +245,7 @@
     const offsetPx = offsetRem * baseFontPx;
     const marginPx = 0.5 * baseFontPx;
 
-    const positions: Record<PopupPlacement, { top: number; left: number }> = {
+    const positions: Record<ResolvedPlacement, { top: number; left: number }> = {
       "bottom-start": { top: tRect.bottom + offsetPx, left: tRect.left },
       "bottom-end": { top: tRect.bottom + offsetPx, left: tRect.right - pRect.width },
       "top-start": { top: tRect.top - pRect.height - offsetPx, left: tRect.left },
@@ -180,49 +254,93 @@
       "left-start": { top: tRect.top, left: tRect.left - pRect.width - offsetPx },
     };
 
-    let { top, left } = positions[placement];
+    const side = resolvePlacement(tRect, pRect, bounds, offsetPx, marginPx, placement);
+    let { top, left } = positions[side];
 
-    // Flip vertically.
-    if (placement.startsWith("bottom") && top + pRect.height > vh - marginPx) {
-      const flipped = tRect.top - pRect.height - offsetPx;
-      if (flipped >= marginPx) top = flipped;
-    } else if (placement.startsWith("top") && top < marginPx) {
-      const flipped = tRect.bottom + offsetPx;
-      if (flipped + pRect.height <= vh - marginPx) top = flipped;
+    // w4-p06 (N9): a popup under or over its anchor stays against it. One too
+    // tall for either side used to be clamped to the window's top edge — far
+    // from its field, as tall as the window. It now takes the side with room
+    // (the asked one first, else the roomier) and is capped to that room; a
+    // list or menu is also capped to LIST_MAX_REM.
+    const vertical = side.startsWith("bottom") || side.startsWith("top");
+    // The edges it grows from: the anchor's, kept inside the visible area (a
+    // keyboard over the anchor leaves the popup at the visible edge nearest it).
+    const belowEdge = Math.max(tRect.bottom + offsetPx, bounds.top + marginPx);
+    const aboveEdge = Math.min(tRect.top - offsetPx, vh - marginPx);
+    const below = Math.max(0, vh - marginPx - belowEdge);
+    const above = Math.max(0, aboveEdge - (bounds.top + marginPx));
+    const listCap = role === "menu" || role === "listbox" ? LIST_MAX_REM * baseFontPx : Infinity;
+    // The content's own height: measured after a cap, pRect would always fit.
+    const natural = Math.min(Math.max(popupEl.scrollHeight, pRect.height), listCap);
+    let room = vh - marginPx;
+    if (vertical) {
+      const wantBelow = side.startsWith("bottom");
+      const goBelow = wantBelow
+        ? natural <= below || (natural > above && below >= above)
+        : !(natural <= above || (natural > below && above >= below));
+      room = Math.min(goBelow ? below : above, listCap);
+      top = goBelow ? belowEdge : aboveEdge - Math.min(natural, room);
     }
 
     // Flip horizontally for left/right.
-    if (placement === "right-start" && left + pRect.width > vw - marginPx) {
+    if (side === "right-start" && left + pRect.width > vw - marginPx) {
       const flipped = tRect.left - pRect.width - offsetPx;
-      if (flipped >= marginPx) left = flipped;
-    } else if (placement === "left-start" && left < marginPx) {
+      if (flipped >= bounds.left + marginPx) left = flipped;
+    } else if (side === "left-start" && left < bounds.left + marginPx) {
       const flipped = tRect.right + offsetPx;
       if (flipped + pRect.width <= vw - marginPx) left = flipped;
     }
 
     // Clamp inside viewport.
     const clampedLeft = Math.min(
-      Math.max(left, marginPx),
-      Math.max(marginPx, vw - pRect.width - marginPx)
+      Math.max(left, bounds.left + marginPx),
+      Math.max(bounds.left + marginPx, vw - pRect.width - marginPx)
     );
-    const clampedTop = Math.min(
-      Math.max(top, marginPx),
-      Math.max(marginPx, vh - pRect.height - marginPx)
-    );
+    const clampedTop = vertical
+      ? top
+      : Math.min(Math.max(top, bounds.top + marginPx), Math.max(bounds.top + marginPx, vh - pRect.height - marginPx));
+    const maxHeight = vertical ? room : Math.min(vh - clampedTop - marginPx, listCap);
 
     // Constrain WIDTH to the space from the clamped origin to the right
     // margin so a wide child cannot overflow the viewport (clamp only moves
     // a fixed-width box; it cannot shrink it). Never widen past the CSS cap —
     // take the MIN of the viewport-derived cap and the resolved CSS max-width.
     const viewportWidthCap = vw - clampedLeft - marginPx;
-    // coercion-exempt: Class C - a computed CSS length read back from the DOM, not record data
-    const cssMaxWidth = parseFloat(view.getComputedStyle(popupEl).maxWidth);
     const widthCap =
       Number.isFinite(cssMaxWidth) && cssMaxWidth > 0
         ? Math.min(viewportWidthCap, cssMaxWidth)
         : viewportWidthCap;
 
-    style = `top: ${remAt(clampedTop, baseFontPx)}; left: ${remAt(clampedLeft, baseFontPx)}; max-width: ${remAt(Math.max(0, widthCap), baseFontPx)};`;
+    style = `top: ${remAt(clampedTop, baseFontPx)}; left: ${remAt(clampedLeft, baseFontPx)}; max-width: ${remAt(Math.max(0, widthCap), baseFontPx)}; min-width: ${remAt(Math.min(12 * baseFontPx, Math.max(0, widthCap)), baseFontPx)}; max-height: ${remAt(Math.max(0, maxHeight), baseFontPx)};`;
+  }
+
+  /**
+   * The placement to lay out: the asked one, or for "side-start" the first of
+   * right, left, below, above with room for the whole window. With room
+   * nowhere, the taller of below and above (the height is capped to it).
+   */
+  function resolvePlacement(
+    tRect: DOMRect,
+    pRect: DOMRect,
+    bounds: { top: number; left: number; right: number; bottom: number },
+    offsetPx: number,
+    marginPx: number,
+    preferred: Exclude<PopupPlacement, "above-field">
+  ): ResolvedPlacement {
+    if (preferred !== "side-start") return preferred;
+    if (sideTaken) return sideTaken;
+    const below = bounds.bottom - marginPx - (tRect.bottom + offsetPx);
+    const above = tRect.top - offsetPx - (bounds.top + marginPx);
+    let side: ResolvedPlacement;
+    if (tRect.right + offsetPx + pRect.width <= bounds.right - marginPx) side = "right-start";
+    else if (tRect.left - offsetPx - pRect.width >= bounds.left + marginPx) side = "left-start";
+    else if (pRect.height <= below) side = "bottom-start";
+    else if (pRect.height <= above) side = "top-start";
+    else side = below >= above ? "bottom-start" : "top-start";
+    // A box not laid out yet measures 0 × 0 and fits anywhere: no side is
+    // taken from that.
+    if (pRect.width > 0 && pRect.height > 0) sideTaken = side;
+    return side;
   }
 
   async function focusFirst(): Promise<void> {
@@ -235,14 +353,21 @@
   }
 
   // ── Event handlers ─────────────────────────────────────────
+  function isTopmost(): boolean {
+    const popups = boundDoc.querySelectorAll(".ppp-popup--floating, .ppp-popup--bottom-sheet");
+    return popupEl === popups[popups.length - 1];
+  }
   function handleKeydown(e: KeyboardEvent): void {
-    if (!open) return;
+    if (!open || e.defaultPrevented || composing || isImeKey(e)) return;
+    if (!isTopmost()) return;
     if (e.key === "Escape") {
       e.preventDefault();
       requestClose();
       return;
     }
-    if (e.key === "Tab" && popupEl) {
+    // w4-input: a suggestion list (listbox) or a tooltip beside a field does
+    // not take Tab — it moves on from the field as usual; dialogs and menus trap it.
+    if (e.key === "Tab" && popupEl && (role === "dialog" || role === "menu")) {
       const focusable = Array.from(
         popupEl.querySelectorAll<HTMLElement>(
           'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
@@ -278,12 +403,17 @@
   }
 
   function handleOutsideMouseDown(e: MouseEvent): void {
-    if (!open) return;
+    if (!open || !isTopmost()) return;
     const target = e.target as Node | null;
     if (!target) return;
     if (popupEl && popupEl.contains(target)) return;
+    // A suggestion list opened by a field inside this popup is portalled to the
+    // body, outside popupEl, but it belongs to the popup: a pick in it is not an
+    // outside press (the settings panel honours the same marker).
+    if ((target as Element).closest?.("[data-settings-dropdown]")) return;
     // Don't auto-close on trigger — let the trigger handle toggle.
     if (triggerEl && triggerEl.contains(target)) return;
+    if (interactionEl?.contains(target)) return;
     requestClose();
   }
 
@@ -292,6 +422,9 @@
   }
 
   function requestClose(): void {
+    if (!dismissible || composing || beforeClose?.() === false) return;
+    const active = popupEl?.ownerDocument.activeElement as HTMLElement | null;
+    if (active && popupEl?.contains(active)) active.blur();
     open = false;
     dispatch("close");
   }
@@ -311,10 +444,12 @@
 </script>
 
 {#if open}
-  {#if $isMobile}
+  {#if $isMobile && mobilePresentation === "sheet" && placement !== "above-field"}
     <!-- ── MOBILE: Bottom Sheet ──────────────────────────── -->
     <div
-      class="ppp-popup-backdrop"
+      class="ppp-popup ppp-popup-backdrop"
+      use:portal={{ to: "document-body" }}
+      use:fitVisibleViewport
       role="presentation"
       on:mousedown|self={requestClose}
     >
@@ -322,9 +457,11 @@
         bind:this={popupEl}
         class="ppp-popup ppp-popup--bottom-sheet"
         {role}
+        {id}
         aria-label={ariaLabel || undefined}
         aria-modal="true"
         on:click={handleInnerClick}
+        on:compositionstart={() => { composing = true; }} on:compositionend={(event) => { recordImeCompositionEnd(event); composing = false; }}
       >
         <div class="ppp-bottom-sheet-handle" aria-hidden="true"></div>
         <slot />
@@ -335,22 +472,35 @@
     <div
       bind:this={popupEl}
       use:portal={{ to: "document-body" }}
+      use:followFieldAnchor={placement === "above-field" ? { anchor: triggerEl, changed: handleReposition } : null}
       class="ppp-popup ppp-popup--floating"
-      {style}
+      style:width
+      style:--ppp-popup-max-w={width}
+      class:ppp-popup--field-suggestions={placement === "above-field"}
+      style={placement === "above-field" && placementHidden ? "visibility: hidden;" : style}
+      aria-hidden={placement === "above-field" && placementHidden ? "true" : undefined}
+      data-settings-dropdown={placement === "above-field" ? "true" : undefined}
+      {id}
       {role}
       aria-label={ariaLabel || undefined}
       on:click={handleInnerClick}
+      on:compositionstart={() => { composing = true; }} on:compositionend={(event) => { recordImeCompositionEnd(event); composing = false; }}
     >
+      {#if placement === "above-field"}<span bind:this={insetEl} class="ppp-popup-insets" aria-hidden="true"></span>{/if}
       <slot />
     </div>
   {/if}
 {/if}
 
 <style>
+  .ppp-popup--floating.ppp-popup--field-suggestions { min-width: 0; max-width: none; overscroll-behavior: contain; touch-action: pan-y; }
+  .ppp-popup-insets { position: fixed; width: 0; height: 0; padding: env(safe-area-inset-top, 0rem) env(safe-area-inset-right, 0rem) env(safe-area-inset-bottom, 0rem) env(safe-area-inset-left, 0rem); visibility: hidden; pointer-events: none; }
   .ppp-popup--floating {
     position: fixed;
     z-index: var(--ppp-z-popover, 50);
     min-width: var(--ppp-popup-min-w, 12rem);
+    box-sizing: border-box;
+    overflow-y: auto;
     max-width: var(--ppp-popup-max-w, 24rem);
     background: var(--background-primary);
     border: 0.0625rem solid var(--background-modifier-border);
@@ -386,7 +536,7 @@
     /* A caller may cap this at a measured room (App's short-landscape rule),
        so the padding has to count inside the cap, not on top of it. */
     box-sizing: border-box;
-    max-height: var(--ppp-bottom-sheet-max-h, 85vh);
+    max-height: min(var(--ppp-bottom-sheet-max-h, 85vh), 100%);
     overflow-y: auto;
     background: var(--background-primary);
     border-radius: var(--ppp-bottom-sheet-radius, 1rem 1rem 0 0);

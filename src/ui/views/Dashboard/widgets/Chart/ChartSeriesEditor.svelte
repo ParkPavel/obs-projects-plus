@@ -12,6 +12,9 @@
   import type { DataField, DataFrame } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
   import type { ChartSeriesConfig } from "../../types";
+  import { chartAggregations, chartYAxis } from "./chartAggregations";
+  import { aggregationLabel, aggregationConsequence } from "src/lib/dashboard-engine/aggregationOptions";
+  import { isRelationCompanionField } from "src/lib/engine/crossProjectResolver";
 
   export let series: readonly ChartSeriesConfig[] = [];
   /** The fields of this chart's own input. */
@@ -24,24 +27,22 @@
 
   const dispatch = createEventDispatcher<{ change: ChartSeriesConfig[] }>();
 
-  const AGGREGATIONS = [
-    ["sum", "views.dashboard.chart.aggregations.sum"],
-    ["avg", "views.dashboard.chart.aggregations.average"],
-    ["min", "views.dashboard.chart.aggregations.min"],
-    ["max", "views.dashboard.chart.aggregations.max"],
-    ["median", "views.dashboard.chart.aggregations.median"],
-    ["count_total", "views.dashboard.chart.aggregations.count"],
-  ] as const;
+  $: tr = (key: string, defaultValue: string) => $i18n.t(key, { defaultValue });
 
-  function fieldsOf(s: ChartSeriesConfig): string[] {
-    const frame = s.dataProjectId ? seriesFrames.get(s.dataProjectId) : undefined;
-    return (s.dataProjectId ? frame?.fields ?? [] : fields).map((f) => f.name);
+  function fieldsOf(s: ChartSeriesConfig, local = fields, frames = seriesFrames): DataField[] {
+    const frame = s.dataProjectId ? frames.get(s.dataProjectId) : undefined;
+    return (s.dataProjectId ? frame?.fields ?? [] : local).filter(f => !isRelationCompanionField(f.name));
   }
 
   function update(index: number, patch: Partial<ChartSeriesConfig>) {
     const next = series.map((s, i) => {
       if (i !== index) return s;
       const merged: Record<string, unknown> = { ...s, ...patch };
+      const candidate = { ...s, ...patch };
+      // Reconcile only explicit edits, never a frame arriving or a panel opening.
+      if ("property" in patch || ("dataProjectId" in patch && (!candidate.dataProjectId || seriesFrames.has(candidate.dataProjectId)))) {
+        merged["aggregation"] = chartYAxis({ yAxis: candidate }, candidate.property, fieldsOf(candidate)).aggregation;
+      }
       // Optional keys are removed rather than stored empty.
       for (const key of ["label", "dataProjectId", "xProperty", "selectionField"]) if (!merged[key]) delete merged[key];
       if (merged["axis"] !== "right") delete merged["axis"];
@@ -56,7 +57,8 @@
 
   function add() {
     const id = `s${Date.now().toString(36)}`;
-    dispatch("change", [...series, { id, property: fields[0]?.name ?? "count", aggregation: "sum" }]);
+    const first = fieldsOf({ id, property: "count", aggregation: "count_total" })[0];
+    dispatch("change", [...series, { id, property: first?.name ?? "count", aggregation: chartAggregations(first).includes("sum") ? "sum" : "count_total" }]);
   }
 
   function remove(index: number) {
@@ -67,7 +69,10 @@
 <div class="ppp-chart-series">
   <div class="ppp-chart-series__title">{$i18n.t("views.dashboard.chart.series.title")}</div>
   {#each series as s, i (s.id)}
-    {@const names = fieldsOf(s)}
+    {@const sourceFields = fieldsOf(s, fields, seriesFrames)}
+    {@const names = sourceFields.map(f => f.name)}
+    {@const aggregations = chartAggregations(sourceFields.find(f => f.name === s.property))}
+    {@const unsupported = s.property !== "count" && !aggregations.includes(s.aggregation)}
     <div class="ppp-chart-series__item">
       <label class="ppp-config-row">
         <span>{$i18n.t("views.dashboard.chart.series.label")}</span>
@@ -90,7 +95,8 @@
         <span>{$i18n.t("views.dashboard.chart.series.field")}</span>
         {#if names.length > 0}
           <select value={s.property} on:change={(e) => update(i, { property: e.currentTarget.value })}>
-            <option value="count">{$i18n.t("views.dashboard.chart.aggregations.count")}</option>
+            <option value="count">{aggregationLabel("count_total", tr)}</option>
+            {#if s.property !== "count" && !names.includes(s.property)}<option value={s.property} disabled>{s.property}</option>{/if}
             {#each names as name}<option value={name}>{name}</option>{/each}
           </select>
         {:else}
@@ -102,10 +108,15 @@
           <span>{$i18n.t("views.dashboard.chart.aggregation")}</span>
           <select value={s.aggregation}
             on:change={(e) => setAggregation(i, e.currentTarget.value)}>
-            {#each AGGREGATIONS as [value, key]}<option {value}>{$i18n.t(key)}</option>{/each}
+            {#if unsupported}<option value={s.aggregation} disabled>{aggregationLabel(s.aggregation, tr)}</option>{/if}
+            {#each aggregations as value}<option {value} title={aggregationConsequence(value, tr)}>{aggregationLabel(value, tr)}</option>{/each}
           </select>
         </label>
       {/if}
+      <p class="ppp-config-hint" role={unsupported ? "alert" : "note"}>
+        {#if unsupported}{$i18n.t("views.dashboard.chart.unsupported-aggregation", { defaultValue: "This aggregation is not supported for the selected field. Choose a compatible operation." })}
+        {:else}{aggregationConsequence(s.property === "count" ? "count_total" : s.aggregation, tr)}{/if}
+      </p>
       {#if s.dataProjectId}
         <label class="ppp-config-row">
           <span>{$i18n.t("views.dashboard.chart.series.x-field")}</span>
@@ -160,5 +171,9 @@
     border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s);
     padding: var(--size-4-2);
+  }
+  .ppp-config-hint {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
   }
 </style>

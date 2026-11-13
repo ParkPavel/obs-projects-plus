@@ -24,6 +24,7 @@
 
 <div 
   class="calendar-event"
+  class:is-done={checked === true}
   on:mouseenter={() => (hover = true)} 
   on:mouseleave={() => (hover = false)}
 >
@@ -93,6 +94,27 @@
     .calendar-event :global(input[type="checkbox"]) {
       width: 1rem;
       height: 1rem;
+    }
+  }
+  /* i2-calendar: a phone's month cell is ~54 px wide; a checkbox left «В» of
+     «Визит». There the event is its title alone, a done one muted and struck
+     through; it is checked off in the record. */
+  @media (pointer: coarse) and (max-width: 40rem) {
+    .calendar-event {
+      gap: 0.125rem;
+      padding: 0.125rem 0.25rem;
+      min-height: 1.375rem;
+    }
+    .calendar-event :global(input[type="checkbox"]) {
+      display: none;
+    }
+    .calendar-event :global(a) {
+      text-decoration: none;
+      color: inherit;
+    }
+    .calendar-event.is-done {
+      opacity: 0.6;
+      text-decoration: line-through;
     }
   }
 </style>

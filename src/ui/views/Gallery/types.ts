@@ -10,7 +10,8 @@ import type { CardFrameConfig } from "src/ui/components/SharedCard/cardFrames";
  * from CardFrameConfig and are read through `normalizeCardFrames`.
  */
 export interface GalleryConfig extends CardFrameConfig {
-  readonly coverField?: string;
+  /** Unset uses the conventional cover property; null explicitly disables the property. */
+  readonly coverField?: string | null;
   /** NPLAN-D2 — page-level icon field (emoji or lucide icon name). */
   readonly iconField?: string;
   /** cover | contain; legacy fill is kept; anything else reads as cover. */
@@ -24,9 +25,25 @@ export interface GalleryConfig extends CardFrameConfig {
   readonly coverAspectRatio?: string;
   /** cards-g3: field names above their values; absent reads as shown. */
   readonly showFieldLabels?: boolean;
+  /** i3-gallery: a field whose values split the cards into sections. */
+  readonly groupByField?: string;
+  /** i3-gallery: the keys of the sections shown folded. */
+  readonly collapsedGroups?: string[];
+  /** i3-gallery: what the media shows; absent or unknown reads as cover. */
+  readonly cardPreview?: string;
+  /** i3-gallery: title-only cards (no media, no properties). */
+  readonly compact?: boolean;
 }
 
 export type GalleryLayout = "grid" | "masonry" | "list";
+/**
+ * i3-gallery — the card preview (Notion's "Card preview"):
+ * - `cover`: the cover property, else the first image embedded in the note;
+ * - `property`: the cover property only (Bases' image property);
+ * - `content`: the cover property, else the first image, else the note's
+ *   first paragraph as text.
+ */
+export type GalleryCardPreview = "cover" | "property" | "content";
 export type GalleryCoverAspectRatio = "16/10" | "4/3" | "1/1" | "3/4" | "2/3" | "none";
 export type GalleryFitStyle = "cover" | "contain" | "fill";
 
@@ -40,4 +57,8 @@ export interface GalleryOptions {
   readonly layout: GalleryLayout;
   readonly coverAspectRatio: GalleryCoverAspectRatio;
   readonly showFieldLabels: boolean;
+  readonly groupByField: string | undefined;
+  readonly collapsedGroups: string[];
+  readonly cardPreview: GalleryCardPreview;
+  readonly compact: boolean;
 }

@@ -15,10 +15,10 @@
 import dayjs from "dayjs";
 import type { DataFrame, DataRecord } from "src/lib/dataframe/dataframe";
 import {
-  parseDateInTimezone,
   extractTimeWithPriority,
 } from "./calendar";
-import { resolveRecordColor } from "src/lib/colors/recordColor";
+import { calendarRecordDates } from "./calendarRecordDates";
+import { DEFAULT_RECORD_COLOR, resolveRecordColor } from "src/lib/colors/recordColor";
 import {
   EventRenderType,
   type CalendarConfig,
@@ -43,21 +43,21 @@ function hasTimeComponent(value: unknown): boolean {
  */
 export class CalendarDataProcessor {
   private config: CalendarConfig;
-  private timezone: string;
   private getRecordColor: ((record: DataRecord) => string | null) | null;
 
   constructor(
     config: CalendarConfig,
-    getRecordColor?: (record: DataRecord) => string | null
+    getRecordColor?: (record: DataRecord) => string | null,
+    private readonly writeFormat?: string,
+    private readonly fallbackStartField?: string
   ) {
     this.config = config;
-    this.timezone = config.timezone ?? "local";
     this.getRecordColor = getRecordColor ?? null;
   }
 
   /**
    * Process all records from DataFrame
-   * This is the ONLY place where date parsing happens
+   * Dates use the same projection as the Agenda selected-day lists.
    */
   process(frame: DataFrame): ProcessedCalendarData {
     const t0 = performance.now();
@@ -137,92 +137,9 @@ export class CalendarDataProcessor {
       lane: 0, // Will be assigned later
     };
   }
-
-  /**
-   * Extract start and end dates from record
-   */
-  private extractDates(record: DataRecord): {
-    startDate: dayjs.Dayjs | null;
-    endDate: dayjs.Dayjs | null;
-  } {
-    const endFieldName = this.config.endDateField || "endDate";
-
-    // Priority: startDateField > common field names > filename date
-    // Note: config.dateField is now "creation date" — not used for event start detection
-    let startDate: dayjs.Dayjs | null = null;
-    let endDate: dayjs.Dayjs | null = null;
-
-    // Try startDateField first (from config)
-    if (this.config.startDateField && record.values[this.config.startDateField] !== undefined) {
-      startDate = parseDateInTimezone(record.values[this.config.startDateField], this.timezone);
-    }
-    // Try common field names in priority order
-    else {
-      const commonDateFields = ["startDate", "date", "deadline", "dueDate", "scheduled"];
-      for (const fieldName of commonDateFields) {
-        if (record.values[fieldName] !== undefined) {
-          startDate = parseDateInTimezone(record.values[fieldName], this.timezone);
-          if (startDate) break;
-        }
-      }
-    }
-
-    // Last resort: extract date from filename (e.g. "2025-01-15.md", "folder/2025-01-15 Meeting.md")
-    if (!startDate) {
-      startDate = this.extractDateFromFilename(record.id);
-    }
-
-    // Extract end date
-    if (record.values[endFieldName] !== undefined) {
-      endDate = parseDateInTimezone(record.values[endFieldName], this.timezone);
-    }
-    // Also try common end date field names
-    else {
-      const commonEndFields = ["endDate", "end", "due"];
-      for (const fieldName of commonEndFields) {
-        if (record.values[fieldName] !== undefined) {
-          endDate = parseDateInTimezone(record.values[fieldName], this.timezone);
-          if (endDate) break;
-        }
-      }
-    }
-
-    return { startDate, endDate };
-  }
-
-  /**
-   * Extract a date from a filename/path.
-   * Supports patterns:
-   *   - "2025-01-15.md"
-   *   - "folder/2025-01-15.md"
-   *   - "2025-01-15 Meeting Notes.md"
-   *   - "Daily/2025-01-15 - Review.md"
-   *   - "20250115.md" (no separators)
-   *   - "2025.01.15.md" (dot separators)
-   */
-  private extractDateFromFilename(recordId: string): dayjs.Dayjs | null {
-    // Get basename without extension
-    const lastSlash = recordId.lastIndexOf("/");
-    const basename = lastSlash >= 0 ? recordId.slice(lastSlash + 1) : recordId;
-    const nameWithoutExt = basename.replace(/\.[^.]+$/, "");
-
-    // Try YYYY-MM-DD or YYYY.MM.DD at start of filename
-    const separatedMatch = nameWithoutExt.match(/^(\d{4})[-.](\d{2})[-.](\d{2})/);
-    if (separatedMatch) {
-      const dateStr = `${separatedMatch[1]}-${separatedMatch[2]}-${separatedMatch[3]}`;
-      const parsed = parseDateInTimezone(dateStr, this.timezone);
-      if (parsed) return parsed;
-    }
-
-    // Try YYYYMMDD at start of filename (8 digits, no separators)
-    const compactMatch = nameWithoutExt.match(/^(\d{4})(\d{2})(\d{2})/);
-    if (compactMatch) {
-      const dateStr = `${compactMatch[1]}-${compactMatch[2]}-${compactMatch[3]}`;
-      const parsed = parseDateInTimezone(dateStr, this.timezone);
-      if (parsed) return parsed;
-    }
-
-    return null;
+  /** Shared with Agenda so mapped dates and selected-day membership agree. */
+  private extractDates(record: DataRecord) {
+    return calendarRecordDates(record, this.config, this.writeFormat, this.fallbackStartField);
   }
 
   /**
@@ -379,13 +296,15 @@ export class CalendarDataProcessor {
 
   /**
    * Extract color via the single record-color contract (UT2026-C, #070):
-   * explicit per-record hex (eventColorField, then any color-named field,
-   * case-tolerant, #RGB/#RRGGBB normalized) → project color rule → null.
+   * Exact mapped hex → project rule → shared theme fallback. The same key
+   * and fallback are used by the popup and by calendar creation.
    */
   private extractColor(record: DataRecord): string | null {
     return resolveRecordColor(record, {
       eventColorField: this.config.eventColorField,
       getRecordColor: this.getRecordColor ?? undefined,
+      exactField: true,
+      fallback: DEFAULT_RECORD_COLOR,
     });
   }
 
@@ -440,8 +359,13 @@ export class CalendarDataProcessor {
         continue;
       }
       
-      const eventStartMs = (event.startDate || event.endDate!).startOf("day").valueOf();
-      const eventEndMs = (event.endDate || event.startDate!).startOf("day").valueOf();
+      // i3-calendar: an inverted range (end before start) takes the same days
+      // as calculateSpanInfo gives it, which swaps them; raw values made the
+      // lane check see an empty range and stack it over another strip.
+      const aMs = (event.startDate || event.endDate!).startOf("day").valueOf();
+      const bMs = (event.endDate || event.startDate!).startOf("day").valueOf();
+      const eventStartMs = Math.min(aMs, bMs);
+      const eventEndMs = Math.max(aMs, bMs);
 
       // Find first available lane (no overlap)
       let assignedLane = -1;
@@ -487,8 +411,10 @@ export class CalendarDataProcessor {
     const grouped: Record<string, ProcessedRecord[]> = {};
 
     for (const pr of processed) {
-      const startDay = (pr.startDate || pr.endDate!).startOf("day");
-      const endDay = (pr.endDate || pr.startDate!).startOf("day");
+      const a = (pr.startDate || pr.endDate!).startOf("day");
+      const b = (pr.endDate || pr.startDate!).startOf("day");
+      // i3-calendar: an inverted range is grouped over the days it covers.
+      const [startDay, endDay] = b.isBefore(a) ? [b, a] : [a, b];
 
       // Fast path: single-day events (most common case, skip loop overhead)
       if (startDay.isSame(endDay, "day")) {
@@ -537,10 +463,50 @@ export class CalendarDataProcessor {
 export function processCalendarData(
   frame: DataFrame,
   config: CalendarConfig,
-  getRecordColor?: (record: DataRecord) => string | null
+  getRecordColor?: (record: DataRecord) => string | null,
+  writeFormat?: string,
+  fallbackStartField?: string
 ): ProcessedCalendarData {
-  const processor = new CalendarDataProcessor(config, getRecordColor);
+  const processor = new CalendarDataProcessor(config, getRecordColor, writeFormat, fallbackStartField);
   return processor.process(frame);
+}
+
+/** Add transient records without reprocessing the calendar's source records. */
+export function mergeCalendarPreview(
+  base: ProcessedCalendarData,
+  preview: ProcessedCalendarData
+): ProcessedCalendarData {
+  if (preview.processed.length === 0) return base;
+
+  let lane = -1;
+  for (const date of Object.keys(preview.grouped)) {
+    for (const record of base.grouped[date] ?? []) lane = Math.max(lane, record.lane);
+  }
+  lane += 1;
+
+  const replacements = new Map<ProcessedRecord, ProcessedRecord>();
+  preview.processed.forEach((record, index) => {
+    replacements.set(record, { ...record, lane: lane + index });
+  });
+
+  const grouped = { ...base.grouped };
+  for (const [date, records] of Object.entries(preview.grouped)) {
+    grouped[date] = [
+      ...(base.grouped[date] ?? []),
+      ...records.map((record) => replacements.get(record) ?? record),
+    ];
+  }
+
+  const processed = [...base.processed, ...replacements.values()];
+  const index = new Map(base.index);
+  for (const record of replacements.values()) index.set(record.record.id, record);
+
+  return {
+    processed,
+    grouped,
+    index,
+    maxLane: processed.reduce((max, record) => Math.max(max, record.lane), base.maxLane),
+  };
 }
 
 /**

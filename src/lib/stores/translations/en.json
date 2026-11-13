@@ -1,5 +1,81 @@
 ﻿{
     "translation": {
+        "formula-migration": {
+            "completed": "Projects+: formula rules migrated. Verified backup and report: {{path}}"
+        },
+        "formula-mode": {
+            "prepare": "Before using new rules, update all devices and back up settings.",
+            "label": "Formula rules",
+            "legacy": "Compatibility",
+            "modern": "New rules",
+            "checking": "Checking…",
+            "warning": "Before choosing new rules, update Projects Plus on every device and back up settings. Older versions ignore this choice; rolling back requires restoring settings or converting formulas after comparing results.",
+            "matches": "Matches: {{count}} of {{total}} records on the selected day."
+        },
+        "formula-profile-docs": {
+            "unified-v1": {
+                "COUNT": "Count non-null values and list items. Skip null and absent items; false, zero and empty text count.",
+                "WORKDAYS": "Signed weekday distance in (earlier day, later day]. Reversing the dates reverses the sign; the same day is zero.",
+                "TODAY": "The selected reference day, as YYYY-MM-DD.",
+                "NOW": "The fixed reference instant of this evaluation."
+            }
+        },
+        "formula-errors": {
+            "column-mode": "Column references in Agenda require New rules. Choose that mode explicitly or use a condition on this record.",
+            "version": "This formula uses an unsupported version. Update Projects Plus before evaluating or changing it.",
+            "number": "Invalid number. Check its sign, decimal point and exponent.",
+            "string": "Close the text with a matching quote.",
+            "escape": "Unsupported character after a backslash. Check the escape sequence.",
+            "column": "Enter a column name after @.",
+            "frame": "There is no data to calculate the column. Open the project and try again.",
+            "limit": "The formula exceeded the calculation limit. Simplify the expression or reduce the number of values.",
+            "unknown-field": "There is no property '{{name}}'",
+            "unknown-field-hint": "There is no property '{{name}}'. Did you mean '{{hint}}'?",
+            "unknown-function": "There is no function '{{name}}'",
+            "unfinished": "The formula is not finished — add a value",
+            "operator": "A sign is missing a value next to it — put a number, a property or a function there",
+            "character": "Unexpected character '{{char}}'",
+            "bracket": "A bracket or a comma is missing",
+            "arguments": "{{name}} takes {{count}} value(s)",
+            "token": "Something is out of place here — check the brackets and commas",
+            "missing-argument": "A function is missing a value",
+            "unknown-operator": "Unknown sign «{{op}}»",
+            "invalid": "The formula cannot be read: {{detail}}"
+        },
+        "regex-errors": {
+            "invalid": "This regular expression has invalid syntax.",
+            "unsafe": "This regular expression is not supported because its evaluation cost cannot be safely bounded.",
+            "too-long": "This regular expression exceeds the supported pattern length.",
+            "input-too-long": "The text is longer than the regular-expression evaluation limit.",
+            "unverified": "The complexity of this regular expression could not be verified within the supported limits. Simplify the pattern."
+        },
+        "formula-docs": {
+            "IS_EMPTY": "True for a missing value, empty text or empty list; zero and false are filled values.",
+            "IS_NOT_EMPTY": "True when a value is present and is not empty text or an empty list.",
+            "NOT_CONTAINS": "Case-insensitive negation of CONTAINS.",
+            "TOMORROW": "The day after the reference date, as YYYY-MM-DD.",
+            "YESTERDAY": "The day before the reference date, as YYYY-MM-DD.",
+            "IS_TODAY": "True when the date is on the reference day.",
+            "IS_THIS_WEEK": "True when the date is in the reference week, using the active date locale.",
+            "IS_THIS_MONTH": "True when the date is in the reference month.",
+            "IS_BEFORE": "True when the date is before the other calendar day.",
+            "IS_AFTER": "True when the date is after the other calendar day.",
+            "IS_ON_AND_BEFORE": "True when the date is on or before the other calendar day.",
+            "IS_ON_AND_AFTER": "True when the date is on or after the other calendar day.",
+            "IS_OVERDUE": "True for a valid date strictly before the reference day.",
+            "IS_UPCOMING": "True for a valid date strictly after the reference day.",
+            "HAS_ANY_OF": "True if the two lists share an item, using strict equality.",
+            "HAS_ALL_OF": "True if the list includes every item from the second list, using strict equality.",
+            "HAS_NONE_OF": "True if the two lists share no items, using strict equality.",
+            "SUMIF": "Sum of the cells (or of the third column on the same rows) that meet the condition: 5, \">10\", \"done\", \"<>x\", \"a*\".",
+            "COUNTIF": "How many cells meet the condition: 5, \">10\", \"done\", \"<>x\", \"a*\", \"\" for blanks.",
+            "AVERAGEIF": "Average of the cells (or of the third column) that meet the condition. Empty if nothing matches.",
+            "SUMIFS": "Sum of the first column on the rows that meet every column–condition pair.",
+            "COUNTIFS": "How many rows meet every column–condition pair.",
+            "AVERAGEIFS": "Average of the first column on the rows that meet every pair.",
+            "MINIFS": "Smallest value of the first column on the matching rows (0 if none).",
+            "MAXIFS": "Largest value of the first column on the matching rows (0 if none)."
+        },
         "data-types": {
             "string": "Text",
             "number": "Number",
@@ -45,16 +121,20 @@
                 "name": "Add field"
             },
             "toggle-visualizer-pane": {
-                "name": "Toggle YAML Visualizer pane"
+                "name": "Toggle properties block in note header"
             },
             "open-visualizer-for-file": {
-                "name": "Open active note in YAML Visualizer"
+                "name": "Show properties of the active note"
             },
             "add-relation": {
                 "name": "Add relation to active note"
             },
             "open-formula-editor": {
                 "name": "Open formula editor"
+            },
+            "startup-report": {
+                "name": "Start-up report (copy)",
+                "copied": "Copied to the clipboard."
             },
             "create-demo-project": {
                 "name": "Create demo project",
@@ -72,7 +152,7 @@
             },
             "file": {
                 "open-in-visualizer": {
-                    "title": "Open in YAML Visualizer"
+                    "title": "Show properties"
                 },
                 "add-relation": {
                     "title": "Add as relation…"
@@ -304,6 +384,8 @@
                     "name-taken-error": "A note with that name already exists.",
                     "empty-name-error": "Name can't be empty.",
                     "dot-start-error": "File name must not start with a dot.",
+                    "save-error": "Could not create the note: {{message}}",
+                    "creating": "Creating…",
                     "create": "Create note",
                     "readonly": {
                         "title": "Read-only project",
@@ -362,6 +444,8 @@
                     },
                     "empty-name-error": "Field name can't be empty.",
                     "existing-name-error": "Can't rename to a existing field name.",
+                    "save-error": "Could not save field changes: {{message}}",
+                    "saving": "Saving…",
                     "type": {
                         "name": "Type",
                         "description": "Convert this field to another type. Existing values are preserved when compatible."
@@ -455,6 +539,20 @@
                     "no-default-stage-a": "This type is computed or linked — no default value to set here.",
                     "empty-name-error": "Field name can't be empty.",
                     "existing-name-error": "A field with that name already exists.",
+                    "flow": {
+                        "group-basic": "Basic",
+                        "group-linked": "Relations and computations",
+                        "create-relation-option": "New relation to {{project}}",
+                        "new-relation-note": "Also creates the relation '{{name}}' to {{project}}.",
+                        "example": "Example on {{n}} records: {{values}} → {{result}}",
+                        "example-empty": "The linked project has no records yet — the example appears once it does.",
+                        "relation-failed": "The relation was not created, so the property was not added. Try again.",
+                        "choose-property": "Choose a property…",
+                        "formula-name": "Formula",
+                        "formula-description": "Type a field or function name — hints appear as you type.",
+                        "all-calculations": "More calculations"
+                    },
+                    "write-failed": "The field was not added to every note. Your entries are kept — try again.",
                     "type": {
                         "name": "Type",
                         "description": ""
@@ -472,7 +570,8 @@
                         "description": "For fields with Markdown content."
                     },
                     "create": "Create field",
-                    "bulk-write-notice": "Adds '{{field}}' to {{count}} notes. Empty values are written; existing values are not changed."
+                    "bulk-write-notice": "Writes the default value of '{{field}}' to {{count}} notes of the base.",
+                    "declared-notice": "'{{field}}' is added to the base. Notes are not changed until you fill in a value."
                 }
             },
             "schema": {
@@ -514,6 +613,7 @@
                 "read-only-fields": "Read-only fields"
             },
             "date-format": {
+                "invalid": "Enter a valid date format",
                 "name": "Date format",
                 "desc": "Choose how dates are formatted when creating or editing notes",
                 "preset": {
@@ -574,6 +674,36 @@
                         "empty": "No notes link here yet.",
                         "via": "via"
                     }
+                },
+                "block": {
+                    "title": "Properties",
+                    "add": "+ Property",
+                    "name-placeholder": "Property name",
+                    "options": "Properties options",
+                    "more": "Property actions",
+                    "empty": "Empty",
+                    "read-only": "Calculated, read only",
+                    "type": "Property type",
+                    "actions": {
+                        "rename": "Rename property",
+                        "delete": "Delete property"
+                    },
+                    "nested": "Nested value: edit it in the note's YAML",
+                    "chips": {
+                        "add": "Add item",
+                        "remove": "Remove {{item}}",
+                        "pick-note": "Choose a note"
+                    },
+                    "color": {
+                        "palette": "Color palette",
+                        "project": "Colors in this project"
+                    },
+                    "errors": {
+                        "exists": "A property with this name already exists",
+                        "reserved": "Names starting with pp_ or $ are reserved",
+                        "empty": "Enter a name"
+                    },
+                    "reorder": "Drag to reorder (Alt+↑ / Alt+↓)"
                 }
             },
             "developer": {
@@ -620,7 +750,12 @@
                 "records_one": "record",
                 "records_other": "records",
                 "drag-column": "Drag to reorder column",
-                "reset-zoom": "Reset zoom"
+                "reset-zoom": "Reset zoom",
+                "drag-blocked": {
+                    "pinned": "Pinned column: unpin it to move its cards",
+                    "readonly": "This data is read-only: cards cannot be moved",
+                    "editing": "Finish editing the column name first"
+                }
             },
             "calendar": {
                 "name": "Calendar",
@@ -710,7 +845,9 @@
                     "cancel": "Cancel",
                     "confirm": "Duplicate",
                     "time": "Time",
-                    "today": "Today"
+                    "today": "Today",
+                    "start-time": "Start time",
+                    "end-time": "End time"
                 },
                 "agenda": {
                     "title": "Agenda",
@@ -733,6 +870,7 @@
                         "add-list": "Add list",
                         "edit-list": "Edit list",
                         "delete-list": "Delete list",
+                        "rename-list": "Rename list",
                         "move-up": "Move up",
                         "move-down": "Move down",
                         "empty-list": "No records match filters",
@@ -888,10 +1026,48 @@
                 "events-count_one": "{{count}} event",
                 "events-count_other": "{{count}} events",
                 "reset-to-original": "Reset to original",
-                "reset-to-original-time": "Reset to original time"
+                "reset-to-original-time": "Reset to original time",
+                "draft": {
+                    "title": "New event",
+                    "resize": "Resize event form: drag the handle or use the arrow keys",
+                    "discard": "Discard event",
+                    "start": "Starts",
+                    "end": "Ends",
+                    "done": "Done",
+                    "status": "Status",
+                    "icon": "Icon",
+                    "color": "Colour",
+                    "clear-color": "Clear colour",
+                    "computed": "Read-only computed fields: {{fields}}",
+                    "mapping-conflict": "Choose distinct mapped properties before saving: {{fields}}",
+                    "template-default": "From template",
+                    "template-hint": "Untouched properties keep the template values. Use the eraser to clear a value explicitly.",
+                    "clear-value": "Clear {{field}}",
+                    "separate-end": "This duration needs a separate end-date property in the view settings.",
+                    "computed-time": "This view uses computed time properties. Choose writable date and time mappings to create an event here."
+                }
             },
             "gallery": {
                 "name": "Gallery",
+                "card-panel": {
+                    "open": "Card options",
+                    "title": "Card",
+                    "cover": "Cover",
+                    "fields": "Properties",
+                    "close": "Close",
+                    "width-value": "{{value}} px",
+                    "preview": "Card preview",
+                    "preview-options": {
+                        "cover": "Cover or first image",
+                        "property": "Cover property only",
+                        "content": "Page content"
+                    },
+                    "compact": "Title only",
+                    "group-by": "Group by"
+                },
+                "card-more": "More actions for \"{{name}}\"",
+                "cover-broken": "Image not found",
+                "cover-broken-hint": "Fix the path in \"{{field}}\": {{path}}",
                 "fields": {
                     "cover": "Cover",
                     "none": "None"
@@ -916,7 +1092,11 @@
                 "empty": "This view is empty.",
                 "records_one": "record",
                 "records_other": "records",
-                "cover-alt": "Title"
+                "cover-alt": "Title",
+                "group": {
+                    "no-value": "No value"
+                },
+                "show-more": "Show more ({{n}})"
             },
             "dashboard": {
                 "name": "Dashboard",
@@ -936,6 +1116,29 @@
                         "rollup-mode": "Rollup mode"
                     }
                 },
+                "insert": {
+                    "here": "Add a block here",
+                    "after": "After «{{name}}»",
+                    "start": "At the start",
+                    "block": "Block",
+                    "add": "Add block",
+                    "database": "Database",
+                    "database-desc": "Table, board or calendar built from notes",
+                    "chart": "Chart",
+                    "chart-desc": "Bars, lines or a pie from a field's values",
+                    "stats": "Numbers",
+                    "stats-desc": "Counts, sums and averages at a glance",
+                    "text": "Text",
+                    "text-desc": "A note, heading or explanation",
+                    "checklist": "Checklist",
+                    "checklist-desc": "Tick off notes as done",
+                    "filter-tabs": "Filter tabs",
+                    "filter-tabs-desc": "Tabs that narrow every block on the page",
+                    "cover": "Cover",
+                    "cover-desc": "An image across the top of the page",
+                    "divider": "Divider",
+                    "divider-desc": "A line between sections"
+                },
                 "canvas": {
                     "widgets": "Widgets",
                     "hide-toolbar": "Hide widget toolbar",
@@ -945,18 +1148,19 @@
                     "layout-stack": "Stack",
                     "hide-formula-bar": "Hide formula bar",
                     "show-formula-bar": "Show formula bar",
-                    "formula-builder": "Formulas",
-                    "schema": "Schema",
-                    "schema-tip": "Manage project fields — types, relations, rollups",
+                    "formula-builder": "Calculated fields",
                     "filter-bridge-global": "Global filter: {{count}} condition(s)",
                     "filter-bridge-local": "Local: {{field}} = {{value}}",
                     "filter-bridge-clear": "Clear local filter",
                     "filter-bridge-promote": "Save as global filter",
-                    "empty-title": "Empty canvas",
-                    "empty-hint": "Start with a data block",
-                    "empty-add-block": "Add data block",
+                    "empty-title": "Nothing on this page yet",
+                    "empty-hint": "A dashboard is a page of blocks. Start with a database — a table, board or calendar of this project's notes.",
+                    "empty-add-block": "Add a database",
                     "error-add-field": "Failed to add field. Please try again.",
-                    "error-reopen-schema": "Failed to reopen schema."
+                    "error-reopen-schema": "Failed to reopen schema.",
+                    "jump-bar": "Blocks on this page",
+                    "blocks": "Blocks",
+                    "collapsed-block": "collapsed"
                 },
                 "cover-banner-config": {
                     "src": "Image source",
@@ -982,6 +1186,9 @@
                     "add": "Filter",
                     "remove": "Remove condition",
                     "scope": "This block — all its views"
+                },
+                "record-card": {
+                    "computed-properties": "Computed properties"
                 },
                 "smart-suggest": {
                     "numeric-message": "Numeric field \"{{field}}\" detected — want a Stats block with sum and average?",
@@ -1013,7 +1220,9 @@
                         "relation-missing-hint": "No Relation field points at the linked block's project - add one to filter by it.",
                         "relation-open-schema": "Open schema editor",
                         "relation-field": "Filter by field",
-                        "select-field": "Select a field"
+                        "select-field": "Select a field",
+                        "source-any": "Source",
+                        "source-hint-any": "By default the block shows this view's records. Pick another project, a saved selection, or another block of this page — its filtered rows, kept up to date."
                     },
                     "tab-add": "Add view",
                     "tab-delete": "Delete view",
@@ -1040,7 +1249,16 @@
                     "filtered-by-canvas": "Filtered by canvas selection",
                     "relation-not-configured": "Relation not configured",
                     "relation-broken": "Relation broken",
-                    "filter-master": "Showing what {{name}} links through {{field}}"
+                    "filter-master": "Showing what {{name}} links through {{field}}",
+                    "link-view": "Link to view",
+                    "link-view-none": "No views of this type in the project",
+                    "unlink-view": "Unlink and keep settings",
+                    "linked-view-label": "Follows the project view {{name}}",
+                    "linked-view-missing": "The linked view was deleted — this tab shows its own settings",
+                    "tab-unavailable": "This kind of view cannot be shown in a block",
+                    "tab-unavailable-hint": "Delete this view from the tab menu, or add a table, board, calendar or gallery view.",
+                    "tab-needs-project": "This view needs a project to show",
+                    "local-settings-hint": "Changing these settings creates a local copy for this block. The project view and other blocks keep their settings."
                 },
                 "field-presets": {
                     "label": "Layout",
@@ -1056,7 +1274,17 @@
                     "confirm-delete": "Delete this layout preset?"
                 },
                 "widget": {
-                    "expand": "Expand widget",
+                    "menu-source": "Source and settings…",
+                    "menu-filter": "Filter for all views of this block…",
+                    "menu-summarize": "Group and count…",
+                    "menu-pivot": "Pivot table…",
+                    "menu-join": "Combine with another source…",
+                    "menu-collapse": "Collapse",
+                    "menu-duplicate": "Duplicate",
+                    "menu-insert-after": "Insert block after",
+                    "menu-insert-before": "Insert block before",
+                    "locked": "Position pinned",
+                    "expand": "Expand",
                     "collapse": "Collapse widget",
                     "drag-handle": "Drag to reorder the widget",
                     "chart-settings": "Chart settings",
@@ -1065,14 +1293,15 @@
                     "not-configured": "Widget type \"{{type}}\" — not configured",
                     "add": "Add widget",
                     "add-aria": "Add widget",
-                    "lock": "Lock widget position",
-                    "menu": "Widget menu",
+                    "lock": "Pin position",
+                    "menu": "Block menu",
                     "menu-configure": "Configure widget…",
-                    "menu-pipeline": "Data pipeline — filter, group, compute…",
-                    "menu-pipeline-active": "Data pipeline ({{count}})",
-                    "menu-remove": "Remove widget",
+                    "menu-more": "More…",
+                    "menu-pipeline": "Group, count, combine…",
+                    "menu-pipeline-active": "Data steps ({{count}})…",
+                    "menu-remove": "Delete block",
                     "menu-rename": "Rename",
-                    "unlock": "Unlock widget",
+                    "unlock": "Unpin position",
                     "removed": "Block \"{{title}}\" removed",
                     "undo": "Undo",
                     "primary": {
@@ -1099,11 +1328,9 @@
                         "column-count-title": "Visible columns",
                         "grouped": "Grouped",
                         "grouped-title": "Grouped by {{field}}"
-                    }
-                },
-                "quick": {
-                    "group": "Quick actions",
-                    "formula": "Formula builder"
+                    },
+                    "resize": "Resize the block: drag, or use the arrow keys",
+                    "menu-properties": "Properties of «{{source}}»…"
                 },
                 "types": {
                     "data-table": "Data table",
@@ -1125,6 +1352,11 @@
                 },
                 "formula": {
                     "title": "Formula editor",
+                    "scope": "Creates or updates a calculated column for every record shown by this dashboard. It appears in the dashboard's data blocks but does not write to note properties. Preview uses the dashboard dataset; column aggregates use every visible record.",
+                    "saved": "Saved dashboard formulas — select one to edit",
+                    "remove": "Delete calculated field {{name}}",
+                    "applied": "Field “{{name}}” saved. It now appears as a column in tables and in the field lists of blocks (stats, chart).",
+                    "cycle": "This formula would create a circular dependency. Remove the reference loop before applying.",
                     "hint": "Ctrl+Enter to apply, Esc to cancel",
                     "field-name": "Field name",
                     "field-placeholder": "e.g. computed budget",
@@ -1153,9 +1385,26 @@
                     "debug-cursor": "Cursor position",
                     "debug-copy": "Copy error",
                     "debug-dismiss": "Dismiss",
-                    "runtime-error": "Runtime error"
+                    "runtime-error": "Runtime error",
+                    "snippet-sum": "Sum of a column",
+                    "snippet-avg": "Average value",
+                    "snippet-count": "Number of records",
+                    "snippet-if": "Conditional value",
+                    "snippet-today": "Today's date",
+                    "snippet-sumif": "Sum where a condition holds",
+                    "snippet-countif": "Count where a condition holds",
+                    "suggestions-label": "Formula suggestions",
+                    "snippets-label": "Formula templates"
                 },
                 "pipeline": {
+                    "intent": {
+                        "summarize-hint": "One row per group with its count or sum — e.g. how many tasks each person has.",
+                        "summarize-add": "Add grouping and count",
+                        "pivot-hint": "Values of one field become columns — a summary table, like a spreadsheet pivot.",
+                        "pivot-add": "Add pivot table",
+                        "join-hint": "Adds columns from another project by a shared value — e.g. a client's city next to each order.",
+                        "join-add": "Add another source"
+                    },
                     "title": "Advanced transforms",
                     "advanced-hint": "Ordinary filtering and grouping now live on the view itself — these steps reshape the data.",
                     "steps": "step(s)",
@@ -1223,17 +1472,49 @@
                     "disable-step": "Disable step",
                     "enable-step": "Enable step",
                     "source-not-ready": "The linked project is not loaded, so its fields are unavailable here.",
-                    "formula-placeholder": "e.g. fieldA + fieldB * 2"
+                    "formula-placeholder": "e.g. fieldA + fieldB * 2",
+                    "execution-stopped": "Data transformation stopped",
+                    "execution": {
+                        "work-limit": "Reduce the input data or calculation complexity, then try again. The result is incomplete.",
+                        "deadline": "The processing deadline was reached. Reduce the input data or split the transformation.",
+                        "cancelled": "Processing was cancelled. Run the transformation again to obtain a complete result."
+                    }
                 },
                 "group": {
                     "empty": "(empty)"
                 },
                 "chart": {
+                    "tabs": {
+                        "setup": "Setup",
+                        "customize": "Customize"
+                    },
+                    "repick": "Re-pick from data",
+                    "repick-hint": "Type and axes are chosen from the source's fields.",
+                    "x-none": "All records (one total)",
+                    "title": "Chart title",
+                    "title-placeholder": "No title",
+                    "colors": "Colours",
+                    "color-schemes": {
+                        "auto": "Automatic",
+                        "accent": "Accent colour",
+                        "categorical": "Different colours",
+                        "sequential": "Shades of one colour"
+                    },
+                    "empty": {
+                        "no-records": "The source has no records yet — add notes or loosen the filter.",
+                        "no-x": "Choose a field for the X axis in Setup.",
+                        "missing-field": "The field “{{field}}” is not in the source any more — choose another one in Setup.",
+                        "no-numeric": "No numeric fields for “{{operation}}” — choose “Count all”.",
+                        "not-numeric": "“{{field}}” is not a number, so “{{operation}}” is impossible — pick a numeric field or “Count all”.",
+                        "scatter-needs-numbers": "A scatter chart needs two numeric fields: one for X and one for Y.",
+                        "x-all-empty": "Every record has an empty “{{field}}” — fill it in or choose another X field."
+                    },
                     "no-data": "No data",
                     "type": "Chart type",
                     "x-axis": "X axis",
                     "y-axis": "Y axis",
                     "aggregation": "Aggregation",
+                    "unsupported-aggregation": "This aggregation is not supported for the selected field. Choose a compatible operation.",
                     "sort-by": "Sort by",
                     "height": "Height",
                     "granularity": "Group dates by",
@@ -1366,6 +1647,8 @@
                         "fmt-currency": "Currency",
                         "fmt-duration": "Duration"
                     },
+                    "summary-hint": "Numeric summary — choose each card's field and aggregation in settings. For a diagram, add a Chart widget.",
+                    "empty-cards": "Add a card in the widget settings.",
                     "field-not-found": "Field not found",
                     "filtered-title": "Filtered by canvas selection",
                     "filtered-aria": "{{value}} — filtered by canvas selection",
@@ -1443,6 +1726,8 @@
                     "filter-canvas": "Filter linked blocks by this row",
                     "group-by": "Group by this field",
                     "hide-field": "Hide in view",
+                    "freeze": "Pin column while scrolling",
+                    "unfreeze": "Unpin column",
                     "new": "New",
                     "new-name": "Note name…",
                     "open": "Open note",
@@ -1456,12 +1741,29 @@
                     "row-menu": "Row actions",
                     "search": "Search records",
                     "search-placeholder": "Search…",
+                    "searching": "Searching…",
+                    "search-hints": "Search suggestions",
+                    "search-tip": "Tip: field:value, field: for empty, field:* for filled",
+                    "readonly-reason": {
+                        "rollup-from": "Rollup from «{{source}}» — computed",
+                        "rollup": "Rollup — computed",
+                        "formula": "Formula — computed",
+                        "derived": "Computed field — read only",
+                        "source": "This source is read only",
+                        "list": "A list of values is not edited here yet — open the note"
+                    },
+                    "invalid-number": "Enter a valid number; the stored value has not changed",
+                    "invalid-date": "Complete the date; the stored value has not changed",
+                    "list-add": "Add item",
+                    "list-remove": "Remove item {{index}}",
                     "sort-asc": "Sort ascending",
                     "sort-clear": "Clear sort",
                     "sort-desc": "Sort descending",
                     "unfilter-canvas": "Stop filtering canvas by this row",
                     "ungroup": "Ungroup",
-                    "group-empty": "No value"
+                    "group-empty": "No value",
+                    "relation-load-error": "Could not load records from the linked database. Retry or check its source.",
+                    "relation-retry": "Retry"
                 },
                 "agg-consequence": {
                     "count_total": "Every record, including ones with nothing in this field",
@@ -1544,6 +1846,10 @@
                     "label": "Follow selection in",
                     "none": "— Don't follow —",
                     "field": "Through relation field"
+                },
+                "source-catalogue": {
+                    "block": "Block «{{title}}» (filtered)",
+                    "cycle": "Circular source: this block reads itself through another block. Pick a different source."
                 }
             }
         },
@@ -1598,7 +1904,9 @@
                     "pin": "Pin column",
                     "unpin": "Unpin column",
                     "persist": "Keep when empty",
-                    "unpersist": "Remove when empty"
+                    "unpersist": "Remove when empty",
+                    "move-left": "Move left",
+                    "move-right": "Move right"
                 }
             },
             "color": {
@@ -1614,8 +1922,9 @@
                 "pick-color": "Pick color",
                 "favorites": "Favorites",
                 "favorites-empty-hint": "Press ⭐ to add",
+                "used-in-notes": "Colors used in notes",
                 "hex-code": "HEX code",
-                "invalid-format": "Invalid format",
+                "invalid-format": "Use #RGB or #RRGGBB",
                 "expand-palette": "Expand palette",
                 "collapse-palette": "Collapse palette"
             },
@@ -1802,8 +2111,8 @@
                     "desc": "Turn off vibration feedback during drag-and-drop on mobile devices"
                 },
                 "replace-properties": {
-                    "name": "Replace Obsidian Properties pane",
-                    "desc": "Close the built-in file-properties leaves and surface the YAML Visualizer pane instead."
+                    "name": "Properties in the note header",
+                    "desc": "Show Projects Plus properties at the top of every note (pin, hide, order, types, relations) instead of Obsidian's built-in Properties block."
                 }
             },
             "front-matter": {
@@ -1847,6 +2156,7 @@
             "fieldWritePartial": "'{{field}}' was written to {{written}} notes; {{unwritten}} could not be updated. See the console for the list.",
             "inverseWriteFailed": "The back-link for '{{field}}' could not be written to {{count}} note(s). See the console.",
             "recordsWriteFailed": "Could not save {{count}} record(s); the previous values were restored.",
+            "recordsWritePartial": "{{unwritten}} of {{count}} notes were not saved and show their previous values; the rest were saved.",
             "migrationBackupFailed": "The dashboard configuration was migrated, but its restore point could not be written. See the console.",
             "renameFailed": "The note could not be renamed.",
             "settingsUnreadable": "The settings file could not be read; defaults are in use.",
@@ -1857,9 +2167,10 @@
                 "settings-unreadable": "data.json could not be read or parsed, so the plugin started from defaults and left the file on disk untouched.",
                 "settings-corrupted": "data.json parsed but matched no known settings version, so there was nothing that could be migrated.",
                 "settings-conflict": "Another window, a synchroniser or a hand edit replaced data.json while this session held changes of its own, so neither version could be discarded.",
-                "settings-conflict-uncopied": "Both the copy beside data.json and the note in the vault failed to write, so the other version survives in two places only: the console line, and data.json itself, which this session is holding unwritten until your next change.",
+                "settings-conflict-uncopied": "Neither the copy beside data.json nor the recovery note could be written and read back completely. The original remains protected from overwrite.",
                 "record-write-failed": "Writing the note's frontmatter failed, so the value on screen was rolled back to what is on disk.",
                 "records-write-failed": "A batch write failed part way through, so every record in the batch was rolled back to what is on disk.",
+                "records-write-partial": "A change to several notes is written into each note on its own; some notes were missing or refused the write. The console lists them.",
                 "record-file-missing": "The note was renamed, moved or deleted after the view loaded it, so there was no file left to write to.",
                 "field-write-partial": "A new field is written into the project's notes one by one, and some of those writes did not succeed.",
                 "rename-failed": "Obsidian refused the rename — usually the new name is already taken, or holds characters the file system does not allow.",
@@ -1941,7 +2252,7 @@
                 "notice": "Projects+: data.json was changed outside this window and could not be adopted. Your version is kept, and the one from disk was saved as {{path}}."
             },
             "conflict-uncopied": {
-                "notice": "Projects+: data.json was changed outside this window, and the other version could not be saved anywhere — not beside the file, not as a note in the vault. On desktop it is printed in the developer console. Nothing is being written over it until you change a setting yourself."
+                "notice": "Projects+: data.json changed outside this window, but its recovery copy could not be verified. The original is protected; changes remain unsaved until a copy is verified. Check storage access and keep a manual backup. On desktop, the other version is also in the developer console."
             },
             "diverged": {
                 "label": "Changed elsewhere",
@@ -1982,6 +2293,8 @@
                     "interval": "Interval",
                     "layout": "Layout",
                     "time-format": "Time format",
+                    "creation-duration": "New event length",
+                    "minutes": "{{count}} min",
                     "timezone": "Timezone",
                     "show-agenda": "Show agenda",
                     "hide-agenda": "Hide agenda",
@@ -2020,15 +2333,17 @@
                         "end-date": "End (endDate)",
                         "start-time": "Start time (startTime)",
                         "end-time": "End time (endTime)",
-                        "check": "Status field (check)",
+                        "check": "Completion checkbox field",
                         "hints": {
                             "date": "Automatically filled when note is created. Does not determine event start",
                             "start-date": "Start date for multi-day events",
                             "end-date": "End date for multi-day events",
                             "start-time": "Separate start time field (HH:mm)",
                             "end-time": "Separate end time field",
-                            "check": "Field for marking completion (completed, done, etc.)"
-                        }
+                            "check": "Field for marking completion (completed, done, etc.)",
+                            "status": "Text such as Queued or Active; separate from the completion checkbox."
+                        },
+                        "status": "Status field"
                     }
                 },
                 "board": {
@@ -2088,7 +2403,7 @@
                     },
                     "hints": {
                         "card-width": "Width of each gallery card in pixels",
-                        "cover-field": "Text field with path to image",
+                        "cover-field": "Uses the cover property by default. Clear the field to disable property images. Cover and Content previews can still use the first image in the note.",
                         "include-fields": "Select which fields to show on cards",
                         "card-fields": "Shown under the title of every card, in this order"
                     }
@@ -2096,10 +2411,19 @@
                 "table": {
                     "hide-fields": "Hide fields",
                     "hints": {
-                        "hide-fields": "Select which fields to hide in the table"
+                        "hide-fields": "Select which fields to hide in the table",
+                        "properties": "Show, hide and order the columns of the tables in this view. A table that set a column itself keeps its own choice."
                     },
                     "hidden-fields": "Hidden fields",
-                    "show-all": "Show all fields"
+                    "show-all": "Show all fields",
+                    "properties": "Properties",
+                    "search-properties": "Search properties",
+                    "shown-fields": "Shown in the table",
+                    "move-field": "Move {{name}}: drag, or press the up and down arrow keys",
+                    "hide-field": "Hide {{name}}",
+                    "show-field": "Show {{name}}",
+                    "primary-field": "The title column is always shown",
+                    "no-matching-properties": "No properties match"
                 },
                 "shared": {
                     "icon-field": "Icon field",
@@ -2150,6 +2474,10 @@
             "intro": "Start with the demo — three linked projects show tables, boards, calendars, charts and computation across them — or create your own project."
         },
         "common": {
+            "clear": "Clear",
+            "retry": "Retry",
+            "hide-keyboard": "Hide keyboard",
+            "search": "Search",
             "yesterday": "Yesterday",
             "tomorrow": "Tomorrow",
             "close": "Close",
@@ -2172,6 +2500,8 @@
             "select-project": "Select project",
             "syntax-help": "Syntax help",
             "date-placeholder": "YYYY-MM-DD",
+            "date-typed-placeholder": "DD.MM.YYYY",
+            "datetime-typed-placeholder": "DD.MM.YYYY HH:MM",
             "datetime-placeholder": "YYYY-MM-DD HH:MM",
             "field": "Field",
             "projects": "Projects",
@@ -2180,6 +2510,7 @@
             "enable": "Enable",
             "disable": "Disable",
             "remove": "Remove",
+            "add-item": "Add item",
             "apply": "Apply",
             "field-placeholder": "Field",
             "add-criterion": "Add criterion",
@@ -2229,6 +2560,12 @@
             "text": "Create the demo — three linked projects with tables, boards, calendars and charts — or start your own project from a folder, a tag or a query.",
             "create-demo": "Create demo: three linked projects",
             "create-project": "Create project"
+        },
+        "automatic-fields": {
+            "generated": "Automatically generated field — read only",
+            "unknown": "Choose a field type before editing this value",
+            "prefix-label": "ID prefix",
+            "prefix-hint": "Prefix for generated IDs, for example TASK-. Each new note and copy receives a new ID."
         }
     }
 }

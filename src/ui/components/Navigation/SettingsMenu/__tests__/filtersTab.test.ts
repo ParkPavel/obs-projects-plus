@@ -369,6 +369,8 @@ describe("chrome-filters — the settings list the project's declared rollups", 
       name: "Clients",
       fieldConfig: {
         "Проведено визитов": { rollup: { function: "count", field: "", backlink: { projectId: "p2", relationField: "client" } } },
+        "Новая формула": {type:"formula",formula:"goal",formulaVersion:"unified-v1"},
+        "Демо формула": {formula:"1 + 2",formulaVersion:"unified-v1"},
       },
       views: [],
     };
@@ -383,6 +385,8 @@ describe("chrome-filters — the settings list the project's declared rollups", 
     const text = target.textContent ?? "";
     expect(text).toContain("goal");
     expect(text).toContain("Проведено визитов");
+    expect(text).toContain("Новая формула");
+    expect(text).toContain("Демо формула");
     component.$destroy();
     target.remove();
     dataFrame.set({ fields: [], records: [] });

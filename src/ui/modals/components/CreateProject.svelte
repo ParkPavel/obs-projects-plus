@@ -4,30 +4,34 @@
   import {
     Button,
     Callout,
-    FileAutocomplete,
     Icon,
     ModalButtonGroup,
     ModalContent,
     ModalLayout,
-    Select,
     SettingItem,
     Switch,
-    TextArea,
-    TextInput,
     Typography,
   } from "obsidian-svelte";
 
   import { FileListInput } from "src/ui/components/FileListInput";
+  import ValueSuggestField from "src/ui/components/fields/ValueSuggestField.svelte";
+  import TextField from "src/ui/components/fields/TextField.svelte";
+  import SelectField from "src/ui/components/fields/SelectField.svelte";
+  import NumberField from "src/ui/components/fields/NumberField.svelte";
+  import PathSuggestField from "src/ui/components/fields/PathSuggestField.svelte";
+  import { vaultPathSource } from "src/lib/suggestions/vaultPaths";
+  import { ProjectRows } from "./projectRows";
   import { Accordion, AccordionItem } from "src/ui/components/Accordion";
   import DateFormatSelector from "./DateFormatSelector.svelte";
   import { notEmpty } from "src/lib/helpers";
-  import { getFoldersInFolder, isValidPath } from "src/lib/obsidian";
+  import { isValidPath } from "src/lib/obsidian";
   import { capabilities } from "src/lib/stores/capabilities";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
   import { settings } from "src/lib/stores/settings";
   import { interpolateTemplate } from "src/lib/templates/interpolate";
-  import { getAPI, isPluginEnabled } from "obsidian-dataview";
+  import { agendaEmoji } from "src/ui/views/Calendar/agenda/agendaEmoji";
+  import { getAPI, isPluginEnabled } from "src/lib/datasources/dataview/host";
   import type { ProjectDefinition } from "src/settings/settings";
   import type {
     AgendaCustomList,
@@ -46,6 +50,51 @@
   export let project: ProjectDefinition;
 
   let originalName = project.name;
+  let projectOwner = project.id;
+  let primarySourceId = project.dataSource.id, primarySourceEpoch = 0;
+  $: if (project.dataSource.id !== primarySourceId) {
+    primarySourceId = project.dataSource.id;
+    primarySourceEpoch++;
+  }
+  let formEl: HTMLDivElement;
+  let limitField: NumberField | undefined;
+  let folderField: PathSuggestField | undefined;
+  let newNotesFolderField: PathSuggestField | undefined;
+  let templateFields: FileListInput | undefined;
+  let excludedFields: FileListInput | undefined;
+  let queryField: TextField | undefined;
+  let dateFormatField: DateFormatSelector | undefined;
+  let queryBaseline = "";
+  let additionalPathFields: Record<string, PathSuggestField | null | undefined> = {};
+  let textFields: Record<string, ValueSuggestField | null | undefined> = {};
+  const sourceRows = new ProjectRows<DataSourceConfig>(source => source.id);
+  const conditionRows = new ProjectRows<FilterCondition>();
+  $: additionalRows = sourceRows.sync(project.id, project.additionalSources ?? []);
+  $: conditionEntries = conditionRows.sync(JSON.stringify([project.id, primarySourceEpoch]), project.dataSource.kind === "native-query" ? project.dataSource.config.where?.conditions ?? [] : []);
+  const composing = new Set<Node>();
+  $: if (project.id !== projectOwner) {
+    projectOwner = project.id;
+    originalName = project.name;
+    composing.clear();
+  }
+  $: pathSource = vaultPathSource($app);
+
+  function trackComposition(event: CompositionEvent, active: boolean) {
+    const target = event.target as Node | null;
+    if (!target) return;
+    if (active) composing.add(target); else composing.delete(target);
+  }
+
+  function submit() {
+    for (const target of composing) {
+      if (!target.isConnected || !formEl?.contains(target)) composing.delete(target);
+    }
+    if (composing.size) return;
+    if (project.dataSource.kind === "native-query" && !limitField?.syncForSubmit()) return;
+    if ([folderField, newNotesFolderField, templateFields, excludedFields, queryField, dateFormatField, ...Object.values(additionalPathFields), ...Object.values(textFields)].some(field => field && !field.syncForSubmit())) return;
+    if (validateName(project.name, originalName, projects)) return;
+    onSave({ ...project, templates: project.templates?.filter(notEmpty) ?? [] });
+  }
 
   $: projects = $settings.projects;
 
@@ -55,7 +104,7 @@
   });
 
   $: ({ name } = project);
-  $: nameError = validateName(name);
+  $: nameError = validateName(name, originalName, projects);
 
   const dataSourceOptions = [
     { label: $i18n.t("datasources.folder"), value: "folder" },
@@ -89,16 +138,20 @@
    * additional sources: a block pointing here means "this project's primary
    * source", and swapping a folder for a tag has not made it a different one.
    */
+  function assignPrimarySource(dataSource: DataSource) {
+    // A locally minted id acknowledges this editor; a different incoming id
+    // retires it through primarySourceEpoch instead.
+    primarySourceId = dataSource.id;
+    project = {...project, dataSource};
+  }
+
   function setPrimarySource(next: DataSource) {
     const previous = project.dataSource as { id?: string; name?: string } | undefined;
-    project = {
-      ...project,
-      dataSource: {
+    assignPrimarySource({
         ...next,
         id: previous?.id ?? uuidv4(),
         ...(previous?.name ? { name: previous.name } : {}),
-      } as DataSource,
-    };
+    } as DataSource);
   }
 
   /**
@@ -116,14 +169,11 @@
    */
   function patchPrimaryConfig(config: Record<string, unknown>) {
     const current = project.dataSource as DataSource & { id?: string };
-    project = {
-      ...project,
-      dataSource: {
+    assignPrimarySource({
         ...current,
         id: current.id ?? uuidv4(),
         config: { ...current.config, ...config },
-      } as DataSource,
-    };
+    } as DataSource);
   }
 
   function handleDataSourceChange({ detail: value }: CustomEvent<string>) {
@@ -178,10 +228,7 @@
 
   function nqSetConfig(config: NativeQueryConfig) {
     const current = project.dataSource as DataSource & { id?: string };
-    project = {
-      ...project,
-      dataSource: { ...current, kind: "native-query", id: current.id ?? uuidv4(), config } as DataSource,
-    };
+    assignPrimarySource({ ...current, kind: "native-query", id: current.id ?? uuidv4(), config } as DataSource);
   }
 
   function nqSetFromKind(kind: string) {
@@ -226,11 +273,12 @@
     ]);
   }
 
-  function nqUpdateCondition(index: number, patch: Partial<FilterCondition>) {
+  function nqUpdateCondition(rowId: number, patch: Partial<FilterCondition>) {
     if (project.dataSource.kind !== "native-query") return;
     const conditions = [
       ...(project.dataSource.config.where?.conditions ?? []),
     ];
+    const index = conditionRows.index(JSON.stringify([project.id, primarySourceEpoch]), conditions, rowId);
     const current = conditions[index];
     if (!current) return;
     const next = { ...current, ...patch };
@@ -238,30 +286,31 @@
       delete next.value;
     }
     conditions[index] = next;
+    conditionRows.replace(rowId, next);
     nqSetConditions(conditions);
   }
 
-  function nqSetConditionOperator(index: number, op: string) {
+  function nqSetConditionOperator(rowId: number, op: string) {
     if ((NQ_OPERATORS as string[]).includes(op)) {
-      nqUpdateCondition(index, { operator: op as FilterOperator });
+      nqUpdateCondition(rowId, { operator: op as FilterOperator });
     }
   }
 
-  function nqRemoveCondition(index: number) {
+  function nqRemoveCondition(rowId: number) {
     if (project.dataSource.kind !== "native-query") return;
     const conditions = [
       ...(project.dataSource.config.where?.conditions ?? []),
     ];
+    const index = conditionRows.index(JSON.stringify([project.id, primarySourceEpoch]), conditions, rowId);
+    if (index < 0) return;
     conditions.splice(index, 1);
     nqSetConditions(conditions);
   }
 
-  function nqSetLimit(raw: string) {
+  function nqSetLimit(parsed: number | null) {
     if (project.dataSource.kind !== "native-query") return;
     const config = project.dataSource.config;
-    // coercion-exempt: Class C - plugin/widget configuration from a form control, not record data
-    const parsed = parseInt(raw, 10);
-    if (Number.isFinite(parsed) && parsed > 0) {
+    if (parsed !== null && parsed > 0) {
       nqSetConfig({ ...config, limit: parsed });
     } else {
       const { limit, ...rest } = config;
@@ -269,16 +318,22 @@
     }
   }
 
-  function validateName(name: string) {
-    if (name === originalName) {
-      return "";
-    }
+  function updatePrimaryTag({detail: raw}: CustomEvent<string>) {
+    const text = raw.trim(), tag = text ? text.startsWith("#") ? text : "#" + text : "";
+    if (project.dataSource.kind === "tag") patchPrimaryConfig({ tag });
+    else if (project.dataSource.kind === "native-query" && project.dataSource.config.from.kind === "tag") nqUpdateFrom({tag});
+  }
 
+  function validateName(name: string, baseline: string, available: readonly ProjectDefinition[]) {
     if (name.trim() === "") {
       return $i18n.t("modals.project.create.empty-name-error");
     }
 
-    if (projects.find((project) => project.name === name)) {
+    if (name === baseline) {
+      return "";
+    }
+
+    if (available.find((project) => project.name === name)) {
       return $i18n.t("modals.project.create.existing-name-error");
     }
 
@@ -288,10 +343,22 @@
   // ── Dataview query validation ──────────────────────────────
   let dvPreviewStatus: "idle" | "loading" | "success" | "error" = "idle";
   let dvPreviewMessage = "";
-  let dvPreviewTimer: ReturnType<typeof setTimeout> | undefined;
+  let dvPreviewTimer: number | undefined;
+  let previewVersion = 0, alive = true;
+  let previewContext = {id: project.id, sourceId: project.dataSource.id, kind: project.dataSource.kind, query: project.dataSource.kind === "dataview" ? project.dataSource.config.query ?? "" : "", owner: $app};
+  $: syncPreviewContext(project.id, project.dataSource.kind, project.dataSource.kind === "dataview" ? project.dataSource.config.query ?? "" : "", $app, project.dataSource.id);
+
+  function syncPreviewContext(id: string, kind: DataSource["kind"], query: string, owner: typeof previewContext.owner, sourceId: string | undefined) {
+    if (previewContext.id === id && previewContext.sourceId === sourceId && previewContext.kind === kind && previewContext.query === query && previewContext.owner === owner) return;
+    previewContext = {id, sourceId, kind, query, owner};
+    window.clearTimeout(dvPreviewTimer); previewVersion++;
+    dvPreviewStatus = "idle"; dvPreviewMessage = "";
+  }
 
   function validateDataviewQuery(query: string) {
-    clearTimeout(dvPreviewTimer);
+    syncPreviewContext(project.id, project.dataSource.kind, query, $app, project.dataSource.id);
+    window.clearTimeout(dvPreviewTimer);
+    const version = ++previewVersion, context = previewContext;
     if (!query.trim()) {
       dvPreviewStatus = "idle";
       dvPreviewMessage = "";
@@ -299,23 +366,26 @@
     }
     dvPreviewStatus = "loading";
     dvPreviewMessage = $i18n.t("modals.project.dataview.validating");
-    dvPreviewTimer = setTimeout(() => runDataviewPreview(query), 600);
+    dvPreviewTimer = window.setTimeout(() => runDataviewPreview(query, version, context), 600);
   }
 
-  async function runDataviewPreview(query: string) {
+  async function runDataviewPreview(query: string, version: number, context: typeof previewContext) {
+    const current = () => alive && version === previewVersion && project.id === context.id && project.dataSource.id === context.sourceId && $app === context.owner && project.dataSource.kind === "dataview" && project.dataSource.config.query === query;
+    if (!current()) return;
     try {
-      if (!isPluginEnabled($app)) {
+      if (!isPluginEnabled(context.owner)) {
         dvPreviewStatus = "error";
         dvPreviewMessage = $i18n.t("errors.missingDataview.message");
         return;
       }
-      const api = getAPI($app);
+      const api = getAPI(context.owner);
       if (!api) {
         dvPreviewStatus = "error";
         dvPreviewMessage = $i18n.t("errors.missingDataview.message");
         return;
       }
       const result = await api.query(query, undefined, { forceId: true });
+      if (!current()) return;
       if (!result?.successful) {
         dvPreviewStatus = "error";
         dvPreviewMessage = $i18n.t("modals.project.dataview.query-error");
@@ -323,15 +393,15 @@
       }
       const type = result.value.type;
       if (type === "table") {
-        const count = (result.value as { values: unknown[] }).values?.length ?? 0;
+        const count = result.value.values?.length ?? 0;
         dvPreviewStatus = "success";
         dvPreviewMessage = $i18n.t("modals.project.dataview.preview-table", { count });
       } else if (type === "list") {
-        const count = (result.value as { values: unknown[] }).values?.length ?? 0;
+        const count = result.value.values?.length ?? 0;
         dvPreviewStatus = "success";
         dvPreviewMessage = $i18n.t("modals.project.dataview.preview-list", { count });
       } else if (type === "task") {
-        const count = (result.value as { values: unknown[] }).values?.length ?? 0;
+        const count = result.value.values?.length ?? 0;
         dvPreviewStatus = "success";
         dvPreviewMessage = $i18n.t("modals.project.dataview.preview-task", { count });
       } else {
@@ -339,6 +409,7 @@
         dvPreviewMessage = $i18n.t("modals.project.dataview.unsupported-type", { type });
       }
     } catch {
+      if (!current()) return;
       dvPreviewStatus = "error";
       dvPreviewMessage = $i18n.t("modals.project.dataview.query-error");
     }
@@ -346,7 +417,7 @@
 
   import { onDestroy } from "svelte";
   import type { DataSource as DataSourceConfig } from "src/settings/v3/settings";
-  onDestroy(() => clearTimeout(dvPreviewTimer));
+  onDestroy(() => { alive = false; previewVersion++; window.clearTimeout(dvPreviewTimer); });
 
   // ── Multi-source management ────────────────────────────────
   /**
@@ -364,23 +435,29 @@
   }
 
   /** The label, which is the user's and may change freely. */
-  function renameAdditionalSource(index: number, name: string) {
+  function renameAdditionalSource(rowId: number, name: string) {
     const sources = [...(project.additionalSources ?? [])];
+    const index = sourceRows.index(project.id, sources, rowId);
     const current = sources[index];
     if (!current) return;
     const trimmed = name.trim();
     sources[index] = (trimmed ? { ...current, name: trimmed } : (({ name: _drop, ...rest }) => rest)(current)) as DataSourceConfig;
+    sourceRows.replace(rowId, sources[index]!);
     project = { ...project, additionalSources: sources };
   }
 
-  function removeAdditionalSource(index: number) {
+  function removeAdditionalSource(rowId: number) {
     const sources = [...(project.additionalSources ?? [])];
+    const index = sourceRows.index(project.id, sources, rowId);
+    if (index < 0) return;
     sources.splice(index, 1);
     project = { ...project, additionalSources: sources };
   }
 
-  function updateAdditionalSource(index: number, kind: string) {
+  function updateAdditionalSource(rowId: number, kind: string) {
     const sources = [...(project.additionalSources ?? [])];
+    const index = sourceRows.index(project.id, sources, rowId);
+    if (index < 0) return;
     let newSrc: DataSourceConfig;
     switch (kind) {
       case "tag":
@@ -401,14 +478,17 @@
       id: previous?.id ?? uuidv4(),
       ...(previous?.name ? { name: previous.name } : {}),
     } as DataSourceConfig;
+    sourceRows.replace(rowId, sources[index]!);
     project = { ...project, additionalSources: sources };
   }
 
-  function updateAdditionalSourceConfig(index: number, config: Record<string, unknown>) {
+  function updateAdditionalSourceConfig(rowId: number, config: Record<string, unknown>) {
     const sources = [...(project.additionalSources ?? [])];
+    const index = sourceRows.index(project.id, sources, rowId);
     const current = sources[index];
     if (!current) return;
     sources[index] = { ...current, config: { ...current.config, ...config } } as DataSourceConfig;
+    sourceRows.replace(rowId, sources[index]!);
     project = { ...project, additionalSources: sources };
   }
 
@@ -527,15 +607,20 @@
   }
 </script>
 
+{#key project.id}
 <ModalLayout {title}>
   <ModalContent>
+    <div bind:this={formEl} on:compositionstart|capture={(event) => trackComposition(event, true)} on:compositionend|capture={(event) => trackComposition(event, false)}>
     <SettingItem
       name={$i18n.t("modals.project.name.name")}
       description={$i18n.t("modals.project.name.description") ?? ""}
     >
-      <TextInput
+      <ValueSuggestField
+        bind:this={textFields['name']}
         value={project.name}
+        ariaLabel={$i18n.t("modals.project.name.name")}
         on:input={({ detail: name }) => (project = { ...project, name })}
+        on:commit={({ detail: name }) => (project = { ...project, name })}
         autoFocus
         error={!!nameError}
         helperText={nameError}
@@ -552,12 +637,15 @@
       />
     </SettingItem>
 
+    {#key primarySourceEpoch}
     <SettingItem
       name={$i18n.t("modals.project.datasource.name")}
       description={$i18n.t("modals.project.datasource.description")}
     >
-      <Select
+      <SelectField
         value={project.dataSource.kind}
+        contextKey={`${project.id}:primary-kind`}
+        tooltip={$i18n.t("modals.project.datasource.name")}
         options={primaryDataSourceOptions}
         on:change={handleDataSourceChange}
       />
@@ -569,8 +657,11 @@
         description={$i18n.t("modals.project.path.description") ?? ""}
         vertical
       >
-        <FileAutocomplete
-          files={getFoldersInFolder($app.vault.getRoot())}
+        <PathSuggestField
+          bind:this={folderField}
+          files={$pathSource.folders}
+          contextKey={`${project.id}:primary-folder`}
+          ariaLabel={$i18n.t("modals.project.path.name")}
           value={project.dataSource.config.path}
           on:change={({ detail: path }) => {
             if (project.dataSource.kind === "folder") patchPrimaryConfig({ path });
@@ -614,19 +705,13 @@
         description={$i18n.t("modals.project.tag.description") ?? ""}
         vertical
       >
-        <TextInput
+        <ValueSuggestField
+          bind:this={textFields['primary-tag']}
           placeholder="#tag"
+          ariaLabel={$i18n.t("modals.project.tag.name")}
           value={project.dataSource.config.tag ?? ""}
-          on:input={({ detail: rawTag }) => {
-            if (project.dataSource.kind === "tag") {
-              // Normalize: ensure tag always has exactly one leading #
-              const tag = rawTag.trim()
-                ? (rawTag.trim().startsWith("#") ? rawTag.trim() : "#" + rawTag.trim())
-                : "";
-              patchPrimaryConfig({ tag });
-            }
-          }}
-          width="100%"
+          on:input={updatePrimaryTag}
+          on:commit={updatePrimaryTag}
         />
       </SettingItem>
 
@@ -652,9 +737,20 @@
           description={$i18n.t("modals.project.query.description") ?? ""}
           vertical
         >
-          <TextArea
+          <TextField
+            bind:this={queryField}
+            multiline
+            ariaLabel={$i18n.t("modals.project.query.name")}
             placeholder={`TABLE status AS "Status" FROM "Work"`}
             value={project.dataSource.config.query ?? ""}
+            on:focus={() => { if (project.dataSource.kind === "dataview") queryBaseline = project.dataSource.config.query ?? ""; }}
+            on:commit={({detail}) => {
+              queryBaseline = detail.value;
+              if (project.dataSource.kind === "dataview" && project.dataSource.config.query !== detail.value) {
+                patchPrimaryConfig({query: detail.value}); validateDataviewQuery(detail.value);
+              }
+            }}
+            on:cancel={() => { if (project.dataSource.kind === "dataview") { patchPrimaryConfig({query: queryBaseline}); validateDataviewQuery(queryBaseline); } }}
             on:input={({ detail: query }) => {
               if (project.dataSource.kind === "dataview") {
                 patchPrimaryConfig({ query });
@@ -662,7 +758,6 @@
               }
             }}
             rows={6}
-            width="100%"
           />
           {#if dvPreviewStatus !== "idle"}
             <div
@@ -701,8 +796,10 @@
         description={$i18n.t("modals.project.native-query.from.description") ??
           ""}
       >
-        <Select
+        <SelectField
           value={project.dataSource.config.from.kind}
+          contextKey={`${project.id}:query-from-kind`}
+          tooltip={$i18n.t("modals.project.native-query.from.name")}
           options={[
             { label: $i18n.t("datasources.folder"), value: "folder" },
             { label: $i18n.t("datasources.tag"), value: "tag" },
@@ -717,8 +814,11 @@
           description={$i18n.t("modals.project.path.description") ?? ""}
           vertical
         >
-          <FileAutocomplete
-            files={getFoldersInFolder($app.vault.getRoot())}
+          <PathSuggestField
+            bind:this={folderField}
+            files={$pathSource.folders}
+            contextKey={`${project.id}:query-folder`}
+            ariaLabel={$i18n.t("modals.project.path.name")}
             value={project.dataSource.config.from.path}
             on:change={({ detail: path }) => nqUpdateFrom({ path })}
             getLabel={(file) => file.path}
@@ -741,18 +841,13 @@
           description={$i18n.t("modals.project.tag.description") ?? ""}
           vertical
         >
-          <TextInput
+          <ValueSuggestField
+            bind:this={textFields['query-tag']}
             placeholder="#tag"
+            ariaLabel={$i18n.t("modals.project.tag.name")}
             value={project.dataSource.config.from.tag ?? ""}
-            on:input={({ detail: rawTag }) => {
-              const tag = rawTag.trim()
-                ? rawTag.trim().startsWith("#")
-                  ? rawTag.trim()
-                  : "#" + rawTag.trim()
-                : "";
-              nqUpdateFrom({ tag });
-            }}
-            width="100%"
+            on:input={updatePrimaryTag}
+            on:commit={updatePrimaryTag}
           />
         </SettingItem>
         <SettingItem
@@ -774,33 +869,41 @@
         vertical
       >
         <div class="ppp-nq-conditions">
-          {#each project.dataSource.config.where?.conditions ?? [] as condition, i}
+          {#each conditionEntries as {id: rowId, value: condition} (rowId)}
             <div class="ppp-nq-condition-row">
-              <TextInput
+              <ValueSuggestField
+                bind:this={textFields[`condition:${rowId}:field`]}
                 value={condition.field}
+                ariaLabel={$i18n.t("modals.project.native-query.where.field-placeholder")}
                 placeholder={$i18n.t(
                   "modals.project.native-query.where.field-placeholder"
                 )}
                 on:input={({ detail: field }) =>
-                  nqUpdateCondition(i, { field })}
+                  nqUpdateCondition(rowId, { field })}
+                on:commit={({ detail: field }) => nqUpdateCondition(rowId, {field})}
               />
-              <Select
+              <SelectField
+                contextKey={`${project.id}:condition:${rowId}`}
+                tooltip={$i18n.t(`modals.project.native-query.operators.${condition.operator}`)}
                 value={condition.operator}
                 options={nqOperatorOptions}
                 on:change={({ detail: operator }) =>
-                  nqSetConditionOperator(i, operator)}
+                  nqSetConditionOperator(rowId, operator)}
               />
               {#if getFilterOperatorType(condition.operator) !== "unary"}
-                <TextInput
+                <ValueSuggestField
+                  bind:this={textFields[`condition:${rowId}:value`]}
                   value={condition.value ?? ""}
+                  ariaLabel={$i18n.t("modals.project.native-query.where.value-placeholder")}
                   placeholder={$i18n.t(
                     "modals.project.native-query.where.value-placeholder"
                   )}
                   on:input={({ detail: value }) =>
-                    nqUpdateCondition(i, { value })}
+                    nqUpdateCondition(rowId, { value })}
+                  on:commit={({ detail: value }) => nqUpdateCondition(rowId, {value})}
                 />
               {/if}
-              <Button variant="plain" on:click={() => nqRemoveCondition(i)}>
+              <Button variant="plain" on:click={() => nqRemoveCondition(rowId)}>
                 <Icon name="x" />
               </Button>
             </div>
@@ -817,14 +920,18 @@
         description={$i18n.t("modals.project.native-query.limit.description") ??
           ""}
       >
-        <TextInput
-          value={project.dataSource.config.limit?.toString() ?? ""}
+        <NumberField
+          bind:this={limitField}
+          value={project.dataSource.config.limit ?? null}
+          ariaLabel={$i18n.t("modals.project.native-query.limit.name")}
+          allowEmpty integer min={0} preserveInvalidOnBlur
           placeholder="∞"
-          on:input={({ detail: raw }) => nqSetLimit(raw)}
+          on:commit={({ detail }) => nqSetLimit(detail)}
         />
       </SettingItem>
     {/if}
 
+    {/key}
     <Accordion>
       <AccordionItem>
         <div slot="header" class="setting-item-info" style:margin-top="0.5rem">
@@ -833,40 +940,55 @@
           </div>
         </div>
         <div class="ppp-additional-sources">
-          {#each project.additionalSources ?? [] as src, i}
+          {#each additionalRows as {id: rowId, value: src} (rowId)}
             <div class="ppp-additional-source-row">
-              <TextInput
+              <ValueSuggestField
+                bind:this={textFields[`source:${rowId}:name`]}
                 value={src.name ?? ""}
+                ariaLabel={$i18n.t("modals.project.additional-sources.name")}
                 placeholder={$i18n.t("modals.project.additional-sources.name-placeholder", {
                   defaultValue: "Name (optional)",
                 })}
-                on:input={({ detail: name }) => renameAdditionalSource(i, name)}
+                on:input={({ detail: name }) => renameAdditionalSource(rowId, name)}
+                on:commit={({ detail: name }) => renameAdditionalSource(rowId, name)}
               />
-              <Select
+              <SelectField
+                contextKey={`${project.id}:source:${rowId}`}
+                tooltip={$i18n.t("modals.project.datasource.name")}
                 value={src.kind}
                 options={dataSourceOptions}
-                on:change={({ detail: kind }) => updateAdditionalSource(i, kind)}
+                on:change={({ detail: kind }) => updateAdditionalSource(rowId, kind)}
               />
               {#if src.kind === "folder"}
-                <TextInput
+                <PathSuggestField
+                  bind:this={additionalPathFields[String(rowId)]}
+                  ariaLabel={$i18n.t("modals.project.path.name")}
+                  files={$pathSource.folders}
+                  contextKey={`${project.id}:additional-folder:${rowId}`}
                   value={src.config.path}
                   placeholder="folder/path"
-                  on:input={({ detail: path }) => updateAdditionalSourceConfig(i, { path, recursive: src.config.recursive ?? false })}
+                  on:change={({ detail: path }) => updateAdditionalSourceConfig(rowId, { path, recursive: src.config.recursive ?? false })}
                 />
               {:else if src.kind === "tag"}
-                <TextInput
+                <ValueSuggestField
+                  bind:this={textFields[`source:${rowId}:tag`]}
                   value={src.config.tag}
+                  ariaLabel={$i18n.t("modals.project.tag.name")}
                   placeholder="#tag"
-                  on:input={({ detail: tag }) => updateAdditionalSourceConfig(i, { tag, hierarchy: src.config.hierarchy ?? false })}
+                  on:input={({ detail: tag }) => updateAdditionalSourceConfig(rowId, { tag, hierarchy: src.config.hierarchy ?? false })}
+                  on:commit={({ detail: tag }) => updateAdditionalSourceConfig(rowId, { tag, hierarchy: src.config.hierarchy ?? false })}
                 />
               {:else if src.kind === "dataview"}
-                <TextInput
+                <ValueSuggestField
+                  bind:this={textFields[`source:${rowId}:query`]}
                   value={src.config.query}
+                  ariaLabel={$i18n.t("modals.project.query.name")}
                   placeholder="TABLE ..."
-                  on:input={({ detail: query }) => updateAdditionalSourceConfig(i, { query })}
+                  on:input={({ detail: query }) => updateAdditionalSourceConfig(rowId, { query })}
+                  on:commit={({ detail: query }) => updateAdditionalSourceConfig(rowId, {query})}
                 />
               {/if}
-              <Button variant="plain" on:click={() => removeAdditionalSource(i)}>
+              <Button variant="plain" on:click={() => removeAdditionalSource(rowId)}>
                 <Icon name="x" />
               </Button>
             </div>
@@ -891,8 +1013,11 @@
           description={$i18n.t("modals.project.newNotesFolder.description") ??
             ""}
         >
-          <FileAutocomplete
-            files={getFoldersInFolder($app.vault.getRoot())}
+          <PathSuggestField
+            bind:this={newNotesFolderField}
+            files={$pathSource.folders}
+            contextKey={`${project.id}:new-notes-folder`}
+            ariaLabel={$i18n.t("modals.project.newNotesFolder.name")}
             value={project.newNotesFolder}
             placeholder={project.dataSource.kind === "folder"
               ? project.dataSource.config.path
@@ -912,11 +1037,13 @@
           description={$i18n.t("modals.project.defaultName.description") ?? ""}
           vertical
         >
-          <TextInput
+          <ValueSuggestField
+            bind:this={textFields['default-name']}
             value={project.defaultName ?? ""}
+            ariaLabel={$i18n.t("modals.project.defaultName.name")}
             on:input={({ detail: defaultName }) =>
               (project = { ...project, defaultName })}
-            width="100%"
+            on:commit={({ detail: defaultName }) => (project = {...project, defaultName})}
           />
           <small>
             {defaultName}
@@ -934,6 +1061,8 @@
           vertical
         >
           <FileListInput
+            bind:this={templateFields}
+            contextKey={`${project.id}:templates`}
             buttonText={$i18n.t("modals.project.templates.add")}
             paths={project.templates ?? []}
             onPathsChange={(templates) => (project = { ...project, templates })}
@@ -946,6 +1075,8 @@
           vertical
         >
           <FileListInput
+            bind:this={excludedFields}
+            contextKey={`${project.id}:excluded-notes`}
             buttonText={$i18n.t("modals.project.exclude.add")}
             paths={project.excludedNotes ?? []}
             onPathsChange={(excludedNotes) =>
@@ -969,8 +1100,10 @@
           name={$i18n.t("modals.project.agenda.name")}
           description={$i18n.t("modals.project.agenda.description") ?? ""}
         >
-          <Select
+          <SelectField
             value={project.agenda?.mode ?? "standard"}
+            contextKey={`${project.id}:agenda-mode`}
+            tooltip={$i18n.t("modals.project.agenda.name")}
             options={[
               { label: $i18n.t("modals.project.agenda.modes.standard"), value: "standard" },
               { label: $i18n.t("modals.project.agenda.modes.custom"), value: "custom" }
@@ -1006,7 +1139,7 @@
                     <div class="list-item">
                       <div class="list-icon">
                         {#if list.icon.type === 'emoji'}
-                          <span class="emoji">{list.icon.value}</span>
+                          <span class="emoji">{agendaEmoji(list.icon.value)}</span>
                         {:else}
                           <Icon name={list.icon.value} size="sm" />
                         {/if}
@@ -1049,6 +1182,7 @@
         {/if}
 
         <DateFormatSelector
+          bind:this={dateFormatField}
           dateFormat={project.dateFormat}
           onChange={(newDateFormat) => {
             if (newDateFormat === undefined) {
@@ -1062,20 +1196,17 @@
         />
       </AccordionItem>
     </Accordion>
+    </div>
   </ModalContent>
   <ModalButtonGroup>
     <Button
       variant="primary"
       disabled={!!nameError}
-      on:click={() => {
-        onSave({
-          ...project,
-          templates: project.templates?.filter(notEmpty) ?? [],
-        });
-      }}>{cta}</Button
+      on:click={submit}>{cta}</Button
     >
   </ModalButtonGroup>
 </ModalLayout>
+{/key}
 
 <style>
   .ppp-create-project-consequence {

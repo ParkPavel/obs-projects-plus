@@ -16,12 +16,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Use Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: "18.x"
+          node-version: "22"
 
       - name: Validate tag and stage manifest
         run: |
@@ -33,11 +35,19 @@ jobs:
           npm ci
           npm run build
 
+      - name: Verify release candidate before publishing
+        run: |
+          npm run lint
+          npm run svelte-check -- --fail-on-warnings
+          npm test -- --runInBand
+          node scripts/check-docs-site.mjs
+          node scripts/test-docs-site.mjs
+
       # Lets anyone verify that main.js and styles.css were built from this
       # repository (`gh attestation verify main.js -R ParkPavel/obs-projects-plus`);
       # the community directory recommends it.
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
         with:
           subject-path: |
             main.js

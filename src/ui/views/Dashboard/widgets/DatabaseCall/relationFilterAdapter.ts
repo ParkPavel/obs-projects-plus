@@ -28,6 +28,8 @@ import {
 } from "src/lib/dataframe/dataframe";
 import type { FilterCondition } from "src/settings/settings";
 import { matchesCondition } from "src/lib/engine/filterEvaluator";
+import { filterSelectionDates } from "../_shared/selectionDates";
+import type { DateGranularity } from "src/lib/dashboard-engine/dateBucket";
 import {
   parseRelationLinks,
   canonicalLinkKey,
@@ -68,8 +70,10 @@ function normalizeRelationCondition(cond: FilterCondition): FilterCondition {
 export function filterByLinkedSelection(
   records: ReadonlyArray<DataRecord>,
   cond: FilterCondition,
-  fields: ReadonlyArray<DataField>
+  fields: ReadonlyArray<DataField>,
+  dateGrouping?: DateGranularity,
 ): DataRecord[] {
+  if (dateGrouping) return filterSelectionDates(records, cond, dateGrouping);
   const field = fields.find((f) => f.name === cond.field);
 
   if (!field || field.type !== DataFieldType.Relation) {

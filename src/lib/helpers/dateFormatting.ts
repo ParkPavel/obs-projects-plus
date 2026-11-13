@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import type { ProjectDefinition } from "src/settings/settings";
 import type { DateFormatConfig } from "src/settings/v3/settings";
+import { normalizeStoredDate } from "./dateShape";
 
 /**
  * Parse a date value with flexible format support.
@@ -22,10 +23,19 @@ function parseDateInTimezone(
     return null;
   }
 
+  // A stored string is read in the order it is written (`10.04.2026` is the
+  // 10th of April); a day that does not exist is no day.
+  let input: string | Date | dayjs.Dayjs = value;
+  if (typeof value === "string") {
+    const stored = normalizeStoredDate(value);
+    if (stored === null) return null;
+    if (stored !== undefined) input = stored;
+  }
+
   const targetTz = tz && tz !== "local" ? tz : undefined;
   const parsed = targetTz
-    ? dayjs.tz(value, targetTz)
-    : dayjs(value);
+    ? dayjs.tz(input, targetTz)
+    : dayjs(input);
 
   return parsed.isValid() ? parsed : null;
 }

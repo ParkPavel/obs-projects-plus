@@ -1,13 +1,15 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import { i18n } from 'src/lib/stores/i18n';
+  import { rootFontPx } from 'src/ui/utils/cssLength';
   import { DND_CONSTANTS } from './types';
   import { minutesToTime, minutesToRem, yPositionToMinutes } from './SnapEngine';
   import { hapticTapCreate, hapticSnap, hapticCreationConfirm, hapticCancel } from './HapticManager';
 
   /**
    * CreationPreview — v3.2.0 Iteration 4
-   * Preview bar shown on mobile tap in empty area.
-   * User can resize via handles, auto-confirms after 3s.
+   * Preview bar shown while holding empty time.
+   * No elapsed timer can confirm a draft.
    */
 
   export let startMinutes: number;
@@ -21,7 +23,6 @@
 
   let currentStartMinutes = startMinutes;
   let currentEndMinutes = endMinutes;
-  let confirmTimer: ReturnType<typeof setTimeout> | null = null;
   let lastSnappedMinutes = -1;
 
   // Resize state
@@ -32,37 +33,17 @@
   $: startTimeLabel = minutesToTime(currentStartMinutes);
   $: endTimeLabel = minutesToTime(currentEndMinutes);
 
-  function startAutoConfirm(): void {
-    confirmTimer = setTimeout(() => {
-      hapticCreationConfirm();
-      onConfirm(minutesToTime(currentStartMinutes), minutesToTime(currentEndMinutes));
-    }, DND_CONSTANTS.CREATION_CONFIRM_TIMEOUT);
-  }
-
-  function resetAutoConfirm(): void {
-    if (confirmTimer !== null) {
-      clearTimeout(confirmTimer);
-      confirmTimer = null;
-    }
-  }
-
-  onMount(() => {
-    hapticTapCreate();
-    startAutoConfirm();
-  });
-
-  onDestroy(() => {
-    resetAutoConfirm();
-  });
+  $: currentStartMinutes = startMinutes;
+  $: currentEndMinutes = endMinutes;
+  onMount(() => { hapticTapCreate(); });
+  onDestroy(() => { detachResize(); });
 
   function handleConfirmClick(): void {
-    resetAutoConfirm();
     hapticCreationConfirm();
     onConfirm(minutesToTime(currentStartMinutes), minutesToTime(currentEndMinutes));
   }
 
   function handleCancelClick(): void {
-    resetAutoConfirm();
     hapticCancel();
     onCancel();
   }
@@ -72,11 +53,10 @@
   function handleResizeTouchStart(event: TouchEvent, mode: 'top' | 'bottom'): void {
     event.stopPropagation();
     resizeMode = mode;
-    resetAutoConfirm();
 
-    document.addEventListener('touchmove', handleResizeTouchMove, { passive: false });
-    document.addEventListener('touchend', handleResizeTouchEnd);
-    document.addEventListener('touchcancel', handleResizeTouchEnd);
+    columnElement.ownerDocument.addEventListener('touchmove', handleResizeTouchMove, { passive: false });
+    columnElement.ownerDocument.addEventListener('touchend', handleResizeTouchEnd);
+    columnElement.ownerDocument.addEventListener('touchcancel', handleResizeTouchEnd);
   }
 
   function handleResizeTouchMove(event: TouchEvent): void {
@@ -91,7 +71,7 @@
     const rect = columnElement.getBoundingClientRect();
     const relativeY = touch.clientY - rect.top;
     const pointerMinutes = yPositionToMinutes(
-      relativeY, startHour, endHour, hourHeightRem, 16,
+      relativeY, startHour, endHour, hourHeightRem, rootFontPx(columnElement.ownerDocument),
       DND_CONSTANTS.SNAP_INTERVAL_DEFAULT
     );
 
@@ -113,11 +93,12 @@
 
   function handleResizeTouchEnd(): void {
     resizeMode = null;
-    document.removeEventListener('touchmove', handleResizeTouchMove);
-    document.removeEventListener('touchend', handleResizeTouchEnd);
-    document.removeEventListener('touchcancel', handleResizeTouchEnd);
-    // Restart auto-confirm after resize
-    startAutoConfirm();
+    detachResize();
+  }
+  function detachResize(): void {
+    columnElement.ownerDocument.removeEventListener('touchmove', handleResizeTouchMove);
+    columnElement.ownerDocument.removeEventListener('touchend', handleResizeTouchEnd);
+    columnElement.ownerDocument.removeEventListener('touchcancel', handleResizeTouchEnd);
   }
 </script>
 
@@ -135,8 +116,8 @@
   <div class="preview-content">
     <span class="preview-time">{startTimeLabel}–{endTimeLabel}</span>
     <div class="preview-actions">
-      <button class="preview-confirm" on:click={handleConfirmClick} type="button">✓</button>
-      <button class="preview-cancel" on:click={handleCancelClick} type="button">✕</button>
+      <button class="preview-confirm" aria-label={$i18n.t("common.save")} on:click={handleConfirmClick} type="button">✓</button>
+      <button class="preview-cancel" aria-label={$i18n.t("common.cancel")} on:click={handleCancelClick} type="button">✕</button>
     </div>
   </div>
 

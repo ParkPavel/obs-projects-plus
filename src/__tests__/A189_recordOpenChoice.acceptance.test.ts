@@ -15,22 +15,28 @@
  * A168 keeps the peek's own mechanics. This file owns which gesture reaches it.
  */
 
-import type { App } from "obsidian";
-
-import type { DataField, DataRecord } from "src/lib/dataframe/dataframe";
+type App = import("obsidian").App;
+type DataField = import("src/lib/dataframe/dataframe").DataField;
+type DataRecord = import("src/lib/dataframe/dataframe").DataRecord;
 import {
   PLAIN_MODE,
   modeFromEvent,
   modeFromNewLeaf,
   openRecord,
-  type RecordOpenMode,
 } from "src/lib/record/openRecord";
+type RecordOpenMode = import("src/lib/record/openRecord").RecordOpenMode;
 import { recordPeek, closePeek } from "src/lib/stores/recordPeek";
-import type { ContextMenuItem } from "src/lib/contextMenu";
-import type { ViewApi } from "src/lib/viewApi";
-import type { ProjectDefinition } from "src/settings/settings";
+type ContextMenuItem = import("src/lib/contextMenu").ContextMenuItem;
+type ViewApi = import("src/lib/viewApi").ViewApi;
+type ProjectDefinition = import("src/settings/settings").ProjectDefinition;
 import { buildRowMenuEntries } from "src/ui/views/Dashboard/widgets/DatabaseCall/tableRowOps";
 import { get } from "svelte/store";
+
+type ContextMenuEntry = import("src/lib/contextMenu").ContextMenuEntry;
+jest.mock("src/lib/contextMenu", () => ({
+  ...jest.requireActual("src/lib/contextMenu"),
+  openContextMenu: jest.fn(),
+}));
 
 /** An App that records what the workspace was asked to do. */
 function spyApp() {
@@ -331,7 +337,32 @@ describe("A189 (4) — a READ-ONLY row keeps the reading entries and loses the w
       require("path").join(__dirname, "..", "ui/views/Dashboard/widgets/DatabaseCall/DataTableContent.svelte"),
       "utf8"
     ) as string;
-    const args = /buildRowMenuEntries\(\{([^}]*)/.exec(content)?.[1] ?? "";
+    // The menu glue moved out for the component budget; the flag must still
+    // enter that call's argument list. Its actual forwarding is tested below.
+    const args = /openTableRowMenu\(e.detail, \{([^}]*)/.exec(content)?.[1] ?? "";
     expect(args).toMatch(/\breadonly\b/);
+  });
+
+  it.each([false, true])("the extracted menu forwards readonly=%s without losing read actions", readonly => {
+    const contextMenu = require("src/lib/contextMenu");
+    const { openTableRowMenu } = require("src/ui/views/Dashboard/widgets/DatabaseCall/tableInteractions");
+    const { EMPTY_SELECTION } = require("src/ui/views/Dashboard/canvasSelectionStore");
+    const spy = contextMenu.openContextMenu as jest.Mock;
+    spy.mockClear();
+    try {
+      openTableRowMenu({ record, event: new MouseEvent("click") }, {
+        readonly, project: undefined, fields, app: undefined,
+        api: { addRecord: () => {}, deleteRecord: () => {} },
+        selection: EMPTY_SELECTION, selectionStore: undefined, widgetId: undefined,
+        primaryField: "name", t: (_k: string, fallback: string) => fallback,
+      });
+      const entries = spy.mock.calls[0]?.[0] as ContextMenuEntry[];
+      const names = entries.filter((e): e is ContextMenuItem => !("separator" in e)).map(e => e.title);
+      expect(names).toEqual(expect.arrayContaining(["Open note", "Open in new tab", "Show fields"]));
+      expect(names.includes("Delete note")).toBe(!readonly);
+      expect(names.includes("Duplicate")).toBe(!readonly);
+    } finally {
+      spy.mockClear();
+    }
   });
 });

@@ -4,21 +4,18 @@
 // function: enrichment, source selection, axis A, and the transform pipeline.
 // `WidgetHost` keeps the reactive plumbing and owns none of the arithmetic.
 //
-// It moved out of the host to make room, and paid for itself: the canonical
-// order (invariant 3) used to be pinned by searching the host's TEXT for
+// Canonical order (invariant 3):
 // `applyWidgetScope(enrichedFrame` ahead of `executeTransform(scope.frame`,
-// which proves two calls sit in an order in a file and cannot prove that
-// swapping them changes an answer. As a composition it is provable, and
-// `__tests__/hostFrames.test.ts` proves it on a frame where the orders
-// disagree. The substrings stay spelled as the invariant reads them, and
-// `R_filterOrder` now reads this file — as #169 established for the context.
+// proved behaviorally by __tests__/hostFrames.test.ts with different totals
+// when swapped. R_filterOrder also reads this file. Stopped execution travels
+// separately from its last complete frame; rendering must not call it final data.
 
 import type { DataFrame, DataField } from "src/lib/dataframe/dataframe";
 import type { DataSource as StoredDataSource } from "src/settings/v3/settings";
 import type { IdentifiedFrame } from "src/lib/datasources/sourceSelection";
 import type { NamedSourceView } from "src/lib/datasources/namedSource";
 import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
-import type { TransformPipeline } from "src/lib/dashboard-engine/transformTypes";
+import type { TransformPipeline, TransformMeta } from "src/lib/dashboard-engine/transformTypes";
 import type { ExternalSourceState } from "../dashboardPreload";
 import type { ChartConfig, StatsConfig, WidgetDefinition } from "../types";
 import { applyWidgetScope, type WidgetScopeResult } from "./widgetScope";
@@ -54,6 +51,7 @@ export interface HostFrames {
   readonly scope: WidgetScopeResult;
   readonly transformedFrame: DataFrame;
   readonly pipelineInputRowCount: number;
+  readonly pipelineStopped?: TransformMeta["stopped"];
   readonly chartConfig: ChartConfig | null;
   readonly statsConfig: StatsConfig | null;
   readonly chartRightFrame: DataFrame | null;
@@ -95,6 +93,7 @@ export function computeHostFrames(input: HostFramesInput): HostFrames {
     scope,
     transformedFrame,
     pipelineInputRowCount,
+    pipelineStopped: transformResult?.meta.stopped,
     chartConfig,
     statsConfig,
     ...chartFramesOf(widget.type, chartConfig, rightFrames),

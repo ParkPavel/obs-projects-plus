@@ -7,6 +7,12 @@
 
 import type { FilterDefinition } from "src/settings/base/settings";
 
+/** The badge/summary counts enabled leaves without flattening the stored AND/OR tree. */
+export function enabledFilterConditionCount(filter: FilterDefinition | undefined): number {
+  return (filter?.conditions ?? []).filter(condition => condition.enabled !== false).length +
+    (filter?.groups ?? []).reduce((count, group) => count + enabledFilterConditionCount(group), 0);
+}
+
 /** True when the definition would actually remove something. */
 export function hasFilterEffect(
   filter: FilterDefinition | undefined

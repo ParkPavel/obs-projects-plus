@@ -103,7 +103,9 @@ describe("chrome-filters — condition rows wrap for every pointer", () => {
     expect(chip.get("max-width")).toBe("100%");
     expect(chip.get("flex")).toBe("0 1 auto");
     expect(chip.has("flex-shrink")).toBe(false);
-    expect(baseDeclarations(".chip-label").get("min-width")).toBe("0");
+    const selector = readFileSync(join(__dirname, "..", "..", "fields", "OptionField.svelte"), "utf8");
+    expect(styleOf(selector)).toMatch(/\.ppp-option-field\s*\{[^}]*min-width:\s*0/);
+    expect(styleOf(selector)).toMatch(/\.ppp-option-field-input\)\s*\{[^}]*min-width:\s*0/);
   });
 
   it("nested group cards and their wrappers shrink with the panel", () => {

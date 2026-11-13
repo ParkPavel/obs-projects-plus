@@ -121,7 +121,7 @@ describe("#163 batch writes are compensated too", () => {
   });
 
   it("keeps the new values when the batch write succeeds", async () => {
-    const api = new ViewApi(source, stubApi({ updateRecords: async () => undefined }));
+    const api = new ViewApi(source, stubApi({ updateRecords: async () => ({ written: ["Clients/Ivan.md"], unchanged: [], missing: [], failed: [] }) }));
 
     const ok = await api.updateRecords([seed({ status: "new" })], fields);
 

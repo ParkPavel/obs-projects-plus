@@ -14,6 +14,9 @@
 
 import type { DataRecord } from "src/lib/dataframe/dataframe";
 
+/** Theme-aware display only; never a default HEX written into frontmatter. */
+export const DEFAULT_RECORD_COLOR = "var(--interactive-accent)";
+
 /**
  * C2 — the ONE list of field-name fragments treated as color-bearing.
  * Used by EditNote / FieldControl to decide when to render a color picker,
@@ -83,6 +86,9 @@ export interface ResolveRecordColorOptions {
   readonly eventColorField?: string | undefined;
   /** Project color-rules callback (settings → colorFilter conditions). */
   readonly getRecordColor?: ((record: DataRecord) => string | null) | undefined;
+  /** Mapped editors read the exact YAML key they will write. */
+  readonly exactField?: boolean;
+  readonly fallback?: string;
 }
 
 /**
@@ -93,7 +99,9 @@ export function resolveRecordColor(
   record: DataRecord,
   options: ResolveRecordColorOptions
 ): string | null {
-  const explicit = explicitRecordColor(record, options.eventColorField);
+  const explicit = options.exactField
+    ? options.eventColorField ? normalizeHexColor(record.values[options.eventColorField]) : null
+    : explicitRecordColor(record, options.eventColorField);
   if (explicit) return explicit;
-  return options.getRecordColor?.(record) ?? null;
+  return options.getRecordColor?.(record) ?? options.fallback ?? null;
 }

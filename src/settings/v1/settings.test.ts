@@ -11,7 +11,7 @@ describe("resolve v2", () => {
       preferences: {
         animationBehavior: "smooth",
         disableHapticFeedback: false,
-        replaceObsidianProperties: false,
+        propertiesInNoteHeader: true,
         frontmatter: {
           quoteStrings: "PLAIN",
         },
@@ -51,7 +51,7 @@ describe("resolve v2", () => {
       preferences: {
         animationBehavior: "smooth",
         disableHapticFeedback: false,
-        replaceObsidianProperties: false,
+        propertiesInNoteHeader: true,
         frontmatter: {
           quoteStrings: "PLAIN",
         },

@@ -2,18 +2,18 @@
   import { createEventDispatcher, onDestroy } from "svelte";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "../../../lib/stores/i18n";
-  import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
-  import PopoverList, { type PopoverItem } from "src/ui/components/FloatingPopup/PopoverList.svelte";
+  import OptionField from "src/ui/components/fields/OptionField.svelte";
   import type {
     FilterCondition,
     FilterDefinition,
     FilterOperator,
   } from "../../../settings/base/settings";
   import type { DataRecord } from "src/lib/dataframe/dataframe";
-  import { getOperatorsForField, getOperatorLabel, getFieldIcon } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
+  import { getOperatorsForField, getOperatorLabel, getFieldChoices, getOperatorChoices } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
   import { operatorNeedsValue } from "src/settings/base/settings";
-
-  function inputVal(e: Event): string { return (e.target as HTMLInputElement)?.value ?? ''; }
+  import ConditionValue from "src/ui/components/FilterPanel/ConditionValue.svelte";
+  import { app } from "src/lib/stores/obsidian";
+  import { templateFoldersOf, valueSuggestions } from "src/lib/suggestions/valueSuggestions";
 
   export let value: FilterDefinition | undefined;
   export let fields: Array<{ name: string; type: string }> = [];
@@ -39,14 +39,21 @@
   }
 
   let local: FilterDefinition = toLocal(value);
+  $: fieldChoices = getFieldChoices(fields);
 
   $: hasContent = local.conditions.length > 0 || (local.groups?.length ?? 0) > 0;
 
   // ── Helpers for path-based updates (groups can be nested) ──
   function updateRoot(newLocal: FilterDefinition, debounce = false) {
     local = newLocal;
-    if (debounce) dispatchDebounced(local);
-    else dispatch("update", local);
+    if (debounce) {
+      dispatchDebounced(local);
+    } else {
+      // An immediate write supersedes a pending typed one: the older snapshot
+      // must not land after it.
+      clearTimeout(_valueDebounceTimer);
+      dispatch("update", local);
+    }
   }
 
   function updateGroupAtPath(root: FilterDefinition, path: number[], patch: Partial<FilterDefinition>): FilterDefinition {
@@ -170,95 +177,25 @@
     return fields.find(f => f.name === fieldName)?.type ?? 'string';
   }
 
-  // ── Value suggestions ──
-  function getValueSuggestions(fieldName: string): string[] {
-    if (!fieldName || records.length === 0) return [];
-    const vals = new Set<string>();
-    for (const record of records) {
-      const raw = record.values[fieldName];
-      if (raw == null) continue;
-      if (Array.isArray(raw)) {
-        raw.forEach(v => { const s = String(v).trim(); if (s) vals.add(s); });
-      } else {
-        let s = String(raw);
-        const m = s.match(/^\[\[([^\]]+)\]\]$/);
-        if (m?.[1]) { const inner = m[1]; const pipe = inner.indexOf('|'); s = pipe >= 0 ? inner.substring(pipe + 1) : inner; }
-        s = s.trim();
-        if (s && s !== 'undefined' && s !== 'null') vals.add(s);
-      }
-    }
-    return [...vals].sort();
+  // ── Value suggestions: the project's values and the field's options (one shared memo) ──
+  $: templateFolders = templateFoldersOf($app);
+  function suggestionsFor(fieldName: string, source: DataRecord[], folders: readonly string[]): string[] {
+    return valueSuggestions(source, fields.find((f) => f.name === fieldName), { templateFolders: folders });
   }
 
-  // ═══════════════════════════════
-  // FloatingPopup-backed dropdowns (#034.2a)
-  // ═══════════════════════════════
-
-  let activePopover: {
-    anchorEl: HTMLElement;
-    items: PopoverItem[];
-    searchable: boolean;
-    autoFocus: boolean;
-  } | null = null;
-
-  function openFieldPop(index: number, anchor: HTMLElement, groupPath: number[] = []) {
+  function setField(index: number, name: string, groupPath: number[] = []) {
     const group = groupPath.length === 0 ? local : getGroupAtPath(local, groupPath);
-    const cond = group.conditions[index]!;
-    activePopover = {
-      anchorEl: anchor,
-      searchable: true,
-      autoFocus: true,
-      items: fields.map((f) => ({
-        label: f.name,
-        icon: getFieldIcon(f.type),
-        selected: f.name === cond.field,
-        handler: () => {
-          const ops = getOperatorsForField(f.type);
-          const op = ops.includes(cond.operator) ? cond.operator : ops[0] ?? 'is';
-          updateCondition(index, { field: f.name, operator: op as FilterOperator, value: '' }, groupPath);
-        },
-      })),
-    };
+    const cond = group.conditions[index], field = fields.find(item => item.name === name);
+    if (!cond || !field) return;
+    const ops = getOperatorsForField(field.type);
+    const operator = ops.includes(cond.operator) ? cond.operator : ops[0] ?? 'is';
+    updateCondition(index, { field: name, operator, value: '' }, groupPath);
   }
-
-  function openOpPop(index: number, anchor: HTMLElement, groupPath: number[] = []) {
+  function setOperator(index: number, code: string, groupPath: number[] = []) {
     const group = groupPath.length === 0 ? local : getGroupAtPath(local, groupPath);
-    const cond = group.conditions[index]!;
-    const ops = getOperatorsForField(getFieldType(cond.field));
-    activePopover = {
-      anchorEl: anchor,
-      searchable: false,
-      autoFocus: true,
-      items: ops.map((op) => ({
-        label: getOperatorLabel(op),
-        selected: op === cond.operator,
-        handler: () => updateCondition(index, { operator: op, value: operatorNeedsValue(op) ? (cond.value ?? '') : '' }, groupPath),
-      })),
-    };
-  }
-
-  function openValPop(index: number, anchor: HTMLElement, groupPath: number[] = []) {
-    const group = groupPath.length === 0 ? local : getGroupAtPath(local, groupPath);
-    const cond = group.conditions[index]!;
-    const all = getValueSuggestions(cond.field);
-    const q = String(cond.value ?? '').toLowerCase().trim();
-    const filtered = q ? all.filter(s => s.toLowerCase().includes(q)) : all;
-    if (filtered.length === 0) { activePopover = null; return; }
-    activePopover = {
-      anchorEl: anchor,
-      searchable: false,
-      // input retains focus so user can keep typing to narrow suggestions
-      autoFocus: false,
-      items: filtered.map((v) => ({
-        label: v,
-        selected: v === String(cond.value ?? ''),
-        handler: () => updateCondition(index, { value: v }, groupPath),
-      })),
-    };
-  }
-
-  function handlePopoverSelect(e: CustomEvent<{ item: PopoverItem; keepOpen: boolean }>): void {
-    if (!e.detail.keepOpen) activePopover = null;
+    const cond = group.conditions[index]; if (!cond) return;
+    const operator = getOperatorsForField(getFieldType(cond.field)).find(op => op === code);
+    if (operator) updateCondition(index, { operator, value: operatorNeedsValue(operator) ? (cond.value ?? '') : '' }, groupPath);
   }
 </script>
 
@@ -330,28 +267,30 @@
           </button>
 
           <!-- Field chip -->
-          <button class="chip chip--field" type="button"
-            on:click={(e) => openFieldPop(index, e.currentTarget)}>
-            <span class="chip-icon"><Icon name={getFieldIcon(fieldType)} size="sm" /></span>
-            <span class="chip-label">{condition.field || $i18n.t('common.field')}</span>
-            <span class="chip-chevron"><Icon name="chevron-down" size="xs" /></span>
-          </button>
+          <div class="chip chip--field">
+            <OptionField value={condition.field} options={fieldChoices} ariaLabel={$i18n.t('common.field')}
+              disabled={!condition.enabled} on:change={(e) => setField(index, e.detail)} />
+          </div>
 
           <!-- Operator chip -->
-          <button class="chip chip--op" type="button"
-            on:click={(e) => openOpPop(index, e.currentTarget)}>
-            <span class="chip-label">{getOperatorLabel(condition.operator)}</span>
-            <span class="chip-chevron"><Icon name="chevron-down" size="xs" /></span>
-          </button>
+          <div class="chip chip--op">
+            <OptionField value={condition.operator} options={getOperatorChoices(fieldType, $i18n)}
+              displayLabel={getOperatorLabel(condition.operator, $i18n)} contextKey={condition.field}
+              disabled={!condition.enabled} on:change={(e) => setOperator(index, e.detail)} />
+          </div>
 
           <!-- Value -->
           <div class="value-area">
             {#if needsVal}
-              <input class="value-input" type="text"
+              <ConditionValue
+                fieldType={getFieldType(condition.field)}
+                operator={condition.operator}
                 value={condition.value ?? ''}
-                on:input={(e) => { updateCondition(index, { value: inputVal(e) }, [], true); openValPop(index, e.currentTarget); }}
-                on:focus={(e) => openValPop(index, e.currentTarget)}
-                placeholder={$i18n.t('common.value-placeholder')} />
+                suggestions={suggestionsFor(condition.field, records, templateFolders)}
+                placeholder={$i18n.t('common.value-placeholder')}
+                ariaLabel={$i18n.t('common.value-placeholder')}
+                on:input={(e) => updateCondition(index, { value: e.detail }, [], true)}
+                on:commit={(e) => updateCondition(index, { value: e.detail })} />
             {:else}
               <span class="no-value">—</span>
             {/if}
@@ -420,26 +359,28 @@
                   <Icon name={gCond.enabled ? 'eye' : 'eye-off'} size="sm" />
                 </button>
 
-                <button class="chip chip--field" type="button"
-                  on:click={(e) => openFieldPop(cIdx, e.currentTarget, [gIndex])}>
-                  <span class="chip-icon"><Icon name={getFieldIcon(gFieldType)} size="sm" /></span>
-                  <span class="chip-label">{gCond.field || $i18n.t('common.field')}</span>
-                  <span class="chip-chevron"><Icon name="chevron-down" size="xs" /></span>
-                </button>
+                <div class="chip chip--field">
+                  <OptionField value={gCond.field} options={fieldChoices} ariaLabel={$i18n.t('common.field')}
+                    disabled={!gCond.enabled} on:change={(e) => setField(cIdx, e.detail, [gIndex])} />
+                </div>
 
-                <button class="chip chip--op" type="button"
-                  on:click={(e) => openOpPop(cIdx, e.currentTarget, [gIndex])}>
-                  <span class="chip-label">{getOperatorLabel(gCond.operator)}</span>
-                  <span class="chip-chevron"><Icon name="chevron-down" size="xs" /></span>
-                </button>
+                <div class="chip chip--op">
+                  <OptionField value={gCond.operator} options={getOperatorChoices(gFieldType, $i18n)}
+                    displayLabel={getOperatorLabel(gCond.operator, $i18n)} contextKey={gCond.field}
+                    disabled={!gCond.enabled} on:change={(e) => setOperator(cIdx, e.detail, [gIndex])} />
+                </div>
 
                 <div class="value-area">
                   {#if gNeedsVal}
-                    <input class="value-input" type="text"
+                    <ConditionValue
+                      fieldType={getFieldType(gCond.field)}
+                      operator={gCond.operator}
                       value={gCond.value ?? ''}
-                      on:input={(e) => { updateCondition(cIdx, { value: inputVal(e) }, [gIndex], true); openValPop(cIdx, e.currentTarget, [gIndex]); }}
-                      on:focus={(e) => openValPop(cIdx, e.currentTarget, [gIndex])}
-                      placeholder={$i18n.t('common.value-placeholder')} />
+                      suggestions={suggestionsFor(gCond.field, records, templateFolders)}
+                      placeholder={$i18n.t('common.value-placeholder')}
+                      ariaLabel={$i18n.t('common.value-placeholder')}
+                      on:input={(e) => updateCondition(cIdx, { value: e.detail }, [gIndex], true)}
+                      on:commit={(e) => updateCondition(cIdx, { value: e.detail }, [gIndex])} />
                   {:else}
                     <span class="no-value">—</span>
                   {/if}
@@ -505,26 +446,28 @@
                         <Icon name={nCond.enabled ? 'eye' : 'eye-off'} size="sm" />
                       </button>
 
-                      <button class="chip chip--field" type="button"
-                        on:click={(e) => openFieldPop(nCIdx, e.currentTarget, nPath)}>
-                        <span class="chip-icon"><Icon name={getFieldIcon(nFieldType)} size="sm" /></span>
-                        <span class="chip-label">{nCond.field || $i18n.t('common.field')}</span>
-                        <span class="chip-chevron"><Icon name="chevron-down" size="xs" /></span>
-                      </button>
+                      <div class="chip chip--field">
+                        <OptionField value={nCond.field} options={fieldChoices} ariaLabel={$i18n.t('common.field')}
+                          disabled={!nCond.enabled} on:change={(e) => setField(nCIdx, e.detail, nPath)} />
+                      </div>
 
-                      <button class="chip chip--op" type="button"
-                        on:click={(e) => openOpPop(nCIdx, e.currentTarget, nPath)}>
-                        <span class="chip-label">{getOperatorLabel(nCond.operator)}</span>
-                        <span class="chip-chevron"><Icon name="chevron-down" size="xs" /></span>
-                      </button>
+                      <div class="chip chip--op">
+                        <OptionField value={nCond.operator} options={getOperatorChoices(nFieldType, $i18n)}
+                          displayLabel={getOperatorLabel(nCond.operator, $i18n)} contextKey={nCond.field}
+                          disabled={!nCond.enabled} on:change={(e) => setOperator(nCIdx, e.detail, nPath)} />
+                      </div>
 
                       <div class="value-area">
                         {#if nNeedsVal}
-                          <input class="value-input" type="text"
+                          <ConditionValue
+                            fieldType={getFieldType(nCond.field)}
+                            operator={nCond.operator}
                             value={nCond.value ?? ''}
-                            on:input={(e) => { updateCondition(nCIdx, { value: inputVal(e) }, nPath, true); openValPop(nCIdx, e.currentTarget, nPath); }}
-                            on:focus={(e) => openValPop(nCIdx, e.currentTarget, nPath)}
-                            placeholder={$i18n.t('common.value-placeholder')} />
+                            suggestions={suggestionsFor(nCond.field, records, templateFolders)}
+                            placeholder={$i18n.t('common.value-placeholder')}
+                            ariaLabel={$i18n.t('common.value-placeholder')}
+                            on:input={(e) => updateCondition(nCIdx, { value: e.detail }, nPath, true)}
+                            on:commit={(e) => updateCondition(nCIdx, { value: e.detail }, nPath)} />
                         {:else}
                           <span class="no-value">—</span>
                         {/if}
@@ -573,19 +516,6 @@
     </button>
   </div>
 </div>
-
-<FloatingPopup
-  triggerEl={activePopover?.anchorEl ?? null}
-  open={activePopover !== null}
-  placement="bottom-start"
-  role="menu"
-  autoFocus={activePopover?.autoFocus ?? true}
-  on:close={() => (activePopover = null)}
->
-  {#if activePopover}
-    <PopoverList items={activePopover.items} searchable={activePopover.searchable} on:select={handlePopoverSelect} />
-  {/if}
-</FloatingPopup>
 
 <style>
   .ppp-filter-scope-label {
@@ -662,7 +592,7 @@
   }
   .filter-row--disabled { opacity: 0.5; }
   .filter-row--disabled .chip,
-  .filter-row--disabled .value-input { pointer-events: none; }
+  .filter-row--disabled .value-area { pointer-events: none; }
 
   /* ── Group card ── */
   .filter-group-wrapper {
@@ -715,22 +645,8 @@
   @media (hover: hover) and (pointer: fine) {
     .chip:hover { border-color: var(--interactive-accent); background: var(--background-primary-alt); }
   }
-  .chip-icon { display: inline-flex; align-items: center; color: var(--text-muted); flex-shrink: 0; }
-  .chip-label { max-width: 6.25rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-  .chip--field .chip-label { font-weight: 500; }
-  .chip-chevron { display: inline-flex; align-items: center; color: var(--text-faint); margin-left: 0.125rem; }
 
   .value-area { flex: 1 1 10em; min-width: 0; }
-  .value-input {
-    width: 100%; height: 1.625rem;
-    border: var(--ppp-border-width) solid var(--background-modifier-border); border-radius: 0.375rem;
-    background: var(--background-primary); color: var(--text-normal);
-    font-size: 0.8125rem; font-family: var(--font-interface);
-    padding: 0 0.5rem; outline: none; box-sizing: border-box;
-    transition: border-color 100ms ease;
-  }
-  .value-input::placeholder { color: var(--text-faint); }
-  .value-input:focus { border-color: var(--interactive-accent); }
   .no-value { color: var(--text-faint); font-size: 0.75rem; font-style: italic; padding: 0 0.5rem; }
 
   .row-btn {
@@ -802,8 +718,6 @@
     .filter-row .row-delete { grid-area: delete; }
     .filter-row .row-drag { display: none; }
     .chip { width: 100%; height: var(--ppp-touch-target-min); min-width: 0; overflow: hidden; padding: 0 0.625rem; font-size: 0.875rem; }
-    .chip-label { min-width: 0; flex: 0 1 auto; }
-    .value-input { height: var(--ppp-touch-target-min); font-size: 0.875rem; }
     .row-btn {
       opacity: 1; display: inline-flex; align-items: center; justify-content: center;
       width: var(--ppp-touch-target-min); height: var(--ppp-touch-target-min); padding: 0;
@@ -811,18 +725,5 @@
     .add-btn { min-height: var(--ppp-touch-target-min); font-size: 0.875rem; }
     .row-prefix { min-width: 2.25rem; font-size: 0.8125rem; }
     .conj-select { min-height: var(--ppp-touch-target-min); font-size: 0.8125rem; padding: 0.25rem 0.625rem; padding-right: 1.5rem; }
-  }
-
-  /* v3.2.1: Mobile keyboard — reverse column so list scrolls upward.
-     Shared by FiltersTab, SortTab, ColorFiltersTab (all use .ppp-pop-box).
-     Applied via JS classList.add(), so :global() required.
-     Compiled into main.css → auto-merged into styles.css by mergeCSS(). */
-  :global(.ppp-pop-box--mobile-kbd) {
-    display: flex;
-    flex-direction: column-reverse;
-  }
-  :global(.ppp-pop-box--mobile-kbd) :global(.ppp-pop-search) {
-    border-bottom: none;
-    border-top: var(--ppp-border-width) solid color-mix(in srgb, var(--background-modifier-border) 50%, transparent);
   }
 </style>

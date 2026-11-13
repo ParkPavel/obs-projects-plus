@@ -1,6 +1,5 @@
 import { writable, get } from 'svelte/store';
 import dayjs from 'dayjs';
-import { formatDateForInternal } from '../helpers';
 import type { ProcessedRecord, ProcessedCalendarData } from '../../ui/views/Calendar/types';
 import type { DuplicateState } from '../duplicate';
 import { 
@@ -30,21 +29,15 @@ function createDuplicateStore() {
     subscribe,
     
     /**
-     * Инициализация store с source record
-     * Автоматически выбирает исходную дату события (или весь span для multi-day)
+     * Инициализация store с source record.
+     * stab-dup: nothing is selected at first. The source's own day used to be
+     * pre-selected, so every confirm also made a copy on the original day
+     * (and the window warned about the event colliding with itself).
      */
     init(source: ProcessedRecord, existingData: ProcessedCalendarData): void {
       existingDataCache = existingData;
       
-      // Для multi-day автоматически выбираем весь span исходного события
       const initialSelected = new Set<string>();
-      if (source.startDate) {
-        const spanDays = source.spanInfo?.spanDays ?? 1;
-        for (let i = 0; i < spanDays; i++) {
-          const dateKey = formatDateForInternal(source.startDate.add(i, 'day')) ?? source.startDate.add(i, 'day').format('YYYY-MM-DD');
-          initialSelected.add(dateKey);
-        }
-      }
       
       // Создаём phantom records для исходной даты
       const editedTime = source.timeInfo ? {

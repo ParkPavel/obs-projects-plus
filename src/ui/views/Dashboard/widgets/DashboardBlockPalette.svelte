@@ -1,59 +1,71 @@
 <script lang="ts">
+  /**
+   * DashboardBlockPalette — B7: the ONE way to put a block on the page.
+   *
+   * A «+» between blocks (`index` = where the new block lands) and one at the
+   * end. On a phone the «+» is always visible; with a mouse it appears when
+   * the gap is hovered OR when the keyboard focuses it — never only on hover.
+   * The menu is `blockCatalog`, with a plain-words description per block.
+   */
   import type { WidgetType } from "../types";
-  import { WIDGET_REGISTRY, canAddWidget } from "./widgetRegistry";
+  import { insertChoices } from "./blockCatalog";
   import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { Icon } from "obsidian-svelte";
   import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
 
   export let currentWidgets: { type: WidgetType }[];
+  /** Position the new block takes in the widget list. */
+  export let index: number;
+  /** `end` is always visible; `between` reveals on hover/focus (pointer: fine). */
+  export let variant: "between" | "end" = "end";
+  /** i3-close: open from outside too (a tile's «Insert block after»). */
+  export let open = false;
+  /** i3-close: where the menu opens when it was not opened by this «+». */
+  export let anchorEl: HTMLElement | null = null;
+  /** w4-p10 (N7): where the block goes, named in the list ("After «Services»"). */
+  export let placeLabel = "";
 
-  let open = false;
   let triggerEl: HTMLButtonElement | null = null;
 
-  const dispatch = createEventDispatcher<{ addWidget: WidgetType }>();
+  const dispatch = createEventDispatcher<{ insert: { type: WidgetType; index: number } }>();
 
-  // UT2026-A L2 (#073): legacy types are not creation candidates — show them
-  // only when the canvas already holds an instance (existing-config support).
-  $: visibleMetas = WIDGET_REGISTRY.filter(
-    (meta) => !meta.legacy || currentWidgets.some((w) => w.type === meta.type)
-  );
+  $: choices = insertChoices(currentWidgets);
+  $: label = $i18n.t("views.dashboard.insert.here", { defaultValue: "Add a block here" });
 
   function handleAdd(type: WidgetType) {
-    dispatch("addWidget", type);
+    dispatch("insert", { type, index });
     open = false;
   }
 </script>
 
-<div class="ppp-block-palette">
+<div class="ppp-block-insert ppp-block-insert--{variant}" class:ppp-block-insert--open={open} data-insert-index={index}>
   <button
     bind:this={triggerEl}
-    class="ppp-block-palette__trigger"
+    class="ppp-block-insert__trigger"
     on:click={() => (open = !open)}
-    aria-label={$i18n.t("views.dashboard.canvas.add-widget", { defaultValue: "Add widget" })}
+    aria-label={label}
+    title={label}
     aria-expanded={open}
     aria-haspopup="menu"
-  >+</button>
+  ><Icon name="plus" size="sm" />{#if variant === "end"}<span>{$i18n.t("views.dashboard.insert.add", { defaultValue: "Add block" })}</span>{/if}</button>
 
-  <FloatingPopup
-    {triggerEl}
-    bind:open
-    placement="top-start"
-    role="menu"
-    ariaLabel={$i18n.t("views.dashboard.canvas.add-widget", { defaultValue: "Add widget" })}
-  >
-    <div class="ppp-block-palette__list">
-      {#each visibleMetas as meta}
-        {@const allowed = canAddWidget(meta.type, currentWidgets)}
+  <FloatingPopup triggerEl={anchorEl ?? triggerEl} bind:open placement="bottom-start" role="menu" ariaLabel={label}>
+    <div class="ppp-block-insert__list">
+      {#if placeLabel}<div class="ppp-block-insert__place" data-insert-place>{placeLabel}</div>{/if}
+      {#each choices as choice (choice.type)}
         <button
-          class="ppp-block-palette__item"
-          class:ppp-block-palette__item--disabled={!allowed}
-          disabled={!allowed}
-          on:click={() => handleAdd(meta.type)}
+          class="ppp-block-insert__item"
+          data-block-type={choice.type}
+          disabled={!choice.allowed}
+          on:click={() => handleAdd(choice.type)}
           role="menuitem"
         >
-          <span class="ppp-block-palette__icon"><Icon name={meta.icon} /></span>
-          <span>{$i18n.t(meta.labelKey)}</span>
+          <span class="ppp-block-insert__icon"><Icon name={choice.icon} /></span>
+          <span class="ppp-block-insert__text">
+            <span class="ppp-block-insert__label">{$i18n.t(choice.labelKey, { defaultValue: choice.labelDefault })}</span>
+            <span class="ppp-block-insert__desc">{$i18n.t(choice.descKey, { defaultValue: choice.descDefault })}</span>
+          </span>
         </button>
       {/each}
     </div>
@@ -61,72 +73,52 @@
 </div>
 
 <style>
-  .ppp-block-palette {
-    position: relative;
-    display: inline-flex;
-  }
+  .ppp-block-insert { display: flex; justify-content: center; position: relative; }
+  /* i2-model (N26): the «+» between blocks has its own row. At height 0 and
+     lifted by half it was drawn over the next block's header on a phone. */
+  .ppp-block-insert--between { height: 2em; align-items: center; }
+  .ppp-block-insert__list { max-height: 60vh; overflow-y: auto; min-width: 15rem; }
 
-  /* #073: cap palette height so the menu never runs off-screen */
-  .ppp-block-palette__list {
-    max-height: 60vh;
-    overflow-y: auto;
-  }
-
-  .ppp-block-palette__trigger {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.75rem;
-    height: 1.75rem;
+  .ppp-block-insert__trigger {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem;
+    min-width: 1.75rem; height: 1.75rem; padding: 0 0.5rem;
     border: 0.0625rem dashed var(--background-modifier-border-hover);
     border-radius: var(--radius-s, 0.25rem);
-    background: transparent;
-    color: var(--text-faint);
-    font-size: 1.125rem;
-    line-height: 1;
-    cursor: pointer;
-    transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+    background: var(--background-primary); color: var(--text-faint);
+    font-size: var(--font-ui-small); cursor: pointer;
+    transition: opacity 120ms ease, border-color 120ms ease, color 120ms ease;
+  }
+  .ppp-block-insert--between .ppp-block-insert__trigger { height: 1.75em; }
+
+  /* Mouse: the in-between «+» shows on hover of the gap or on keyboard focus.
+     `opacity`, not `visibility`: a hidden control could never receive focus. */
+  @media (pointer: fine) {
+    .ppp-block-insert--between .ppp-block-insert__trigger { opacity: 0; }
+    .ppp-block-insert--between:hover .ppp-block-insert__trigger,
+    .ppp-block-insert--open .ppp-block-insert__trigger,
+    .ppp-block-insert__trigger:focus-visible { opacity: 1; }
   }
 
-  .ppp-block-palette__trigger:hover,
-  .ppp-block-palette__trigger[aria-expanded="true"] {
-    border-color: var(--interactive-accent);
-    color: var(--interactive-accent);
-    background: var(--background-modifier-hover);
+  .ppp-block-insert__trigger:hover,
+  .ppp-block-insert__trigger[aria-expanded="true"] {
+    border-color: var(--interactive-accent); color: var(--interactive-accent);
   }
+  .ppp-block-insert__trigger:focus-visible { outline: 0.125rem solid var(--interactive-accent); outline-offset: 0.0625rem; }
 
-  .ppp-block-palette__trigger:focus-visible {
-    outline: 0.125rem solid var(--interactive-accent);
-    outline-offset: 0.0625rem;
+  .ppp-block-insert__item {
+    /* i2-base-style (D11): rows start at the left and wrap; Obsidian's button
+       centring and nowrap made a staircase and cut the descriptions. */
+    display: flex; align-items: flex-start; justify-content: flex-start; gap: 0.5rem; width: 100%;
+    white-space: normal;
+    padding: 0.375rem 0.5rem; color: var(--text-normal);
+    background: transparent; border: none; border-radius: var(--radius-s, 0.25rem);
+    cursor: pointer; text-align: left; height: auto;
   }
-
-  .ppp-block-palette__item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    width: 100%;
-    padding: 0.375rem 0.5rem;
-    font-size: var(--font-ui-small);
-    color: var(--text-normal);
-    background: transparent;
-    border: none;
-    border-radius: var(--radius-s, 0.25rem);
-    cursor: pointer;
-    text-align: left;
-  }
-
-  .ppp-block-palette__item:hover:not(:disabled) {
-    background: var(--background-modifier-hover);
-  }
-
-  .ppp-block-palette__item--disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  .ppp-block-palette__icon {
-    flex-shrink: 0;
-    color: var(--text-muted);
-    font-size: 0.875rem;
-  }
+  .ppp-block-insert__item:hover:not(:disabled) { background: var(--background-modifier-hover); }
+  .ppp-block-insert__item:disabled { opacity: 0.4; cursor: not-allowed; }
+  .ppp-block-insert__icon { flex-shrink: 0; color: var(--text-muted); }
+  .ppp-block-insert__text { display: flex; flex-direction: column; align-items: flex-start; gap: 0.125rem; min-width: 0; }
+  .ppp-block-insert__label { font-size: var(--font-ui-small); }
+  .ppp-block-insert__place { padding: 0.25em 0.5em; font-size: var(--font-ui-smaller); color: var(--text-muted); }
+  .ppp-block-insert__desc { font-size: var(--font-ui-smaller); color: var(--text-muted); }
 </style>

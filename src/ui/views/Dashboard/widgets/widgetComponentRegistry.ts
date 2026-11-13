@@ -50,6 +50,7 @@ import DividerWidget from "./DividerWidget/DividerWidget.svelte";
 
 /** Everything a props builder may need; assembled reactively by WidgetHost. */
 export interface WidgetRenderContext {
+  readonly pipelineStopped?: import("src/lib/dashboard-engine/transformTypes").TransformMeta["stopped"];
   readonly widget: WidgetDefinition;
   readonly frame: DataFrame;
   readonly transformedFrame: DataFrame;
@@ -64,6 +65,8 @@ export interface WidgetRenderContext {
   readonly availableWidgets: Array<{ id: string; title: string }>;
   readonly project: ProjectDefinition | undefined;
   readonly effectiveTableConfig: DataTableConfig | undefined;
+  /** i3-final (B4): the dashboard view's own table settings — its field list is every table tab's default. */
+  readonly dashboardTableConfig: DataTableConfig | undefined;
   readonly pipelineStepCount: number;
   readonly pipelineInputRowCount: number;
   readonly chartConfig: ChartConfig | null;
@@ -181,6 +184,7 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
       // so a data write would land in the wrong project. Config writes stay.
       sourceReadOnly: c.dbCallUsesLinkedSource,
       sourceState: c.dbCallSource,
+      dashboardTableConfig: c.dashboardTableConfig,
     }),
   },
   "cover-banner": {
@@ -214,7 +218,7 @@ export function panelFields(c: Pick<WidgetRenderContext, "transformedFrame">): D
  * branch in WidgetHost. Archived types have no panels (F3).
  */
 export const WIDGET_PANELS: Partial<Record<WidgetType, { component: ComponentType; props: (ctx: WidgetRenderContext) => Props }>> = {
-  chart: { component: ChartConfigPanel, props: (c) => ({ config: c.chartConfig, fields: panelFields(c), availableSources: c.availableSources, seriesFrames: c.chartSeriesFrames, availableWidgets: c.availableWidgets }) },
+  chart: { component: ChartConfigPanel, props: (c) => ({ config: c.chartConfig, fields: panelFields(c), records: c.transformedFrame.records, availableSources: c.availableSources, seriesFrames: c.chartSeriesFrames, availableWidgets: c.availableWidgets }) },
   checklist: { component: ChecklistConfigPanel, props: (c) => ({ config: c.widget.config, fields: c.transformedFrame.fields }) },
   stats: { component: StatsConfigPanel, props: (c) => ({ config: c.statsConfig, fields: c.transformedFrame.fields, availableSources: c.availableSources, availableWidgets: c.availableWidgets }) },
   "filter-tabs": { component: FilterTabsConfigPanel, props: (c) => ({ config: c.widget.config, fields: c.transformedFrame.fields, source: c.transformedFrame }) },

@@ -19,7 +19,8 @@ export type BlockSource =
   /** No external source configured: the block reads the host's own frame. */
   | { readonly kind: "parent"; readonly frame: DataFrame }
   | { readonly kind: "loading"; readonly projectId: string }
-  | { readonly kind: "ready"; readonly projectId: string; readonly frame: DataFrame }
+  /** i3-data: `writable` — a block of this project read as a source (dashboardPreload.ts). */
+  | { readonly kind: "ready"; readonly projectId: string; readonly frame: DataFrame; readonly writable?: boolean }
   | { readonly kind: "unavailable"; readonly projectId: string }
   | { readonly kind: "error"; readonly projectId: string; readonly message: string };
 
@@ -41,7 +42,9 @@ export function resolveBlockSource(
 
   const state = states.get(projectId);
   if (!state || state.status === "loading") return { kind: "loading", projectId };
-  if (state.status === "ready") return { kind: "ready", projectId, frame: state.frame };
+  if (state.status === "ready") {
+    return { kind: "ready", projectId, frame: state.frame, ...(state.writable ? { writable: true } : {}) };
+  }
   if (state.status === "error") {
     return { kind: "error", projectId, message: state.message };
   }

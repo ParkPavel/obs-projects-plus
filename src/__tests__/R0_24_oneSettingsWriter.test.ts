@@ -34,6 +34,8 @@ const SRC = path.join(ROOT, "src");
 const ADAPTER_WRITERS: Readonly<Record<string, string>> = {
   "src/lib/settings/brokenBackup.ts":
     "the forensic copy of unreadable settings, and the conflict copy/note — never data.json itself",
+  "src/lib/formula/settingsMigration.ts":
+    "verified formula migration restore point and report, never data.json itself",
   "src/lib/settingsBackup.ts":
     "#145 restore point for the dashboard migrations — a sibling file, never data.json",
 };
@@ -80,10 +82,19 @@ function sitesOf(pattern: RegExp): string[] {
 }
 
 describe("R0.24 — one writer of the settings file", () => {
-  it("`saveData` is called from exactly one place", () => {
-    // The host's own persistence. Handed to the writer, never called beside it:
-    // a second call site is a second writer, whatever it is named.
-    expect(sitesOf(/\bsaveData\(/g)).toEqual(["src/main.ts"]);
+  it("no path bypasses checked persistence with blind saveData", () => {
+    expect(sitesOf(/\bsaveData\(/g)).toEqual([]);
+  });
+
+  it("checked persistence has exactly one caller, through main's writer callback", () => {
+    const callers = sitesOf(/saveCheckedSettings\(/g).filter((file) => file !== "src/lib/settings/settingsCheckedSave.ts");
+    expect(callers).toEqual(["src/main.ts"]);
+    expect(sitesOf(/this\.saveSettingsWithCheck\(/g)).toEqual(["src/main.ts"]);
+  });
+
+  it("only checked persistence may process or bootstrap the settings file", () => {
+    expect(sitesOf(/adapter\.process\(/g)).toEqual(["src/lib/settings/settingsCheckedSave.ts"]);
+    expect(sitesOf(/adapter\.append\(/g)).toEqual(["src/lib/settings/settingsCheckedSave.ts"]);
   });
 
   it("the writer is constructed exactly once", () => {
@@ -109,7 +120,7 @@ describe("R0.24 — one writer of the settings file", () => {
     // through the writer.
     const text = fs.readFileSync(path.join(SRC, "main.ts"), "utf8");
 
-    expect(text).not.toMatch(/adapter\.write\(/);
+    expect(code(text)).not.toMatch(/adapter\.(?:write|process|append)\(/);
   });
 });
 

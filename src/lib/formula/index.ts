@@ -1,15 +1,9 @@
 /**
- * R0.1 — Unified Formula Module entry point
- *
- * Revision 3 §1.5 mandates a SINGLE formula engine for the whole plugin
- * (Database column formulas, Schema-MVP modal, Agenda agendaFormula,
- * filter formula mode, Rollup custom calculation). Today these surfaces
- * each have their own parser/evaluator and they drift over time.
- *
- * This file is the canonical import path for the formula engine. New
- * call-sites MUST import from here (`src/lib/formula`). Migrations from
- * the legacy paths (`src/lib/helpers/formulaParser`) happen in R0.1b/c.
- *
+ * Canonical formula entry: one AST runtime and executable function catalog.
+ * Existing boolean/computed APIs retain their compatibility profiles. New
+ * rules require an explicit evaluation context; saved formulas are not migrated
+ * by importing this module. Persisted definitions carry an optional version;
+ * the explicit editor opt-in is integrated separately from the data layer.
  */
 export {
   tokenize,
@@ -42,9 +36,22 @@ export {
   validateFormulaExpression,
   getFormulaFunctions,
   isStyledValue,
+  createFormulaPass,
+  evaluateExpression,
+  evaluateFormulaNode,
 } from "./extendedEvaluator";
 export type {
   StyledValue,
   FormulaResult,
+  FormulaPass,
+  FormulaEvaluationContext,
 } from "./extendedEvaluator";
+export { getFormulaCatalog, getFormulaDefinition } from "./catalog";
+export type { FormulaSemantics, FormulaDefinition } from "./catalog";
+export { validateExpression } from "./validation";
+export { formulaSemantics, evaluateVersionedFormula } from "./version";
+export type { VersionedFormula } from "./version";
+export type { FormulaSyntaxPolicy } from "./syntax";
+// i3-final: the criteria language of SUMIF / COUNTIF / the *IFS family
+export { compileCriterion, matchingRows } from "./criteria";
 

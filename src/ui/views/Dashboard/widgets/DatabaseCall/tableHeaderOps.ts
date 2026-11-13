@@ -7,6 +7,8 @@ import { DataFieldType } from "src/lib/dataframe/dataframe";
 import type { DataField, DataRecord } from "src/lib/dataframe/dataframe";
 import type { ContextMenuEntry } from "src/lib/contextMenu";
 import { aggregationLabel, aggregationOptionsFor } from "src/lib/dashboard-engine/aggregationOptions";
+import { valueSuggestions, type SuggestionContext } from "src/lib/suggestions/valueSuggestions";
+import { configuredChoiceOptions } from "src/lib/suggestions/choiceOptions";
 import type { ColumnAggregation, DataTableConfig, DataTableSortCriteria } from "../../types";
 
 export type SortOrder = "asc" | "desc";
@@ -24,26 +26,19 @@ export function calculateOptions(field: DataField): ColumnAggregation[] {
 }
 
 /**
- * Dropdown option pools for Select/Status columns: the values those columns
- * already hold, deduplicated and sorted.
- *
- * Derived from the data rather than declared, which is why an option a user
- * typed into one note shows up as a choice in the next — the field's own
- * `typeConfig` is not the only source of truth for what a column contains.
+ * Configured Select/Status edits offer exact schema choices. Free text and
+ * unconfigured choices retain the project pool; filters retain legacy values.
  */
 export function optionPools(
   fields: readonly DataField[],
-  records: readonly DataRecord[]
+  records: readonly DataRecord[],
+  context: SuggestionContext = {},
 ): Map<string, string[]> {
   const map = new Map<string, string[]>();
   for (const f of fields) {
-    if (f.type !== DataFieldType.Select && f.type !== DataFieldType.Status) continue;
-    const seen = new Set<string>();
-    for (const r of records) {
-      const v = r.values[f.name];
-      if (typeof v === "string" && v !== "") seen.add(v);
-    }
-    map.set(f.name, [...seen].sort((a, b) => a.localeCompare(b)));
+    if (![DataFieldType.String, DataFieldType.List, DataFieldType.Select,
+      DataFieldType.Status, DataFieldType.Number, DataFieldType.Date].includes(f.type)) continue;
+    map.set(f.name, configuredChoiceOptions(f) ?? valueSuggestions(records, f, { ...context, purpose: "edit" }));
   }
   return map;
 }
@@ -66,6 +61,17 @@ export function applyHidePatch(config: DataTableConfig | undefined, field: strin
     ...config,
     fieldConfig: { ...config?.fieldConfig, [field]: { ...config?.fieldConfig?.[field], hide: true } },
   };
+}
+
+/**
+ * i3-table — the first column is pinned only when the view asks for it
+ * (`freezeUpTo` names it). It used to be pinned always, and at 17rem it took
+ * most of a phone's width and every horizontal swipe.
+ */
+export function applyFreezePatch(config: DataTableConfig | undefined, field: string | null): DataTableConfig {
+  const { freezeUpTo: _omit, ...rest } = config ?? {};
+  void _omit;
+  return field === null ? rest : { ...rest, freezeUpTo: field };
 }
 
 export function applyWidthPatch(
@@ -127,6 +133,7 @@ export function startColumnResize(
   onLive: (rem: number) => void,
   onCommit: (rem: number) => void
 ): void {
+  const ownerView = (e.currentTarget as HTMLElement | null)?.ownerDocument.defaultView ?? window;
   e.stopPropagation();
   e.preventDefault();
   const startX = e.clientX;
@@ -136,12 +143,12 @@ export function startColumnResize(
     onLive(lastRem);
   };
   const onUp = () => {
-    window.removeEventListener("pointermove", onMove);
-    window.removeEventListener("pointerup", onUp);
+    ownerView.removeEventListener("pointermove", onMove);
+    ownerView.removeEventListener("pointerup", onUp);
     onCommit(lastRem);
   };
-  window.addEventListener("pointermove", onMove);
-  window.addEventListener("pointerup", onUp);
+  ownerView.addEventListener("pointermove", onMove);
+  ownerView.addEventListener("pointerup", onUp);
 }
 
 // ── Menu (canon §3: everything about a column lives in its header menu) ──
@@ -157,8 +164,11 @@ export function buildHeaderMenuEntries(opts: {
   onHide: () => void;
   onCalculate: (fn: ColumnAggregation | null) => void;
   onGroup: (group: boolean) => void;
+  /** i3-table — first column only: pin it while scrolling sideways, or release it. */
+  frozen?: boolean;
+  onFreeze?: ((freeze: boolean) => void) | undefined;
 }): ContextMenuEntry[] {
-  const { field, isPrimary, currentSort, currentCalc, groupedBy, t, onSort, onHide, onCalculate, onGroup } = opts;
+  const { field, isPrimary, currentSort, currentCalc, groupedBy, t, onSort, onHide, onCalculate, onGroup, frozen, onFreeze } = opts;
   const entries: ContextMenuEntry[] = [
     { title: t("views.dashboard.table-v2.sort-asc", "Sort ascending"), icon: "arrow-up", onClick: () => onSort("asc"), disabled: currentSort === "asc" },
     { title: t("views.dashboard.table-v2.sort-desc", "Sort descending"), icon: "arrow-down", onClick: () => onSort("desc"), disabled: currentSort === "desc" },
@@ -185,6 +195,14 @@ export function buildHeaderMenuEntries(opts: {
       })),
     ],
   });
+  if (onFreeze) {
+    entries.push({ separator: true });
+    entries.push(
+      frozen
+        ? { title: t("views.dashboard.table-v2.unfreeze", "Unpin column"), icon: "pin-off", onClick: () => onFreeze(false) }
+        : { title: t("views.dashboard.table-v2.freeze", "Pin column while scrolling"), icon: "pin", onClick: () => onFreeze(true) }
+    );
+  }
   if (!isPrimary) {
     entries.push({ separator: true });
     entries.push({ title: t("views.dashboard.table-v2.hide-field", "Hide in view"), icon: "eye-off", onClick: onHide });

@@ -1,17 +1,29 @@
 <script lang="ts">
+  import { provideFormFields } from "src/ui/components/fields/formFields";
+  const formFields = provideFormFields();
   import {
     Button,
     ModalButtonGroup,
     ModalContent,
     ModalLayout,
-    Select,
     SettingItem,
-    TextInput,
-    NumberInput,
-    // DateInput,
-    // DatetimeInput,
     Switch,
+    Icon,
   } from "obsidian-svelte";
+  import TextInput from "src/ui/components/fields/ValueSuggestField.svelte";
+  import NumberInput from "src/ui/components/fields/NumberField.svelte";
+  import Select from "src/ui/components/fields/SelectField.svelte";
+  import { isImeKey } from "src/ui/components/fields/draftController";
+  import FormulaEditor from "src/ui/components/FormulaEditor/VersionedFormulaEditor.svelte";
+  import { isEmptyFieldValue } from "src/lib/relations/declaredFieldTypes";
+  import { sourceCatalogue } from "src/lib/relations/baseRef";
+  import {
+    FIELD_TYPE_GROUPS,
+    ROLLUP_QUICK_FUNCTIONS,
+    defaultRollupFunction,
+    newRelationFieldName,
+    rollupExample,
+  } from "./createFieldFlow";
   import { TagsInput } from "src/ui/components/TagsInput";
   import MultiTextInput from "src/ui/components/MultiTextInput/MultiTextInput.svelte";
   import dayjs from "dayjs";
@@ -21,6 +33,7 @@
     type Optional,
     type DataField,
     type DataValue,
+    type DataFrame,
   } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
   import {
@@ -58,7 +71,21 @@
   /** Identifier of the project the new field belongs to. */
   export let currentProjectId: string = "";
   export let onSetupRelation: ((field: DataField) => void) | undefined = undefined;
-  let inputRef: HTMLInputElement;
+  /**
+   * B5 — reads another project's records, so pickers list its real properties
+   * and the rollup shows an example on three of its records. Absent: the
+   * pickers fall back to typing a name and no example is shown.
+   */
+  export let resolveFrame: ((projectId: string) => Promise<DataFrame | null>) | undefined = undefined;
+  /**
+   * B5 — creates the relation a new rollup reads through, before the rollup
+   * itself. `false` (or a throw) stops the create and keeps the draft. Absent:
+   * the rollup step offers only relations that already exist.
+   */
+  export let onCreateRelation: ((field: DataField) => Promise<boolean>) | undefined = undefined;
+  let nameInput: TextInput;
+  let defaultInput: TextInput;
+  let numberInput: NumberInput;
 
   export let field: DataField = {
     name: defaultName,
@@ -72,7 +99,14 @@
   let listValue: string = "[]";
   let dateValue: Optional<Date> = new Date();
 
-  export let onCreate: (field: DataField, value: Optional<DataValue>) => void;
+  /**
+   * Resolves to `false` (or throws) when the write did not happen; the form
+   * then stays open with the draft so the person can retry. M03 (C03/C13).
+   */
+  export let onCreate: (
+    field: DataField,
+    value: Optional<DataValue>
+  ) => void | boolean | Promise<void | boolean>;
   /**
    * #144 — number of notes this create will write to. The modal closed on click
    * without ever stating that the write touches every note in the project;
@@ -83,7 +117,14 @@
   // Derived / linked types write nothing into frontmatter on creation
   // (`isStageANoDefault` passes null), so the consequence line would be a lie
   // for them.
-  $: writesToNotes = recordCount > 0 && !isStageANoDefault(field.type);
+  // i2-safety: only a real default goes into the notes (ViewApi.addField skips
+  // an empty one), so the line below says which of the two happens.
+  $: writesToNotes = recordCount > 0 && hasDefault(field, value, listValue, dateValue);
+
+  /** The arguments only make the statement above re-run when they change. */
+  function hasDefault(..._deps: unknown[]): boolean {
+    return !isEmptyFieldValue(normalizedSubmission()[1]);
+  }
 
   $: fieldNameError = validateFieldName(field.name);
 
@@ -96,7 +137,8 @@
       return $i18n.t("modals.field.create.empty-name-error");
     }
 
-    if (existingFields.findIndex((field) => field.name === fieldName) !== -1) {
+    if (existingFields.findIndex((field) => field.name === fieldName) !== -1 ||
+      (field.type === DataFieldType.Rollup && pendingRelation?.name === fieldName)) {
       return $i18n.t("modals.field.create.existing-name-error");
     }
 
@@ -198,9 +240,13 @@
     return converter ? converter(origValue) : origValue;
   }
 
-  function handleTypeChange(event: CustomEvent<string>) {
+  function selectType(to: DataFieldType) {
     const from = field.type;
-    const to = event.detail as DataFieldType;
+    if (to !== DataFieldType.Formula) {
+      const { formula: _expression, formulaVersion: _version, ...config } = field.typeConfig ?? {};
+      field = { ...field, typeConfig: config };
+    }
+    if (to !== DataFieldType.Rollup) pendingRelation = null;
     if (to === DataFieldType.List) {
       field = {
         ...field,
@@ -272,14 +318,20 @@
   // target picker silently empty.
   $: effectiveProjects =
     availableProjects.length > 0 ? availableProjects : $settingsStore.projects;
+  // i3-data: the one source catalogue — projects, their sources and saved
+  // selections, and every dashboard block as a filtered source.
+  $: catalogue = sourceCatalogue(effectiveProjects, {
+    blockLabel: (title) => $i18n.t("views.dashboard.source-catalogue.block", { defaultValue: "Block «{{title}}» (filtered)", title }),
+  });
   $: projectOptions = [
     { label: $i18n.t("modals.field.configure.relation.no-project"), value: "" },
-    ...effectiveProjects.map((p) => ({
+    // D19: a project's own sources are bases too («Кабинет · Активные клиенты»).
+    ...catalogue.map((o) => ({
       label:
-        p.id === currentProjectId
-          ? `${p.name} ${$i18n.t("modals.field.configure.relation.this-project-suffix")}`
-          : p.name,
-      value: p.id,
+        o.value === currentProjectId
+          ? `${o.label} ${$i18n.t("modals.field.configure.relation.this-project-suffix")}`
+          : o.label,
+      value: o.value,
     })),
   ];
   $: relationFieldsOnThisProject = existingFields.filter(
@@ -294,8 +346,27 @@
     currentProjectId
   );
 
+  // B5 — a rollup on a project with no relation yet does not send the person
+  // away: every other project is offered as "New relation to …", created
+  // together with the rollup on submit.
+  const CREATE_PREFIX = "create:";
+  let pendingRelation: { name: string; targetProjectId: string; projectName: string } | null = null;
+  $: createRelationOptions = onCreateRelation
+    ? catalogue
+        .filter((o) => o.value !== currentProjectId)
+        .map((o) => ({
+          label: $i18n.t("modals.field.create.flow.create-relation-option", {
+            defaultValue: "New relation to {{project}}",
+            project: o.label,
+          }),
+          value: CREATE_PREFIX + o.value,
+        }))
+    : [];
   $: rollupRelationOptions = [
     { label: $i18n.t("modals.field.configure.rollup.no-relation"), value: "" },
+    ...(pendingRelation
+      ? [{ label: pendingRelation.name, value: CREATE_PREFIX + pendingRelation.targetProjectId }]
+      : []),
     ...rollupSourceList.map((s) => ({
       label:
         s.kind === "forward"
@@ -306,10 +377,83 @@
             }),
       value: s.value,
     })),
+    ...createRelationOptions.filter((o) => o.value !== CREATE_PREFIX + (pendingRelation?.targetProjectId ?? "")),
   ];
+  $: rollupPickerValue = pendingRelation
+    ? CREATE_PREFIX + pendingRelation.targetProjectId
+    : rollupSourceValue(rollupCfg);
+
+  /** The project a rollup aggregates: the backlink's, the new relation's, or the forward relation's target. */
+  function rollupTargetProject(cfg: RollupFieldConfig | undefined): string {
+    if (!cfg) return "";
+    if (cfg.backlink) return cfg.backlink.projectId;
+    if (pendingRelation && cfg.relationField === pendingRelation.name) return pendingRelation.targetProjectId;
+    const own = effectiveProjects.find((p) => p.id === currentProjectId)?.fieldConfig?.[cfg.relationField]?.relation;
+    const declared = (existingFields.find((f) => f.name === cfg.relationField)?.typeConfig as
+      | { relation?: RelationFieldConfig }
+      | undefined)?.relation;
+    return own?.targetProjectId ?? declared?.targetProjectId ?? "";
+  }
+
+  // Target project's frame: properties for the pickers, records for the example.
+  let targetFrame: DataFrame | null = null;
+  let loadedFrameFor = "";
+  $: targetProjectId =
+    field.type === DataFieldType.Rollup
+      ? rollupTargetProject(rollupCfg)
+      : field.type === DataFieldType.Relation
+        ? relationCfg?.targetProjectId ?? ""
+        : "";
+  $: void loadTargetFrame(targetProjectId);
+  async function loadTargetFrame(projectId: string): Promise<void> {
+    if (projectId === loadedFrameFor) return;
+    loadedFrameFor = projectId;
+    targetFrame = null;
+    if (!projectId || !resolveFrame) return;
+    try {
+      const frame = await resolveFrame(projectId);
+      if (loadedFrameFor === projectId) targetFrame = frame ?? null;
+    } catch {
+      targetFrame = null;
+    }
+  }
+  $: targetFieldOptions = targetFrame
+    ? [
+        { label: $i18n.t("modals.field.create.flow.choose-property", { defaultValue: "Choose a property…" }), value: "" },
+        ...targetFrame.fields
+          .filter((f) => !isRelationCompanionField(f.name))
+          .map((f) => ({ label: f.name, value: f.name })),
+      ]
+    : [];
+  $: example =
+    targetFrame && rollupCfg?.targetField
+      ? rollupExample(targetFrame.records, rollupCfg.targetField, rollupCfg.function ?? "count", rollupCfg.separator)
+      : null;
+  $: exampleText = example
+    ? $i18n.t("modals.field.create.flow.example", {
+        defaultValue: "Example on {{n}} records: {{values}} → {{result}}",
+        n: example.records,
+        values: example.values.map((v) => (v === null || v === undefined || v === "" ? "—" : String(v))).join(", "),
+        result: example.result.formattedValue || "—",
+      })
+    : "";
+
+  let functionTouched = false;
+  function handleRollupTargetField(name: string) {
+    const chosen = targetFrame?.fields.find((f) => f.name === name);
+    // The calculation follows the property until the person picks one.
+    patchRollup(
+      !functionTouched && chosen
+        ? { targetField: name, function: defaultRollupFunction(chosen) }
+        : { targetField: name }
+    );
+  }
   // #180d/T5: the default label came from the raw stored name, so this picker
   // showed `count_total` where every other surface showed "Count all".
-  $: rollupFunctionOptions = ROLLUP_PICKER_ORDER.map((fn) => ({
+  $: rollupFunctionOptions = [
+    ...ROLLUP_QUICK_FUNCTIONS,
+    ...ROLLUP_PICKER_ORDER.filter((fn) => !ROLLUP_QUICK_FUNCTIONS.includes(fn)),
+  ].map((fn) => ({
     label: aggregationLabel(fn, (key, defaultValue) => $i18n.t(key, { defaultValue })),
     value: fn,
   }));
@@ -381,6 +525,19 @@
   }
 
   function handleRollupSourceChange(e: CustomEvent<string>) {
+    if (e.detail.startsWith(CREATE_PREFIX)) {
+      const projectId = e.detail.slice(CREATE_PREFIX.length);
+      const target = catalogue.find((o) => o.value === projectId);
+      if (!target) return;
+      const name = newRelationFieldName(target.label, [...existingFields.map((f) => f.name), field.name]);
+      pendingRelation = { name, targetProjectId: projectId, projectName: target.label };
+      const base: RollupFieldConfig = rollupCfg ?? { relationField: "", targetField: "", function: "count" };
+      const { backlink: _b, ...rest } = base;
+      void _b;
+      field = { ...field, typeConfig: { ...field.typeConfig, rollup: { ...rest, relationField: name } } };
+      return;
+    }
+    pendingRelation = null;
     const next = applyRollupSource(rollupCfg, e.detail);
     if (!next) {
       const { rollup: _omit, ...rest } = (field.typeConfig ?? {}) as {
@@ -395,7 +552,106 @@
   }
 
   function handleRollupFunctionChange(e: CustomEvent<string>) {
+    functionTouched = true;
     patchRollup({ function: e.detail as RollupFunction });
+  }
+
+  /**
+   * M03 (C16): the one submission both Enter and the Create button go through.
+   * Enter used to hand the raw draft to the writer, so a derived type wrote an
+   * empty literal into every note and a date was not formatted.
+   */
+  function normalizedSubmission(): [DataField, Optional<DataValue>] {
+    if (field.repeated) {
+      return [{ ...field, type: DataFieldType.String }, safeParseList(listValue)];
+    }
+    if (isStageANoDefault(field.type)) {
+      // Stage A.10 — derived / pickable types do not own a literal
+      // default. Passing null prevents `dataApi.addField` from writing
+      // an empty string into every record's frontmatter on creation.
+      return [field, null];
+    }
+    if (field.type === DataFieldType.Date) {
+      // If no date(time) value specified still add today's date / current time
+      return [
+        field,
+        dayjs(dateValue ?? "").format(field.typeConfig?.time ? "YYYY-MM-DDTHH:mm" : "YYYY-MM-DD"),
+      ];
+    }
+    if (
+      (field.type === DataFieldType.String ||
+        field.type === DataFieldType.Select ||
+        field.type === DataFieldType.Status) &&
+      field.typeConfig?.options
+    ) {
+      // uniquify options items and omit empty
+      const options = [...new Set(field.typeConfig.options)].filter((v) => v !== "");
+      return [{ ...field, typeConfig: { ...field.typeConfig, options } }, value];
+    }
+    return [field, value];
+  }
+
+  // The form stays open until the write answers: a failure keeps the draft
+  // and says so here, instead of a Notice behind an already closed modal.
+  let pending = false;
+  let submitError = "";
+
+  async function submit(): Promise<void> {
+    if (pending || !formFields.syncForSubmit()) return;
+    fieldNameError = validateFieldName(field.name);
+    if (fieldNameError) return;
+    if (nameInput?.isComposing() || defaultInput?.isComposing() || (field.type === DataFieldType.Number && !numberInput?.commitForNavigation())) return;
+    pending = true;
+    submitError = "";
+    const [submittedField, submittedValue] = normalizedSubmission();
+    try {
+      if (pendingRelation && submittedField.type === DataFieldType.Rollup && onCreateRelation) {
+        if (!(await createPendingRelation(onCreateRelation, pendingRelation))) return;
+      }
+      const outcome = await onCreate(submittedField, submittedValue);
+      if (outcome === false) submitError = createFailedText();
+    } catch {
+      submitError = createFailedText();
+    } finally {
+      pending = false;
+    }
+  }
+
+  async function createPendingRelation(
+    create: (field: DataField) => Promise<boolean>,
+    pending: { name: string; targetProjectId: string }
+  ): Promise<boolean> {
+    const relation: DataField = {
+      name: pending.name,
+      type: DataFieldType.Relation,
+      repeated: true,
+      identifier: false,
+      derived: false,
+      typeConfig: { relation: { targetProjectId: pending.targetProjectId } },
+    };
+    let made = false;
+    try {
+      made = await create(relation);
+    } catch {
+      made = false;
+    }
+    if (!made) {
+      submitError = $i18n.t("modals.field.create.flow.relation-failed", {
+        defaultValue: "The relation was not created, so the property was not added. Try again.",
+      });
+      return false;
+    }
+    // Created: from now on it is an ordinary relation of this project, so a
+    // retry after a failed rollup write does not create it twice.
+    existingFields = [...existingFields, relation];
+    pendingRelation = null;
+    return true;
+  }
+
+  function createFailedText(): string {
+    return $i18n.t("modals.field.create.write-failed", {
+      defaultValue: "The field was not added to every note. Your entries are kept — try again.",
+    });
   }
 
   function isStageANoDefault(t: DataFieldType): boolean {
@@ -406,10 +662,25 @@
     );
   }
 
-  const options = dataFieldTypeOptions((key) => $i18n.t(key));
+  // The grouped picker below shows every type the registry lists.
+  const typeCount = dataFieldTypeOptions((key) => key).length;
+  void typeCount;
+
+  $: formulaFieldNames = existingFields.map((f) => f.name);
+  function handleFormulaModeChange(event: CustomEvent<import("src/lib/formula/version").VersionedFormula>) {
+    const { formulaVersion: _previousVersion, ...config } = field.typeConfig ?? {};
+    field = { ...field, typeConfig: { ...config, ...(event.detail.formulaVersion !== undefined ? { formulaVersion: event.detail.formulaVersion } : {}) } };
+  }
+
+  function handleFormulaChange(ev: CustomEvent<string>) {
+    const expr = ev.detail;
+    const { formula: _f, ...rest } = (field.typeConfig ?? {}) as { formula?: string } & Record<string, unknown>;
+    void _f;
+    field = { ...field, typeConfig: expr ? { ...rest, formula: expr } : rest };
+  }
 
   onMount(() => {
-    if (inputRef) inputRef.select();
+    nameInput?.select();
   });
 </script>
 
@@ -420,28 +691,77 @@
       description={$i18n.t("modals.field.create.name.description") ?? ""}
     >
       <TextInput
-        bind:ref={inputRef}
+        bind:this={nameInput}
+        ariaLabel={$i18n.t("modals.field.create.name.name")}
         value={field.name}
         on:input={(event) => (field = { ...field, name: event.detail })}
         autoFocus
         error={!!fieldNameError}
         helperText={fieldNameError}
         on:keydown={(ev) => {
-          if (ev.key === "Enter" && !fieldNameError) {
+          if (ev.key === "Enter" && !isImeKey(ev) && !nameInput?.isComposing() && !fieldNameError) {
             ev.preventDefault();
-            onCreate(field, value);
+            void submit();
           }
         }}
       />
     </SettingItem>
 
-    <SettingItem
-      name={$i18n.t("modals.field.create.type.name")}
-      description={$i18n.t("modals.field.create.type.description")}
-    >
-      <Select value={field.type} {options} on:change={handleTypeChange} />
-    </SettingItem>
+    <!-- B5 — types as in Notion: two groups of icon tiles, one tap each. -->
+    <div class="ppp-create-field-types">
+      {#each FIELD_TYPE_GROUPS as group (group.id)}
+        <div class="ppp-create-field-type-group" role="radiogroup" aria-label={group.id === "basic"
+            ? $i18n.t("modals.field.create.flow.group-basic", { defaultValue: "Basic" })
+            : $i18n.t("modals.field.create.flow.group-linked", { defaultValue: "Relations and computations" })}>
+          <div class="ppp-create-field-type-group-title">
+            {group.id === "basic"
+              ? $i18n.t("modals.field.create.flow.group-basic", { defaultValue: "Basic" })
+              : $i18n.t("modals.field.create.flow.group-linked", { defaultValue: "Relations and computations" })}
+          </div>
+          <div class="ppp-create-field-type-grid">
+            {#each group.types as choice (choice.value)}
+              <button
+                type="button"
+                role="radio"
+                aria-checked={field.type === choice.value}
+                class="ppp-create-field-type"
+                class:is-active={field.type === choice.value}
+                data-type={choice.value}
+                on:click={() => selectType(choice.value)}
+              >
+                <Icon name={choice.icon} />
+                <span>{$i18n.t(choice.labelKey)}</span>
+              </button>
+            {/each}
+          </div>
+        </div>
+      {/each}
+    </div>
+    {#if field.type === DataFieldType.Formula}
+      <SettingItem
+        name={$i18n.t("modals.field.create.flow.formula-name", { defaultValue: "Formula" })}
+        description={$i18n.t("modals.field.create.flow.formula-description", {
+          defaultValue: "Type a field or function name — hints appear as you type.",
+        })}
+        vertical
+      >
+        <FormulaEditor
+          version={field.typeConfig?.formulaVersion}
+          on:modechange={handleFormulaModeChange}
+          expression={(field.typeConfig?.formula ?? "")}
+          fields={formulaFieldNames}
+          rows={3}
+          on:change={handleFormulaChange}
+        />
+      </SettingItem>
+    {/if}
 
+    {#if field.type === DataFieldType.UniqueId}
+      <SettingItem name={$i18n.t("automatic-fields.prefix-label")} description={$i18n.t("automatic-fields.prefix-hint")}>
+        <TextInput value={field.typeConfig?.uniqueIdPrefix ?? ""} ariaLabel={$i18n.t("automatic-fields.prefix-label")}
+          placeholder={$i18n.t("modals.configure-field.prefix-placeholder")} on:input={event => (field = { ...field, typeConfig: { ...field.typeConfig, uniqueIdPrefix: event.detail } })} />
+      </SettingItem>
+    {/if}
     <SettingItem
       name={$i18n.t("modals.field.create.default.name")}
       description={$i18n.t("modals.field.create.default.description")}
@@ -459,24 +779,26 @@
         />
       {:else if field.type === DataFieldType.String}
         <TextInput
+          bind:this={defaultInput}
           value={value?.toString() ?? ""}
           on:input={(event) => (value = event.detail)}
           on:keydown={(ev) => {
-            if (ev.key === "Enter" && !fieldNameError) {
+            if (ev.key === "Enter" && !isImeKey(ev) && !defaultInput?.isComposing() && !fieldNameError) {
               ev.preventDefault();
-              onCreate(field, value);
+              void submit();
             }
           }}
         />
       {:else if field.type === DataFieldType.Number}
         <NumberInput
-          bind:ref={inputRef}
+          bind:this={numberInput}
+          allowEmpty preserveInvalidOnBlur
           value={toNumber(value)}
           on:input={(event) => (value = event.detail)}
           on:keydown={(ev) => {
-            if (ev.key === "Enter" && !fieldNameError) {
+            if (ev.key === "Enter" && !isImeKey(ev) && !numberInput?.isComposing() && !fieldNameError) {
               ev.preventDefault();
-              onCreate(field, value);
+              void submit();
             }
           }}
         />
@@ -505,13 +827,14 @@
         />
       {/if}
     </SettingItem>
-    {#if !field.repeated && (field.type === DataFieldType.String || field.type === DataFieldType.Select || field.type === DataFieldType.Status)}
+    {#if field.type === DataFieldType.List || (!field.repeated && (field.type === DataFieldType.String || field.type === DataFieldType.Select || field.type === DataFieldType.Status))}
       <SettingItem
         name={$i18n.t("modals.field.create.options.name")}
         description={$i18n.t("modals.field.create.options.description")}
         vertical
       >
         <MultiTextInput
+          contextKey={JSON.stringify([currentProjectId, field.name, field.type])}
           options={field.typeConfig?.options ?? []}
           onChange={handleOptionsChange}
         />
@@ -556,6 +879,7 @@
         )}
       >
         <Select
+          contextKey={currentProjectId}
           value={relationCfg?.targetProjectId ?? ""}
           options={projectOptions}
           on:change={(e) => patchRelation({ targetProjectId: e.detail })}
@@ -568,13 +892,22 @@
             "modals.field.configure.relation.display-field.description"
           )}
         >
-          <TextInput
-            value={relationCfg?.displayField ?? ""}
-            placeholder={$i18n.t(
-              "modals.field.configure.relation.display-field.placeholder"
-            )}
-            on:input={handleDisplayFieldChange}
-          />
+          {#if targetFieldOptions.length > 0}
+            <Select
+              contextKey={currentProjectId}
+              value={relationCfg?.displayField ?? ""}
+              options={targetFieldOptions}
+              on:change={handleDisplayFieldChange}
+            />
+          {:else}
+            <TextInput
+              value={relationCfg?.displayField ?? ""}
+              placeholder={$i18n.t(
+                "modals.field.configure.relation.display-field.placeholder"
+              )}
+              on:input={handleDisplayFieldChange}
+            />
+          {/if}
         </SettingItem>
       {/if}
       {#if onSetupRelation}
@@ -586,7 +919,7 @@
       {/if}
     {/if}
     {#if field.type === DataFieldType.Rollup}
-      {#if rollupSourceList.length === 0}
+      {#if rollupSourceList.length === 0 && createRelationOptions.length === 0}
         <p class="ppp-create-field-stagea-note">
           {$i18n.t("modals.field.configure.rollup.no-relations-warning")}
         </p>
@@ -598,11 +931,21 @@
           )}
         >
           <Select
-            value={rollupSourceValue(rollupCfg)}
+            contextKey={currentProjectId}
+            value={rollupPickerValue}
             options={rollupRelationOptions}
             on:change={handleRollupSourceChange}
           />
         </SettingItem>
+        {#if pendingRelation}
+          <p class="ppp-create-field-stagea-note" data-testid="pending-relation">
+            {$i18n.t("modals.field.create.flow.new-relation-note", {
+              defaultValue: "Also creates the relation '{{name}}' to {{project}}.",
+              name: pendingRelation.name,
+              project: pendingRelation.projectName,
+            })}
+          </p>
+        {/if}
         {#if rollupCfg?.relationField || rollupCfg?.backlink}
           <SettingItem
             name={$i18n.t("modals.field.configure.rollup.target-field.name")}
@@ -610,13 +953,22 @@
               "modals.field.configure.rollup.target-field.description"
             )}
           >
-            <TextInput
-              value={rollupCfg?.targetField ?? ""}
-              placeholder={$i18n.t(
-                "modals.field.configure.rollup.target-field.placeholder"
-              )}
-              on:input={(e) => patchRollup({ targetField: e.detail })}
-            />
+            {#if targetFieldOptions.length > 0}
+              <Select
+                contextKey={currentProjectId}
+                value={rollupCfg?.targetField ?? ""}
+                options={targetFieldOptions}
+                on:change={(e) => handleRollupTargetField(e.detail)}
+              />
+            {:else}
+              <TextInput
+                value={rollupCfg?.targetField ?? ""}
+                placeholder={$i18n.t(
+                  "modals.field.configure.rollup.target-field.placeholder"
+                )}
+                on:input={(e) => patchRollup({ targetField: e.detail })}
+              />
+            {/if}
           </SettingItem>
           <SettingItem
             name={$i18n.t("modals.field.configure.rollup.function.name")}
@@ -625,11 +977,21 @@
             )}
           >
             <Select
+              contextKey={currentProjectId}
               value={rollupCfg?.function ?? "count"}
               options={rollupFunctionOptions}
               on:change={handleRollupFunctionChange}
             />
           </SettingItem>
+          {#if exampleText}
+            <p class="ppp-create-field-example" role="status" data-testid="rollup-example" data-result={example?.result.formattedValue ?? ""}>{exampleText}</p>
+          {:else if targetFrame && targetFrame.records.length === 0}
+            <p class="ppp-create-field-stagea-note">
+              {$i18n.t("modals.field.create.flow.example-empty", {
+                defaultValue: "The linked project has no records yet — the example appears once it does.",
+              })}
+            </p>
+          {/if}
           {#if rollupFunctionIsPositional(rollupCfg?.function)}
             <SettingItem
               name={$i18n.t("modals.field.configure.rollup.order-by.name")}
@@ -663,56 +1025,26 @@
     {#if writesToNotes}
       <p class="ppp-create-field-consequence" role="status">
         {$i18n.t("modals.field.create.bulk-write-notice", {
-          defaultValue:
-            "Adds '{{field}}' to {{count}} notes. Empty values are written; existing values are not changed.",
+          defaultValue: "Writes the default value of '{{field}}' to {{count}} notes of the base.",
           field: field.name,
           count: recordCount,
         })}
       </p>
+    {:else}
+      <p class="ppp-create-field-consequence" role="status">
+        {$i18n.t("modals.field.create.declared-notice", {
+          defaultValue: "'{{field}}' is added to the base. Notes are not changed until you fill in a value.",
+          field: field.name,
+        })}
+      </p>
+    {/if}
+    {#if submitError}
+      <p class="ppp-create-field-error" role="alert">{submitError}</p>
     {/if}
     <Button
       variant={"primary"}
-      disabled={!!fieldNameError}
-      on:click={() => {
-        if (field.repeated) {
-          onCreate(
-            { ...field, type: DataFieldType.String },
-            safeParseList(listValue)
-          );
-        } else if (isStageANoDefault(field.type)) {
-          // Stage A.10 — derived / pickable types do not own a literal
-          // default. Passing null prevents `dataApi.addField` from writing
-          // an empty string into every record's frontmatter on creation.
-          onCreate(field, null);
-        } else if (field.type === DataFieldType.Date) {
-          onCreate(
-            field,
-            // If no date(time) value specified still add today's date / current time
-            dayjs(dateValue ?? "").format(
-              field.typeConfig?.time ? "YYYY-MM-DDTHH:mm" : "YYYY-MM-DD"
-            )
-          );
-        } else if (
-          field.type === DataFieldType.String ||
-          field.type === DataFieldType.Select ||
-          field.type === DataFieldType.Status
-        ) {
-          // uniquify options items and omit empty
-          if (field?.typeConfig && field.typeConfig?.options) {
-            const options = field.typeConfig.options;
-            field = {
-              ...field,
-              typeConfig: {
-                ...field.typeConfig,
-                options: [...new Set(options)].filter((v) => v !== ""),
-              },
-            };
-          }
-          onCreate(field, value);
-        } else {
-          onCreate(field, value);
-        }
-      }}
+      disabled={!!fieldNameError || pending}
+      on:click={() => void submit()}
     >
       {$i18n.t("modals.field.create.create")}
     </Button>
@@ -732,6 +1064,44 @@
     color: var(--text-muted);
     font-size: var(--font-ui-smaller, 0.75rem);
     line-height: 1.4;
+  }
+  .ppp-create-field-types {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-4-2);
+    padding: var(--size-4-2) 0;
+  }
+  .ppp-create-field-type-group-title {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    margin-bottom: var(--size-4-1);
+  }
+  .ppp-create-field-type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(8em, 1fr));
+    gap: var(--size-4-1);
+  }
+  .ppp-create-field-type {
+    display: flex;
+    align-items: center;
+    gap: var(--size-4-2);
+    justify-content: flex-start;
+    min-width: 0;
+  }
+  .ppp-create-field-type span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ppp-create-field-type.is-active {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+  }
+  .ppp-create-field-example {
+    margin: 0;
+    color: var(--text-normal);
+    font-size: var(--font-ui-smaller);
+    font-variant-numeric: tabular-nums;
   }
   .ppp-setup-relation-cta {
     display: flex;

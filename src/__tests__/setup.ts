@@ -7,6 +7,21 @@ import quarterOfYear from "dayjs/plugin/quarterOfYear";
 dayjs.extend(isoWeek);
 dayjs.extend(quarterOfYear);
 
+// JSDOM has no layout. Behavioral field tests need an explicitly modelled
+// visible input/list; geometry tests replace these boxes with their own cases.
+// Production code correctly suppresses suggestions for an unmeasurable field.
+const nativeRect = HTMLElement.prototype.getBoundingClientRect;
+HTMLElement.prototype.getBoundingClientRect = function (this: HTMLElement): DOMRect {
+  const rect = nativeRect.call(this);
+  if (!this.isConnected || rect.width || rect.height || this.hidden) return rect;
+  const input = this.classList.contains("ppp-combo-input") || this.classList.contains("ppp-fc-textarea");
+  const popup = this.classList.contains("ppp-combo-popup") || this.classList.contains("ppp-popup--field-suggestions");
+  if (!input && !popup) return rect;
+  const top = input ? 400 : 0;
+  const height = input ? 32 : 80;
+  return { top, bottom: top + height, left: 20, right: 220, width: 200, height, x: 20, y: top, toJSON: () => ({}) };
+};
+
 // Polyfill for Node.js environment
 (global as any).TextEncoder = TextEncoder;
 (global as any).TextDecoder = TextDecoder;

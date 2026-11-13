@@ -8,7 +8,8 @@ import {
 
 import DashboardCanvasSvelte from "./DashboardCanvas.svelte";
 import type { DatabaseViewConfig } from "./types";
-import { isLegacyTableConfig, migrateTableConfig, migrateDashboardTransforms, dropTemplateQuickActions } from "./migration";
+import { isLegacyTableConfig, migrateTableConfig,
+  emptyDashboardConfig, migrateDashboardTransforms, dropObsoleteQuickActions } from "./migration";
 import { get } from "svelte/store";
 import { app } from "src/lib/stores/obsidian";
 import { writeMigrationBackup } from "src/lib/settingsBackup";
@@ -87,6 +88,12 @@ export class DashboardView extends ProjectView<DatabaseViewConfig> {
 
     let config = props.config;
     let migrated = false;
+    // D10: a page opened with no config at all starts empty — its empty state
+    // offers «Add a database» — instead of with a block made for it.
+    if (!config || Object.keys(config).length === 0) {
+      config = emptyDashboardConfig();
+      props.saveConfig(config);
+    }
     if (
       isLegacyTableConfig(props.config as unknown as Record<string, unknown>)
     ) {
@@ -107,14 +114,11 @@ export class DashboardView extends ProjectView<DatabaseViewConfig> {
       }
     }
 
-    // #191: a quick action pointing at the removed dashboard-template mechanism
-    // is dropped on the way in, so the button is gone from the first render
-    // rather than lingering as something that does nothing. The save below is
-    // the existing one — this is a fourth participant in a chain, not new
-    // machinery, and the #145 restore point above already covers it.
-    const withoutTemplates = dropTemplateQuickActions(config);
-    if (withoutTemplates.migrated) {
-      config = withoutTemplates.config;
+    // The toolbar is now the sole formula entry point. Remove its old duplicate
+    // quick action on the existing migration path before the first render.
+    const withoutQuickActions = dropObsoleteQuickActions(config);
+    if (withoutQuickActions.migrated) {
+      config = withoutQuickActions.config;
       migrated = true;
       props.saveConfig(config);
     }

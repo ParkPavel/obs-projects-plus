@@ -29,6 +29,7 @@
  */
 
 import {
+  describeWithChrome,
   findChrome,
   renderProbe,
   svelteStyle,
@@ -41,7 +42,8 @@ import * as fs from "fs";
 import * as path from "path";
 
 const chrome = findChrome();
-const describeIfChrome = chrome ? describe : describe.skip;
+// w4-p00: without a browser the suite reports BLOCKED instead of vanishing.
+const describeIfChrome = describeWithChrome;
 
 if (!chrome) {
   console.warn(

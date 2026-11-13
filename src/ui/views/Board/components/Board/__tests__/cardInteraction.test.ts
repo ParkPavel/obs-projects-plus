@@ -45,9 +45,9 @@ const helpers = require("src/ui/views/helpers") as { showMobileNavMenu: jest.Moc
 
 const record = (id: string, done = false) => ({ id, values: { done } });
 
-function mountCards(props: Record<string, unknown> = {}) {
-  const target = document.createElement("div");
-  document.body.appendChild(target);
+function mountCards(props: Record<string, unknown> = {}, doc: Document = document) {
+  const target = doc.createElement("div");
+  doc.body.appendChild(target);
   const items = [record("a.md"), record("b.md")];
   const onRecordClick = jest.fn();
   const onRecordCheck = jest.fn();
@@ -152,6 +152,19 @@ describe("cards-g2 — what a click does on each part of a board card", () => {
     m.destroy();
   });
 
+  it("a click on an iframe grip does not activate the card", () => {
+    const iframe = document.createElement("iframe");
+    document.body.appendChild(iframe);
+    const m = mountCards({}, iframe.contentDocument!);
+    try {
+      m.card(0).querySelector<HTMLElement>(".board-card-grip-glyph")?.dispatchEvent(click());
+      expect(m.onRecordClick).not.toHaveBeenCalled();
+    } finally {
+      m.destroy();
+      iframe.remove();
+    }
+  });
+
   it("the checkbox toggles the record without opening it", async () => {
     const m = mountCards();
     const box = m.card(0).querySelector<HTMLInputElement>(".checkbox-wrapper input[type='checkbox']");
@@ -227,5 +240,28 @@ describe("cards-g2 — the title link keeps its modifiers", () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+});
+
+describe("B10 — a card body activation carries its modifiers", () => {
+  it("Shift on the body opens a window, Ctrl or Meta a tab, and none opens the card", () => {
+    const m = mountCards();
+    m.card(0).dispatchEvent(click({ shiftKey: true }));
+    expect(openRecord).toHaveBeenLastCalledWith({ id: "a.md" }, "window", expect.anything());
+    m.card(0).dispatchEvent(click({ ctrlKey: true }));
+    expect(openRecord).toHaveBeenLastCalledWith({ id: "a.md" }, "tab", expect.anything());
+    m.card(0).dispatchEvent(click({ metaKey: true }));
+    expect(openRecord).toHaveBeenLastCalledWith({ id: "a.md" }, "tab", expect.anything());
+    expect(m.onRecordClick).not.toHaveBeenCalled();
+    m.destroy();
+  });
+
+  it("the pencil opens the editor when the board hands one in, not the peek", () => {
+    const onRecordEdit = jest.fn();
+    const m = mountCards({ onRecordEdit });
+    m.card(0).querySelector<HTMLElement>(".edit-hint .clickable-icon")?.dispatchEvent(click());
+    expect(onRecordEdit).toHaveBeenCalledWith(m.items[0]);
+    expect(m.onRecordClick).not.toHaveBeenCalled();
+    m.destroy();
   });
 });

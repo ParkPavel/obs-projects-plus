@@ -12,19 +12,28 @@
   } from "./types";
   import type { BoardThumbnailLayout } from "../../types";
   import type { CardFrame, NormalizedCardFrames } from "src/ui/components/SharedCard/cardFrames";
+  import NoteDraft from "src/ui/components/NoteDraft.svelte";
+  import type { ProjectDefinition } from "src/settings/settings";
   import { openContextMenu } from "src/lib/contextMenu";
   import { toRem } from "src/ui/utils/cssLength";
 
   /** Column width in CSS pixels, as measured and stored; written back in rem. */
   export let width: number;
-  $: widthLength = toRem(width);
+  let columnEl: HTMLElement | null = null;
+  $: widthLength = toRem(width, columnEl?.ownerDocument);
+  $: stripLength = toRem(48, columnEl?.ownerDocument);
+  $: foldMargin = toRem(48 - width, columnEl?.ownerDocument);
 
   export let name: string;
   export let records: DataRecord[];
+  export let project: ProjectDefinition;
   export let readonly: boolean;
   /** #C4 — see BoardView.svelte for what this covers and why it is separate from `readonly`. */
   export let dataReadOnly: boolean = false;
   export let richText: boolean;
+  /** Transient layout while columns move; never changes the saved collapse flag. */
+  export let temporaryCollapse = false;
+  $: shownCollapsed = collapse || temporaryCollapse;
   export let checkField: string | undefined;
   export let includeFields: DataField[];
   export let customHeader: DataField | undefined;
@@ -35,22 +44,43 @@
   /** cards-g5 — saved card frames and their change route, passed through to the card list. */
   export let cardFrames: NormalizedCardFrames = { view: {}, byRecord: {} };
   export let onCardFrameChange: ((recordId: string, frame: CardFrame | undefined) => void) | undefined = undefined;
+  /** p372-b8 — board zoom, for the mouse drag's clone (CardList). */
+  export let zoom: number = 1;
   export let pinned: boolean;
   export let collapse: boolean;
   export let persisted: boolean;
 
   export let onDrop: OnRecordDrop;
   export let onRecordClick: OnRecordClick;
+  export let onRecordEdit: OnRecordClick | undefined = undefined;
   export let onRecordCheck: OnRecordCheck;
-  export let onRecordAdd: () => void;
+  export let onRecordAdd: (
+    name: string,
+    templatePath: string,
+    project: ProjectDefinition
+  ) => void | Promise<unknown>;
   export let onColumnPin: (name: string) => void;
   export let onColumnPersist: (name: string) => void;
   export let onColumnCollapse: OnColumnCollapse;
   export let onColumnDelete: (name: string, records: DataRecord[]) => void;
   export let onColumnRename: (name: string) => void;
   export let onValidate: (name: string) => boolean;
+  /** i3-board — Move left / Move right in the column menu; absent for pinned or read-only columns. */
+  export let onColumnMove: ((name: string, delta: -1 | 1) => void) | undefined = undefined;
+  export let canMoveLeft: boolean = false;
+  export let canMoveRight: boolean = false;
 
   let editing: boolean = false;
+  let addingRecord = false;
+
+  async function saveNewRecord(
+    noteName: string,
+    templatePath: string,
+    noteProject: ProjectDefinition
+  ) {
+    await onRecordAdd(noteName, templatePath, noteProject);
+    addingRecord = false;
+  }
 
   export let boardEditing: boolean = false;
   export let onEdit: (editing: boolean) => void;
@@ -77,6 +107,20 @@
         icon: collapse ? "chevrons-left-right" : "chevrons-right-left",
         onClick: () => { onColumnCollapse(name); },
       },
+      ...(onColumnMove && canMoveLeft
+        ? [{
+            title: $i18n.t("components.board.column.move-left"),
+            icon: "arrow-left",
+            onClick: () => { onColumnMove?.(name, -1); },
+          }]
+        : []),
+      ...(onColumnMove && canMoveRight
+        ? [{
+            title: $i18n.t("components.board.column.move-right"),
+            icon: "arrow-right",
+            onClick: () => { onColumnMove?.(name, 1); },
+          }]
+        : []),
       {
         title: pinned
           ? $i18n.t("components.board.column.unpin")
@@ -107,12 +151,13 @@
 </script>
 
 <section
+  bind:this={columnEl}
   data-id={name}
   class="projects--board--column"
-  class:collapse
+  class:collapse={shownCollapsed}
   class:pinned
   class:persisted
-  style={`width: ${widthLength}; min-width: ${widthLength}; max-width: ${widthLength};${collapse ? ` margin-right: ${toRem(48 - width)};` : ''}`}
+  style={`width: ${widthLength}; min-width: ${widthLength}; max-width: ${widthLength};${shownCollapsed ? ` height: ${stripLength}; margin-right: ${foldMargin};` : ''}`}
 >
   <ColumnHeader
     value={name}
@@ -121,7 +166,7 @@
     bind:editing
     {dataReadOnly}
     {richText}
-    {collapse}
+    collapse={shownCollapsed}
     {pinned}
     {persisted}
     {checkField}
@@ -138,12 +183,13 @@
     </svelte:fragment>
   </ColumnHeader>
 
-  {#if !collapse}
+  {#if !shownCollapsed}
     <CardGroup
       items={records}
       {boardEditing}
       disableDnd={pinned || dataReadOnly}
       readOnly={dataReadOnly}
+      {zoom}
       {customHeader}
       {iconField}
       {thumbnailLayout}
@@ -151,6 +197,7 @@
       {cardFrames}
       {onCardFrameChange}
       {onRecordClick}
+      {onRecordEdit}
       {checkField}
       {onRecordCheck}
       {onDrop}
@@ -166,18 +213,32 @@
         {/if}
       </span>
     </div>
-    {#if !readonly}
-      <span>
-        <Button variant="plain" on:click={() => onRecordAdd()}>
-          <Icon name="plus" />
-          {$i18n.t("views.board.note.add")}
-        </Button>
-      </span>
+    {#if !readonly && !dataReadOnly}
+      {#if addingRecord}
+        <div class="ppp-board-note-draft">
+          <NoteDraft
+            {project}
+            onSave={saveNewRecord}
+            onCancel={() => (addingRecord = false)}
+          />
+        </div>
+      {:else}
+        <span data-board-add-note>
+          <Button
+            variant="plain"
+            on:click={() => (addingRecord = true)}
+          >
+            <Icon name="plus" />
+            {$i18n.t("views.board.note.add")}
+          </Button>
+        </span>
+      {/if}
     {/if}
   {/if}
 </section>
 
 <style>
+  section { box-sizing: border-box; }
   .projects--board--column-footer {
     display: flex;
     align-items: center;

@@ -16,6 +16,7 @@
 
 import {
   cssFile,
+  describeWithChrome,
   findChrome,
   px,
   renderProbe,
@@ -24,7 +25,8 @@ import {
 } from "./support/renderProbe";
 
 const chrome = findChrome();
-const describeIfChrome = chrome ? describe : describe.skip;
+// w4-p00: without a browser the suite reports BLOCKED instead of vanishing.
+const describeIfChrome = describeWithChrome;
 
 if (!chrome) {
   // Not a silent skip: a suite that vanishes is indistinguishable from one that

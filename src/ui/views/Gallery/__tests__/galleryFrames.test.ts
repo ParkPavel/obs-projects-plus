@@ -25,9 +25,6 @@ jest.mock("src/lib/record/openRecord", () => ({
   ...jest.requireActual("src/lib/record/openRecord"),
   openRecord: jest.fn(() => Promise.resolve()),
 }));
-jest.mock("src/ui/modals/editNoteModal", () => ({
-  EditNoteModal: jest.fn().mockImplementation(() => ({ open: jest.fn() })),
-}));
 jest.mock("src/ui/modals/createNoteModal", () => ({
   CreateNoteModal: jest.fn().mockImplementation(() => ({ open: jest.fn() })),
 }));
@@ -198,7 +195,7 @@ describe("cards-g5 — a config without frames renders as before", () => {
       expect(prop(m.media(r.id), "height")).toBe("");
       expect(prop(m.media(r.id), "--ppp-card-media-ratio")).toBe("16 / 10");
       const lanes = Array.from(card.children).map((c) => c.className.split(/\s+/)[0]);
-      expect(lanes).toEqual(["projects--gallery--card__media", "projects--gallery--card__body", "ppp-card-resize-handle"]);
+      expect(lanes).toEqual(["projects--gallery--card__media", "projects--gallery--card__body", "ppp-gallery-card-more", "ppp-card-resize-handle"]);
     }
     m.destroy();
   });
@@ -283,9 +280,10 @@ describe("cards-g5 — grid span", () => {
     await reportAndFrame(observer, 640);
     expect(prop(m.card(ALPHA), "grid-column")).toMatch(/^span 2/);
 
-    // Narrower than one column: no span at all.
+    // i3-gallery: a phone-narrow grid (≤ 30rem) is two columns whatever the
+    // card width, so the span is capped to two there.
     await reportAndFrame(observer, 280);
-    expect(prop(m.card(ALPHA), "grid-column")).toBe("");
+    expect(prop(m.card(ALPHA), "grid-column")).toMatch(/^span 2/);
 
     // Wide again: the saved three come back, because nothing was rewritten.
     await reportAndFrame(observer, 1000);

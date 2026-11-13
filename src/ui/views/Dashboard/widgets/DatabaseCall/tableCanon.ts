@@ -5,7 +5,9 @@
 // engine — filtering stays at view/block level; this module only orders and
 // presents what the canonical pipeline already produced.
 
-import { formatLocalDay, formatLocalDateTime } from "src/lib/helpers/dateFormatting";
+import { displayFormatOf, formatDateCell } from "src/lib/helpers/dateDisplay";
+export { isDerivedRowId, sourceIdOf } from "src/lib/dashboard-engine/derivedRowId";
+type DateFormatConfig = import("src/settings/v3/settings").DateFormatConfig;
 import { isRelationCompanionField } from "src/lib/engine/crossProjectResolver";
 import {
   DataFieldType,
@@ -15,7 +17,7 @@ import {
   type Optional,
 } from "src/lib/dataframe/dataframe";
 import type { DataTableConfig, DataTableSortCriteria } from "../../types";
-import { getOptionColor, type ExtendedFieldTypeConfig } from "../../fieldTypes";
+import { getOptionColor } from "../../fieldTypes";
 import { groupRecords } from "./groupRows";
 import { parseRelationLinks } from "src/lib/relations/parseRelationLinks";
 
@@ -40,7 +42,7 @@ const DEFAULT_WIDTH_REM: Partial<Record<DataFieldType, number>> = {
   [DataFieldType.Rollup]: 8,
 };
 
-function primaryFieldName(fields: readonly DataField[]): string {
+export function primaryFieldName(fields: readonly { name: string; identifier?: boolean }[]): string {
   return (
     fields.find((f) => f.identifier)?.name ??
     fields.find((f) => f.name === "name")?.name ??
@@ -55,7 +57,7 @@ function primaryFieldName(fields: readonly DataField[]): string {
  */
 const DEFAULT_HIDDEN = new Set(["path"]);
 
-function isVisible(
+export function isVisible(
   name: string,
   primary: string,
   cfg: { hide?: boolean } | undefined
@@ -148,19 +150,7 @@ export function applySort(
   });
 }
 
-// ── Search ───────────────────────────────────────────────────
-
-export function applySearch(
-  records: readonly DataRecord[],
-  query: string
-): DataRecord[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return [...records];
-  return records.filter((r) =>
-    r.id.toLowerCase().includes(q) ||
-    Object.values(r.values).some((v) => v != null && String(v).toLowerCase().includes(q))
-  );
-}
+export { applySearch } from "./tableSearchMatch";
 
 // ── Grouping render model (F2.5, canon §1) ───────────────────
 
@@ -210,26 +200,22 @@ const HAS_WIKILINK = /\[\[/;
 
 function toPills(labels: string[], color: (label: string) => string | null, status: boolean): CellDisplay {
   const visible = labels.slice(0, MAX_VISIBLE_PILLS);
-  return {
-    kind: "pills",
-    pills: visible.map((label) => ({ label, color: color(label) })),
-    overflow: Math.max(0, labels.length - MAX_VISIBLE_PILLS),
-    status,
-  };
+  const pills = visible.map((label) => ({ label, color: color(label) }));
+  return { kind: "pills", pills, overflow: Math.max(0, labels.length - MAX_VISIBLE_PILLS), status };
 }
 // A Date field keeps a string as written; only AutoTime parses its ISO stat string. Never Date.toString().
-function dateCellText(auto: boolean, value: Optional<DataValue>): string {
-  if (value instanceof Date) return auto ? formatLocalDateTime(value) : formatLocalDay(value);
-  const parsed = auto && typeof value === "string" ? new Date(value) : null;
-  return parsed && !Number.isNaN(parsed.getTime()) ? formatLocalDateTime(parsed) : String(value);
+function dateCellText(auto: boolean, value: Optional<DataValue>, dateFormat?: DateFormatConfig): string {
+  return formatDateCell(value, { withTime: auto, displayFormat: displayFormatOf(dateFormat) });
 }
-export function cellDisplay(field: DataField, value: Optional<DataValue>): CellDisplay {
+/** i3-table — a computed value's text: a date as a date, not a String() dump. */
+const computedText = (v: Optional<DataValue>, f?: DateFormatConfig) => (v instanceof Date ? dateCellText(false, v, f) : String(v));
+export function cellDisplay(field: DataField, value: Optional<DataValue>, dateFormat?: DateFormatConfig): CellDisplay {
   if (value === null || value === undefined || value === "") return { kind: "empty" };
 
-  const cfg = field.typeConfig as ExtendedFieldTypeConfig | undefined;
+  const cfg = field.typeConfig;
   const optionColor = (label: string) => (cfg ? getOptionColor(cfg, label) : null);
 
-  if (field.repeated && Array.isArray(value)) return toPills(value.map((v) => String(v)), optionColor, false);
+  if ((field.repeated || field.type === DataFieldType.List) && Array.isArray(value)) return toPills(value.map((v) => String(v)), optionColor, false);
 
   switch (field.type) {
     case DataFieldType.Boolean:
@@ -238,7 +224,7 @@ export function cellDisplay(field: DataField, value: Optional<DataValue>): CellD
       return { kind: "number", text: typeof value === "number" ? value.toLocaleString() : String(value) };
     case DataFieldType.Date:
     case DataFieldType.AutoTime:
-      return { kind: "text", text: dateCellText(field.type === DataFieldType.AutoTime, value) };
+      return { kind: "text", text: dateCellText(field.type === DataFieldType.AutoTime, value, dateFormat) };
     case DataFieldType.Select:
       return toPills([String(value)], optionColor, false);
     case DataFieldType.Status:
@@ -247,7 +233,7 @@ export function cellDisplay(field: DataField, value: Optional<DataValue>): CellD
       return toPills(parseRelationLinks(value), () => null, false);
     case DataFieldType.Formula:
     case DataFieldType.Rollup:
-      return typeof value === "number" ? { kind: "number", text: value.toLocaleString() } : { kind: "text", text: String(value) };
+      return typeof value === "number" ? { kind: "number", text: value.toLocaleString() } : Array.isArray(value) ? toPills(value.map((v) => computedText(v, dateFormat)), () => null, false) : { kind: "text", text: computedText(value, dateFormat) };
     default: {
       // UT-R2 #085: wikilinks in plain String fields read as link chips,
       // not raw "[[...]]" markup — the cell honors what the user wrote.

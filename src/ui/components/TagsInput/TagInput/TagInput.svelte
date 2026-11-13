@@ -1,13 +1,13 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
-  export let ref: HTMLDivElement;
-
+  import TextField from "src/ui/components/fields/TextField.svelte";
+  import { isImeKey } from "src/ui/components/fields/draftController";
+  import { i18n } from "src/lib/stores/i18n";
   export let value: string;
-  const rollback = value;
-
-  const reset = () => {
-    value = "";
-  };
+  let field: TextField;
+  let draftLength = value.length + 1;
+  $: draftLength = value.length + 1;
+  export function focus(): void { field?.focus(); }
 
   const dispatch = createEventDispatcher<{
     input: string;
@@ -16,74 +16,45 @@
     escape: void;
     navigatePrev: void;
   }>();
-  $: dispatch("input", value);
+  function commit(event: CustomEvent<{ value: string }>): void {
+    const draft = event.detail.value;
+    if (!draft || draft === value) { dispatch("escape"); return; }
+    dispatch("submit", draft);
+    field.reset("");
+    draftLength = 1;
+  }
+  function navigate(event: KeyboardEvent): void {
+    if (field.isComposing() || isImeKey(event)) return;
+    const input = event.target as HTMLInputElement;
+    if (!input.value && ["ArrowLeft", "ArrowUp", "Backspace"].includes(event.key)) {
+      event.preventDefault();
+      dispatch("navigatePrev");
+    }
+  }
 </script>
 
-<div
-  contenteditable="true"
-  bind:textContent={value}
-  bind:this={ref}
-  on:click={(event) => {
-    event.stopPropagation();
-  }}
+<TextField
+  bind:this={field}
+  {value}
+  commitUnchanged
+  inputClass="ppp-tag-input"
+  ariaLabel={$i18n.t("data-types.list")}
+  style="width: {draftLength}ch"
+  on:click={(event) => event.stopPropagation()}
   on:focus={(event) => {
-    if (value !== "" && event.target instanceof Node) {
-      window.getSelection()?.selectAllChildren(event.target); // The second condition is used for type assertion
-    }
+    if (value) field.select();
     dispatch("focus", event);
   }}
-  on:keydown={(event) => {
-    if (value === "") {
-      switch (event.key) {
-        case "Enter":
-          event.preventDefault();
-          break;
-        case "ArrowLeft":
-          dispatch("navigatePrev");
-          break;
-        case "ArrowUp":
-          dispatch("navigatePrev");
-          break;
-        case "Backspace":
-          dispatch("navigatePrev");
-          break;
-        case "Escape":
-          dispatch("escape");
-          break;
-      }
-      return;
-    } else {
-      switch (event.key) {
-        case "Enter":
-          event.preventDefault();
-          if (value == rollback) {
-            dispatch("escape");
-          } else {
-            dispatch("submit", value);
-            reset();
-          }
-          break;
-        case "Escape":
-          dispatch("escape");
-          value = rollback;
-          break;
-      }
-    }
-  }}
-  on:blur={() => {
-    if (value == rollback) {
-      dispatch("escape");
-    } else {
-      dispatch("submit", value);
-      reset();
-    }
-  }}
+  on:keydown={navigate}
+  on:input={({ detail }) => { draftLength = Math.max(1, detail.length + 1); dispatch("input", detail); }}
+  on:commit={commit}
+  on:cancel={() => { draftLength = value.length + 1; dispatch("escape"); }}
 />
 
 <style>
-  div {
-    min-width: 0.0625rem;
-    max-width: max-content;
+  :global(.ppp-tag-input) {
+    min-width: 1ch;
+    max-width: 100%;
     box-sizing: border-box;
 
     cursor: text;
@@ -91,6 +62,8 @@
     color: var(--text-normal);
     background-color: transparent;
     border: none;
+    padding: 0;
+    box-shadow: none;
     overflow-x: auto;
     white-space: nowrap;
   }

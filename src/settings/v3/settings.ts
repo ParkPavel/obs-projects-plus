@@ -159,6 +159,7 @@ export type AgendaCustomList = {
   readonly filterGroup?: AgendaFilterGroup;
   // Advanced mode: formula string
   readonly filterFormula?: string;
+  readonly formulaVersion?: string;
   readonly order: number;
   readonly collapsed?: boolean;
   readonly color?: string;
@@ -429,7 +430,7 @@ export const DEFAULT_SETTINGS: ProjectsPluginSettings<
     showViewTitles: true,
     animationBehavior: "smooth",
     disableHapticFeedback: false,
-    replaceObsidianProperties: false,
+    propertiesInNoteHeader: true,
   },
 };
 
@@ -559,7 +560,7 @@ export const DEFAULT_PREFERENCES: ProjectsPluginPreferences = {
   showViewTitles: true,
   animationBehavior: "smooth",
   disableHapticFeedback: false,
-  replaceObsidianProperties: false,
+  propertiesInNoteHeader: true,
 };
 
 export function resolvePreferences(

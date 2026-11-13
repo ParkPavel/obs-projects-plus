@@ -72,11 +72,30 @@ async function edit(input: HTMLInputElement, value: string, inputType = "insertT
   await tick();
 }
 
-const change = (el: HTMLElement) => el.dispatchEvent(new Event("change", { bubbles: true }));
+// B1b: a select commits on change; a text or number field (TextField) when
+// the user leaves it, which is where the native change fired too.
+const change = (el: HTMLElement) => {
+  el.dispatchEvent(new Event("change", { bubbles: true }));
+  el.dispatchEvent(new FocusEvent("blur"));
+};
 const enter = (el: HTMLElement) => el.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
 
 afterEach(() => {
   document.body.innerHTML = "";
+});
+
+it("gallery settings show the default cover and persist an explicit empty choice through JSON", async () => {
+  const m = mount("gallery");
+  try {
+    await tick();
+    const input = m.q<HTMLInputElement>("#fieldlist-cover-input");
+    expect(input.value).toBe("cover");
+    await edit(input, ""); enter(input); await tick();
+    expect(m.updates).toEqual([{ coverField: null }]);
+    const saved = JSON.parse(JSON.stringify(m.updates[0]));
+    m.component.$set({ view: viewOf("gallery", saved) }); await tick();
+    expect(m.q<HTMLInputElement>("#fieldlist-cover-input").value).toBe("");
+  } finally { m.destroy(); }
 });
 
 describe("settings-binds — a field picker (board cover field)", () => {
@@ -109,13 +128,21 @@ describe("settings-binds — a field picker (board cover field)", () => {
     m.destroy();
   });
 
-  it("a datalist pick commits at once and is still shown after the flush", async () => {
+  // stab-forms: the native datalist is gone; a pick is a press on a listbox option.
+  it("a listbox pick commits at once and is still shown after the flush", async () => {
     const m = mount("board");
-    await edit(cover(m), "cover", "insertReplacementText");
+    cover(m).focus();
+    await tick();
+    const option = Array.from(document.querySelectorAll<HTMLElement>('[role="option"]')).find(
+      (o) => o.textContent === "cover"
+    ) as HTMLElement;
+    option.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+    await tick();
     expect(m.updates).toEqual([{ coverField: "cover" }]);
     expect(cover(m).value).toBe("cover");
-    // The blur's change after the pick writes nothing more.
+    // The change and the blur after the pick write nothing more.
     change(cover(m));
+    cover(m).blur();
     expect(m.updates).toEqual([{ coverField: "cover" }]);
     m.destroy();
   });
@@ -277,6 +304,20 @@ describe("settings-binds — a checkbox (board freeze columns) and the table tog
 });
 
 describe("settings-binds — the calendar field mapping keeps its value shapes", () => {
+  it.each(["year", "month", "week", "day"])("offers colour and textual status mappings in %s", async (interval) => {
+    const m = mount("calendar", { interval });
+    const status = m.q<HTMLInputElement>("#fieldlist-status-input");
+    const color = m.q<HTMLInputElement>("#fieldlist-color-input");
+    expect(status).not.toBeNull();
+    expect(color).not.toBeNull();
+    await edit(status, "status");
+    change(status);
+    await edit(color, "cover");
+    change(color);
+    await tick();
+    expect(m.updates).toEqual([{ statusField: "status" }, { eventColorField: "cover" }]);
+    m.destroy();
+  });
   it("a mapping field emits the text itself (an empty one too), the icon field clears to undefined", async () => {
     const m = mount("calendar", { dateField: "due", iconField: "status" });
     const date = m.q<HTMLInputElement>("#fieldlist-date-input");

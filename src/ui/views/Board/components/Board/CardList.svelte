@@ -1,5 +1,5 @@
 <script context="module" lang="ts">
-  import { SOURCES, TRIGGERS } from "svelte-dnd-action";
+  import { DRAGGED_ELEMENT_ID, SOURCES, TRIGGERS } from "svelte-dnd-action";
 
   // ── ios-d1: a grip press that starts no drag must not leave the board armed ──
   //
@@ -26,11 +26,13 @@
    * never a reorder; the zone's own handlers drop it via `isDisarmEvent`.
    */
   export function disarmAfterGripTap(node: HTMLElement, grip: string): { destroy: () => void } {
+    const ownerView = node.ownerDocument.defaultView ?? window;
+    const ElementCtor = ownerView.Element;
     let pressed = false;
     let dragStarted = false;
 
     function onPress(e: Event) {
-      if (!(e.target instanceof Element) || !e.target.closest(grip)) return;
+      if (!(e.target instanceof ElementCtor) || !e.target.closest(grip)) return;
       pressed = true;
       dragStarted = false;
     }
@@ -43,7 +45,7 @@
       if (!pressed) return;
       pressed = false;
       if (dragStarted) return;
-      const disarm = new CustomEvent("consider", {
+      const disarm = new ownerView.CustomEvent("consider", {
         detail: { items: [], info: { trigger: TRIGGERS.DRAG_STOPPED, id: "", source: SOURCES.KEYBOARD } },
       });
       disarmEvents.add(disarm);
@@ -54,17 +56,17 @@
     node.addEventListener("mousedown", onPress, true);
     node.addEventListener("touchstart", onPress, { capture: true, passive: true });
     node.addEventListener("consider", onConsider);
-    window.addEventListener("mouseup", onRelease);
-    window.addEventListener("touchend", onRelease);
-    window.addEventListener("touchcancel", onRelease);
+    ownerView.addEventListener("mouseup", onRelease);
+    ownerView.addEventListener("touchend", onRelease);
+    ownerView.addEventListener("touchcancel", onRelease);
     return {
       destroy() {
         node.removeEventListener("mousedown", onPress, true);
         node.removeEventListener("touchstart", onPress, true);
         node.removeEventListener("consider", onConsider);
-        window.removeEventListener("mouseup", onRelease);
-        window.removeEventListener("touchend", onRelease);
-        window.removeEventListener("touchcancel", onRelease);
+        ownerView.removeEventListener("mouseup", onRelease);
+        ownerView.removeEventListener("touchend", onRelease);
+        ownerView.removeEventListener("touchcancel", onRelease);
       },
     };
   }
@@ -75,7 +77,7 @@
   // arming flag (svelte-dnd-action 0.9.52, dist/index.mjs `getAddedOptions`),
   // so the `dragDisabled` a zone passes is never read. Any grip press arms every
   // zone, and the pressed item starts a drag even in a pinned or read-only
-  // column, while editing or zoomed. The zone therefore decides itself: when
+  // column or while editing. The zone therefore decides itself: when
   // it is disabled, a press (or Enter/Space) on one of its grips is stopped
   // before the grip's `dragHandle` listener, so nothing is armed.
 
@@ -84,13 +86,26 @@
     editing?: boolean;
     /** The zone is pinned or its data is read-only. */
     locked?: boolean;
-    /** Board zoom; only the column row is gated by it. */
-    zoom?: number;
   }
 
-  /** Whether a drag may not start from a zone in this state. */
+  /**
+   * Whether a drag may not start from a zone in this state. w4-p08 (N6): the
+   * board's zoom no longer forbids moving columns (it did, from ios-c1 on); the
+   * zoom is held still while a drag is under way instead (`zoomHeldByDrag`).
+   */
   export function isDragZoneDisabled(state: DragZoneState): boolean {
-    return Boolean(state.editing) || Boolean(state.locked) || (state.zoom !== undefined && state.zoom !== 1);
+    return Boolean(state.editing) || Boolean(state.locked);
+  }
+
+  /**
+   * w4-p08 (N6) — a drag is under way on the board: a column drag the board
+   * tracks, a touch card drag, or the library's mouse drag, whose clone is in
+   * the document for exactly as long. A pinch or Ctrl+wheel then leaves the
+   * zoom alone: rescaling under a moving clone threw the drop off target and
+   * could crash the phone.
+   */
+  export function zoomHeldByDrag(doc: Document | undefined, columnDrag: boolean, touchDrag: boolean): boolean {
+    return columnDrag || touchDrag || Boolean(doc?.getElementById(DRAGGED_ELEMENT_ID));
   }
 
   interface GripGate {
@@ -106,11 +121,12 @@
    * an enabled zone are untouched.
    */
   export function gateDisabledGrip(node: HTMLElement, gate: GripGate): { update: (gate: GripGate) => void; destroy: () => void } {
+    const ElementCtor = node.ownerDocument.defaultView?.Element ?? Element;
     let current = gate;
 
     function block(e: Event) {
       if (!current.disabled) return;
-      if (!(e.target instanceof Element)) return;
+      if (!(e.target instanceof ElementCtor)) return;
       const grip = e.target.closest(current.grip);
       if (!grip || !node.contains(grip)) return;
       if (e.type === "keydown") {
@@ -134,11 +150,14 @@
       },
     };
   }
+
 </script>
 
 <script lang="ts">
+  import { readCardDragType } from "./boardDragTypes";
+  const cardDragType = readCardDragType();
   // import { Checkbox, InternalLink} from "obsidian-svelte";
-  import { Checkbox, Icon } from "obsidian-svelte";
+  import { Icon } from "obsidian-svelte";
   import IconButton from "src/ui/components/IconButton/IconButton.svelte";
   import InternalLink from "src/ui/components/InternalLink.svelte";
 
@@ -173,10 +192,10 @@
     dragHandleZone,
     dragHandle,
   } from "svelte-dnd-action";
-  import { flip } from "svelte/animate";
   import { getCoverRealPath } from "src/ui/views/Gallery/gallery";
   import type { BoardThumbnailLayout } from "../../types";
   import { excludeHeaderField, getDisplayName } from "./boardHelpers";
+  import { blockLibraryTouchGrip, scaleDraggedClone } from "./touchCardDrag";
   import type {
     DropTrigger,
     OnRecordClick,
@@ -186,6 +205,8 @@
 
   export let items: DataRecord[];
   export let onRecordClick: OnRecordClick;
+  /** B10 — the note editor behind the pencil; without one the pencil opens the record. */
+  export let onRecordEdit: OnRecordClick | undefined = undefined;
   export let onRecordCheck: OnRecordCheck;
   export let onDrop: OnRecordDrop;
   export let includeFields: DataField[];
@@ -199,6 +220,8 @@
   export let disableDnd: boolean = false;
   /** The data is read-only (a source block): the pencil opens the note, and says so. */
   export let readOnly: boolean = false;
+  /** p372-b8 — board zoom: the mouse drag's clone is scaled to match the card. */
+  export let zoom: number = 1;
   /**
    * cards-g5 — saved card frames (BoardView reads them from the config) and
    * the one route a frame change takes back to it. A board frame sets a
@@ -216,14 +239,32 @@
   const sortRecords = sortRecordsContext.get();
 
   // cards-g1: `getAnimationDuration` is 0 under reduced motion (or the
-  // plugin's instant setting), so the flip and the library's drop animation
-  // stop together. Measured later, live, on 20/100/300-card boards with reduced
+  // plugin's instant setting), so the library's drop animation stops with it.
+  // Measured later, live, on 20/100/300-card boards with reduced
   // motion off and on: pointer-down on a grip to the first drag frame, and frame
   // time during repeated drags (p50/p95 of each, Performance panel).
+  // stab-board: the list has no per-item `animate:flip`. Svelte measures every
+  // keyed item before and after each reorder whatever the duration (a zero
+  // duration still reads the rects), and svelte-dnd-action reorders on every
+  // `consider`: 178 cards cost ~34 ms of layout per pointer move. The library
+  // reads this value for the drop animation of the dragged clone only.
   const flipDurationMs = getAnimationDuration(150);
 
   /** cards-g1: whether a click landed on the grip lane, which drags rather than opens the card. */
-  const isGripTarget = (e: Event) => e.target instanceof Element && e.target.closest(".board-card-grip") !== null;
+  const isGripTarget = (e: Event) => {
+    const target = e.target;
+    if (!target || typeof target !== "object" || !("closest" in target)) return false;
+    const closest = target.closest;
+    return typeof closest === "function" && closest.call(target, ".board-card-grip") !== null;
+  };
+
+  /** Whether a click landed on a checkbox or its wrapper. */
+  const isCheckboxTarget = (e: Event) => {
+    const target = e.target;
+    if (!target || typeof target !== "object" || !("closest" in target)) return false;
+    const closest = target.closest;
+    return typeof closest === "function" && closest.call(target, '.checkbox-wrapper, .ppp-card-meta-boolean, input[type="checkbox"]') !== null;
+  };
 
   $: zoneDisabled = isDragZoneDisabled({ editing: boardEditing, locked: disableDnd });
 
@@ -302,7 +343,7 @@
   on:consider={handleDndConsider}
   on:finalize={handleDndFinalize}
   use:dragHandleZone={{
-    type: "card",
+    type: cardDragType,
     items,
     flipDurationMs,
     dropTargetStyle: {
@@ -315,6 +356,10 @@
     // Overwritten by `dragHandleZone`; `gateDisabledGrip` below enforces it.
     dragDisabled: disableDnd || zoneDisabled,
     morphDisabled: true,
+    // p372-b8: on a zoomed board the library's clone is the scaled rect
+    // filled with unscaled content (a cropped strip); give it the card's
+    // logical size at the board's scale, so preview and hit-test agree.
+    transformDraggedElement: (element) => scaleDraggedClone(element, zoom),
     // ios-d1: the library picks the drop zone from the CLONE's centre. The grip
     // sits at the card's left edge, so on a phone the centre of a card dragged
     // by it hangs a card-half right of the finger, past the viewport, and the
@@ -324,6 +369,7 @@
   }}
   use:disarmAfterGripTap={".board-card-grip"}
   use:gateDisabledGrip={{ grip: ".board-card-grip", disabled: zoneDisabled }}
+  use:blockLibraryTouchGrip
 >
   {#each items as item (item.id)}
     {@const color = getRecordColor(item)}
@@ -332,12 +378,11 @@
 
     <div
       class="ppp-board-card-slot"
+      data-record-id={item.id}
       class:projects--board--card-placeholder={isPlaceholder(item)}
-      animate:flip={{ duration: flipDurationMs }}
     >
-      <!-- cards-g2: the zone's item is this plain wrapper, because `animate:flip`
-           may only sit on an element directly in the keyed each, never on a
-           component. svelte-dnd-action reads the zone's direct children: it
+      <!-- cards-g2: the zone's item is this plain wrapper (an element directly
+           in the keyed each, not a component). svelte-dnd-action reads the zone's direct children: it
            arms, clones, hides and marks the shadow on this element, and the
            card inside moves with it. The placeholder class lives here too; the
            column and list find it with `:has()`, at any depth.
@@ -349,11 +394,16 @@
         {color}
         interactive
         mediaLayout={thumbnail?.layout}
-        minHeight={thumbnail ? undefined : frameHeight}
+        minHeight={thumbnail?.layout === "top" ? undefined : frameHeight}
         mediaSize={thumbnail?.layout === "left" ? frameHeight : undefined}
         on:keypress
         on:click={(e) => {
-          if (!isGripTarget(e)) onRecordClick(item);
+          if (isGripTarget(e)) return;
+          if (isCheckboxTarget(e)) return;
+          // B10: the body carries the same modifiers as the title link.
+          if (e.shiftKey) void openRecord({ id: item.id }, "window", { app: $app });
+          else if (e.ctrlKey || e.metaKey) void openRecord({ id: item.id }, "tab", { app: $app });
+          else onRecordClick(item);
         }}
       >
         <span slot="grip" class="board-card-grip" use:dragHandle aria-label={$i18n.t("common.drag-to-reorder")}>
@@ -382,14 +432,19 @@
         </svelte:fragment>
         <div slot="header" class="card-header">
           {#if checkField}
-            <span class="checkbox-wrapper">
-              <Checkbox
+            <div class="checkbox-wrapper">
+              <input
+                type="checkbox"
+                aria-label={checkField}
+                disabled={readOnly}
+                on:click|stopPropagation
+                on:dblclick|stopPropagation
                 checked={checkField !== undefined
                   ? !!item.values[checkField]
                   : false}
-                on:check={({ detail: checked }) => onRecordCheck(item, checked)}
+                on:change={(e) => !readOnly && onRecordCheck(item, e.currentTarget.checked)}
               />
-            </span>
+            </div>
           {/if}
           {#if iconField}
             <PageIcon value={item.values[iconField.name]} />
@@ -426,15 +481,15 @@
                 onClick={(event) => {
                   // The card itself opens the record on click; open it once.
                   event.stopPropagation();
-                  onRecordClick(item);
+                  (onRecordEdit ?? onRecordClick)(item);
                 }}
               />
             </span>
           {:else}
-            <CardMetadata fields={[customHeader]} record={item} />
+            <CardMetadata fields={[customHeader]} record={item} onBooleanChange={readOnly ? undefined : (field, checked) => onRecordCheck(item, checked, field.name)} />
           {/if}
         </div>
-        <CardMetadata slot="metadata" fields={bodyFields} record={item} />
+        <CardMetadata slot="metadata" fields={bodyFields} record={item} onBooleanChange={readOnly ? undefined : (field, checked) => onRecordCheck(item, checked, field.name)} />
         <!-- cards-g5: the resize handle, at the card's trailing lower corner,
              far from the grip lane; it is no drag handle and stops its own
              presses, so a resize never arms the board's drag. -->
@@ -454,6 +509,22 @@
 </div>
 
 <style>
+  /* w4-p08 (N5): on a computer the library marks where the card will land with
+     a hidden copy of it (inline `visibility: hidden`) — in a list tinted whole,
+     an invisible gap. The slot is drawn instead: a dashed frame of the card's
+     own size, the card inside it hidden. The phone's own drag draws a line. */
+  :global(.ppp-board-card-slot[data-is-dnd-shadow-item-internal]) {
+    visibility: visible !important;
+    /* An outline, drawn inside: the slot keeps the card's exact size. */
+    outline: var(--ppp-border-width-thick) dashed var(--interactive-accent);
+    outline-offset: calc(-1 * var(--ppp-border-width-thick));
+    border-radius: var(--radius-s);
+    background: hsla(var(--interactive-accent-hsl), 0.12);
+  }
+  :global(.ppp-board-card-slot[data-is-dnd-shadow-item-internal] > *) {
+    visibility: hidden;
+  }
+
   /* cards-g2: the card's own lanes (`.projects--board--card`: the grid, its
      focus and hover surface, the coarse-pointer lane width) moved to
      SharedCard.svelte with the article they style. What stays here styles

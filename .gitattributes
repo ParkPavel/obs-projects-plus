@@ -25,3 +25,19 @@ main.js -diff -merge
 styles.css -diff -merge
 releases/*/main.js -diff -merge
 releases/*/styles.css -diff -merge
+
+# Generated Pages are checked byte-for-byte, including on Windows checkouts.
+docs/*.html text eol=lf
+docs/read/*.html text eol=lf
+docs/search-index.json text eol=lf
+docs/site-manifest.json text eol=lf
+
+# Runtime build inputs use the same newlines on Windows and CI.
+src/**/*.ts text eol=lf
+src/**/*.svelte text eol=lf
+src/**/*.css text eol=lf
+/esbuild.config.mjs text eol=lf
+/THIRD_PARTY_NOTICES.txt text eol=lf
+/main.js text eol=lf
+/styles.css text eol=lf
+/manifest.json text eol=lf

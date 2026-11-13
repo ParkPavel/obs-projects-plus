@@ -24,9 +24,6 @@ jest.mock("src/lib/record/openRecord", () => ({
   ...jest.requireActual("src/lib/record/openRecord"),
   openRecord: jest.fn(() => Promise.resolve()),
 }));
-jest.mock("src/ui/modals/editNoteModal", () => ({
-  EditNoteModal: jest.fn().mockImplementation(() => ({ open: jest.fn() })),
-}));
 jest.mock("src/ui/modals/createNoteModal", () => ({
   CreateNoteModal: jest.fn().mockImplementation(() => ({ open: jest.fn() })),
 }));
@@ -101,7 +98,6 @@ type Mounted = { $destroy(): void };
 type ComponentClass = new (options: { target: HTMLElement; props: Record<string, unknown> }) => Mounted;
 
 const { openRecord } = require("src/lib/record/openRecord") as { openRecord: jest.Mock };
-const { EditNoteModal } = require("src/ui/modals/editNoteModal") as { EditNoteModal: jest.Mock };
 const helpers = require("src/ui/views/helpers") as { showMobileNavMenu: jest.Mock; handleHoverLink: jest.Mock };
 const { app } = require("src/lib/stores/obsidian") as { app: { set(value: unknown): void } };
 const { watchViewport } = require("src/lib/stores/ui") as { watchViewport: () => () => void };
@@ -183,7 +179,6 @@ beforeAll(() => {
 
 beforeEach(() => {
   openRecord.mockClear();
-  EditNoteModal.mockClear();
   helpers.showMobileNavMenu.mockClear();
   helpers.handleHoverLink.mockClear();
 });
@@ -205,9 +200,10 @@ describe("cards-g2 — a gallery card's structure", () => {
     m.destroy();
   });
 
-  it("media first, then the body, and nothing else", () => {
+  it("media first, then the body, then only the card's ⋯ (B9)", () => {
     const m = mountGallery();
-    const lanes = Array.from(m.card(0).children);
+    expect(m.card(0).lastElementChild).toHaveAttribute("data-gallery-card-more");
+    const lanes = Array.from(m.card(0).children).filter((el) => !el.hasAttribute("data-gallery-card-more"));
     expect(lanes).toHaveLength(2);
     expect(lanes[0]).toHaveClass("projects--gallery--card__media");
     expect(lanes[1]).toHaveClass("projects--gallery--card__body");
@@ -301,14 +297,11 @@ describe("chrome-filters — the card follows the saved field order", () => {
 });
 
 describe("cards-g2 — opening a card from its media", () => {
-  it("a plain click opens the edit modal for that record", () => {
+  it("B9: a plain click opens that record in the peek, not the editor", () => {
     const m = mountGallery();
     m.media(1).dispatchEvent(click());
-    expect(EditNoteModal).toHaveBeenCalledTimes(1);
-    expect(EditNoteModal.mock.calls[0]?.[3]).toBe(records[1]);
-    const modal = EditNoteModal.mock.results[0]?.value as { open: jest.Mock };
-    expect(modal.open).toHaveBeenCalledTimes(1);
-    expect(openRecord).not.toHaveBeenCalled();
+    expect(openRecord).toHaveBeenCalledTimes(1);
+    expect(openRecord).toHaveBeenCalledWith(expect.objectContaining({ id: "notes/Beta.md" }), "peek", expect.anything());
     m.destroy();
   });
 
@@ -316,7 +309,6 @@ describe("cards-g2 — opening a card from its media", () => {
     const m = mountGallery();
     m.media(0).dispatchEvent(click({ shiftKey: true }));
     expect(openRecord).toHaveBeenCalledWith({ id: "notes/Alpha.md", sourcePath: "" }, "window", expect.anything());
-    expect(EditNoteModal).not.toHaveBeenCalled();
     m.destroy();
   });
 
@@ -330,14 +322,12 @@ describe("cards-g2 — opening a card from its media", () => {
       expect(openRecord).toHaveBeenCalledWith({ id: "notes/Alpha.md", sourcePath: "" }, "tab", expect.anything());
       m.destroy();
     }
-    expect(EditNoteModal).not.toHaveBeenCalled();
   });
 
-  it("on a read-only data source a plain click opens the note instead of the editor", () => {
+  it("on a read-only data source a plain click opens a read-only peek, never the editor", () => {
     const m = mountGallery({ dataReadOnly: true });
     m.media(0).dispatchEvent(click());
-    expect(openRecord).toHaveBeenCalledWith({ id: "notes/Alpha.md" }, "same", expect.anything());
-    expect(EditNoteModal).not.toHaveBeenCalled();
+    expect(openRecord).toHaveBeenCalledWith(expect.objectContaining({ id: "notes/Alpha.md", readonly: true }), "peek", expect.anything());
     m.destroy();
   });
 });
@@ -366,7 +356,8 @@ describe("cards-g2 — long press on the media (touch)", () => {
     const [, target, , onModal] = helpers.showMobileNavMenu.mock.calls[0] as [unknown, { id: string }, Event, () => void];
     expect(target).toEqual({ id: "notes/Alpha.md" });
     onModal();
-    expect(EditNoteModal).toHaveBeenCalledTimes(1);
+    // i3-close: the editor entry is the properties block in the peek.
+    expect(openRecord).toHaveBeenLastCalledWith(expect.objectContaining({ id: "notes/Alpha.md" }), "peek", expect.anything());
     m.destroy();
   });
 
@@ -385,11 +376,10 @@ describe("cards-g2 — long press on the media (touch)", () => {
     m.media(0).dispatchEvent(touch("touchstart", 100, 100));
     jest.advanceTimersByTime(500);
     m.media(0).dispatchEvent(click());
-    expect(EditNoteModal).not.toHaveBeenCalled();
     expect(openRecord).not.toHaveBeenCalled();
-    // Only that one click: the next one opens the editor again.
+    // Only that one click: the next one opens the card again (B9: the peek).
     m.media(0).dispatchEvent(click());
-    expect(EditNoteModal).toHaveBeenCalledTimes(1);
+    expect(openRecord).toHaveBeenCalledWith(expect.objectContaining({ id: "notes/Alpha.md" }), "peek", expect.anything());
     m.destroy();
   });
 
@@ -403,7 +393,7 @@ describe("cards-g2 — long press on the media (touch)", () => {
     expect(release.defaultPrevented).toBe(false);
     expect(helpers.showMobileNavMenu).not.toHaveBeenCalled();
     m.media(0).dispatchEvent(click());
-    expect(EditNoteModal).toHaveBeenCalledTimes(1);
+    expect(openRecord).toHaveBeenCalledTimes(1);
     m.destroy();
   });
 
@@ -437,8 +427,9 @@ describe("cards-g2 — the title link", () => {
   it("a plain click opens the editor, without also counting as a media click", () => {
     const m = mountGallery();
     m.link(0).dispatchEvent(click());
-    expect(EditNoteModal).toHaveBeenCalledTimes(1);
-    expect(openRecord).not.toHaveBeenCalled();
+    // i3-close: the editor entry is the properties block in the peek, once.
+    expect(openRecord).toHaveBeenCalledTimes(1);
+    expect(openRecord).toHaveBeenLastCalledWith(expect.objectContaining({ id: "notes/Alpha.md" }), "peek", expect.anything());
     m.destroy();
   });
 
@@ -456,7 +447,6 @@ describe("cards-g2 — the title link", () => {
       "tab",
       expect.anything()
     );
-    expect(EditNoteModal).not.toHaveBeenCalled();
     m.destroy();
   });
 

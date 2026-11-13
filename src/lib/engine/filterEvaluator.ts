@@ -73,9 +73,8 @@ import { isEmpty as kernelIsEmpty, isNotEmpty as kernelIsNotEmpty } from "src/li
 import { toNumber } from "src/lib/engine/numeric";
 import { asCheckbox } from "src/lib/engine/aggregate";
 import {
-  isUnsafePattern,
+  compileSafeRegex,
   MAX_REGEX_INPUT_LENGTH,
-  MAX_REGEX_PATTERN_LENGTH,
 } from "src/lib/helpers/regexSafety";
 
 // dayjs isoWeek + quarterOfYear plugins are extended globally in main.ts
@@ -86,6 +85,8 @@ import {
  * deliberately reads it differently.
  */
 export interface FilterOpts {
+  /** Optional caller-owned budget shared by nested groups and list values. */
+  chargeWork?: (steps: number) => void;
   /** When false, `is-upcoming` excludes the baseDate day (strictly future). Default true (Notion-style). */
   upcomingInclusive?: boolean;
 }
@@ -109,6 +110,7 @@ export function matchesCondition(
   const { operator } = cond;
 
   const value: Optional<DataValue> = record.values[cond.field];
+  opts?.chargeWork?.(1 + (Array.isArray(value) ? value.length : 0));
 
   if (operator === "is-empty" || operator === "is-not-empty") {
     return baseFns[operator](value);
@@ -189,10 +191,13 @@ export function matchesCondition(
     // falsy `cond.value` check already did for "".
     return numberFns[operator](value, toNumber(cond.value) ?? undefined);
   } else if (isOptionalDate(value) && isDateFilterOperator(operator)) {
-    // Resolve date formula in cond.value when baseDateCtx is available
+    // Resolve a date formula in cond.value ("today", "today+7d", "sow") from
+    // the pinned "today", else the clock. w4-filters (N11): the view's filter
+    // has no pinned day, and its formula was compared as text and matched
+    // nothing; the agenda and the view now read the same value the same way.
     let rv = cond.value;
-    if (rv && baseDateCtx && isDateFormula(rv)) {
-      const result = parseDateFormula(rv, baseDateCtx);
+    if (rv && isDateFormula(rv)) {
+      const result = parseDateFormula(rv, baseDateCtx ?? dayjs());
       if (result.success && result.date) {
         rv = result.date.format("YYYY-MM-DD");
       }
@@ -253,6 +258,7 @@ export function matchesFilterConditions(
   opts?: FilterOpts,
   _depth = 0
 ): boolean {
+  opts?.chargeWork?.(1 + filter.conditions.length);
   if (_depth >= 20) return true; // safety: prevent infinite recursion
 
   const validConds = filter.conditions.filter((cond) => {
@@ -337,13 +343,8 @@ export const baseFns: Record<
  * the one place a pattern meets every record in the vault.
  */
 function safeRegexTest(pattern: string, input: string): boolean {
-  if (pattern.length > MAX_REGEX_PATTERN_LENGTH) return false;
-  if (isUnsafePattern(pattern)) return false;
-  try {
-    return new RegExp(pattern, "i").test(input.slice(0, MAX_REGEX_INPUT_LENGTH));
-  } catch {
-    return false;
-  }
+  const result = compileSafeRegex(pattern, "i");
+  return result.ok && result.regex.test(input.slice(0, MAX_REGEX_INPUT_LENGTH));
 }
 
 /**

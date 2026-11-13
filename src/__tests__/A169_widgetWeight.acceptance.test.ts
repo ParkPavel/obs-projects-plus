@@ -11,14 +11,15 @@
  * CLAUDE.md names three times: a conclusion stronger than the thing measured.
  */
 
-import { findChrome, renderProbe, svelteStyle, unscope, SRC_ROOT } from "./support/renderProbe";
+import { describeWithChrome, findChrome, renderProbe, svelteStyle, unscope, SRC_ROOT } from "./support/renderProbe";
 import * as fs from "fs";
 import * as path from "path";
 
 import { restoreDataTableConfig } from "src/ui/views/Dashboard/widgets/legacyMigration";
 
 const chrome = findChrome();
-const describeIfChrome = chrome ? describe : describe.skip;
+// w4-p00: without a browser the suite reports BLOCKED instead of vanishing.
+const describeIfChrome = describeWithChrome;
 
 if (!chrome) {
   console.warn("A169 weight: no Chrome found (set CHROME_PATH) — the visual acceptance did NOT run.");
@@ -71,7 +72,7 @@ const header = (widthPx: number) =>
       { id: "primary", props: ["visibility", "opacity", "background-color"] },
       { id: "primary-label", props: ["display"] },
       { id: "cog", props: ["visibility", "background-color"] },
-      { id: "menu", props: ["visibility"] },
+      { id: "menu", props: ["visibility", "background-color"] },
       { id: "remove", props: ["visibility"] },
     ],
   });
@@ -83,15 +84,17 @@ describeIfChrome("A169 — the block's own action outweighs its settings", () =>
     const r = header(800);
     expect(r["primary"]!["visibility"]).toBe("visible");
     expect(r["primary"]!["opacity"]).toBe("1");
-    expect(r["cog"]!["visibility"]).toBe("hidden");
-    expect(r["remove"]!["visibility"]).toBe("hidden");
+    // B7: the hover cluster is gone — its actions live in the «⋯» menu, so
+    // the header's stylesheet no longer knows those classes at all.
+    expect(actionsStyle).not.toContain("ppp-widget-settings-btn");
+    expect(actionsStyle).not.toContain("ppp-widget-remove-btn");
   });
 
   it("carries a fill where the icon buttons carry none", () => {
     // Weight through paint, not through size: the header's min-height is
     // already declared once in WidgetShell and must not gain a second source.
     const r = header(800);
-    expect(r["cog"]!["background-color"]).toBe("rgba(0, 0, 0, 0)");
+    expect(r["menu"]!["background-color"]).toBe("rgba(0, 0, 0, 0)");
     expect(r["primary"]!["background-color"]).not.toBe("rgba(0, 0, 0, 0)");
     expect(r["primary"]!["background-color"]).toBe("rgb(91, 60, 196)");
   });
@@ -126,10 +129,11 @@ describeIfChrome("A169 — the block's own action outweighs its settings", () =>
 
 describeIfChrome("A169 — the filter bar yields to a narrow widget, in its units", () => {
   const barStyle = unscope(svelteStyle("ui/views/Dashboard/widgets/DatabaseCall/TableControlBar.svelte"));
+  const searchStyle = unscope(svelteStyle("ui/views/Dashboard/widgets/DatabaseCall/TableSearch.svelte"));
 
   const bar = (widthPx: number) =>
     renderProbe({
-      css: [THEME, shellStyle, barStyle, `.ppp-widget-host{width:${widthPx}px}`],
+      css: [THEME, shellStyle, barStyle, searchStyle, `.ppp-widget-host{width:${widthPx}px}`],
       html: [
         "<div class='ppp-widget-host'>",
         "  <div class='ppp-t2-controlbar'>",
@@ -185,14 +189,14 @@ describe("A169 — structure, asserted in source because it is a structural clai
     );
   });
 
-  it("the hover cluster still reveals on hover — SOURCE-LEVEL, not rendered", () => {
+  it("B7: there is no hover-only cluster left to reveal — SOURCE-LEVEL", () => {
     // Stated plainly: this is a check that a rule exists, not that a browser
     // applied it. `renderProbe` drives the page through `evaluate`, and a
     // synthetic event does not produce `:hover` — only real input does. The
     // at-rest half above IS measured; this half is the honest half of a claim
     // the harness cannot make.
-    expect(actionsStyle).toContain(".ppp-widget-host:hover .ppp-widget-settings-btn");
-    expect(actionsStyle).toContain("visibility: visible");
+    expect(actionsStyle).not.toContain(":hover .ppp-widget-");
+    expect(actionsStyle).not.toContain("visibility: hidden");
   });
 });
 

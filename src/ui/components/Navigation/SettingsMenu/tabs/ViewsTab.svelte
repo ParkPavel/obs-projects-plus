@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
   import { Icon } from "obsidian-svelte";
+  import TextField from "src/ui/components/fields/TextField.svelte";
   import { customViews } from "src/lib/stores/customViews";
   import { settings } from "src/lib/stores/settings";
   import { i18n } from "src/lib/stores/i18n";
@@ -9,7 +10,7 @@
   /** Svelte action for programmatic focus (a11y-friendly alternative to autofocus) */
   function focusOnMount(node: HTMLElement) {
     // Use requestAnimationFrame to ensure DOM is ready
-    requestAnimationFrame(() => node.focus());
+    requestAnimationFrame(() => node.querySelector("input")?.focus());
   }
 
   export let views: ViewDefinition[] = [];
@@ -53,13 +54,6 @@
     cancelEditing();
   }
 
-  function handleKeydown(event: KeyboardEvent) {
-    if (event.key === "Enter") {
-      saveEditing();
-    } else if (event.key === "Escape") {
-      cancelEditing();
-    }
-  }
 
   function deleteView(view: ViewDefinition) {
     if (projectId && views.length > 1) {
@@ -157,14 +151,17 @@
         </div>
         
         {#if editingViewId === view.id}
-          <input
-            class="view-name-input"
-            type="text"
-            bind:value={editingName}
-            on:keydown={handleKeydown}
-            on:blur={saveEditing}
-            use:focusOnMount
-          />
+          <span class="view-name-field" use:focusOnMount>
+            <TextField
+              value={editingName}
+              inputClass="view-name-input"
+              ariaLabel={t("settings-menu.views.rename")}
+              commitUnchanged
+              on:input={(e) => (editingName = e.detail)}
+              on:commit={saveEditing}
+              on:cancel={cancelEditing}
+            />
+          </span>
         {:else}
           <button 
             class="view-name"
@@ -350,7 +347,13 @@
     min-height: 1.75rem;
   }
   
-  .view-name-input {
+  .view-name-field {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .view-name-field :global(.view-name-input) {
     flex: 1;
     padding: 0.25rem 0.375rem;
     border: var(--ppp-border-width) solid var(--interactive-accent, #7b68ee);

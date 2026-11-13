@@ -2,9 +2,17 @@
 
 [Русский](ROADMAP-RU.md) · [README](README.md) · [Changelog](CHANGELOG.md)
 
-This is the plan of record for Projects Plus after 3.6.3. It changes when priorities change; what has
+This is the plan of record for Projects Plus after 3.7.2. It changes when priorities change; what has
 shipped is in the [changelog](CHANGELOG.md). Items are listed in priority order within each track; no
 dates are promised.
+
+## Current priority — build on 3.7.2
+
+The 3.7.2 stabilization workflows passed the release's automated checks and maintainer acceptance,
+including the final Agenda keyboard scenario on iPhone. See the [release guide](docs/release-3.7.2.md)
+for its scope and migration requirements. The [3.7.1 completion baseline](docs/development-3.7.1.md)
+is a historical specification. The tracks below describe future work, not additional features
+promised by 3.7.2.
 
 ## Principles that do not change
 
@@ -17,14 +25,14 @@ dates are promised.
 - **Layouts adapt to their container, not to the screen.** A view sized for a small window works the same
   on a small phone.
 
-## Track 1 — Calculations and data (first priority)
+## Track 1 — Calculations and data (after stabilization)
 
 One calculation model, closer to a spreadsheet, for everything you see in tables, cards and charts.
 
-1. **One calculation engine.** The separate transformation pipeline is retired. Its operations move into
-   the database itself: filters and formulas inside tables, chart calls and cross-project summaries built
-   on a computed data model that you configure — similar to a spreadsheet's data model or pivot table.
-   Dashboards you already have are migrated.
+1. **A shared calculated data model.** The strict formula evaluator is already unified in 3.7.2.
+   Next, integrate the existing transformation pipeline's operations into a configurable data model
+   shared by tables, chart calls and cross-project summaries, with migration of saved Dashboards.
+   The current pipeline remains supported until that model is implemented.
 2. **Correct calculations.** Formulas defined on a project field are evaluated. Rollups get their own
    filters, so one relation can feed several differently filtered totals. Rollups can chain across
    projects. `SUMIF`, `COUNTIF` and `AVERAGEIF` behave as they do in spreadsheets. Anything unsupported

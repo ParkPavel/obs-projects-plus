@@ -7,21 +7,35 @@
    * Provides preset dropdown, custom format input, live preview, and time toggle.
    */
   import dayjs from "dayjs";
-  import { Select, TextInput, Switch, SettingItem } from "obsidian-svelte";
+  import { Switch, SettingItem } from "obsidian-svelte";
+  import SelectField from "src/ui/components/fields/SelectField.svelte";
+  import ValueSuggestField from "src/ui/components/fields/ValueSuggestField.svelte";
   import type { DateFormatConfig, DateFormatPreset } from "src/settings/v3/settings";
   import { DATE_FORMAT_PRESETS } from "src/settings/v3/settings";
 
   export let dateFormat: DateFormatConfig | undefined = undefined;
   export let onChange: (config: DateFormatConfig | undefined) => void;
+  let customField: ValueSuggestField | undefined;
+  export function commitForNavigation(): boolean {
+    return settleCustom(false);
+  }
+  export function syncForSubmit(): boolean {
+    return settleCustom(true);
+  }
+  function settleCustom(submit: boolean): boolean {
+    if (!dateFormat || currentPreset !== "custom") return true;
+    const accepted = customField ? submit ? customField.syncForSubmit() : customField.commitForNavigation() : isValidFormat;
+    return accepted && validFormat(dateFormat?.writeFormat ?? "");
+  }
 
   // Preset options
-  const presetOptions = [
+  $: presetOptions = [
     { label: "ISO 8601 (YYYY-MM-DD)", value: "iso" },
     { label: "US (MM/DD/YYYY)", value: "us" },
     { label: "EU (DD.MM.YYYY)", value: "eu" },
     { label: "UK (DD/MM/YYYY)", value: "uk" },
     { label: "Japan (YYYY年MM月DD日)", value: "japan" },
-    { label: "Custom", value: "custom" },
+    { label: $i18n.t("modals.date-format.custom.name"), value: "custom" },
   ];
 
   // Current state
@@ -42,21 +56,21 @@
       }
       return result;
     } catch (e) {
-      return "Invalid format";
+      return $i18n.t("modals.date-format.invalid");
     }
   })();
 
   // Validation
-  $: isValidFormat = (() => {
-    if (currentPreset !== "custom") return true;
-    if (!customFormat) return false;
+  $: isValidFormat = currentPreset !== "custom" || validFormat(customFormat);
+  function validFormat(format: string): boolean {
+    if (!format) return false;
     try {
-      previewDate.format(customFormat);
+      dayjs().format(format);
       return true;
     } catch {
       return false;
     }
-  })();
+  }
 
   function handlePresetChange({ detail: value }: CustomEvent<string>) {
     const preset = value as DateFormatPreset;
@@ -81,11 +95,12 @@
   function handleCustomFormatChange({ detail: value }: CustomEvent<string>) {
     if (currentPreset !== "custom") return;
     
-    onChange({
+    dateFormat = {
       writeFormat: value,
       includeTime,
       preset: "custom",
-    });
+    };
+    onChange(dateFormat);
   }
 
   function handleTimeToggle({ detail: checked }: CustomEvent<boolean>) {
@@ -128,7 +143,8 @@
     name={$i18n.t("modals.date-format.preset.name")}
     description={$i18n.t("modals.date-format.preset.desc")}
   >
-    <Select
+    <SelectField
+      tooltip={$i18n.t("modals.date-format.preset.name")}
       value={currentPreset}
       options={presetOptions}
       on:change={handlePresetChange}
@@ -141,13 +157,17 @@
       description={$i18n.t("modals.date-format.custom.desc")}
       vertical
     >
-      <TextInput
+      <ValueSuggestField
+        bind:this={customField}
+        validate={validFormat}
+        preserveInvalidOnBlur
+        ariaLabel={$i18n.t("modals.date-format.custom.name")}
         value={customFormat}
         on:input={handleCustomFormatChange}
+        on:commit={handleCustomFormatChange}
         error={!isValidFormat}
-        helperText={!isValidFormat ? "Invalid format string" : ""}
+        helperText={!isValidFormat ? $i18n.t("modals.date-format.invalid") : ""}
         placeholder="YYYY-MM-DD"
-        width="100%"
       />
     </SettingItem>
   {/if}

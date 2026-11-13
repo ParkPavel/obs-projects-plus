@@ -167,7 +167,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
      *
      * A separate code rather than a softer wording of PPP-105, because the
      * user's next move is different and urgent: the other version exists only
-     * as `data.json`, and this plugin's next ordinary save overwrites it. The
+     * as `data.json`, and no replacement is permitted without a verified copy. The
      * #195 rule applies one level up — a notice must never name a file that
      * was not written.
      */
@@ -176,9 +176,9 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     key: "save-status.conflict-uncopied.notice",
     causeKey: "errors.causes.settings-conflict-uncopied",
     caption:
-      "Projects+: data.json was changed outside this window, and the other version could not be saved anywhere — not beside the file, not as a note in the vault. On desktop it is printed in the developer console. Nothing is being written over it until you change a setting yourself.",
+      "Projects+: data.json changed outside this window, but its recovery copy could not be verified. The original is protected; changes remain unsaved until a copy is verified. Check storage access and keep a manual backup. On desktop, the other version is also in the developer console.",
     cause:
-      "Both the copy beside data.json and the note in the vault failed to write, so the other version survives in two places only: the console line, and data.json itself, which this session is holding unwritten until your next change.",
+      "Neither the copy beside data.json nor the recovery note could be written and read back completely. The original remains protected from overwrite.",
   },
   {
     code: "PPP-201",
@@ -220,6 +220,16 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
       "A new field is written into the project's notes one by one, and some of those writes did not succeed.",
   },
   {
+    code: "PPP-205",
+    kind: "failure",
+    key: "errors.recordsWritePartial",
+    causeKey: "errors.causes.records-write-partial",
+    caption:
+      "{{unwritten}} of {{count}} notes were not saved and show their previous values; the rest were saved.",
+    cause:
+      "A change to several notes is written into each note on its own; some notes were missing or refused the write. The console lists them.",
+  },
+  {
     code: "PPP-301",
     kind: "failure",
     key: "errors.renameFailed",
@@ -227,6 +237,8 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "The note could not be renamed.",
     cause:
       "Obsidian refused the rename — usually the new name is already taken, or holds characters the file system does not allow.",
+    // i3: the old note editor that renamed notes is no longer opened by any view.
+    status: "retired",
   },
   {
     code: "PPP-302",
@@ -236,6 +248,9 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "Failed to save changes",
     cause:
       "The note editor could not write its changes back to the file, so what is on screen is ahead of what is on disk.",
+    // i3: the calendar's day window no longer opens the old note editor (its
+    // settings open the properties block, which reports its own failures).
+    status: "retired",
   },
   {
     code: "PPP-303",

@@ -19,6 +19,11 @@ import { readFileSync } from "fs";
 import { join, resolve } from "path";
 import { tick } from "svelte";
 
+jest.mock("obsidian-svelte", () => ({
+  ...jest.requireActual("src/__mocks__/obsidian-svelte"),
+  Checkbox: (jest.requireActual("obsidian-svelte/Checkbox/Checkbox.svelte") as { default: unknown }).default,
+}));
+
 // CardList reads two view contexts keyed by private symbols (gripLayout
 // pattern); BoardView's `set` calls are no-ops against the same stubs.
 jest.mock("src/ui/views/helpers", () => ({
@@ -31,9 +36,6 @@ jest.mock("src/ui/views/helpers", () => ({
 jest.mock("src/lib/record/openRecord", () => ({
   ...jest.requireActual("src/lib/record/openRecord"),
   openRecord: jest.fn(() => Promise.resolve()),
-}));
-jest.mock("src/ui/modals/editNoteModal", () => ({
-  EditNoteModal: jest.fn().mockImplementation(() => ({ open: jest.fn() })),
 }));
 jest.mock("src/ui/modals/createNoteModal", () => ({
   CreateNoteModal: jest.fn().mockImplementation(() => ({ open: jest.fn() })),
@@ -73,6 +75,7 @@ type ComponentClass = new (options: { target: HTMLElement; props: Record<string,
 
 const CardList = require("../CardList.svelte").default as ComponentClass;
 const Board = require("../Board.svelte").default as ComponentClass;
+const { TRIGGERS, SOURCES } = require("svelte-dnd-action");
 const BoardView = require("../../../BoardView.svelte").default as ComponentClass;
 const { app } = require("src/lib/stores/obsidian") as { app: { set(value: unknown): void } };
 const { Notice } = require("obsidian") as { Notice: jest.Mock };
@@ -157,6 +160,51 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
+describe("board checkbox interaction", () => {
+  it("toggles the Boolean property shown in card metadata, without opening YAML", async () => {
+    const onRecordCheck = jest.fn();
+    const m = mountCards({
+      items: [{ id: "a.md", values: { reviewed: false } }],
+      includeFields: [{ name: "reviewed", type: "boolean", repeated: false, derived: false, identifier: false }],
+      onRecordCheck,
+    });
+    const checkbox = m.card("a.md").querySelector<HTMLInputElement>('.field-label input[type="checkbox"]');
+    expect(checkbox).not.toBeNull();
+    checkbox!.click();
+    await tick();
+    expect(onRecordCheck).toHaveBeenCalledWith(expect.objectContaining({ id: "a.md" }), true, "reviewed");
+    expect(m.onRecordClick).not.toHaveBeenCalled();
+    m.destroy();
+  });
+  it("does not write on mount; a native click toggles once without opening the note", async () => {
+    const onRecordCheck = jest.fn();
+    const onRecordEdit = jest.fn();
+    const m = mountCards({ checkField: "done", onRecordCheck, onRecordEdit });
+    await tick();
+    expect(onRecordCheck).not.toHaveBeenCalled();
+    const checkbox = m.card("a.md").querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+    expect(checkbox).not.toBeNull();
+    checkbox.click();
+    await tick();
+    expect(checkbox.checked).toBe(true);
+    expect(onRecordCheck).toHaveBeenCalledTimes(1);
+    expect(onRecordCheck).toHaveBeenCalledWith(m.items[0], true);
+    expect(m.onRecordClick).not.toHaveBeenCalled();
+    expect(onRecordEdit).not.toHaveBeenCalled();
+    m.destroy();
+  });
+
+  it("a read-only card cannot change its checkbox", async () => {
+    const onRecordCheck = jest.fn();
+    const m = mountCards({ checkField: "done", readOnly: true, onRecordCheck });
+    m.card("a.md").querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
+    await tick();
+    expect(onRecordCheck).not.toHaveBeenCalled();
+    expect(m.onRecordClick).not.toHaveBeenCalled();
+    m.destroy();
+  });
+});
+
 describe("cards-g5 — board height", () => {
   it("no frame: the card and its slot carry no frame style; the handle is the last lane", () => {
     const m = mountCards();
@@ -199,7 +247,9 @@ describe("cards-g5 — board height", () => {
     expect(prop(media, "height")).toBe("");
     expect(prop(media, "--ppp-card-media-ratio")).toBe("");
     expect(media).toHaveAttribute("data-ppp-frame-target");
-    expect(prop(m.card("a.md"), "min-height")).toBe("");
+    // stab-board: the lane is capped at 40% of the card, so the frame is also
+    // the card's minimum height; without it the resize would change nothing.
+    expect(prop(m.card("a.md"), "min-height")).toBe("9rem");
     // b.md has no cover: no side, and its frame is the card's minimum.
     expect(prop(m.card("b.md"), "--ppp-board-card-thumb")).toBe("");
     expect(prop(m.card("b.md"), "min-height")).toBe("9rem");
@@ -213,9 +263,21 @@ describe("cards-g5 — board height", () => {
     handle.dispatchEvent(pointer("pointermove", 100, 132));
     await tick();
     expect(prop(m.card("a.md"), "--ppp-board-card-thumb")).toBe("12rem");
+    expect(prop(m.card("a.md"), "min-height")).toBe("12rem");
     expect(prop(m.card("a.md").querySelector<HTMLElement>(".ppp-board-card-media"), "height")).toBe("");
     handle.dispatchEvent(pointer("pointerup", 100, 132));
     expect(m.onCardFrameChange).toHaveBeenCalledWith("a.md", { heightRem: 12 });
+    m.destroy();
+  });
+
+  it("left thumbnail: a per-card override sets that card's minimum, the view frame the rest", () => {
+    const m = mountCards({
+      thumbnailLayout: "left",
+      cardFrames: { view: { heightRem: 9 }, byRecord: { "a.md": { heightRem: 15 } } },
+    });
+    expect(prop(m.card("a.md"), "min-height")).toBe("15rem");
+    expect(prop(m.card("a.md"), "--ppp-board-card-thumb")).toBe("15rem");
+    expect(prop(m.card("b.md"), "min-height")).toBe("9rem");
     m.destroy();
   });
 
@@ -302,6 +364,88 @@ describe("cards-g5 — the board handle", () => {
   });
 });
 
+describe("column drag temporarily folds columns without changing saved state", () => {
+  it.each([0.25, 0.55, 1, 1.5, 2])("a mouse drag reorders columns at zoom %s", async zoom => {
+    const target = document.createElement("div");
+    document.body.appendChild(target);
+    const columns = [
+      { id: "Open", records: RECORDS(), collapse: false, pinned: false, persisted: false },
+      { id: "Closed", records: RECORDS(), collapse: true, pinned: false, persisted: false },
+    ];
+    const onSortColumns = jest.fn();
+    const component = new Board({ target, props: {
+      columns, project: { id: "board", name: "Board" }, readonly: true, dataReadOnly: false, richText: false, zoom,
+      onRecordClick: jest.fn(), onRecordCheck: jest.fn(), onRecordUpdate: jest.fn(), onRecordAdd: jest.fn(),
+      columnWidth: 270, onSortColumns, onColumnAdd: jest.fn(), onColumnDelete: jest.fn(),
+      onColumnRename: jest.fn(), onColumnCollapse: jest.fn(), onColumnPin: jest.fn(), onColumnPersist: jest.fn(),
+      validateStatusField: () => ({}), checkField: undefined, includeFields: [], customHeader: undefined,
+    }});
+    const zone = target.querySelector<HTMLElement>("section.projects--board:not(.projects--board--pinned)")!;
+    const grip = target.querySelector<HTMLElement>('section[data-id="Open"] .board-column-grip')!;
+    const scrollingElementDescriptor = Object.getOwnPropertyDescriptor(document, "scrollingElement");
+    Object.defineProperty(document, "scrollingElement", { configurable: true, value: document.documentElement });
+    try {
+      grip.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0, clientX: 10, clientY: 10 }));
+      window.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, cancelable: true, clientX: 20, clientY: 10 }));
+      await tick();
+      const wrappers = Array.from(target.querySelectorAll<HTMLElement>(".projects--board--column--dndwrapper"));
+      expect(wrappers).toHaveLength(2);
+      expect(wrappers.every((wrapper) => wrapper.classList.contains("projects--board--column--dndwrapper--collapsed"))).toBe(true);
+      expect(wrappers.every((wrapper) => wrapper.style.width === "3rem")).toBe(true);
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+      zone.dispatchEvent(new CustomEvent(TRIGGERS.DRAGGED_OVER_INDEX, {
+        detail: { indexObj: { index: 1, isProximityBased: false } },
+      }));
+      await tick();
+      window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true, clientX: 20, clientY: 10 }));
+      await tick();
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      expect(onSortColumns).toHaveBeenCalledTimes(1);
+      expect(onSortColumns).toHaveBeenCalledWith(["Closed", "Open"]);
+    } finally {
+      component.$destroy();
+      target.remove();
+      if (scrollingElementDescriptor) Object.defineProperty(document, "scrollingElement", scrollingElementDescriptor);
+      else Reflect.deleteProperty(document, "scrollingElement");
+    }
+  });
+
+  it("restores expanded, collapsed and pinned columns and keeps the pressed handle connected", async () => {
+    const target=document.createElement("div");document.body.appendChild(target);
+    const columns=[
+      {id:"Pinned",records:RECORDS(),collapse:false,pinned:true,persisted:false},
+      {id:"Open",records:RECORDS(),collapse:false,pinned:false,persisted:false},
+      {id:"Closed",records:RECORDS(),collapse:true,pinned:false,persisted:false},
+    ];
+    const onColumnCollapse=jest.fn();const onSortColumns=jest.fn();
+    const component=new Board({target,props:{columns,project:{id:"board",name:"Board"},readonly:true,dataReadOnly:false,richText:false,
+      onRecordClick:jest.fn(),onRecordCheck:jest.fn(),onRecordUpdate:jest.fn(),onRecordAdd:jest.fn(),columnWidth:270,
+      onSortColumns,onColumnAdd:jest.fn(),onColumnDelete:jest.fn(),onColumnRename:jest.fn(),onColumnCollapse,
+      onColumnPin:jest.fn(),onColumnPersist:jest.fn(),validateStatusField:()=>({}),checkField:undefined,includeFields:[],customHeader:undefined,
+    }});
+    const zone=target.querySelector<HTMLElement>("section.projects--board:not(.projects--board--pinned)")!;
+    const grip=target.querySelector<HTMLElement>('section[data-id="Open"] .board-column-grip')!;
+    expect(grip).not.toBeNull();
+    zone.dispatchEvent(new CustomEvent("consider",{detail:{items:columns.filter(c=>!c.pinned),info:{trigger:TRIGGERS.DRAG_STARTED,source:SOURCES.KEYBOARD,id:"Open"}}}));
+    await tick();
+    expect(target.querySelectorAll("section.projects--board--column.collapse")).toHaveLength(3);
+    for (const section of Array.from(target.querySelectorAll<HTMLElement>("section.projects--board--column.collapse"))) {
+      expect(section.ownerDocument.defaultView!.getComputedStyle(section).boxSizing).toBe("border-box");
+      expect(section.style.height).toBe("3rem");
+      expect(section.parentElement!.style.minHeight).toBe("16.875rem");
+    }
+    expect(grip.isConnected).toBe(true);
+    expect(columns.map(c=>c.collapse)).toEqual([false,false,true]);
+    zone.dispatchEvent(new CustomEvent("finalize",{detail:{items:columns.filter(c=>!c.pinned),info:{trigger:TRIGGERS.DROPPED_INTO_ZONE,source:SOURCES.KEYBOARD,id:"Open"}}}));
+    await tick();
+    expect(target.querySelectorAll("section.projects--board--column.collapse")).toHaveLength(1);
+    expect(target.querySelector('section[data-id="Closed"]')?.classList.contains("collapse")).toBe(true);
+    expect(grip.isConnected).toBe(true);
+    expect(onColumnCollapse).not.toHaveBeenCalled();expect(onSortColumns).not.toHaveBeenCalled();
+    component.$destroy();target.remove();
+  });
+});
+
 describe("cards-g5 — Board passes frames to every column", () => {
   it("pinned and unpinned columns both size their cards and offer the handle", () => {
     const target = document.createElement("div");
@@ -319,6 +463,7 @@ describe("cards-g5 — Board passes frames to every column", () => {
       target,
       props: {
         columns: [column("Pinned", { pinned: true }), column("Open")],
+        project: { id: "board", name: "Board" },
         readonly: true,
         dataReadOnly: false,
         richText: false,
@@ -354,7 +499,7 @@ describe("cards-g5 — Board passes frames to every column", () => {
 });
 
 describe("cards-g5 — BoardView writes frames through onConfigChange", () => {
-  function mountView(config: Record<string, unknown>) {
+  function mountView(config: Record<string, unknown>, props: Record<string, unknown> = {}) {
     const target = document.createElement("div");
     document.body.appendChild(target);
     const records = RECORDS();
@@ -373,11 +518,51 @@ describe("cards-g5 — BoardView writes frames through onConfigChange", () => {
         onConfigChange,
         hasSort: false,
         hasFilter: false,
+        ...props,
       },
     });
     const card = (id: string) => target.querySelector<HTMLElement>(`article[data-ppp-card-id="${id}"]`) as HTMLElement;
     return { target, card, onConfigChange, destroy: () => component.$destroy() };
   }
+
+  it.each([false, true])("metadata checkbox reaches the record API only for writable data (readOnly=%s)", async (dataReadOnly) => {
+    const updateRecord = jest.fn();
+    const booleanField = { name: "reviewed", type: "boolean", repeated: false, derived: false, identifier: false };
+    const record = { id: "a.md", values: { reviewed: false } };
+    const m = mountView({ includeFields: ["reviewed"] }, {
+      frame: { fields: [booleanField], records: [record] },
+      getRecord: () => record,
+      dataReadOnly,
+      api: { updateRecord, updateRecords: jest.fn(), addRecord: jest.fn() },
+    });
+    const checkbox = m.card("a.md").querySelector<HTMLInputElement>('.field-label input[type="checkbox"]')!;
+    expect(checkbox.disabled).toBe(dataReadOnly);
+    checkbox.click();
+    await tick();
+    if (dataReadOnly) expect(updateRecord).not.toHaveBeenCalled();
+    else {
+      expect(updateRecord).toHaveBeenCalledTimes(1);
+      expect(updateRecord).toHaveBeenCalledWith({ id: "a.md", values: { reviewed: true } }, [booleanField]);
+      expect(record.values.reviewed).toBe(false);
+    }
+    m.destroy();
+  });
+
+  it("a computed Boolean has no editable header control and stays disabled in metadata", () => {
+    const updateRecord = jest.fn();
+    const field = { name: "derivedFlag", type: "boolean", repeated: false, derived: true, identifier: false };
+    const record = { id: "a.md", values: { derivedFlag: true } };
+    const m = mountView({ checkField: "derivedFlag", includeFields: ["derivedFlag"] }, {
+      frame: { fields: [field], records: [record] }, getRecord: () => record,
+      api: { updateRecord, updateRecords: jest.fn(), addRecord: jest.fn() },
+    });
+    expect(m.card("a.md").querySelector(".checkbox-wrapper")).toBeNull();
+    const checkbox = m.card("a.md").querySelector<HTMLInputElement>('.field-label input[type="checkbox"]')!;
+    expect(checkbox.disabled).toBe(true);
+    checkbox.click();
+    expect(updateRecord).not.toHaveBeenCalled();
+    m.destroy();
+  });
 
   it("a key action on a card's handle saves the override once, keeping the rest of the config", async () => {
     const m = mountView({ boardZoom: 1, cardFrame: { heightRem: 10 } });

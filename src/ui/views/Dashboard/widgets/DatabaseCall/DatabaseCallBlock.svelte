@@ -5,8 +5,13 @@
    * Renders ViewTabBar + active tab's view (Table/Board/Calendar/...).
    * Each tab owns its config; switching preserves state. Sprint 2 MVP
    * reuses parent frame; independent source loading deferred to S3+.
+   * i3-final: a tab may instead follow a project view (`linkedView.ts`), and
+   * a table tab takes the dashboard's field list as its default (`fieldLayout.ts`).
    */
   import { createEventDispatcher } from "svelte";
+  import { Icon } from "obsidian-svelte";
+  import { isMobileDevice } from "src/lib/stores/ui";
+  import { agendaDrawer, toggle as toggleAgendaDrawer } from "src/lib/stores/agendaDrawer";
   import type {
     DataFrame,
     DataRecord,
@@ -55,9 +60,20 @@
   import type { NamedSourceView } from "src/lib/datasources/namedSource";
   import { namedSourceNotice } from "./namedSourceNotice";
   import EmptyState from "src/ui/components/EmptyState/EmptyState.svelte";
-  import { CreateNoteModal } from "src/ui/modals/createNoteModal";
+  import NoteDraft from "src/ui/components/NoteDraft.svelte";
+  import { creationContextKey } from "src/ui/utils/creationContext";
   import { createDataRecord } from "src/lib/dataApi";
-  import { app } from "src/lib/stores/obsidian";
+  import { getFilterValuesFromConditions, prefillConditions } from "src/lib/helpers";
+  import { settings } from "src/lib/stores/settings";
+  import type { ViewDefinition } from "src/settings/base/settings";
+  import { isRenderableTab, linkTab, resolveTabView, scopeTabFrame, sortTabRecords, unlinkTab } from "./linkedView";
+  import { tabLinkMenu } from "./tabLinkMenu";
+  import { detachInherited, inheritFieldLayout } from "./fieldLayout";
+  import EmbeddedViewSettings from "./EmbeddedViewSettings.svelte";
+  import { provideTableControlsHost, readBlockHeaderControlsHost, moveTableControls } from "./tableControlsHost";
+  const tableControlsHost = provideTableControlsHost();
+  const blockHeaderControlsHost = readBlockHeaderControlsHost();
+  import { initialEmbeddedConfig, embeddedViewDefinition, localTabWithConfig } from "./embeddedView";
 
   export let frame: DataFrame;
   export let api: ViewApi;
@@ -134,6 +150,8 @@
    * for, presented as if it were theirs.
    */
   export let sourceState: BlockSource = { kind: "parent", frame: { fields: [], records: [] } as unknown as DataFrame };
+  /** i3-final (B4): the dashboard view's table settings; its field list is the default of every table tab (fieldLayout.ts). */
+  export let dashboardTableConfig: DataTableConfig | undefined = undefined;
 
   const dispatch = createEventDispatcher<{
     configChange: Record<string, unknown>;
@@ -207,7 +225,7 @@
     hasSubFilter && !scopeApplied ? applyFilter(frame, subFilter as FilterDefinition) : frame;
 
   $: effectiveFrame = autoFilter
-    ? { ...subFiltered, records: filterByLinkedSelection(subFiltered.records, autoFilter, subFiltered.fields) }
+    ? { ...subFiltered, records: filterByLinkedSelection(subFiltered.records, autoFilter, subFiltered.fields, autoFilter.field === $canvasStore.field ? $canvasStore.dateGrouping : undefined) }
     : masterSelected && masterFrame && linkedSelection
       ? { ...subFiltered, records: filterByMasterSide(masterUniverse ?? frame, subFiltered.records, masterFrame, $canvasStore.values, linkedSelection.relationField) }
       : subFiltered;
@@ -222,7 +240,28 @@
   $: tabs = (config["viewTabs"] as ViewTab[]) ?? [];
   $: activeTabId = String(config["activeTabId"] ?? tabs[0]?.id ?? "");
   $: activeTab = tabs.find((t) => t.id === activeTabId) ?? tabs[0];
-  $: activeTabTableConfig = activeTab?.config as DataTableConfig | undefined;
+  $: embeddedAgendaKey = `block:${project?.id ?? ""}:${widgetId}:${activeTab?.id ?? ""}`;
+
+  // i3-final (B3): a tab may follow a view of the project it reads (the source
+  // project for a linked-source block, else this one). Its config, sort and
+  // filter then come from that view, live; `effectiveFrame` already carries the
+  // block's own filter, so the view's filter narrows it further (AND).
+  $: sourceProjectId = sourceState.kind === "ready" ? sourceState.projectId : project?.id;
+  $: sourceProject = $settings.projects.find((p) => p.id === sourceProjectId) ?? project;
+  $: sourceViews = sourceProject?.views ?? ([] as ViewDefinition[]);
+  $: resolvedTab = activeTab ? resolveTabView(activeTab, sourceViews) : undefined;
+  $: embeddedSettingsView = activeTab ? embeddedViewDefinition(activeTab, resolvedTab?.config ?? {}) : undefined;
+  $: tabScope = scopeTabFrame(effectiveFrame, resolvedTab, hasSubFilter || autoFilter !== null || masterSelected);
+  $: activeTabTableConfig = inheritFieldLayout(resolvedTab?.config as DataTableConfig | undefined, dashboardTableConfig);
+
+  function replaceTab(next: ViewTab) {
+    dispatch("configChange", { ...config, viewTabs: tabs.map((t) => (t.id === next.id ? next : t)) });
+  }
+  $: tabMenuExtras = (tab: ViewTab) =>
+    tabLinkMenu(tab, sourceViews, (key, fallback) => $i18n.t(key, { defaultValue: fallback }), {
+      link: (t, view) => replaceTab(linkTab(t, view)),
+      unlink: (t) => replaceTab(unlinkTab(t, sourceViews)),
+    });
 
   function handleTabSwitch(e: CustomEvent<string>) {
     dispatch("configChange", {
@@ -251,7 +290,7 @@
       id: `tab-${Date.now()}`,
       label: sameType > 0 ? `${base} ${sameType + 1}` : base,
       viewType,
-      config: {},
+      config: initialEmbeddedConfig(viewType),
     };
     dispatch("configChange", {
       ...config,
@@ -281,6 +320,16 @@
   // on every collapse toggle, so a later expand cannot replay a spent one.
   let seenPrimarySignal = 0;
   let newRowSignal = 0;
+  let firstRecordDraftOpen = false;
+  let firstRecordVersion = 0, firstRecordContext = "", alive = true;
+  onDestroy(() => { alive = false; firstRecordVersion++; });
+  function syncFirstRecordContext(next: string): void {
+    if (firstRecordContext === next) return;
+    firstRecordContext = next;
+    closeFirstRecordDraft();
+  }
+  function closeFirstRecordDraft(): void { firstRecordVersion++; firstRecordDraftOpen = false; }
+  $: syncFirstRecordContext(JSON.stringify([creationContextKey(project, sourceProjectId, fields, creationConditions, readonly || sourceReadOnly, api), activeTab?.id, sourceState.kind, namedSource.kind]));
   $: if (primaryActionSignal > seenPrimarySignal) {
     seenPrimarySignal = primaryActionSignal;
     runPrimaryAction();
@@ -289,21 +338,17 @@
   /**
    * Add a record through whichever creation path is actually on screen.
    *
-   * With rows present the table shows an inline «+ New» at the body end, and
-   * that is the one the user already reaches; with none, the block shows an
-   * empty state whose own button opens the create-note modal. Routing to the
-   * mounted one is what keeps this a shortcut to an existing interaction
-   * rather than a second way to make a record.
+   * With rows present the table shows an inline «+ New» at the body end. With
+   * none, the empty state opens the shared note draft in this view.
    *
    * A NON-TABLE tab with records is the case that must do nothing, and the
    * adversarial review of #169 is why it is written out rather than left to
    * fall through: Board, Calendar and Gallery each create a record with the
    * context of what you are looking at — the column's value, the day you
-   * clicked, the active filter. The generic modal below has none of it, so on
-   * a Calendar tab it would write a record with no date, which then does not
-   * appear in the calendar that made it. The header does not offer the action
-   * for those blocks at all (`primaryActionFor`), and this guard is the second
-   * lock on the same door.
+   * clicked, the active filter. The generic table draft has none of that
+   * view-specific context, so this guard must stop it on non-table tabs. The
+   * header does not offer the action for those blocks at all
+   * (`primaryActionFor`), and this guard is the second lock on the same door.
    */
   function runPrimaryAction() {
     if (readonly || sourceReadOnly || !project) return;
@@ -315,16 +360,25 @@
     // offer the action here either; this is the second lock.
     if (namedSource.kind === "broken") return;
     if (activeTab && activeTab.viewType !== "table") return;
-    if (effectiveFrame.records.length > 0) newRowSignal += 1;
-    else handleAddFirstRecord();
+    if (viewFrame.records.length > 0) newRowSignal += 1;
+    else openFirstRecordDraft();
   }
 
-  function handleAddFirstRecord() {
-    const p = project;
-    if (!p) return;
-    new CreateNoteModal($app, p, (name, templatePath) => {
-      api.addRecord(createDataRecord(name, p), fields, templatePath);
-    }).open();
+  function openFirstRecordDraft(): void {
+    if (!alive || readonly || sourceReadOnly || !project || namedSource.kind === "broken") return;
+    firstRecordVersion++;
+    firstRecordDraftOpen = true;
+  }
+
+  async function saveFirstRecord(
+    name: string,
+    templatePath: string,
+    targetProject: ProjectDefinition
+  ): Promise<void> {
+    if (!alive || !firstRecordDraftOpen || readonly || sourceReadOnly) return;
+    const version = firstRecordVersion;
+    await api.addRecord(createDataRecord(name, targetProject, getFilterValuesFromConditions(creationConditions)), JSON.parse(JSON.stringify(fields)) as DataField[], templatePath);
+    if (alive && firstRecordVersion === version) closeFirstRecordDraft();
   }
 
   function handleClearCanvasFilter() {
@@ -339,10 +393,13 @@
   }
 
   function handleDataTableConfigChange(e: CustomEvent<DataTableConfig>) {
-    if (!activeTab) return;
+    if (readonly || !activeTab) return;
+    // i3-final (B4): store only what the tab says itself, not the dashboard's
+    // field list it was shown with — or that list would freeze into the tab.
+    const own = detachInherited(e.detail, activeTab.config as DataTableConfig, dashboardTableConfig);
     const updatedTabs = tabs.map((t) =>
       t.id === activeTab.id
-        ? { ...t, config: e.detail as unknown as Record<string, unknown> }
+        ? { ...t, config: own as unknown as Record<string, unknown> }
         : t
     );
     dispatch("configChange", {
@@ -352,13 +409,10 @@
   }
 
   function handleViewConfigChange(cfg: Record<string, unknown>) {
-    if (!activeTab) return;
-    dispatch("configChange", {
-      ...config,
-      viewTabs: tabs.map((t) =>
-        t.id === activeTab.id ? { ...t, config: cfg } : t
-      ),
-    });
+    if (readonly || !activeTab) return;
+    // One block-local event carries the fork, including effective sort/filter.
+    // Neither the source project nor other blocks following it are changed.
+    replaceTab(localTabWithConfig(activeTab, sourceViews, cfg));
   }
 
   function handleTabRemove(e: CustomEvent<string>) {
@@ -381,15 +435,20 @@
     });
   }
 
-  // Derived helpers for embedded Board/Calendar/Gallery
-  $: getRecord = (id: string) =>
-    effectiveFrame.records.find((r) => r.id === id);
-  const sortRecords = (records: ReadonlyArray<DataRecord>) => [...records];
-  $: boardConfig = (activeTab?.config ?? {}) as BoardConfig;
-  $: calendarConfig = (activeTab?.config ?? undefined) as CalendarConfig | undefined;
-  $: galleryConfig = (activeTab?.config ?? undefined) as GalleryConfig | undefined;
+  // Derived helpers for embedded Board/Calendar/Gallery. i3-final (B3): they
+  // read the tab's resolved view (linked or own) and its sorted, filtered
+  // frame; the board learns that sort and filter are active, like a project
+  // board does, instead of a fixed «no sort, no filter» and an identity sort.
+  $: viewFrame = tabScope.frame;
+  $: creationConditions = [...prefillConditions(subFilter), ...tabScope.filterConditions];
+  $: getRecord = (id: string) => viewFrame.records.find((r) => r.id === id);
+  $: tabSort = resolvedTab?.sort;
+  $: sortRecords = (records: ReadonlyArray<DataRecord>): DataRecord[] => sortTabRecords(records, tabSort);
+  $: boardConfig = (resolvedTab?.config ?? {}) as BoardConfig;
+  $: calendarConfig = resolvedTab?.config as CalendarConfig | undefined;
+  $: galleryConfig = resolvedTab?.config as GalleryConfig | undefined;
   let dataVersion = 0;
-  $: { void effectiveFrame; dataVersion++; }
+  $: { void viewFrame; dataVersion++; }
 
   function handleBoardConfigChange(cfg: BoardConfig) {
     handleViewConfigChange(cfg as unknown as Record<string, unknown>);
@@ -500,22 +559,45 @@
       </svelte:fragment>
     </EmptyState>
   {:else}
-    <ViewTabBar
-      {tabs}
-      {activeTabId}
-      {readonly}
-      on:tabSwitch={handleTabSwitch}
-      on:tabAdd={handleTabAdd}
-      on:tabRemove={handleTabRemove}
-      on:tabRename={handleTabRename}
-    />
-    <BlockFilterBar
-      filter={subFilter}
-      fields={frame.fields}
-      records={frame.records}
-      {readonly}
-      on:change={handleSubFilterChange}
-    />
+    <!-- w4-p10a (N8): the block's views and its filter share one row. -->
+    <div class="ppp-dbc-head" class:ppp-dbc-head--docked={!!$blockHeaderControlsHost} use:moveTableControls={$blockHeaderControlsHost}>
+      <ViewTabBar
+        {tabs}
+        {activeTabId}
+        {readonly}
+        menuExtras={tabMenuExtras}
+        on:tabSwitch={handleTabSwitch}
+        on:tabAdd={handleTabAdd}
+        on:tabRemove={handleTabRemove}
+        on:tabRename={handleTabRename}
+      />
+      <BlockFilterBar
+        filter={subFilter}
+        fields={frame.fields}
+        records={frame.records}
+        {readonly}
+        on:change={handleSubFilterChange}
+      />
+      <div class="ppp-dbc-table-controls" use:tableControlsHost></div>
+      {#if $isMobileDevice && project && activeTab?.viewType === "calendar"}
+        <button type="button" class="clickable-icon" data-embedded-agenda-toggle
+          aria-label={$i18n.t("views.calendar.agenda.title")}
+          aria-expanded={$agendaDrawer[embeddedAgendaKey] === true}
+          on:click={() => toggleAgendaDrawer(embeddedAgendaKey)}>
+          <Icon name="panel-right" size="sm" />
+        </button>
+      {/if}
+      {#if !readonly && activeTab && embeddedSettingsView && activeTab.viewType !== "table" && isRenderableTab(activeTab)}
+        {#key activeTab.id}
+          <EmbeddedViewSettings
+            view={embeddedSettingsView}
+            fields={viewFrame.fields}
+            linkedName={resolvedTab?.view?.name}
+            onUnlink={resolvedTab?.link === "live" ? () => activeTab && replaceTab(unlinkTab(activeTab, sourceViews)) : undefined}
+            onChange={handleViewConfigChange} />
+        {/key}
+      {/if}
+    </div>
     {#if filterLabel === "relation" && masterSide}
       <span class="ppp-dbc-filter-label ppp-dbc-filter-label--relation" aria-label={$i18n.t("views.dashboard.database-call.filtered-by-relation")}>
         {$i18n.t("views.dashboard.database-call.filter-master", {
@@ -572,8 +654,26 @@
             })}
       </span>
     {/if}
+    {#if resolvedTab?.link === "live" && resolvedTab.view}
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--linked" data-tab-link="live">
+        {$i18n.t("views.dashboard.database-call.linked-view-label", {
+          defaultValue: "Follows the project view {{name}}",
+          name: resolvedTab.view.name,
+        })}
+      </span>
+      <span class="ppp-dbc-filter-label" data-local-settings-hint>
+        {$i18n.t("views.dashboard.database-call.local-settings-hint")}
+      </span>
+    {:else if resolvedTab?.link === "missing"}
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--broken" data-tab-link="missing">
+        {$i18n.t("views.dashboard.database-call.linked-view-missing", {
+          defaultValue: "The linked view was deleted — this tab shows its own settings",
+        })}
+      </span>
+    {/if}
     <div
       class="ppp-database-call-content"
+      class:ppp-database-call-content--visual={activeTab && activeTab.viewType !== "table" && isRenderableTab(activeTab)}
       role="tabpanel"
       id="ppp-tab-panel-{activeTabId}"
       aria-labelledby="ppp-tab-{activeTabId}"
@@ -618,7 +718,17 @@
                 </button>
               </svelte:fragment>
             </EmptyState>
-          {:else if effectiveFrame.records.length === 0}
+          {:else if viewFrame.records.length === 0 && firstRecordDraftOpen && project}
+            <div class="ppp-dbc-first-record-draft">
+              {#key firstRecordVersion}
+              <NoteDraft
+                {project}
+                onSave={saveFirstRecord}
+                onCancel={closeFirstRecordDraft}
+              />
+              {/key}
+            </div>
+          {:else if viewFrame.records.length === 0}
             <EmptyState
               icon="database"
               title={$i18n.t("views.dashboard.database-call.no-records", {
@@ -630,7 +740,7 @@
             >
               <svelte:fragment slot="actions">
                 {#if !readonly && !sourceReadOnly && project}
-                  <button on:click={handleAddFirstRecord}>
+                  <button on:click={openFirstRecordDraft}>
                     {$i18n.t("views.dashboard.database-call.add-first-record", {
                       defaultValue: "Add first record"
                     })}
@@ -639,8 +749,8 @@
               </svelte:fragment>
             </EmptyState>
           {:else}
-            <DataTableContent
-              frame={effectiveFrame}
+            {#key activeTab.id}<DataTableContent
+              frame={viewFrame}
               {api}
               readonly={readonly || sourceReadOnly}
               {getRecordColor}
@@ -652,14 +762,17 @@
               sourceProjectId={sourceState.kind === "ready" ? sourceState.projectId : undefined}
               {widgetId}
               {newRowSignal}
+              {creationConditions}
               on:configChange={handleDataTableConfigChange}
               on:fieldPresetsChange={(e) => dispatch("fieldPresetsChange", e.detail)}
-            />
+            />{/key}
           {/if}
         {:else if activeTab.viewType === "board" && project}
+          {#key activeTab.id}
           <BoardView
+            embedded={true}
             {project}
-            frame={effectiveFrame}
+            frame={viewFrame}
             {api}
             readonly={readonly || sourceReadOnly}
             dataReadOnly={sourceReadOnly}
@@ -668,39 +781,65 @@
             {getRecord}
             config={boardConfig}
             onConfigChange={handleBoardConfigChange}
-            hasSort={false}
-            hasFilter={false}
+            hasSort={tabScope.hasSort}
+            hasFilter={tabScope.hasFilter}
+            filterConditions={creationConditions}
           />
+          {/key}
         {:else if activeTab.viewType === "calendar" && project}
+          {#key activeTab.id}
           <CalendarView
+            embedded={true}
+            agendaProject={sourceProject}
+            agendaKey={embeddedAgendaKey}
             {project}
-            frame={effectiveFrame}
+            frame={viewFrame}
             {api}
             readonly={readonly || sourceReadOnly}
             dataReadOnly={sourceReadOnly}
             {getRecordColor}
             config={calendarConfig}
             onConfigChange={handleCalendarConfigChange}
+            filterConditions={creationConditions}
             {dataVersion}
           />
+          {/key}
         {:else if activeTab.viewType === "gallery" && project}
+          {#key activeTab.id}
           <GalleryView
             {project}
-            frame={effectiveFrame}
+            frame={viewFrame}
             {api}
             readonly={readonly || sourceReadOnly}
             dataReadOnly={sourceReadOnly}
             {getRecordColor}
             config={galleryConfig}
+            filterConditions={creationConditions}
             onConfigChange={handleGalleryConfigChange}
           />
+          {/key}
+        {:else if !isRenderableTab(activeTab)}
+          <!--
+            i3-final (B3): list, timeline, chart and stats tabs were never
+            creatable here; a stored one says what it is and what to do,
+            instead of a placeholder line promising a future.
+          -->
+          <EmptyState
+            icon="layout-grid"
+            title={$i18n.t("views.dashboard.database-call.tab-unavailable", {
+              defaultValue: "This kind of view cannot be shown in a block"
+            })}
+            hint={$i18n.t("views.dashboard.database-call.tab-unavailable-hint", {
+              defaultValue: "Delete this view from the tab menu, or add a table, board, calendar or gallery view."
+            })}
+          />
         {:else}
-          <div class="ppp-database-call-placeholder">
-            <span>{$i18n.t("views.dashboard.database-call.view-not-implemented", {
-              defaultValue: "{{viewType}} view not yet implemented",
-              viewType: $i18n.t(`views.${activeTab.viewType}.name`, { defaultValue: activeTab.viewType })
-            })}</span>
-          </div>
+          <EmptyState
+            icon="folder-x"
+            title={$i18n.t("views.dashboard.database-call.tab-needs-project", {
+              defaultValue: "This view needs a project to show"
+            })}
+          />
         {/if}
       {/if}
     </div>
@@ -716,20 +855,29 @@
 
   .ppp-database-call-content {
     flex: 1;
+    min-height: 0;
     overflow: hidden;
     display: flex;
     flex-direction: column;
   }
-
-  .ppp-database-call-placeholder {
+  .ppp-dbc-first-record-draft {
     display: flex;
+    flex: 1 1 auto;
     align-items: center;
     justify-content: center;
-    padding: 2rem;
-    color: var(--text-faint);
-    font-style: italic;
-    font-family: var(--font-monospace);
-    font-size: var(--font-ui-smaller);
+    min-height: 0;
+    overflow: auto;
+    padding: var(--size-4-3);
+  }
+  .ppp-dbc-first-record-draft :global(.ppp-note-draft) {
+    max-width: 32rem;
+  }
+  .ppp-database-call-content--visual {
+    flex: 1 1 30em;
+    height: 30em;
+    max-height: 65vh;
+    min-height: 12em;
+    overflow: auto;
   }
 
   .ppp-dbc-filter-label {
@@ -750,8 +898,31 @@
     background: color-mix(in srgb, var(--interactive-accent) 12%, var(--background-secondary));
   }
 
+  /* i3-final (B3): a tab following a project view says which one. */
+  .ppp-dbc-filter-label--linked {
+    color: var(--text-muted);
+    background: var(--background-secondary);
+  }
+
   .ppp-dbc-filter-label--broken {
     color: var(--text-warning, var(--text-muted));
     background: color-mix(in srgb, var(--text-warning, orange) 12%, var(--background-secondary));
   }
+  /* w4-p10a (N8): views and filter in one row; the strip scrolls, the filter stays. */
+  .ppp-dbc-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    min-width: 0;
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
+  }
+  .ppp-dbc-head :global(.ppp-view-tab-bar) {
+    flex: 1 1 8em;
+    min-width: 0;
+    border-bottom: none;
+  }
+  .ppp-dbc-head--docked { border-bottom: none; }
+  .ppp-dbc-table-controls { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+  .ppp-dbc-table-controls:empty { display: none; }
+  .ppp-dbc-table-controls :global(.ppp-t2-controlbar) { padding: 0; border-bottom: none; }
 </style>

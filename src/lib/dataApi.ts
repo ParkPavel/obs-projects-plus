@@ -1,12 +1,14 @@
 ﻿import dayjs from "dayjs";
-import { produce } from "immer";
 
 
 import { get } from "svelte/store";
+import { reserveAutomaticIds, automaticIdProject, reconcileAutomaticIds, isAutomaticIdField } from "src/lib/record/automaticIds";
+import { queryProjectRecords } from "src/lib/datasources/queryProjectRecords";
+import { getAPI, isPluginEnabled } from "src/lib/datasources/dataview/host";
+import { app } from "src/lib/stores/obsidian";
 import { v4 as uuidv4 } from "uuid";
 
 import {
-  isDate,
   DataFieldType,
   type DataField,
   type DataRecord,
@@ -41,6 +43,21 @@ export type BulkFieldWriteOutcome = {
 };
 
 /**
+ * w4-p04 (audit F17) — what a batch of record writes did, note by note.
+ * `written` reached the file; `unchanged` had nothing to write; `missing`
+ * names records whose note no longer exists; `failed` names the writes that
+ * threw. Every record lands in exactly one list. The batch used to resolve the
+ * same whether a note was missing or not, and to reject on the first failure
+ * while the others went on, so nobody could say which notes were written.
+ */
+export type RecordsWriteOutcome = {
+  readonly written: ReadonlyArray<string>;
+  readonly unchanged: ReadonlyArray<string>;
+  readonly missing: ReadonlyArray<string>;
+  readonly failed: ReadonlyArray<{ readonly path: string; readonly error: Error }>;
+};
+
+/**
  * DataApi writes records to file.
  */
 export class DataApi {
@@ -51,38 +68,64 @@ export class DataApi {
    * originally treated that as success — the caller kept an optimistic value in
    * the store for a file that could not receive it. Found by cross-model review.
    */
-  async updateRecord(fields: DataField[], record: DataRecord): Promise<boolean> {
+  async updateRecord(
+    fields: DataField[],
+    record: DataRecord,
+    keys?: readonly string[]
+  ): Promise<boolean> {
     const file = this.fileSystem.getFile(record.id);
     if (!file) return false;
+    // An empty key list means nothing changed: no write, the note still exists.
+    if (keys?.length === 0) return true;
     // Phase 3 / F6: prefer Obsidian's processFrontMatter (body-safe,
     // lock-protected) over the legacy read-modify-write path.
     const processed = await file.processFrontMatter((fm) =>
-      applyRecordToFrontmatter(fm, fields, record),
+      applyRecordToFrontmatter(fm, fields, record, keys),
     );
     if (processed) return true;
     await this.updateFile(file, (data) =>
-      doUpdateRecord(data, fields, record),
+      doUpdateRecord(data, fields, record, keys),
     )();
     return true;
   }
 
+  /**
+   * `keys[i]` is the list of changed keys for `records[i]`; an entry (or the
+   * whole array) left undefined writes that record whole.
+   */
   async updateRecords(
     fields: DataField[],
-    records: DataRecord[]
-  ): Promise<void> {
+    records: DataRecord[],
+    keys?: ReadonlyArray<readonly string[] | undefined>
+  ): Promise<RecordsWriteOutcome> {
+    const written: string[] = [];
+    const unchanged: string[] = [];
+    const missing: string[] = [];
+    const failed: Array<{ path: string; error: Error }> = [];
+    // Each note is settled on its own: one failure neither stops the others
+    // nor hides which of them were written.
     await Promise.all(
-      records.map(async (record) => {
+      records.map(async (record, index) => {
         const file = this.fileSystem.getFile(record.id);
-        if (!file) return;
-        const processed = await file.processFrontMatter((fm) =>
-          applyRecordToFrontmatter(fm, fields, record),
-        );
-        if (processed) return;
-        await this.updateFile(file, (data) =>
-          doUpdateRecord(data, fields, record),
-        )();
+        if (!file) return void missing.push(record.id);
+        const recordKeys = keys?.[index];
+        if (recordKeys?.length === 0) return void unchanged.push(record.id);
+        try {
+          const processed = await file.processFrontMatter((fm) =>
+            applyRecordToFrontmatter(fm, fields, record, recordKeys),
+          );
+          if (!processed) {
+            await this.updateFile(file, (data) =>
+              doUpdateRecord(data, fields, record, recordKeys),
+            )();
+          }
+          written.push(record.id);
+        } catch (error) {
+          failed.push({ path: record.id, error: E.toError(error) });
+        }
       }),
     );
+    return { written, unchanged, missing, failed };
   }
 
   /**
@@ -159,14 +202,36 @@ export class DataApi {
     });
   }
 
+  /**
+   * Creates the note for a record. `body` is the text that goes under the
+   * frontmatter: a copy passes the source's, so it is not created empty. When
+   * it is given the template is not read, the body is the whole text.
+   */
   async createNote(
     record: DataRecord,
     fields: DataField[],
-    templatePath: string
+    templatePath: string,
+    body?: string,
+    defaults?: Record<string, Optional<DataValue>>,
+    onPrepared?: (record: DataRecord) => void,
   ): Promise<void> {
-    let content = "";
+    // Every creation path, including the general create-note command, crosses
+    // this boundary. A view may display only the reconciled record below.
+    const projectId = automaticIdProject(record);
+    if (projectId) {
+      const currentSettings = get(settings), project = currentSettings.projects.find(item => item.id === projectId);
+      if (!project) throw new Error("Cannot check automatic IDs: project source unavailable");
+      const currentApp = get(app);
+      const records = await queryProjectRecords(project, {
+        fileSystem: this.fileSystem,
+        preferences: currentSettings.preferences,
+        dataviewApi: currentApp && isPluginEnabled(currentApp) ? getAPI(currentApp) : undefined,
+      });
+      record = reconcileAutomaticIds(record, records);
+    }
+    let content = body ?? "";
 
-    if (templatePath) {
+    if (templatePath && body === undefined) {
       const file = this.fileSystem.getFile(normalizePath(templatePath));
       if (file) {
         content = await file.read();
@@ -176,7 +241,7 @@ export class DataApi {
           time: (format) => dayjs().format(format || "HH:mm"),
 
         });
-        if (record.values["tags"]) {
+        if (record.values["tags"] && !isAutomaticIdField(record, "tags")) {
           const templateTags = F.pipe(
             content,
             decodeFrontMatter,
@@ -201,11 +266,13 @@ export class DataApi {
       }
     }
 
-    const file = await this.fileSystem.create(record.id, content);
-
-    await this.updateFile(file, (data) =>
-      doUpdateRecord(data, fields, record)
-    )();
+    // Prepare the complete note before crossing the filesystem boundary.
+    // Creating a body first and writing properties afterwards could leave an
+    // incomplete file when the second write failed, blocking a safe retry.
+    const prepared = doUpdateRecord(content, fields, record, undefined, defaults);
+    if (E.isLeft(prepared)) throw prepared.left;
+    onPrepared?.(record);
+    await this.fileSystem.create(record.id, prepared.right);
   }
 
   updateFile(
@@ -249,36 +316,25 @@ export class DataApi {
 export function doUpdateRecord(
   data: string,
   fields: DataField[],
-  record: DataRecord
+  record: DataRecord,
+  keys?: readonly string[],
+  defaults?: Record<string, Optional<DataValue>>,
 ): E.Either<Error, string> {
+  // encodeFrontMatter lays the given entries over the note's own, so a key list
+  // can hand it just the changed entries. Untouched keys are then neither
+  // re-read from `values` nor re-formatted.
+  const written = keys
+    ? Object.fromEntries(
+        Object.entries(record.values).filter(([key]) => keys.includes(key))
+      )
+    : record.values;
   return F.pipe(
     data,
     decodeFrontMatter,
     E.map((frontmatter) => {
       return Object.fromEntries(
-        Object.entries({ ...frontmatter, ...record.values })
-          .map((entry) => {
-            const value = entry[1];
-            if (value instanceof Date) {
-              const isDatetime = fields.find(
-                (field) =>
-                  field.name === entry[0] &&
-                  field.type === DataFieldType.Date &&
-                  (field.typeConfig?.time ||
-                    value.getHours() ||
-                    value.getMinutes() ||
-                    value.getSeconds() ||
-                    value.getMilliseconds())
-              );
-
-              return produce(entry, (draft) => {
-                draft[1] = dayjs(value).format(
-                  isDatetime ? "YYYY-MM-DDTHH:mm" : "YYYY-MM-DD"
-                );
-              });
-            }
-            return entry;
-          })
+        Object.entries(keys ? written : { ...defaults, ...frontmatter, ...written })
+          .map(([key, value]) => [key, encodeRecordValue(value, fields.find(field => field.name === key))] as const)
           .filter(
             (entry) =>
               !fields.find((field) => field.name === entry[0] && field.derived)
@@ -295,32 +351,33 @@ export function doUpdateRecord(
  * Mutate an Obsidian-frontmatter object in place so it reflects the given
  * record's values, using the same field-level rules as `doUpdateRecord`
  * (date formatting, derived-field exclusion). Intended for use inside
- * `app.fileManager.processFrontMatter` callbacks — closes F6.
+ * `app.fileManager.processFrontMatter` callbacks — closes F6. With `keys`,
+ * only those keys are written; every other frontmatter key keeps its bytes.
  */
 export function applyRecordToFrontmatter(
   frontmatter: Record<string, unknown>,
   fields: DataField[],
   record: DataRecord,
+  keys?: readonly string[],
 ): void {
   for (const [key, value] of Object.entries(record.values)) {
+    // A key list narrows the write to what changed. A listed key that is gone
+    // from `values` writes nothing, as an absent key never did.
+    if (keys && !keys.includes(key)) continue;
     const field = fields.find((f) => f.name === key);
     if (field?.derived) continue;
 
-    if (isDate(value)) {
-      const isDatetime =
-        field?.type === DataFieldType.Date &&
-        (field.typeConfig?.["time"] ||
-          value.getHours() ||
-          value.getMinutes() ||
-          value.getSeconds() ||
-          value.getMilliseconds());
-      frontmatter[key] = dayjs(value).format(
-        isDatetime ? "YYYY-MM-DDTHH:mm" : "YYYY-MM-DD",
-      );
-    } else {
-      frontmatter[key] = value;
-    }
+    frontmatter[key] = encodeRecordValue(value, field);
   }
+}
+
+/** Repeated members use exactly the same local date/time policy as scalars. */
+function encodeRecordValue(value: unknown, field?: DataField): unknown {
+  if (Array.isArray(value)) return value.map(item => encodeRecordValue(item, field));
+  if (!(value instanceof Date)) return value;
+  const withTime = field?.type === DataFieldType.Date && (field.typeConfig?.time ||
+    value.getHours() || value.getMinutes() || value.getSeconds() || value.getMilliseconds());
+  return dayjs(value).format(withTime ? "YYYY-MM-DDTHH:mm" : "YYYY-MM-DD");
 }
 
 export function doAddField(
@@ -433,10 +490,10 @@ export function createDataRecord(
     };
   }
 
-  return {
+  return reserveAutomaticIds({
     id: normalizePath(path + "/" + name + ".md"),
     values: values ?? {},
-  };
+  }, project);
 }
 
 function getDefaultStringType() {

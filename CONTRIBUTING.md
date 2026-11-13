@@ -2,7 +2,7 @@
 
 [Русский](CONTRIBUTING-RU.md)
 
-Projects Plus is an Obsidian plugin maintained as a fork of [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects). This guide covers building, changing and testing the plugin. Development coordination is maintained in [Claudex](https://github.com/ParkPavel/claudex).
+Projects Plus is an Obsidian plugin maintained as a fork of [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects). This guide covers building, changing and testing the plugin. Development coordination in the maintainer workspace uses Borshkit. Start with its local `borshkit/START-HERE.md`; task contracts and acceptance evidence are private workspace material, not plugin runtime files.
 
 ## Build locally
 
@@ -14,6 +14,14 @@ npm run build
 ```
 
 The build type-checks TypeScript and bundles the plugin with esbuild. The runtime files are `main.js`, `manifest.json` and `styles.css`. For incremental builds, run `npm run dev`.
+
+`npm run build` and `npm run dev` overwrite generated runtime files in the checkout, including tracked `main.js`. In maintainer task worktrees, use the isolated build helper instead. Run it from the workspace root, with explicit checkout and output paths:
+
+```sh
+node handoff/2026-10-07-claudex-to-borshkit/tools/build-branch.mjs <candidate-checkout> <output-directory>
+```
+
+This helper belongs to the maintainer workspace, not a standalone repository clone. It includes the checkout's uncommitted source changes and records artifact hashes without replacing its tracked bundle. Install each task worktree's dependencies with `npm ci`; do not share its `node_modules` through a junction.
 
 To test in Obsidian, copy those three files into `.obsidian/plugins/obs-projects-plus/` in a separate test vault. Create the directory if necessary, enable the plugin in Community plugins, and reload it after each build. Use sample notes: testing editing and deletion changes vault files.
 
@@ -45,12 +53,14 @@ Run these commands from the repository root:
 npm run build
 npm test -- --runInBand
 npm run lint
-npm run svelte-check
+npm run svelte-check -- --fail-on-warnings
 ```
 
 Use focused tests while developing; run the full suite before submitting a pull request. Tests are located alongside their modules and under `src/__tests__`. Add regression coverage when fixing behavior that could recur. For a documentation-only change, check links, examples and any tests that validate the changed reference material.
 
 UI changes also need an Obsidian check: open the affected view, perform the changed action, and verify its result after reopening the view or reloading the plugin when persistence is involved. Describe the vault, Obsidian version and checks in the pull request without including private notes.
+
+The [3.7.1 completion baseline](docs/development-3.7.1.md) is historical. For current changes, attach automated results and manual evidence for the affected device workflows to the pull request, with the exact build identifier. A green test run does not replace device acceptance. See the [3.7.2 release guide](docs/release-3.7.2.md) for the completed release scope.
 
 ## Translate the interface
 
@@ -78,10 +88,12 @@ Do not include credentials, vault contents, local logs or machine-specific confi
 Maintainers release from `main`, which accepts changes only through a pull request with a green `build` check.
 
 1. On a branch, set the version with `npm version X.Y.Z --tag-version-prefix="" --no-git-tag-version`. The `version` hook copies it to `manifest.json` and adds it to `versions.json`; it never increments on its own.
-2. Update both changelogs, rebuild with `npm run build` and commit `main.js` — it is tracked in Git and must match the release commit. Build from a checkout with LF line endings: with `core.autocrlf` on Windows, whitespace in Svelte templates carries `\r` into the bundle, and it no longer matches the release, which CI builds on Linux. The release asset is the reference — if in doubt, commit it.
+2. Update both changelogs and the bilingual release guide, regenerate the documentation with `node scripts/build-docs-site.mjs`, and run `npm run docs:check`. Build with `npm run build` in a clean checkout with LF line endings and commit the resulting `main.js`: it is tracked and must match the release build. With `core.autocrlf` on Windows, Svelte whitespace can carry `\r` into the bundle; an isolated LF checkout avoids changing the development copy while reproducing Linux CI.
 3. Merge the pull request, then push the tag `X.Y.Z` — the version itself, without `v` — on the merge commit. The release workflow refuses a tag that differs from `manifest.json`, builds the plugin and publishes `main.js`, `manifest.json` and `styles.css`.
 
-A beta for [BRAT](https://github.com/TfTHacker/obsidian42-brat) is a tag `X.Y.Z-beta.N` on a commit of `main`, with `X.Y.Z` above the current version (after 3.7.0: `3.7.1-beta.1`); the workflow publishes it as a pre-release with the beta version in its manifest, leaving `manifest.json` on `main` untouched.
+4. Wait for successful CI, release and Pages deployment. Verify the published assets and their checksums, release notes and site links. Delete merged working branches only after preserving their history in a verified backup; retain unrelated work and dirty worktrees.
+
+A beta for [BRAT](https://github.com/TfTHacker/obsidian42-brat) is a tag `X.Y.Z-beta.N` on a commit of `main`, with `X.Y.Z` above the current version (after 3.7.2: `3.7.3-beta.1`); the workflow publishes it as a pre-release with the beta version in its manifest, leaving `manifest.json` on `main` untouched.
 
 ## License and attribution
 

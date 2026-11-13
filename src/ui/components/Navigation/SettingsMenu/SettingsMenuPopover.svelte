@@ -1,6 +1,8 @@
 <script lang="ts">
   import { createEventDispatcher, onMount, onDestroy, tick } from "svelte";
   import { focusTrap } from "src/lib/a11y/focusTrap";
+  import { comboOwnsEscape } from "src/ui/components/fields/comboOptions";
+  import TextField from "src/ui/components/fields/TextField.svelte";
   import type {
     ProjectDefinition,
     ProjectId,
@@ -11,7 +13,8 @@
   import type { DataSource as StoredDataSource } from "src/settings/v3/settings";
   import { sourceNameTaken } from "src/lib/datasources/namedSource";
   import { dataFrame } from "../../../../lib/stores/dataframe";
-  import { applyRollupColumns } from "src/lib/relations/rollupColumns";
+  import { applyComputedColumns } from "src/lib/relations/computedColumns";
+  import { applyDeclaredFieldTypes } from "src/lib/relations/declaredFieldTypes";
   import SettingsMenuTabs, { type SettingsTabId } from "./SettingsMenuTabs.svelte";
   import ProjectTab from "./tabs/ProjectTab.svelte";
   import ViewsTab from "./tabs/ViewsTab.svelte";
@@ -47,7 +50,7 @@
   $: activeProject = projects.find((p) => p.id === projectId);
   $: storeFields = $dataFrame?.fields ?? [];
   $: frameFields = activeProject?.fieldConfig
-    ? applyRollupColumns({ fields: storeFields, records: [] }, activeProject.fieldConfig, activeProject.id, new Map()).fields
+    ? applyComputedColumns(applyDeclaredFieldTypes({ fields: storeFields, records: [] }, activeProject.fieldConfig), activeProject.fieldConfig, activeProject.id, new Map()).fields
     : storeFields;
   $: resolvedFields = fields.length > 0 ? fields : frameFields.map(f => ({ name: f.name, type: f.type, derived: f.derived }));
   
@@ -147,6 +150,9 @@
 
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === "Escape") {
+      // A suggestion list that is open takes this Escape (it only closes the
+      // list); the panel closes on the next one.
+      if (comboOwnsEscape(event.target)) return;
       // chrome-filters: Escape in the source-name field abandons the name, not
       // the whole panel. This listener runs in the capture phase, before the
       // field's own, so it has to know.
@@ -221,7 +227,7 @@
   let naming = false;
   let sourceName = "";
   let nameError = "";
-  let nameEl: HTMLInputElement | null = null;
+  let nameEl: TextField | null = null;
   // The action can disappear while a name is half typed (the last condition
   // disabled, the source turning read-only); the naming state goes with it, so
   // Escape closes the panel again instead of cancelling an invisible field.
@@ -260,14 +266,6 @@
     dispatch("saveFilterAsSource", trimmed);
   }
 
-  function handleNameKeydown(event: KeyboardEvent) {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      commitName();
-    } else if (event.key === "Escape") {
-      cancelNaming();
-    }
-  }
 </script>
 
 {#if position}
@@ -341,16 +339,18 @@
             {#if canSaveSource}
               <div class="ppp-filters-save" data-filters-save>
                 {#if naming}
-                  <input
+                  <!-- Enter saves, Escape cancels; leaving the field keeps the name
+                       for the Save button, as before. -->
+                  <TextField
                     bind:this={nameEl}
-                    class="ppp-filters-save-name"
-                    type="text"
-                    bind:value={sourceName}
+                    value=""
+                    inputClass="ppp-filters-save-name"
                     placeholder={$i18n.t("views.filter.bar.save-name", { defaultValue: "Name this selection…" })}
-                    aria-label={$i18n.t("views.filter.bar.save-name", { defaultValue: "Name this selection…" })}
-                    aria-invalid={nameError !== ""}
-                    on:input={() => (nameError = "")}
-                    on:keydown={handleNameKeydown}
+                    ariaLabel={$i18n.t("views.filter.bar.save-name", { defaultValue: "Name this selection…" })}
+                    error={nameError !== ""}
+                    on:input={(e) => { sourceName = e.detail; nameError = ""; }}
+                    on:commit={(e) => { if (e.detail.reason === "enter") commitName(); }}
+                    on:cancel={cancelNaming}
                   />
                   <div class="ppp-filters-save-actions">
                     <button type="button" class="mod-cta" data-filters-action="save-confirm" on:click={commitName}>
@@ -391,6 +391,7 @@
         {:else if activeTab === "viewConfig"}
           <ViewConfigTab
             view={activeView}
+            projectViews={views}
             fields={resolvedFields}
             on:update={(event) => dispatch("updateViewConfig", event.detail)}
             on:navigateTab={(event) => (activeTab = event.detail)}
@@ -565,7 +566,7 @@
     align-self: flex-start;
   }
 
-  .ppp-filters-save-name {
+  :global(.ppp-filters-save-name) {
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
@@ -592,7 +593,7 @@
     .ppp-filters-clear,
     .ppp-filters-save-start,
     .ppp-filters-save-actions button,
-    .ppp-filters-save-name {
+    :global(.ppp-filters-save-name) {
       min-height: var(--ppp-touch-target-min);
     }
   }

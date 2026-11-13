@@ -25,6 +25,7 @@ import type { DbCallView } from "./linkedSourceState";
 export type RenderContextInput = Omit<
   WidgetRenderContext,
   | "effectiveTableConfig"
+  | "dashboardTableConfig"
   | "dbCallFrame"
   | "dbCallFields"
   | "dbCallSourceConfig"
@@ -54,6 +55,7 @@ export function buildRenderContext(input: RenderContextInput): WidgetRenderConte
     effectiveTableConfig: isPrimaryDataTable
       ? tableConfig
       : (widget.config as { table?: DataTableConfig })?.table ?? tableConfig,
+    dashboardTableConfig: tableConfig,
     // An external source is read whole: the host's transform pipeline never ran
     // on it, so reporting a step count would describe work that did not happen.
     pipelineStepCount: dbCall.isExternal ? 0 : pipelineStepCount,
@@ -64,7 +66,8 @@ export function buildRenderContext(input: RenderContextInput): WidgetRenderConte
     dbCallLinkedSelection: dbCall.linkedSelection,
     dbCallSource: dbCall.source,
     dbCallScopeApplied: !dbCall.isExternal && scopeApplied,
-    dbCallUsesLinkedSource: dbCall.isExternal,
+    // i3-data: a block of this project read as a source holds this project's notes — writable.
+    dbCallUsesLinkedSource: dbCall.isExternal && !(dbCall.source.kind === "ready" && dbCall.source.writable === true),
     // F3b: a master-side link lives in the MASTER's frame (this dashboard's)
     // and must point at the project the block reads.
     dbCallLinkedSelectionValidation: dbCall.linkedSelection

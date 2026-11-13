@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { gridColumnCount } from "src/ui/components/SharedCard/cardFrames";
-  import { toRem } from "src/ui/utils/cssLength";
+  import { rootFontPx, toRem } from "src/ui/utils/cssLength";
   import type { GalleryLayout } from "../../types";
 
   export let cardWidth: number;
@@ -40,7 +40,8 @@
       return;
     }
     gap = readGap();
-    columns = gridColumnCount(contentWidth, columnMin, gap);
+    // i3-gallery: 30rem is the narrow-gallery container rule in styles.css.
+    columns = gridColumnCount(contentWidth, columnMin, gap, 30 * rootFontPx(section.ownerDocument));
   }
 
   $: recount(cardWidth, layout);

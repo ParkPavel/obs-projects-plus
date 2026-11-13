@@ -17,8 +17,11 @@
   } from "src/lib/dashboard-engine/aggregationOptions";
   import type { StatsConfig, StatsCardConfig, ColumnAggregation } from "../../types";
   import { createEventDispatcher } from "svelte";
+  import TextField from "src/ui/components/fields/TextField.svelte";
   import { i18n } from "src/lib/stores/i18n";
   import WidgetConfigShell from "../_shared/WidgetConfigShell.svelte";
+  import ComboField from "src/ui/components/fields/ComboField.svelte";
+  import { namesToOptions } from "src/ui/components/fields/comboOptions";
 
   export let config: StatsConfig;
   export let fields: DataField[] = [];
@@ -63,7 +66,8 @@
 
   $: cards = config.cards.slice();
   $: columnsCount = config.columns;
-  $: fieldNames = fields.map((f) => f.name);
+  // "*" counts records, so it is offered ahead of the fields.
+  $: fieldOptions = namesToOptions(["*", ...fields.map((f) => f.name)]);
 
   function emit(next: Partial<StatsConfig>) {
     dispatch("change", { ...config, ...next });
@@ -105,9 +109,6 @@
     emit({ cards: cards.filter((_, i) => i !== idx) });
   }
 
-  function inputVal(e: Event): string {
-    return (e.currentTarget as HTMLInputElement).value;
-  }
   function selectVal(e: Event): string {
     return (e.currentTarget as HTMLSelectElement).value;
   }
@@ -173,23 +174,24 @@
   <div class="ppp-cfg-list">
     {#each cards as card, idx (card.id)}
       <div class="ppp-cfg-item ppp-stats-config-item">
+        <!-- svelte-ignore a11y-label-has-associated-control -->
         <label>
           {$i18n.t("views.dashboard.stats.config.label", { defaultValue: "Label" })}
-          <input
-            type="text"
+          <TextField
             value={card.label}
-            on:input={(e) => updateCard(idx, { label: inputVal(e) })}
+            on:input={(e) => updateCard(idx, { label: e.detail })}
           />
         </label>
 
+        <!-- svelte-ignore a11y-label-has-associated-control -->
         <label>
           {$i18n.t("views.dashboard.stats.config.field", { defaultValue: "Field" })}
-          <input
-            type="text"
-            list="ppp-stats-fields"
+          <ComboField
             value={card.field}
+            options={fieldOptions}
+            allowCustom
             placeholder="*"
-            on:input={(e) => updateCard(idx, { field: inputVal(e) })}
+            on:commit={(e) => updateCard(idx, { field: e.detail.value })}
           />
         </label>
 
@@ -230,13 +232,13 @@
         </label>
 
         {#if card.format === "currency"}
+          <!-- svelte-ignore a11y-label-has-associated-control -->
           <label class="ppp-stats-currency">
             {$i18n.t("views.dashboard.stats.config.currency", { defaultValue: "Symbol" })}
-            <input
-              type="text"
+            <TextField
               value={card.currencySymbol ?? "$"}
               maxlength="3"
-              on:input={(e) => updateCard(idx, { currencySymbol: inputVal(e) })}
+              on:input={(e) => updateCard(idx, { currencySymbol: e.detail })}
             />
           </label>
         {/if}
@@ -265,12 +267,6 @@
     + {$i18n.t("views.dashboard.stats.config.add", { defaultValue: "Add card" })}
   </button>
 
-  <datalist id="ppp-stats-fields">
-    <option value="*" />
-    {#each fieldNames as name (name)}
-      <option value={name} />
-    {/each}
-  </datalist>
 </WidgetConfigShell>
 
 <style>

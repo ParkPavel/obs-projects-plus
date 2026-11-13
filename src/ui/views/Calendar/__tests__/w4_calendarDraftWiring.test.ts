@@ -1,0 +1,160 @@
+/**
+ * w4-calendar-draft — how CalendarView wires the draft. Mounting the whole
+ * calendar engine for this is not worth its weight; the behaviour lives in
+ * `draft/calendarDraft.ts` and its tests. These pins keep the doors of the view
+ * shut: a time on the grid opens a draft and writes nothing, ✓ is the one write,
+ * and every path that would touch a note by id recognises the draft first.
+ */
+import * as fs from "fs";
+import * as path from "path";
+import * as ts from "typescript";
+
+const CALENDAR = path.resolve(__dirname, "..");
+const read = (rel: string) => fs.readFileSync(path.join(CALENDAR, rel), "utf8");
+const view = read("CalendarView.svelte");
+const sheet = read("draft/CalendarDraftSheet.svelte");
+
+/** The body of `function name(` up to the next top-level function of the script. */
+function fnBody(code: string, signature: RegExp): string {
+  const script = /<script[^>]*>([\s\S]*?)<\/script>/.exec(code)?.[1] ?? code;
+  const ast = ts.createSourceFile("view.ts", script, ts.ScriptTarget.Latest, true);
+  const fn = ast.statements.find((node) => ts.isFunctionDeclaration(node) && signature.test(node.getText(ast)));
+  if (!fn || !ts.isFunctionDeclaration(fn) || !fn.body) throw new Error("function not found");
+  return fn.body.getText(ast);
+}
+
+function hasIdentifier(code: string, name: string): boolean {
+  const script = /<script[^>]*>([\s\S]*?)<\/script>/.exec(code)?.[1] ?? code;
+  const ast = ts.createSourceFile("view.ts", script, ts.ScriptTarget.Latest, true);
+  let found = false;
+  function visit(node: ts.Node): void {
+    if (ts.isIdentifier(node) && node.text === name) found = true;
+    ts.forEachChild(node, visit);
+  }
+  visit(ast);
+  return found;
+}
+
+describe("calendar creation opens an in-view draft, not a modal", () => {
+  const add = fnBody(view, /function handleRecordAdd\(/);
+
+  it("a timed grid gesture starts the draft only for writable data", () => {
+    expect(add).toMatch(/if \(startTime && !readonly && !dataReadOnly\) \{\s*beginDraft\(date, startTime, endTime\);\s*return;/);
+    expect(view).not.toContain("CreateNoteModal");
+  });
+
+  it("a date-only action checks the date mapping and write access before starting the same draft", () => {
+    const dateRequired = add.indexOf("if (!dateField)");
+    const readonly = add.indexOf("if (readonly || dataReadOnly)");
+    const begin = add.lastIndexOf("beginDraft(date, startTime, endTime);");
+    expect(dateRequired).toBeGreaterThanOrEqual(0);
+    expect(readonly).toBeGreaterThan(dateRequired);
+    expect(begin).toBeGreaterThan(readonly);
+  });
+
+  it("the date controls follow the draft mode instead of forcing time fields", () => {
+    expect(sheet).toMatch(/withTime=\{draft\.hasTime\}/);
+  });
+
+  it("beginning a draft writes nothing", () => {
+    const begin = fnBody(view, /function beginDraft\(/);
+    expect(begin).toMatch(/draftCtl\.begin\(/);
+    expect(begin).not.toMatch(/api\.|addRecord|updateRecord|vault\./);
+  });
+
+  it("✓ is the draft's one write, through the view API's complete create", () => {
+    const confirm = fnBody(view, /async function confirmDraft\(/);
+    expect(confirm).toMatch(/if \(dataReadOnly \|\| readonly\) return;/);
+    expect(confirm).toMatch(/draftCtl\.confirm\(/);
+    expect(confirm.match(/api\.addRecord\(createDataRecord\(name, project, values\), fields, templatePath, undefined, defaults\)/g)).toHaveLength(1);
+  });
+
+  it("the form is mounted only for a draft, in the view's own layout", () => {
+    expect(view).toMatch(/\{#if draftState\.draft\}\s*<CalendarDraftSheet/);
+    expect(view).toMatch(/onDestroy\(\(\) => draftCtl\.destroy\(\)\)/);
+    expect(view).not.toMatch(/<CalendarDraftSheet[^>]*use:portal/);
+  });
+
+  it("the draft's color picker offers the same shared favorites as every other palette", () => {
+    expect(view).not.toMatch(/getProjectPalette/);
+    expect(sheet).toMatch(/\{#if colorOpen && !state\.saving && \$isMobile\}\s*<div class="ppp-draft-sheet__palette"[^>]*>\s*<ColorPicker scrollable=\{false\} value=\{draft\.color \|\| "#808080"\} on:change/);
+    const desktop = sheet.match(/\{#if colorOpen && !state\.saving && !\$isMobile\}\s*(<FloatingPopup[\s\S]*?<\/FloatingPopup>)/)?.[1] ?? "";
+    expect(desktop).toMatch(/triggerEl=\{colorTrigger\}/);
+    expect(desktop).toMatch(/<ColorPicker scrollable=\{false\} value=\{draft\.color \|\| "#808080"\} on:change/);
+  });
+});
+
+describe("the calendar draws the draft beside the notes", () => {
+  it("the processed frame is the frame plus the draft, never the draft alone", () => {
+    expect(view).toMatch(/displayFrame = shownDraft \? \{ \.\.\.frame, records: \[\.\.\.frame\.records, shownDraft\] \} : frame/);
+    expect(view).toMatch(/updateProcessedData\(processedStartField, colorConfig, records, fields, dataVersion, draftKey, displayFrame,/);
+  });
+
+  it("draft revisions reuse source processing and only process the transient record", () => {
+    const body = fnBody(view, /function updateProcessedData\(/);
+    expect(body).toMatch(/const versionKey = String\(dv\);/);
+    expect(body).toMatch(/fr\.records\.find\(\(record\) => isDraftId\(record\.id\)\)/);
+    expect(body).toMatch(/mergeCalendarPreview/);
+    expect(body).toMatch(/versionKey !== lastProcessedKey/);
+    expect(hasIdentifier(view, "lastProcessedVersion")).toBe(false);
+    expect(hasIdentifier(view.replace("</script>", "let lastProcessedVersion = 0;\n</script>"), "lastProcessedVersion")).toBe(true);
+  });
+
+  it("the agenda lists notes only", () => {
+    expect(view).toMatch(/\$: agendaRecords = records;/);
+  });
+});
+
+describe("every path that touches a note by id recognises the draft first", () => {
+  it.each([
+    ["drag-change", /async function handleRecordChange\(/, /draftCtl\.move\(date, options\)/],
+    ["check", /function handleRecordCheck\(/, /draftCtl\.edit\(\{ done: checked \}\)/],
+    ["popup check", /async function handleDayPopupRecordCheck\(/, /draftCtl\.edit\(\{ done: checked \}\)/],
+    ["popup colour", /async function handleDayPopupRecordColorChange\(/, /draftCtl\.edit\(\{ color \}\)/],
+    ["popup delete", /async function handleDayPopupRecordDelete\(/, /draftCtl\.cancel\(\)/],
+  ])("%s: after the read-only guard, before any write", (_name, signature, branch) => {
+    const body = fnBody(view, signature);
+    const guard = body.search(/if \(dataReadOnly\) return(?: false)?;/);
+    const draft = body.search(/interceptDraft\(record\??\.id/);
+    const write = body.search(/\bapi\.|await |updateRecord\(/);
+    expect(guard).toBeGreaterThanOrEqual(0);
+    expect(draft).toBeGreaterThan(guard);
+    expect(body).toMatch(branch);
+    if (write >= 0) expect(draft).toBeLessThan(write);
+  });
+
+  it.each([
+    ["duplicate", /async function handleDayPopupRecordDuplicate\(/],
+    ["duplicate request", /function handleDayPopupRecordDuplicateRequest\(/],
+    ["open in a window", /function handleDayPopupRecordOpenInNewWindow\(/],
+    ["peek", /function handleRecordClick\(/],
+  ])("%s refuses a draft", (_name, signature) => {
+    expect(fnBody(view, signature)).toMatch(/(?:isDraftId|interceptDraft)\((record|entry)\.id/);
+  });
+
+  it("the day window is not handed the draft", () => {
+    expect(fnBody(view, /function handleDayTap\(/)).toMatch(/records\.filter\(\(r\) => !isDraftId\(r\.id\)\)/);
+  });
+
+  it.each([
+    "components/Calendar/EventBarContainer.svelte",
+    "components/Calendar/Day.svelte",
+    "components/Calendar/EventList.svelte",
+    "components/Calendar/TimelineView.svelte",
+  ])("%s does not open a draft in a tab or window", (file) => {
+    const code = read(file);
+    expect(code).toMatch(/import \{ isDraftId \} from ["']\.\.\/\.\.\/draft\/calendarDraft["']/);
+    const at = code.search(/isDraftId\(/);
+    const open = code.search(/void openRecord\(/);
+    expect(at).toBeGreaterThanOrEqual(0);
+    expect(at).toBeLessThan(open);
+  });
+});
+
+// Structural contract only: controller destruction itself is tested behaviourally.
+it("keys the embedded calendar instance by its tab, so switching tabs destroys the old session", () => {
+  const source = fs.readFileSync(path.resolve(CALENDAR, "../Dashboard/widgets/DatabaseCall/DatabaseCallBlock.svelte"), "utf8");
+  expect(source).toMatch(/\{#key activeTab\.id\}\s*<CalendarView/);
+  const calendar = source.slice(source.indexOf('activeTab.viewType === "calendar"'), source.indexOf('activeTab.viewType === "gallery"'));
+  expect(calendar).toMatch(/filterConditions=\{creationConditions\}/);
+});

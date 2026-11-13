@@ -10,6 +10,9 @@
   export let preferences: ProjectsPluginPreferences;
   export let projects: ProjectDefinition[];
   export let save: (prefs: ProjectsPluginPreferences) => void;
+  function hasCommand(prefs: ProjectsPluginPreferences, project: string, view?: string): boolean {
+    return prefs.commands.some(command => command.project === project && (view === undefined ? !command.view : command.view === view));
+  }
 </script>
 
 {#if !projects.length}
@@ -20,10 +23,9 @@
   {#each projects as project}
     <SettingItem name={`${project.name}`} description={$i18n.t("settings.commands.project")}>
       <Switch
-        checked={!!preferences.commands.find(
-          (command) => command.project == project.id && !command.view
-        )}
+        checked={hasCommand(preferences, project.id)}
         on:check={({ detail }) => {
+          if (detail === hasCommand(preferences, project.id)) return;
           save(
             produce(preferences, (draft) => {
               if (detail) {
@@ -44,11 +46,9 @@
     {#each project.views as view}
       <SettingItem name={`${project.name}: ${view.name}`} description={$i18n.t("settings.commands.view")}>
         <Switch
-          checked={!!preferences.commands.find(
-            (command) =>
-              command.project == project.id && command.view === view.id
-          )}
+          checked={hasCommand(preferences, project.id, view.id)}
           on:check={({ detail }) => {
+            if (detail === hasCommand(preferences, project.id, view.id)) return;
             save(
               produce(preferences, (draft) => {
                 if (detail) {

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { guarded } from "src/lib/errors/guarded";
+  import { Notice } from "obsidian";
   import type { DataFrame, DataRecord } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
   import type { ProjectDefinition } from "src/settings/settings";
@@ -29,6 +31,9 @@
   import { createSuggestionController } from "./dashboardSuggest";
   import { createSelectionStore, bindEscapeClear, SELECTION_CONTEXT_KEY, type SelectionStore } from "./canvasSelectionStore";
   import { createConfigEcho } from "./dashboardConfigEcho";
+  import { reorderWidgets } from "./dashboardReorder";
+  import { withPackedLayout } from "./layout/tileGrid";
+  import { createWidgetReveal } from "./dashboardReveal";
 
   export let project: ProjectDefinition;
   export let frame: DataFrame;
@@ -56,18 +61,8 @@
   }
   $: effectiveConfig = (commitTick, configEcho.receiveProp(config), configEcho.current);
   $: widgets = effectiveConfig?.widgets ?? [];
-  $: showToolbar = effectiveConfig?.showWidgetToolbar ?? false;
-  // #191. Filtered by kind HERE as well as in the migration, and the two are
-  // not redundant. The migration cleans the stored file; this decides what is
-  // drawn from whatever it is handed — and after the template dispatcher was
-  // removed every button runs the one remaining action, so an unfiltered
-  // «Обзорный пресет» left in a config would silently toggle the formula bar.
-  // Drawing only what this canvas can honour is the correctness half.
-  // Array-ness checked, not assumed: the migrator leaves a malformed value alone
-  // rather than throw, and `.filter()` on a string would down the whole canvas.
-  $: quickActions = (Array.isArray(effectiveConfig?.quickActions) ? effectiveConfig.quickActions : [])
-    .filter((action) => action?.kind === "toggle-formula-bar");
-  const widgetController = createWidgetController({ getConfig: () => effectiveConfig, saveConfig, i18nStore: i18n });
+  let rootEl: HTMLDivElement | null = null;
+  const widgetController = createWidgetController({ getConfig: () => effectiveConfig, saveConfig, i18nStore: i18n, onAdded: createWidgetReveal(() => rootEl) });
   function handleFieldPresetsChange(e: CustomEvent<{ fieldPresets: FieldPreset[]; activeFieldPresetId: string | undefined }>) {
     if (!effectiveConfig) return;
     const { fieldPresets, activeFieldPresetId } = e.detail;
@@ -75,7 +70,6 @@
     if (activeFieldPresetId !== undefined) saveConfig({ ...base, activeFieldPresetId });
     else { const { activeFieldPresetId: _omit, ...rest } = base; void _omit; saveConfig(rest); }
   }
-  function toggleToolbar() { if (effectiveConfig) saveConfig({ ...effectiveConfig, showWidgetToolbar: !showToolbar }); }
   const t = (key: string, opts?: Record<string, unknown>) => opts !== undefined ? $i18n.t(key, opts) : $i18n.t(key);
   const schemaController = createSchemaController({
     app: $app, api, getProjectId: () => project.id, t,
@@ -84,9 +78,9 @@
   const unsubCommands = subscribeCanvasCommands(() => schemaController.openSchema(), () => schemaController.openCreateField());
   onDestroy(() => { unsubCommands(); schemaController.dispose(); }); // CV-2: nothing opens after the view is gone
   let isRecalculating = false, showFormulaBar = false, activeFilterTab: ActiveFilterTab | null = null;
-  $: { void frame; isRecalculating = true; void Promise.resolve().then(() => { isRecalculating = false; }); }
-  $: fieldNames = frame.fields.map((f) => f.name);
-  $: previewRecord = frame.records[0];
+  $: { void frame; isRecalculating = true; schemaController.refresh(); /* i3-final: an open schema follows */ void Promise.resolve().then(() => { isRecalculating = false; }); }
+  $: fieldNames = [...frame.fields.map((f) => f.name), ...(effectiveConfig?.formulaFields ?? []).map(definition => definition.name)];
+  $: previewRecord = filteredFrame.records[0];
   function handleFilterTab(e: CustomEvent<{ field: string; value: string | null }>) {
     const { field, value } = e.detail;
     activeFilterTab = value === null ? null : { field, value };
@@ -96,7 +90,7 @@
     const f = a?.vault.getAbstractFileByPath(path);
     return f && "stat" in f ? (f as { stat: { ctime: number; mtime: number } }).stat : null;
   })($app) satisfies GetFileStat;
-  $: displayFrame = buildDisplayFrame(filteredFrame, effectiveConfig, getFileStat);
+  $: displayFrame = guarded("page", filteredFrame, () => buildDisplayFrame(filteredFrame, effectiveConfig, getFileStat));
   $: availableSources = ($settings.projects ?? []).filter((p) => p.id !== project.id).map((p) => ({ id: p.id, name: p.name }));
   $: availableWidgets = widgets.map((w) => ({ id: w.id, title: w.title }));
   const sourceStatesStore = writable<ReadonlyMap<string, ExternalSourceState>>(new Map());
@@ -112,19 +106,20 @@
     activeFilterTab = null;
   }
   $: dndWidgets = widgets.map((w) => ({ ...w }));
-  function handleDndConsider(e: CustomEvent<DndEvent<WidgetDefinition>>) { dndWidgets = e.detail.items; }
+  function handleDndConsider(e: CustomEvent<DndEvent<WidgetDefinition>>) { dndWidgets = reorderWidgets(widgets, e.detail.items, SHADOW_PLACEHOLDER_ITEM_ID.toString()); }
   function handleDndFinalize(e: CustomEvent<DndEvent<WidgetDefinition>>) {
-    dndWidgets = e.detail.items;
+    dndWidgets = reorderWidgets(widgets, e.detail.items);
     if (!effectiveConfig) return;
-    saveConfig({ ...effectiveConfig, widgets: dndWidgets.filter((w) => w.id !== SHADOW_PLACEHOLDER_ITEM_ID.toString()) });
+    saveConfig({ ...effectiveConfig, widgets: withPackedLayout(dndWidgets.filter((w) => w.id !== SHADOW_PLACEHOLDER_ITEM_ID.toString())) });
   }
   $: primaryDataTableId = effectiveConfig?.widgets.find((w) => w.type === "data-table" || w.type === "database-call")?.id ?? "";
   const selectionStore: SelectionStore = createSelectionStore();
   setContext<SelectionStore>(SELECTION_CONTEXT_KEY, selectionStore);
   onDestroy(bindEscapeClear(selectionStore));
-  function handleFormulaApply(e: CustomEvent<{ name: string; expression: string }>) {
-    widgetController.applyFormulaField(e.detail.name, e.detail.expression);
+  function handleFormulaApply(e: CustomEvent<{ name: string; expression: string; draft?: import("src/lib/formula/version").VersionedFormula }>) {
+    widgetController.applyFormulaField(e.detail.name, e.detail.expression, e.detail.draft);
     showFormulaBar = false;
+    new Notice($i18n.t("views.dashboard.formula.applied", { name: e.detail.name }));
   }
   const suggest = createSuggestionController({
     getConfig: () => effectiveConfig,
@@ -135,49 +130,36 @@
 </script>
 <ViewLayout>
   <ViewContent>
-    <div class="ppp-database-root" role="region" aria-label={$i18n.t("views.dashboard.name")}>
+    <div class="ppp-database-root" bind:this={rootEl} role="region" aria-label={$i18n.t("views.dashboard.name")}>
       <div class="ppp-toolbar-row">
-        <DashboardToolbar {showToolbar} {readonly} {showFormulaBar} currentWidgets={widgets}
-          on:toggleToolbar={toggleToolbar} on:openSchema={() => schemaController.openSchema()}
-          on:toggleFormulaBar={() => (showFormulaBar = !showFormulaBar)}
-          on:addWidget={(e) => widgetController.addWidget(e.detail)} />
+        <DashboardToolbar {readonly} {showFormulaBar} on:toggleFormulaBar={() => (showFormulaBar = !showFormulaBar)} />
         {#if isRecalculating}<span class="ppp-recalc-dot" aria-label={$i18n.t("views.dashboard.canvas.recalculating", { defaultValue: "Recalculating…" })} aria-live="polite" />{/if}
       </div>
-      {#if !readonly && quickActions.length > 0}
-        <div class="ppp-quick-actions" role="group" aria-label={$i18n.t("views.dashboard.quick.group", { defaultValue: "Quick actions" })}>
-          {#each quickActions as action (action.id)}
-            <!-- #191: `toggle-formula-bar` is the only kind left, so the call is
-                 direct. A dispatcher over a union of one would be ceremony that
-                 hides which of the two lines is the actual behaviour. -->
-            <button class="ppp-quick-action clickable-icon" on:click={() => (showFormulaBar = !showFormulaBar)}
-              aria-label={action.labelKey ? $i18n.t(action.labelKey, { defaultValue: action.label }) : action.label}>
-              {action.labelKey ? $i18n.t(action.labelKey, { defaultValue: action.label }) : action.label}
-            </button>
-          {/each}
-        </div>
-      {/if}
       {#if showFormulaBar && !readonly}
-        <FormulaBar fields={fieldNames} {previewRecord} on:apply={handleFormulaApply} on:cancel={() => (showFormulaBar = false)} />
+        <FormulaBar fields={fieldNames} {previewRecord} previewFrame={filteredFrame}
+          formulaFields={effectiveConfig?.formulaFields ?? []}
+          on:apply={handleFormulaApply} on:remove={(event) => { widgetController.removeFormulaField(event.detail); showFormulaBar = false; }}
+          on:cancel={() => (showFormulaBar = false)} />
       {/if}
       <FilterBridge {activeFilterTab} {readonly}
         canPromote={!!onViewFilterChange} on:promote={promoteLocalToGlobal} on:clear={() => (activeFilterTab = null)} />
-      {#if !readonly && widgets.length > 0}
-        <SmartSuggestionBus fields={frame.fields} {widgets} dismissed={effectiveConfig?.dismissedSuggestions ?? []} context={{ hostProjectId: project.id, projects: $settings.projects ?? [], hostViewFiltered: narrowsFrame(globalFilter) }}
-          on:accept={suggest.accept} on:dismissForever={suggest.dismiss} />
-      {/if}
       <WidgetGrid
         {widgets} {dndWidgets} canDnd={!readonly} {frame} {displayFrame} {api} {readonly} {getRecordColor}
         fields={frame.fields} tableConfig={effectiveConfig?.table} {primaryDataTableId}
         fieldPresets={effectiveConfig?.fieldPresets ?? []} activeFieldPresetId={effectiveConfig?.activeFieldPresetId}
         {availableSources} {availableWidgets} {rightFrames} sourceStates={$sourceStatesStore} {project}
         on:consider={handleDndConsider} on:finalize={handleDndFinalize} on:filter={handleFilterTab}
-        on:showToolbar={() => { if (!effectiveConfig) return; saveConfig({ ...effectiveConfig, showWidgetToolbar: true }); }}
-        on:addWidget={(e) => widgetController.addWidget(e.detail)}
+        on:insert={(e) => widgetController.addWidget(e.detail.type, undefined, e.detail.index)}
+        on:duplicateWidget={(e) => widgetController.duplicateWidget(e.detail)}
         on:configChange={widgetController.handleWidgetConfigChange}
         on:tableConfigChange={widgetController.handleTableConfigChange}
         on:fieldPresetsChange={handleFieldPresetsChange}
         on:removeWidget={(e) => widgetController.removeWidget(e.detail)}
-      />
+        on:openProperties={() => schemaController.openSchema()} on:layout={(e) => effectiveConfig && saveConfig({ ...effectiveConfig, widgets: e.detail })}
+      ><!-- B7: suggestions only as a quiet offer on an empty page, never above blocks; a linked block needs a block to link to. -->
+        <svelte:fragment slot="empty-extra">{#if !readonly}<SmartSuggestionBus fields={frame.fields} {widgets} dismissed={[...(effectiveConfig?.dismissedSuggestions ?? []), "relation-block"]} context={{ hostProjectId: project.id, projects: $settings.projects ?? [], hostViewFiltered: narrowsFrame(globalFilter) }}
+          on:accept={suggest.accept} on:dismissForever={suggest.dismiss} />{/if}</svelte:fragment>
+      </WidgetGrid>
     </div>
   </ViewContent>
 </ViewLayout>
@@ -187,8 +169,4 @@
   .ppp-toolbar-row { display: flex; align-items: center; gap: 0.375rem; }
   .ppp-recalc-dot { display: inline-block; width: 0.375rem; height: 0.375rem; border-radius: 50%; background: var(--interactive-accent); opacity: 0.7; animation: ppp-pulse 0.8s ease-in-out infinite alternate; flex-shrink: 0; }
   @keyframes ppp-pulse { from { opacity: 0.3; } to { opacity: 0.9; } }
-  .ppp-quick-actions { display: flex; align-items: center; gap: 0.375rem; flex-wrap: wrap; }
-  .ppp-quick-action { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.625rem; font-size: var(--font-ui-small); color: var(--text-normal); background: var(--background-secondary); border: var(--ppp-border-width) solid var(--background-modifier-border); border-radius: var(--radius-s, 0.25rem); cursor: pointer; }
-  .ppp-quick-action:hover { border-color: var(--interactive-accent); background: var(--background-modifier-hover); }
-  .ppp-quick-action:focus-visible { outline: 0.125rem solid var(--interactive-accent); outline-offset: 0.0625rem; }
 </style>

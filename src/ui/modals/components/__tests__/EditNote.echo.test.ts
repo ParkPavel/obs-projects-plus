@@ -5,8 +5,8 @@
  *
  * `ModalLayout`, `ModalContent` and `SettingItem` need stand-ins that render
  * their slots — `src/__mocks__/obsidian-svelte.js` renders none of them, so a
- * field mounted inside one would never reach the DOM. `NumberInput` is the
- * same stand-in as in `FieldControl.echo.test.ts`.
+ * field mounted inside one would never reach the DOM. Numeric editing uses the
+ * real shared NumberField and an explicit confirmation before autosave.
  */
 
 // Through its index the jest Svelte transform hands back the module object
@@ -102,7 +102,7 @@ function mount(record: DataRecord, extra: Record<string, unknown> = {}) {
 }
 
 function numberInput(target: HTMLElement): HTMLInputElement {
-  const input = target.querySelector<HTMLInputElement>("[data-testid='number-input']");
+  const input = target.querySelector<HTMLInputElement>(".ppp-number-field");
   if (!input) throw new Error("number input not found");
   return input;
 }
@@ -117,6 +117,7 @@ describe("EditNote / echo (N1) — a stale record push does not re-save", () => 
     const input = numberInput(target);
     input.value = "8";
     input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
 
     await jest.advanceTimersByTimeAsync(300);
     expect(onSave).toHaveBeenCalledTimes(1);

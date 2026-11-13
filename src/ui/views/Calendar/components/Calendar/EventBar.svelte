@@ -3,9 +3,11 @@
   import type { ProcessedRecord } from '../../types';
   import type { TimelineDragManager } from '../../dnd/TimelineDragManager';
   import type { DragMode } from '../../dnd/types';
+  import { pressMode, handleHitFromTarget } from '../../dnd/pressMode';
   import { getDisplayName, cleanWikiLink } from "src/ui/views/Board/components/Board/boardHelpers";
   import dayjs from 'dayjs';
-  
+  import { MIN_EVENT_VISUAL_MINUTES } from '../../utils/eventLayout';
+
   /**
    * EventBar - Positioned event bar for timeline views
    * Displays event as colored bar with time-based positioning
@@ -51,19 +53,22 @@
   $: {
     const startMinutes = startDate.hour() * 60 + startDate.minute();
     const startFromBeginning = startMinutes - (startHour * 60);
-    
+
     // If no end date, default to 1 hour duration
     const effectiveEndDate = endDate || startDate.add(1, 'hour');
-    const endMinutes = effectiveEndDate.hour() * 60 + effectiveEndDate.minute();
-    const endFromBeginning = endMinutes - (startHour * 60);
-    
+    // i3-calendar: the length is the difference, not the end's clock time, so
+    // a segment ending at the next midnight (DayColumn's day clip) is 24:00,
+    // not 00:00 and a negative height.
+    const durationMinutes = Math.max(0, effectiveEndDate.diff(startDate, 'minute', true));
+
     // Convert minutes to rem (hourHeightRem per 60 minutes)
     const minuteHeightRem = hourHeightRem / 60;
     topRem = Math.max(0, startFromBeginning * minuteHeightRem);
-    // v8.2: Min visual height = 20 minutes (hourHeightRem * 20/60 = hourHeightRem/3)
-    // This MUST match MIN_VISUAL_DURATION_MINUTES in EventBarContainer for collision sync
-    const MIN_VISUAL_MINUTES = 20;
-    heightRem = Math.max(hourHeightRem * MIN_VISUAL_MINUTES / 60, (endFromBeginning - startFromBeginning) * minuteHeightRem);
+    // i3-calendar: one shared minimum (MIN_EVENT_VISUAL_MINUTES, 15 min) for
+    // the bar and EventBarContainer's overlap layout; no CSS minimum on top.
+    heightRem = Math.max(MIN_EVENT_VISUAL_MINUTES, durationMinutes) * minuteHeightRem;
+    // A bar too low for a padded title line shows the title tight on one line.
+    isShort = heightRem < 1.5;
     
     // Column positioning for overlapping events (guard against division by zero)
     const safeTotalColumns = totalColumns > 0 ? totalColumns : 1;
@@ -73,6 +78,7 @@
   
   let topRem: number;
   let heightRem: number;
+  let isShort = false;
   let leftPercent: number;
   let widthPercent: number;
   
@@ -119,21 +125,20 @@
    * making it impossible to drag small events (move mode) via class detection.
    * Using clientY÷barHeight ratio gives exact control regardless of pseudo-element zones.
    */
-  function getBarMode(clientY: number): DragMode {
+  function getBarMode(clientY: number, target: EventTarget | null, coarse: boolean): DragMode {
     if (!barElement) return 'move';
     const rect = barElement.getBoundingClientRect();
-    const relY = clientY - rect.top;
-    const barH = rect.height;
-    // v4.0.2: Resize zone: 1rem (desktop) / 1.25rem (touch) or 35% of bar height.
-    // Larger zones make it easier to "catch" the resize edge on mobile.
     // coercion-exempt: Class C - a computed CSS length read back from the DOM, not record data
     const remPx = parseFloat(getComputedStyle(barElement).fontSize) || 16;
-    const isTouchDevice = 'ontouchstart' in window;
-    const zoneRem = isTouchDevice ? 1.25 : 1;
-    const zone = Math.min(zoneRem * remPx, barH * 0.35);
-    if (relY <= zone) return 'resize-top';
-    if (relY >= barH - zone) return 'resize-bottom';
-    return 'move';
+    // One shared decision (dnd/pressMode.ts), made once at pointerDown. A press
+    // on a visible handle in its half of the bar resizes; otherwise the edge band.
+    return pressMode({
+      relY: clientY - rect.top,
+      barH: rect.height,
+      remPx,
+      coarse,
+      handleHit: handleHitFromTarget(target, barElement),
+    });
   }
 
   function handleMouseDown(event: MouseEvent) {
@@ -144,7 +149,7 @@
     // Don't interfere with modifier-key clicks (open in new tab etc.)
     if (event.ctrlKey || event.metaKey || event.shiftKey) return;
 
-    const mode = getBarMode(event.clientY);
+    const mode = getBarMode(event.clientY, event.target, false);
 
     // Prevent default to avoid text selection
     event.preventDefault();
@@ -161,7 +166,7 @@
     const touch = event.touches[0];
     if (!touch) return;
 
-    const mode = getBarMode(touch.clientY);
+    const mode = getBarMode(touch.clientY, event.target, true);
 
     // Do NOT preventDefault here — allow page scroll if long-press fails
     dragManager.initiate(record, processedRecord, event, mode, barElement);
@@ -173,6 +178,7 @@
     class="projects-calendar-event-bar projects-calendar-event-bar-clickable"
     class:dnd-dragging={isDragging}
     class:dnd-handles-visible={showHandles}
+    class:is-short={isShort}
     type="button"
     data-record-id={record.id}
     style="
@@ -210,6 +216,7 @@
 {:else}
   <div
     class="projects-calendar-event-bar"
+    class:is-short={isShort}
     data-record-id={record.id}
     style="
       top: {topRem}rem; 
@@ -275,6 +282,13 @@
   
   button.projects-calendar-event-bar {
     cursor: pointer;
+  }
+
+  /* i3-calendar: outranks styles.css's coarse-pointer 2.75rem button minimum
+     (0-2-1), which drew a 15-minute event an hour and more tall. */
+  button.projects-calendar-event-bar.projects-calendar-event-bar {
+    min-height: 0;
+    min-width: 0;
   }
   
   button.projects-calendar-event-bar:hover {
@@ -378,11 +392,35 @@
     }
   }
 
-  /* Touch device: minimum touch target height */
+  /* i3-calendar: a short event (15–40 min) keeps its true height; the title
+     sits tight on one line instead of padding pushing it past the bar. */
+  .projects-calendar-event-bar.is-short {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .projects-calendar-event-bar.is-short .projects-calendar-event-title {
+    line-height: 1.1;
+  }
+
+  /* Touch device. i3-calendar: no visual minimum height any more — a
+     2.25rem floor drew a 15-minute event over an hour (2rem) on a phone and
+     over the events after it. The finger target grows invisibly instead:
+     the ::after band reaches past the bar's top and bottom. */
   @media (pointer: coarse) {
     .projects-calendar-event-bar {
-      min-height: 2.25rem;
       padding: 0.25rem 0.375rem;
+    }
+    .projects-calendar-event-bar.is-short {
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+    button.projects-calendar-event-bar::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: -0.375rem;
+      bottom: -0.375rem;
     }
 
     /* v4.0.2: Larger, more visible triangle handles for touch */

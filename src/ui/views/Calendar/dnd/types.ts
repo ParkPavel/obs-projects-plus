@@ -32,8 +32,6 @@ export const DND_CONSTANTS = {
   MIN_DURATION_MINUTES: 15,
   /** Default duration for new events created via tap (minutes) */
   CREATION_DEFAULT_DURATION: 60,
-  /** Auto-confirm timeout for touch-tap creation preview (ms) */
-  CREATION_CONFIRM_TIMEOUT: 3000,
   /** Triangle handle size on desktop (rem) */
   TRIANGLE_SIZE_DESKTOP: 0.5,
   /** Triangle handle size on touch devices (rem) */
@@ -97,6 +95,8 @@ export interface GhostPosition {
   date: dayjs.Dayjs;
   /** v3.2.6: Event title for ghost display */
   title?: string;
+  /** Timed move: days from the start day to the end day (overnight 1) */
+  endDayOffset?: number;
   /** v3.2.2: Viewport-fixed rect for cross-period ghost rendering */
   viewportRect?: { top: number; left: number; width: number; height: number };
 }

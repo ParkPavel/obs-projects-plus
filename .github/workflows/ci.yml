@@ -28,4 +28,8 @@ jobs:
       - name: Lint plugin (ESLint)
         run: npm run lint
       - name: Check plugin (Svelte)
-        run: npm run svelte-check
+        run: npm run svelte-check -- --fail-on-warnings
+      - name: Check generated documentation and site links
+        run: |
+          node scripts/check-docs-site.mjs
+          node scripts/test-docs-site.mjs

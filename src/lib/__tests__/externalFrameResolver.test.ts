@@ -23,6 +23,40 @@ const { DataviewDataSource } = require("src/lib/datasources/dataview/datasource"
 
 const EMPTY_FRAME = { fields: [], records: [] } as const;
 
+it("external project enrichment finds backlinks across acquired source boundaries", async () => {
+  FolderDataSource.mockImplementation((_fileSystem: unknown, project: { dataSource: { config: { path: string } } }) => ({
+    queryAll: async () => ({
+      fields: [{ name: "owner", type: "relation", identifier: false, derived: false, repeated: false }],
+      records: project.dataSource.config.path === "A" ? [{ id: "A.md", values: { owner: "[[B]]" } }] : [{ id: "B.md", values: {} }],
+    }),
+  }));
+  const project = makeProject("p", "folder");
+  project.dataSource = { kind: "folder", config: { path: "A", recursive: true } };
+  project.additionalSources = [{ kind: "folder", id: "extra", config: { path: "B", recursive: true } }];
+  const frame = await resolveExternalFrame("p", makeDeps({ projects: [project] }));
+  expect(frame?.records.find(row => row.id === "B.md")?.values["owner_backlinks"]).toEqual(["[[A]]"]);
+});
+
+it("derived selections retain additional-source records and project computations", async () => {
+  FolderDataSource.mockImplementation((_fileSystem: unknown, project: { dataSource: { config: { path: string } } }) => ({
+    queryAll: async () => ({ fields: [], records: [{ id: project.dataSource.config.path + ".md", values: {} }] }),
+  }));
+  const project = makeProject("p", "folder");
+  project.dataSource = { kind: "folder", id: "primary", config: { path: "A", recursive: true } };
+  project.fieldConfig = { computed: { formula: "1 + 1" } };
+  project.additionalSources = [
+    { kind: "folder", id: "extra", config: { path: "B", recursive: true } },
+    { kind: "folder", config: { path: "C", recursive: true } },
+    { kind: "derived", id: "selected", config: { from: "extra", where: { conjunction: "and", conditions: [] } } },
+  ];
+  const deps = makeDeps({ projects: [project] });
+  const selected = await resolveExternalFrame("p::selected", deps);
+  expect(selected?.records.map(row => row.id)).toEqual(["B.md"]);
+  expect(selected?.records[0]?.values["computed"]).toBe(2);
+  const whole = await resolveExternalFrame("p", deps);
+  expect(whole?.records.map(row => row.id)).toEqual(["A.md", "B.md", "C.md"]);
+});
+
 function makeProject(
   id: string,
   kind: "folder" | "tag" | "dataview"
@@ -210,5 +244,31 @@ describe("resolveExternalFrame — rollup columns", () => {
     expect(anna.values["visitCount"]).toBe(2);
     expect(anna.values["paid"]).toBe(6500);
     expect(out!.fields.find((f: { name: string }) => f.name === "paid")?.derived).toBe(true);
+  });
+});
+
+describe("i2-data (D19) — a project's own source is a base", () => {
+  it("a saved selection narrows the project's records by its filter", async () => {
+    FolderDataSource.mockImplementation(() => ({
+      queryAll: async () => ({
+        fields: [{ name: "type", type: "string", repeated: false, identifier: false, derived: false }],
+        records: [
+          { id: "a.md", values: { type: "client" } },
+          { id: "b.md", values: { type: "visit" } },
+        ],
+      }),
+    }));
+    const project = makeProject("p1", "folder");
+    project.additionalSources = [{
+      kind: "derived", id: "clients", name: "Клиенты",
+      config: { from: "project", where: { conjunction: "and", conditions: [{ field: "type", operator: "is", value: "client", enabled: true }] } },
+    }];
+    const frame = await resolveExternalFrame("p1::clients", makeDeps({ projects: [project] }));
+    expect(frame?.records.map((r) => r.id)).toEqual(["a.md"]);
+  });
+
+  it("an unknown source is no base", async () => {
+    const project = makeProject("p1", "folder");
+    expect(await resolveExternalFrame("p1::missing", makeDeps({ projects: [project] }))).toBeNull();
   });
 });

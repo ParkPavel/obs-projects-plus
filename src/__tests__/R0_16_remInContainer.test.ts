@@ -127,8 +127,25 @@ const WINDOW_ANCHORED = [
  *     Obsidian's --shadow-s / --shadow-l and dims onto
  *     --background-modifier-cover, taking their rem offsets with them.
  *     Re-measured.
+ *   778 — stab-forms moved the dashboard table search, choice and relation
+ *     inputs onto the shared field primitives, whose sizes are not
+ *     hand-written in those widgets. Re-measured.
+ *   B7 — the header icon cluster, WidgetToolbar and the old palette were
+ *     replaced by one menu and one insert point. Re-measured.
  */
-const REM_IN_CONTAINER_BUDGET = 790;
+// Wave 2: Stats grid breakpoint sizes now follow the container font scale.
+// 777 → 775 (3.7.2 B4): month +N row and duplicate time fields re-measured.
+// → 763 (3.7.2 B7): dashboard shell lost its toolbar and palette rules.
+// Integration p372-rc: re-measured on the merged tree.
+// → 760 (3.7.2 i2): the in-between «+» lost its translate and sizes in em.
+// → 691 (3.7.2 i3): month bars and multi-day strips lost their labels and per-width text sizes.
+// → 690 (3.7.2 i3-final): the database-call block's «not implemented» placeholder left for an EmptyState.
+// → 686 (w4-p10a): the block filter's pill row became one button in the views' row.
+// → 683 (formula editor): obsolete compute input styles replaced by the shared editor.
+// → 679 (w4-full-stack): RelationPickerPopover moved to FloatingPopup; its
+// duplicated container-scoped popup sizing is no longer shipped by the widget.
+// → 662: the calendar draft resize grip uses em sizing inside its inline container.
+const REM_IN_CONTAINER_BUDGET = 662;
 
 /** A length in `rem`. `0.5rem`, `.5rem` and `1.5rem` all count once. */
 const REM_LENGTH = /\b\d*\.?\d+rem\b/g;

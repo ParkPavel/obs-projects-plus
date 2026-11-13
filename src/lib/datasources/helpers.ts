@@ -9,6 +9,8 @@ import {
 } from "../dataframe/dataframe";
 import { stripToPath as stripWikiLink } from "src/lib/engine/wikilink";
 import { toNumber } from "src/lib/engine/numeric";
+import { dateAsText, parseStoredDate } from "src/lib/helpers/dateShape";
+import { markTouched, touchedKeys } from "src/lib/recordDiff";
 
 /**
  * Parses the values for each record based on the detected field types.
@@ -24,7 +26,8 @@ import { toNumber } from "src/lib/engine/numeric";
  */
 export function parseRecords(
   records: DataRecord[],
-  fields: DataField[]
+  fields: DataField[],
+  writeFormat?: string
 ): DataRecord[] {
   for (const field of fields) {
     for (const record of records) {
@@ -33,7 +36,15 @@ export function parseRecords(
       switch (field.type) {
         case DataFieldType.Date:
           if (typeof value === "string") {
-            record.values[field.name] = dayjs(value).toDate();
+            // A date is read in the order it is written: `10.04.2026` is the
+            // 10th of April, not what `Date()` makes of it (the 4th of October).
+            // A spelling nobody here knows is left to dayjs, as before. A known
+            // spelling that names no day (`2024-02-30`) stays the original
+            // string: it stays visible and editable instead of being rolled
+            // over to another day or erased.
+            const stored = parseStoredDate(value, writeFormat);
+            if (stored === undefined) record.values[field.name] = dayjs(value).toDate();
+            else if (stored !== null) record.values[field.name] = stored;
           }
           // Date objects from YAML parser are already Date — keep as-is
           break;
@@ -66,7 +77,8 @@ export function parseRecords(
           break;
         case DataFieldType.String:
           if (value instanceof Date) {
-            record.values[field.name] = dayjs(value).format("YYYY-MM-DD");
+            // w4-p01 (F06): the time is kept — this cut it to YYYY-MM-DD.
+            record.values[field.name] = dateAsText(value);
           } else if (value !== null && value !== undefined && typeof value === "object" && !Array.isArray(value)) {
             // /skip: Nested YAML objects (e.g. version: {major:1}) → JSON string so value is visible in editor
             try {
@@ -127,7 +139,20 @@ export function updateRecordValues(
   record: Readonly<DataRecord>,
   values: Readonly<DataRecord["values"]>
 ): DataRecord {
-  return { ...record, values: { ...record.values, ...values } };
+  // A record built from an already changed one keeps both sets of keys (a
+  // board move sets the column, then the order).
+  const keys = new Set([...(touchedKeys(record) ?? []), ...Object.keys(values)]);
+  return markTouched({ ...record, values: { ...record.values, ...values } }, [...keys]);
+}
+
+/**
+ * Keys the plugin stores its own state in (`pp_overlay`, `pp_types`) or that
+ * Obsidian reserves (`$…`). They are not properties of the base: no field
+ * list, picker or table shows them (D09). The virtual time fields
+ * (`pp_created_time`, …) are real read-only fields and stay.
+ */
+export function isPluginStorageKey(key: string): boolean {
+  return key === "pp_overlay" || key === "pp_types" || key.startsWith("$");
 }
 
 export function detectFields(records: DataRecord[]): DataField[] {
@@ -135,7 +160,8 @@ export function detectFields(records: DataRecord[]): DataField[] {
 
   records.forEach((record) => {
     Object.entries(record.values).forEach(([field, value]) => {
-      valuesByField[field] = [...(valuesByField[field] ?? []), value];
+      if (isPluginStorageKey(field)) return;
+      (valuesByField[field] ??= []).push(value);
     });
   });
 

@@ -107,18 +107,22 @@ describe("a template path is normalised before it is looked up", () => {
 describe("a recovery note is created through the vault when it is given", () => {
   test("the note and its folder go through the vault, so Obsidian indexes them", async () => {
 
-    const onDisk = new Set<string>();
+    const onDisk = new Map<string, string>();
     const adapterWrites: string[] = [];
     const adapter = {
       exists: async (p: string) => onDisk.has(p),
-      read: async () => "",
+      read: async (p: string) => {
+        const contents = onDisk.get(p);
+        if (contents === undefined) throw new Error("ENOENT");
+        return contents;
+      },
       write: async (p: string) => { adapterWrites.push(p); },
       mkdir: async () => { adapterWrites.push("mkdir"); },
     };
     const created: string[] = [];
     const folders: string[] = [];
     const vault = {
-      create: async (p: string) => { created.push(p); onDisk.add(p); },
+      create: async (p: string, contents: string) => { created.push(p); onDisk.set(p, contents); },
       createFolder: async (p: string) => { folders.push(p); },
     };
     const at = await writeConflictNote(adapter, '{"version":4}', new Date(), null, vault);
@@ -126,6 +130,7 @@ describe("a recovery note is created through the vault when it is given", () => 
     expect(created).toEqual([at]);
     expect(folders).toEqual([CONFLICT_NOTE_FOLDER]);
     expect(adapterWrites).toEqual([]);
+    expect(await adapter.read(at!)).toContain('{"version":4}');
   });
 });
 

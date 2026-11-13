@@ -6,6 +6,7 @@
   import { dndzone } from "svelte-dnd-action";
   import { app } from "src/lib/stores/obsidian";
   import { openRecord } from "src/lib/record/openRecord";
+  import { isDraftId } from "../../draft/calendarDraft";
   import { createEventDispatcher } from "svelte";
   import type {
     DataRecord,
@@ -96,7 +97,10 @@
           tooltip={getDisplayName(record.id)}
           on:open={({ detail: { linkText, sourcePath, newLeaf, shiftKey } }) => {
             // v3.0.8: Unified note navigation — Shift → new window, Ctrl → new tab, else → modal
-            if (shiftKey) {
+            // w4-calendar-draft: a draft has no note to open in a tab or window.
+            if (isDraftId(record.id)) {
+              onRecordClick?.(record);
+            } else if (shiftKey) {
               void openRecord({ id: linkText, sourcePath }, "window", { app: $app });
             } else if (newLeaf) {
               void openRecord({ id: linkText, sourcePath }, "tab", { app: $app });

@@ -46,6 +46,8 @@ export class NativeQueryDataSource extends DataSource {
       fileSystem: this.fileSystem,
       preferences: this.preferences,
       excludedNotes: this.project.excludedNotes,
+      fieldConfig: this.project.fieldConfig,
+      ...(this.project.dateFormat ? { dateFormat: this.project.dateFormat } : {}),
     });
   }
 

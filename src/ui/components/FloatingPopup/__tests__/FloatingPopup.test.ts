@@ -190,6 +190,42 @@ describe("FloatingPopup", () => {
     view.destroy();
   });
 
+  test("a preferred-width popup retains its cap when repeated positioning computes the same style", async () => {
+    const trigger = createTrigger({top:100,left:0,bottom:120,right:40,width:40,height:20});
+    const view = mount({open:true,triggerEl:trigger,width:"44rem"});
+    try {
+      await flush(10);
+      const popup = stubPopupRect(1200,200)!;
+      window.dispatchEvent(new Event("resize")); await flush(20);
+      const cap = popup.style.maxWidth;
+      expect(cap).not.toBe("");
+      window.dispatchEvent(new Event("resize")); await flush(20);
+      expect(popup.style.maxWidth).toBe(cap);
+    } finally {view.destroy();trigger.remove();}
+  });
+
+  test("outside dismissal blurs its native input before notifying the containing form", async () => {
+    const view=mount({open:true}); await flush(10);
+    const popup=document.querySelector(".ppp-popup--floating")!;
+    const input=document.createElement("input"),order:string[]=[];
+    popup.append(input);input.focus();input.addEventListener("blur",()=>order.push("blur"));
+    view.component.$on("close",()=>order.push("close"));
+    document.body.dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));await flush();
+    expect(order).toEqual(["blur","close"]);view.destroy();
+  });
+
+  test("an unfinished native composition prevents outside dismissal", async () => {
+    const view=mount({open:true});await flush(10);
+    const popup=document.querySelector(".ppp-popup--floating")!,input=document.createElement("input");
+    popup.append(input);input.focus();
+    input.dispatchEvent(new CompositionEvent("compositionstart",{bubbles:true}));
+    document.body.dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));await flush();
+    expect(document.querySelector(".ppp-popup--floating")).toBe(popup);
+    input.dispatchEvent(new CompositionEvent("compositionend",{bubbles:true}));
+    document.body.dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));await flush();
+    expect(document.querySelector(".ppp-popup--floating")).toBeNull();view.destroy();
+  });
+
   test("removes the resize listener on destroy (#098)", async () => {
     const removeSpy = jest.spyOn(window, "removeEventListener");
     const trigger = createTrigger({ top: 100, left: 50, bottom: 120, right: 150, width: 100, height: 20 });
@@ -272,9 +308,28 @@ describe("FloatingPopup", () => {
 
     await flush(10);
 
-    expect(view.target.querySelector(".ppp-popup-backdrop")).not.toBeNull();
-    expect(view.target.querySelector(".ppp-popup--bottom-sheet")).not.toBeNull();
+    expect(document.querySelector(".ppp-popup-backdrop")?.parentElement).toBe(document.body);
+    expect(document.querySelector(".ppp-popup--bottom-sheet")).not.toBeNull();
     expect(document.querySelector(".ppp-popup--floating")).toBeNull();
+
+    view.destroy();
+    expect(document.querySelector(".ppp-popup-backdrop")).toBeNull();
+    isMobile.set(false);
+  });
+
+  test("keeps anchored popovers floating on mobile without a modal backdrop", async () => {
+    isMobile.set(true);
+    const trigger = createTrigger({ top: 100, left: 100, bottom: 120, right: 200, width: 100, height: 20 });
+    const view = mount({ open: true, triggerEl: trigger, mobilePresentation: "anchored", role: "dialog" });
+
+    await flush(10);
+
+    const popup = document.querySelector(".ppp-popup--floating");
+    expect(popup).not.toBeNull();
+    expect(popup?.parentElement).toBe(document.body);
+    expect(popup).not.toHaveAttribute("aria-modal");
+    expect(document.querySelector(".ppp-popup-backdrop")).toBeNull();
+    expect(document.querySelector(".ppp-popup--bottom-sheet")).toBeNull();
 
     view.destroy();
     isMobile.set(false);

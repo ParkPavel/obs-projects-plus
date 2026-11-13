@@ -11,9 +11,14 @@
  *   3. When `processFrontMatter` returns `false` (unsupported), DataApi
  *      falls back to the legacy `read()` / `write()` pipeline.
  */
-import { DataFieldType, type DataField, type DataRecord } from "src/lib/dataframe/dataframe";
-import { DataApi, applyRecordToFrontmatter } from "src/lib/dataApi";
-import { IFile, type IFileSystem } from "src/lib/filesystem/filesystem";
+jest.mock("yaml", () => jest.requireActual("../../../node_modules/yaml/dist/index.js"));
+const { DataFieldType } = require("src/lib/dataframe/dataframe");
+const { DataApi, applyRecordToFrontmatter } = require("src/lib/dataApi");
+const { IFile }: { IFile: typeof import("src/lib/filesystem/filesystem").IFile } = require("src/lib/filesystem/filesystem");
+type DataField = import("src/lib/dataframe/dataframe").DataField;
+type DataRecord = import("src/lib/dataframe/dataframe").DataRecord;
+type IFile = import("src/lib/filesystem/filesystem").IFile;
+type IFileSystem = import("src/lib/filesystem/filesystem").IFileSystem;
 
 const fields: DataField[] = [
   { name: "title", type: DataFieldType.String, repeated: false, derived: false, identifier: false },
@@ -89,6 +94,16 @@ describe("applyRecordToFrontmatter", () => {
 });
 
 describe("DataApi.updateRecord — Phase 3 / F6", () => {
+  test.each([true, false])("repeated dates use the existing local field policy through writer %s and real YAML", async supported => {
+    const field: DataField = { ...fields[1]!, repeated: true };
+    const values = [new Date(2026, 10, 5), new Date(2026, 10, 6, 9, 30), 0, false, null, "0"];
+    const file = new FakeFile(supported), api = new DataApi(makeFs(file));
+    await api.updateRecord([field], { id: file.path, values: { due: values } });
+    const yaml = jest.requireActual("../../../node_modules/yaml/dist/index.js");
+    const stored = supported ? file.fmSeed : yaml.parse(file.writeSpy.mock.calls[0]![0].split("---")[1]);
+    expect(stored.due).toEqual(["2026-11-05", "2026-11-06T09:30", 0, false, null, "0"]);
+    expect(yaml.parse(yaml.stringify(stored)).due).toEqual(stored.due);
+  });
   test("prefers processFrontMatter when supported and skips full-file write", async () => {
     const file = new FakeFile(true);
     const api = new DataApi(makeFs(file));

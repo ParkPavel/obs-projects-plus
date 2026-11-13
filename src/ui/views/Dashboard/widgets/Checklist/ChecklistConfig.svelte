@@ -2,6 +2,9 @@
   import { createEventDispatcher } from "svelte";
   import type { DataField } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
+  import NumberField from "src/ui/components/fields/NumberField.svelte";
+  import ComboField from "src/ui/components/fields/ComboField.svelte";
+  import { namesToOptions } from "src/ui/components/fields/comboOptions";
 
   export let config: Record<string, unknown> = {};
   export let fields: DataField[] = [];
@@ -18,11 +21,8 @@
   // coercion-exempt: Class C - plugin/widget configuration from a form control, not record data
   $: limit = Number(config["limit"] ?? 0) || 0;
 
-  $: fieldNames = fields.map((f) => f.name);
+  $: fieldOptions = namesToOptions(fields.map((f) => f.name));
 
-  function inputVal(e: Event): string {
-    return (e.currentTarget as HTMLInputElement).value;
-  }
 
   function selectVal(e: Event): string {
     return (e.currentTarget as HTMLSelectElement).value;
@@ -34,25 +34,27 @@
 </script>
 
 <div class="ppp-checklist-config">
+  <!-- svelte-ignore a11y-label-has-associated-control -->
   <label>
     {$i18n.t("views.dashboard.checklist.config.check-field", { defaultValue: "Checkbox field" })}
-    <input
-      type="text"
-      list="ppp-checklist-fields"
+    <ComboField
       value={checkField}
+      options={fieldOptions}
+      allowCustom
       placeholder={$i18n.t("views.dashboard.checklist.config.check-field-placeholder", { defaultValue: "e.g. completed" })}
-      on:input={(e) => emit({ field: inputVal(e) })}
+      on:commit={(e) => emit({ field: e.detail.value })}
     />
   </label>
 
+  <!-- svelte-ignore a11y-label-has-associated-control -->
   <label>
     {$i18n.t("views.dashboard.checklist.config.label-field", { defaultValue: "Label field" })}
-    <input
-      type="text"
-      list="ppp-checklist-fields"
+    <ComboField
       value={labelField}
+      options={fieldOptions}
+      allowCustom
       placeholder={$i18n.t("views.dashboard.checklist.config.label-field-placeholder", { defaultValue: "name" })}
-      on:input={(e) => emit({ labelField: inputVal(e) })}
+      on:commit={(e) => emit({ labelField: e.detail.value })}
     />
   </label>
 
@@ -66,14 +68,15 @@
   </label>
 
   <div class="ppp-checklist-config-row">
+    <!-- svelte-ignore a11y-label-has-associated-control -->
     <label>
       {$i18n.t("views.dashboard.checklist.config.sort-field", { defaultValue: "Sort field" })}
-      <input
-        type="text"
-        list="ppp-checklist-fields"
+      <ComboField
         value={sortField}
+        options={fieldOptions}
+        allowCustom
         placeholder={$i18n.t("views.dashboard.checklist.config.sort-field-placeholder", { defaultValue: "name" })}
-        on:input={(e) => emit({ sortField: inputVal(e) })}
+        on:commit={(e) => emit({ sortField: e.detail.value })}
       />
     </label>
 
@@ -86,22 +89,19 @@
     </label>
   </div>
 
+  <!-- svelte-ignore a11y-label-has-associated-control -->
   <label>
     {$i18n.t("views.dashboard.checklist.config.limit", { defaultValue: "Limit" })}
-    <input
-      type="number"
-      min="0"
+    <NumberField
+      min={0}
+      integer
+      allowEmpty
       value={limit}
       placeholder={$i18n.t("views.dashboard.checklist.config.limit-placeholder", { defaultValue: "0 = no limit" })}
-      on:input={(e) => emit({ limit: Math.max(0, /* coercion-exempt: a number input's own value, min=0 above — a widget setting, not record data */ Number(inputVal(e)) || 0) })}
+      on:input={(e) => emit({ limit: e.detail ?? 0 })}
     />
   </label>
 
-  <datalist id="ppp-checklist-fields">
-    {#each fieldNames as name}
-      <option value={name} />
-    {/each}
-  </datalist>
 </div>
 
 <style>
@@ -128,8 +128,9 @@
     color: var(--text-muted);
   }
 
-  input,
-  select {
+  .ppp-checklist-config :global(input.ppp-text-field),
+  select,
+  .ppp-checklist-config :global(.ppp-combo-input) {
     min-height: 2rem;
     padding: 0.3rem 0.45rem;
     border-radius: var(--radius-s, 0.25rem);

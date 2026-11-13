@@ -2,8 +2,8 @@
   import { followLinkedSelection, isFollowing } from "../_shared/selectionFollow";
   import type { DataFrame, DataRecord, DataValue } from "src/lib/dataframe/dataframe";
   import type { Optional } from "src/lib/dataframe/dataframe";
-  import type { StatsConfig, StatsCardConfig } from "../../types";
-  import { DataFieldType } from "src/lib/dataframe/dataframe";
+  import type { StatsConfig } from "../../types";
+  import { i18n } from "src/lib/stores/i18n";
   import { getContext, onDestroy } from "svelte";
   import StatsCard from "./StatsCard.svelte";
   import {
@@ -39,25 +39,7 @@
     : () => {};
   onDestroy(unsubscribeSelection);
 
-  /** Build default cards from numeric fields when config is empty */
-  function buildDefaultCards(df: DataFrame): StatsCardConfig[] {
-    const cards: StatsCardConfig[] = [
-      { id: "_count", label: "Total", field: "*", aggregation: "count_total" },
-    ];
-    const numFields = df.fields.filter(
-      (f) => f.type === DataFieldType.Number
-    );
-    if (numFields.length > 0) {
-      const f = numFields[0]!;
-      cards.push(
-        { id: "_sum", label: `${f.name} Sum`, field: f.name, aggregation: "sum", format: "number" },
-        { id: "_avg", label: `${f.name} Avg`, field: f.name, aggregation: "avg", format: "number" }
-      );
-    }
-    return cards;
-  }
-
-  $: cards = config.cards?.length ? config.cards : buildDefaultCards(source);
+  $: cards = config.cards ?? [];
   $: availableFieldNames = new Set(source.fields.map((f) => f.name));
 
   // Receiver core: narrow source.records by the active selection (no-op when
@@ -89,7 +71,11 @@
   }
 </script>
 
-<div class="ppp-stats-widget">
+<p class="ppp-stats-hint">{$i18n.t("views.dashboard.stats.summary-hint", { defaultValue: "Numeric summary — each card shows its field and aggregation. For a diagram, add a Chart widget." })}</p>
+{#if cards.length === 0}
+  <p class="ppp-stats-hint">{$i18n.t("views.dashboard.stats.empty-cards", { defaultValue: "Add a card in the widget settings." })}</p>
+{/if}
+<div class="ppp-stats-widget" style:--ppp-stats-columns={config.columns}>
   {#each cards as card (card.id)}
     <StatsCard
       config={card}
@@ -103,8 +89,11 @@
 <style>
   .ppp-stats-widget {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(var(--ppp-db-stats-card-min, 10rem), 1fr));
+    grid-template-columns: repeat(var(--ppp-stats-columns, 2), minmax(0, 1fr));
     gap: var(--ppp-space-md, 0.5rem);
     padding: var(--ppp-space-md, 0.5rem);
   }
+  .ppp-stats-hint { margin: 0; padding: var(--ppp-space-sm); color: var(--text-muted); font-size: var(--font-ui-smaller); }
+  @container widget (max-width: 30em) { .ppp-stats-widget { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @container widget (max-width: 20em) { .ppp-stats-widget { grid-template-columns: minmax(0, 1fr); } }
 </style>

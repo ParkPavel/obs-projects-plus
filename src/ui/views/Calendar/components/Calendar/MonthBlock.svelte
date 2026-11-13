@@ -33,7 +33,7 @@
   export let onRecordChange: ((date: dayjs.Dayjs, record: DataRecord, options?: RecordChangeOptions) => void) | undefined;
   export let onRecordCheck: ((record: DataRecord, checked: boolean) => void) | undefined;
   export let onRecordAdd: ((date: dayjs.Dayjs) => void) | undefined;
-  export let onDayTap: ((date: dayjs.Dayjs, records: DataRecord[], event?: MouseEvent | TouchEvent) => void) | undefined;
+  export let onDayTap: ((date: dayjs.Dayjs, records: DataRecord[], event?: Event) => void) | undefined;
   export let isMobile: boolean = false;
   export let dateFieldName: string | undefined;
   export let timezone: string = "local";

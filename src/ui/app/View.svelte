@@ -11,11 +11,14 @@
   } from "src/settings/settings";
   import { applyFilter, matchesCondition } from "./filterFunctions";
   import { enrichFrameWithAllRelations } from "src/lib/engine/crossProjectResolver";
-  import { applyRollupColumns } from "./rollupColumns";
+  import { applyComputedColumns } from "src/lib/relations/computedColumns";
+  import { prefillConditions } from "src/lib/helpers";
+  import { guarded } from "src/lib/errors/guarded";
   import { externalFrameInvalidation } from "src/lib/stores/externalFrameInvalidation";
   import { applyDeclaredFieldTypes, conditionFieldsKnown, extractRelationTargetIds, getRecordColor as computeRecordColor } from "./viewHelpers";
 
   import { useView } from "./useView";
+  import { bindViewOwner } from "./viewOwner";
   import { applySort, sortRecords } from "./viewSort";
   import RecordCardView from "src/ui/components/RecordCardView/RecordCardView.svelte";
   import { recordPeek, closePeek } from "src/lib/stores/recordPeek";
@@ -58,9 +61,7 @@
     cfg: Record<string, any>
   ) => void;
 
-  function handleConfigChange(config: Record<string, any>) {
-    onConfigChange(project.id, view.id, config);
-  }
+  $: handleConfigChange = bindViewOwner(project.id, view.id, onConfigChange);
 
   // Clean up any filter conditions for non-existing fields.
   // Guard: skip when frame is empty (initial load) to prevent deleting valid conditions
@@ -163,7 +164,7 @@
     }
   }
 
-  $: enrichedFrame = (() => {
+  $: enrichedFrame = guarded("enrich", frame, () => {
     const fc = project.fieldConfig as
       | import("./viewHelpers").FieldConfigRelationMap
       | undefined;
@@ -180,10 +181,13 @@
         : declaredFrame;
     // Rollup values are folded in under the field's own name, so filter, sort
     // and cell renderers all see the aggregate without a separate column.
-    return applyRollupColumns(enriched, fc, project.id, externalFramesMap);
-  })();
+    // i2-data (R3): a formula property of the base is computed here.
+    // w4-p01b: in dependency order — a rollup may read a formula of this
+    // project, and a formula may read a rollup (computedColumns.ts).
+    return applyComputedColumns(enriched, fc, project.id, externalFramesMap);
+  });
 
-  $: filteredFrame = applyFilter(enrichedFrame, viewFilter);
+  $: filteredFrame = guarded("filter", enrichedFrame, () => applyFilter(enrichedFrame, viewFilter));
 
   $: viewSort =
     view.sort.criteria.length > 0
@@ -237,9 +241,10 @@
   // Promote local widget filter to the global view filter.
   // Called via ProjectViewProps.saveViewFilter by views that expose such UX
   // (currently Database view — see filter-bridge chip).
-  const handleViewFilterChange = (filter: typeof view.filter) => {
-    settings.updateView(project.id, { ...view, filter });
-  };
+  $: handleViewFilterChange = bindViewOwner(project.id, view.id, (ownerProject, ownerView, filter: typeof view.filter) => {
+    const latest = get(settings).projects.find(p => p.id === ownerProject)?.views.find(v => v.id === ownerView);
+    if (latest) settings.updateView(ownerProject, { ...latest, filter });
+  });
 
   // ── #158 (L2) — the peek is RESOLVED, every tick, from identity ──────
   // The store carries `{id, projectId?, readonly?}`, never a copy (see
@@ -340,7 +345,9 @@
       dataGeneration,
       hasSort: view.sort.criteria.filter((c) => c.enabled).length > 0,
       hasFilter: view.filter.conditions.filter((c) => c.enabled).length > 0,
-      filterConditions: view.filter.conditions.filter((c) => c.enabled),
+      // w4-p03: what a note created here takes from the filter — the «and»
+      // conditions only (an «or» names no single value to write).
+      filterConditions: prefillConditions(view.filter),
       // #125: the complete definition, so a view that saves a filter back can
       // preserve groups, the conjunction and disabled conditions.
       filter: view.filter,

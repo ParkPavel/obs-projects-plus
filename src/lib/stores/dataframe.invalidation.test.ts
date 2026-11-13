@@ -184,3 +184,19 @@ describe("dataFrame invalidation hook (#016 regression)", () => {
     off();
   });
 });
+
+describe("dataFrame.addField — a retried create keeps one column (M03)", () => {
+  beforeEach(() => {
+    resetState();
+  });
+
+  it("adding a field whose name already exists replaces it in place", () => {
+    dataFrame.set({ fields: [...fields], records: [] });
+    const budget: DataField = { name: "budget", type: DataFieldType.Number, repeated: false, identifier: false, derived: false };
+    dataFrame.addField(budget);
+    dataFrame.addField({ ...budget, typeConfig: { options: [] } });
+    const names = get(dataFrame).fields.map((f) => f.name);
+    expect(names).toEqual(["name", "progress", "budget"]);
+    expect(get(dataFrame).fields[2]?.typeConfig).toEqual({ options: [] });
+  });
+});

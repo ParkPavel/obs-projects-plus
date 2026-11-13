@@ -20,8 +20,10 @@
   export let aggregations: AggregationConfig = {};
   export let groupByField: string | undefined = undefined;
   export let readonly = false;
+  export let frozen = false; // i3-table — the first column is pinned (freezeUpTo); its menu toggles it
 
   const dispatch = createEventDispatcher<{
+    freeze: { field: string; freeze: boolean };
     sort: { field: string; order: SortOrder | null };
     hide: string;
     calculate: { field: string; fn: ColumnAggregation | null };
@@ -50,6 +52,7 @@
         onHide: () => dispatch("hide", col.field.name),
         onCalculate: (fn) => dispatch("calculate", { field: col.field.name, fn }),
         onGroup: (group) => dispatch("group", { field: col.field.name, group }),
+        frozen, onFreeze: col === columns[0] ? (freeze) => dispatch("freeze", { field: col.field.name, freeze }) : undefined,
       }),
       e
     );
@@ -159,11 +162,7 @@
     white-space: nowrap;
   }
 
-  .ppp-t2-header-sort {
-    flex-shrink: 0;
-    display: inline-flex;
-    color: var(--text-accent);
-  }
+  .ppp-t2-header-sort { flex-shrink: 0; display: inline-flex; color: var(--text-accent); }
 
   .ppp-t2-resize {
     position: absolute;

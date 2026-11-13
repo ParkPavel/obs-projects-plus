@@ -2,20 +2,21 @@
   /**
    * Dashboard V2 (DG-5) — multi-view tab bar.
    *
-   * #088 (W1, NOTION_GRADE_PIPELINE): tabs are managed where they live —
-   * `+` opens a view-type chooser (Table/Board/Calendar/Gallery), each tab
-   * has a ⋯ menu (rename inline / delete, guarded for the last tab),
-   * double-click renames. All menus go through the canonical contextMenu.
+   * #088: `+` opens a view-type chooser (Table/Board/Calendar/Gallery), each tab has a ⋯ menu
+   * (rename / delete, guarded for the last tab), double-click renames; menus are contextMenu.
+   * i3-final: a tab that follows a project view wears the link icon instead of its type's.
    */
   import { createEventDispatcher, tick } from "svelte";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
-  import { openContextMenu } from "src/lib/contextMenu";
+  import { openContextMenu, type ContextMenuEntry } from "src/lib/contextMenu";
   import type { ViewTab } from "../types";
 
   export let tabs: ViewTab[];
   export let activeTabId: string;
   export let readonly = false;
+  /** i3-final (B3): extra entries for a tab's menu — «Link to view», «Unlink» (tabLinkMenu.ts). */
+  export let menuExtras: (tab: ViewTab) => ContextMenuEntry[] = () => [];
 
   const dispatch = createEventDispatcher<{
     tabSwitch: string;
@@ -88,6 +89,7 @@
           icon: "pencil",
           onClick: () => void startRename(tab),
         },
+        ...menuExtras(tab),
         {
           title: $i18n.t("views.dashboard.database-call.tab-delete", { defaultValue: "Delete view" }),
           icon: "trash",
@@ -127,7 +129,7 @@
         on:contextmenu={(e) => openTabMenu(tab, e)}
       >
         <span class="ppp-view-tab-icon" aria-hidden="true">
-          <Icon name={VIEW_ICONS[tab.viewType] ?? "layout-grid"} size="sm" />
+          <Icon name={tab.linkedViewId ? "link" : (VIEW_ICONS[tab.viewType] ?? "layout-grid")} size="sm" />
         </span>
         <span class="ppp-view-tab-label">{tab.label}</span>
         {#if tab.id === activeTabId && !readonly}
@@ -214,8 +216,7 @@
     transition: opacity 120ms ease;
   }
 
-  /* Hover-revealed only where hover exists; a finger has no hover to find it. The active tab
-     out-ranked the plain hover tint by source order; `:not` keeps that inside the gate. */
+  /* Hover-revealed only where hover exists; `:not` keeps the active tab above the hover tint. */
   @media (hover: hover) and (pointer: fine) {
     .ppp-view-tab:hover:not(.ppp-view-tab--active) { background: var(--background-modifier-hover); color: var(--text-normal); }
     .ppp-view-tab-more { opacity: 0; }

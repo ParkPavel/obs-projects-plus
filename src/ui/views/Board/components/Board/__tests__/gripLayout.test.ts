@@ -289,16 +289,18 @@ describe("cards-g1 — responsiveness hygiene", () => {
     expect(read("CardList.svelte")).not.toMatch(/transition:\s*["'`]all\b/);
   });
 
-  it("card and column flips take their duration from the reduced-motion helper", () => {
+  it("card and column drop animations take their duration from the reduced-motion helper", () => {
+    // stab-board: no per-item `animate:flip` (dragCost.test.ts); the duration
+    // is the library's drop animation and the column finalize delay.
     for (const file of ["CardList.svelte", "Board.svelte"]) {
       const text = read(file);
       expect(`${file}: ${/import \{ getAnimationDuration \} from "src\/lib\/helpers\/animation"/.test(text)}`).toBe(`${file}: true`);
       expect(`${file}: ${/const flipDurationMs = getAnimationDuration\(150\);/.test(text)}`).toBe(`${file}: true`);
-      expect(`${file}: ${/animate:flip=\{\{ duration: flipDurationMs \}\}/.test(text)}`).toBe(`${file}: true`);
+      expect(`${file}: ${/^\s*flipDurationMs,$/m.test(text)}`).toBe(`${file}: true`);
     }
   });
 
-  it("the helper the flips use is 0 under reduced motion", () => {
+  it("the helper the drop animations use is 0 under reduced motion", () => {
     const { getAnimationDuration } = jest.requireActual("src/lib/helpers/animation") as {
       getAnimationDuration: (d?: number) => number;
     };

@@ -56,9 +56,9 @@ function placed<T extends HTMLElement>(el: T, box: DOMRect): T {
 }
 
 /** jsdom has no `Touch` constructor; the manager only reads the coordinates. */
-function touch(type: string, y: number, cancelable = true): TouchEvent {
+function touch(type: string, y: number, cancelable = true, x = X): TouchEvent {
   const ev = new Event(type, { bubbles: true, cancelable });
-  const point = [{ clientX: X, clientY: y }];
+  const point = [{ clientX: x, clientY: y }];
   const ended = type === "touchend" || type === "touchcancel";
   Object.defineProperty(ev, "touches", { value: ended ? [] : point });
   Object.defineProperty(ev, "changedTouches", { value: point });
@@ -125,6 +125,172 @@ describe("TimelineDragManager — touch gesture on an event bar (ios-d1)", () =>
     bar.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
   };
 
+  describe("interrupted gesture lifecycle (owner report02.11)", () => {
+    function drag(): void {
+      press();
+      jest.advanceTimersByTime(DND_CONSTANTS.LONG_PRESS_MS + 50);
+      bar.dispatchEvent(touch("touchmove", BAR_CENTRE_Y + HOUR_PX));
+      expect(get(manager.state)).toBe("dragging");
+    }
+
+    it("touchcancel discards a moved gesture instead of writing its ghost position", () => {
+      drag();
+      bar.dispatchEvent(touch("touchcancel", BAR_CENTRE_Y + HOUR_PX));
+      expect(onCommit).not.toHaveBeenCalled();
+      expect(get(manager.state)).toBe("idle");
+      expect(get(manager.longPressActive)).toBe(false);
+      expect(get(manager.ghostPosition)).toBeNull();
+    });
+
+    it("a mouse or pen pointercancel cancels without retaining quick re-grab", () => {
+      drag();
+      bar.dispatchEvent(new Event("pointercancel", { bubbles: true }));
+      expect(onCommit).not.toHaveBeenCalled();
+      expect(get(manager.state)).toBe("idle");
+      expect(get(manager.longPressActive)).toBe(false);
+    });
+
+    // iOS reports these just before the touchend of an ordinary release; touchcancel is the cancellation.
+    it.each(["pointercancel", "lostpointercapture"])("a touch %s is not a cancellation: the release still commits", type => {
+      drag();
+      const event = new Event(type, { bubbles: true });
+      Object.defineProperty(event, "pointerType", { value: "touch" });
+      bar.dispatchEvent(event);
+      expect(get(manager.state)).toBe("dragging");
+      bar.dispatchEvent(touch("touchend", BAR_CENTRE_Y + HOUR_PX));
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      expect(get(manager.state)).toBe("idle");
+    });
+
+    it("release is observed even if a sidebar or bar stops bubbling", () => {
+      drag();
+      bar.addEventListener("touchend", event => event.stopPropagation(), { once: true });
+      bar.dispatchEvent(touch("touchend", BAR_CENTRE_Y + HOUR_PX));
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      expect(get(manager.state)).toBe("idle");
+    });
+
+    it.each(["blur", "pagehide"])("window %s cancels a pending hold before its timer can arm", type => {
+      press();
+      window.dispatchEvent(new Event(type));
+      jest.advanceTimersByTime(DND_CONSTANTS.LONG_PRESS_MS + 100);
+      expect(get(manager.state)).toBe("idle");
+      expect(get(manager.longPressActive)).toBe(false);
+      expect(onCommit).not.toHaveBeenCalled();
+    });
+
+    it("a hidden owner document cancels the gesture without writing", () => {
+      const original = Object.getOwnPropertyDescriptor(document, "visibilityState");
+      try {
+        drag();
+        Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+        document.dispatchEvent(new Event("visibilitychange"));
+        expect(get(manager.state)).toBe("idle");
+        expect(get(manager.longPressActive)).toBe(false);
+        expect(onCommit).not.toHaveBeenCalled();
+      } finally {
+        if (original) Object.defineProperty(document, "visibilityState", original);
+        else Reflect.deleteProperty(document, "visibilityState");
+      }
+    });
+
+    it("a thrown commit callback still releases drag state and edge scrolling", () => {
+      const failure = new Error("synthetic write rejection");
+      onCommit.mockImplementation(() => { throw failure; });
+      const errors = (event: ErrorEvent) => { if (event.error === failure) event.preventDefault(); };
+      window.addEventListener("error", errors);
+      try {
+        drag();
+        bar.dispatchEvent(touch("touchend", BAR_CENTRE_Y + HOUR_PX));
+        expect(onCommit).toHaveBeenCalledTimes(1);
+        expect(get(manager.state)).toBe("idle");
+        expect(get(manager.ghostPosition)).toBeNull();
+        expect(get(manager.longPressActive)).toBe(false);
+      } finally { window.removeEventListener("error", errors); }
+    });
+
+    it("a secondary document owns its RAF and termination events", () => {
+      const iframe = document.createElement("iframe");
+      document.body.appendChild(iframe);
+      const doc = iframe.contentDocument!, view = doc.defaultView!;
+      const ownRAF = jest.fn<number, [FrameRequestCallback]>().mockReturnValue(41);
+      const ownCancel = jest.fn();
+      // A newly created iframe has real timers even when Jest fakes the main
+      // window. Keep the fixture clock controllable while checking ownership.
+      const ownTimeout = jest.fn(window.setTimeout.bind(window));
+      const ownClearTimeout = jest.fn(window.clearTimeout.bind(window));
+      Object.defineProperty(view, "requestAnimationFrame", { configurable: true, value: ownRAF });
+      Object.defineProperty(view, "cancelAnimationFrame", { configurable: true, value: ownCancel });
+      Object.defineProperty(view, "setTimeout", { configurable: true, value: ownTimeout });
+      Object.defineProperty(view, "clearTimeout", { configurable: true, value: ownClearTimeout });
+      const mainRAF = jest.spyOn(window, "requestAnimationFrame");
+      try {
+        const column = doc.createElement("div"), foreignBar = doc.createElement("button"), scroller = doc.createElement("div");
+        doc.body.append(column, foreignBar, scroller);
+        Object.defineProperty(column, "getBoundingClientRect", { value: () => rect(0, 0, 100, 24 * HOUR_PX) });
+        Object.defineProperty(foreignBar, "getBoundingClientRect", { value: () => rect(BAR_TOP, 10, 80, HOUR_PX) });
+        Object.defineProperty(scroller, "getBoundingClientRect", { value: () => rect(0, 0, 600, 1200) });
+        manager.setDayColumns([{ day: start.startOf("day"), element: column }]);
+        manager.setHorizontalScrollContainer(scroller);
+        manager.initiate(record, processed, touch("touchstart", BAR_CENTRE_Y), "move", foreignBar);
+        expect(ownTimeout).toHaveBeenCalledTimes(1);
+        jest.advanceTimersByTime(DND_CONSTANTS.LONG_PRESS_MS + 50);
+        foreignBar.dispatchEvent(touch("touchmove", BAR_CENTRE_Y, true, 590));
+        expect(get(manager.state)).toBe("dragging");
+        expect(ownRAF).toHaveBeenCalledTimes(1);
+        expect(mainRAF).not.toHaveBeenCalled();
+        window.dispatchEvent(new Event("blur"));
+        expect(get(manager.state)).toBe("dragging");
+        view.dispatchEvent(new view.Event("blur"));
+        expect(get(manager.state)).toBe("idle");
+        expect(ownCancel).toHaveBeenCalledWith(41);
+        expect(scroller.hasAttribute("data-dnd-scrolling")).toBe(false);
+        expect(onCommit).not.toHaveBeenCalled();
+      } finally { manager.destroy(); mainRAF.mockRestore(); iframe.remove(); }
+    });
+
+    it("window blur stops edge scrolling and removes the period-loading marker", () => {
+      const callbacks: FrameRequestCallback[] = [];
+      const raf = jest.spyOn(window, "requestAnimationFrame").mockImplementation(callback => { callbacks.push(callback); return callbacks.length; });
+      const cancelRaf = jest.spyOn(window, "cancelAnimationFrame").mockImplementation(() => undefined);
+      try {
+        const scroller = placed(document.createElement("div"), rect(0, 0, 600, 1200));
+        manager.setHorizontalScrollContainer(scroller);
+        press(); jest.advanceTimersByTime(DND_CONSTANTS.LONG_PRESS_MS + 50);
+        bar.dispatchEvent(touch("touchmove", BAR_CENTRE_Y, true, 590));
+        expect(scroller.dataset["dndScrolling"]).toBe("true");
+        callbacks[0]!(performance.now());
+        expect(scroller.scrollLeft).toBeGreaterThan(0);
+        window.dispatchEvent(new Event("blur"));
+        expect(get(manager.state)).toBe("idle");
+        expect(scroller.hasAttribute("data-dnd-scrolling")).toBe(false);
+        const stoppedAt = scroller.scrollLeft;
+        callbacks.at(-1)!(performance.now()); // A callback already delivered to the event loop.
+        expect(scroller.scrollLeft).toBe(stoppedAt);
+        expect(onCommit).not.toHaveBeenCalled();
+      } finally { raf.mockRestore(); cancelRaf.mockRestore(); }
+    });
+
+    it("a synchronous cancellation during period loading cannot enqueue a new scroll frame", () => {
+      const callbacks: FrameRequestCallback[] = [];
+      const raf = jest.spyOn(window, "requestAnimationFrame").mockImplementation(callback => { callbacks.push(callback); return callbacks.length; });
+      const cancelRaf = jest.spyOn(window, "cancelAnimationFrame").mockImplementation(() => undefined);
+      try {
+        const scroller = placed(document.createElement("div"), rect(0, 0, 600, 1200));
+        manager.setHorizontalScrollContainer(scroller);
+        scroller.addEventListener("dnd-check-load", () => manager.cancel(), { once: true });
+        press(); jest.advanceTimersByTime(DND_CONSTANTS.LONG_PRESS_MS + 50);
+        bar.dispatchEvent(touch("touchmove", BAR_CENTRE_Y, true, 590));
+        expect(callbacks).toHaveLength(1);
+        jest.advanceTimersByTime(300);
+        callbacks[0]!(performance.now());
+        expect(get(manager.state)).toBe("idle");
+        expect(callbacks).toHaveLength(1);
+        expect(onCommit).not.toHaveBeenCalled();
+      } finally { raf.mockRestore(); cancelRaf.mockRestore(); }
+    });
+  });
+
   describe("short tap", () => {
     it("leaves the release default, so the click that opens the record arrives", () => {
       press();
@@ -185,7 +351,7 @@ describe("TimelineDragManager — touch gesture on an event bar (ios-d1)", () =>
       const call = onCommit.mock.calls[0];
       expect(call?.[1]).toBe(record);
       expect(call?.[2]).toEqual(
-        expect.objectContaining({ startTime: "11:30", endTime: "12:30" })
+        expect.objectContaining({ startTime: "11:00", endTime: "12:00" }) // grabbed at its centre, moved one hour: the bar moves one hour
       );
 
       clickBar();
@@ -307,7 +473,7 @@ describe("TimelineDragManager — touch gesture on an event bar (ios-d1)", () =>
 
       expect(onCommit).toHaveBeenCalledTimes(1);
       expect(onCommit.mock.calls[0]?.[2]).toEqual(
-        expect.objectContaining({ startTime: "11:30", endTime: "12:30" })
+        expect.objectContaining({ startTime: "11:00", endTime: "12:00" }) // grabbed at its centre, moved one hour: the bar moves one hour
       );
       clickBar();
       expect(onClick).not.toHaveBeenCalled();

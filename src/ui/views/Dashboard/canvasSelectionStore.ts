@@ -25,6 +25,7 @@
 
 import { writable, type Writable } from "svelte/store";
 import type { FilterCondition, FilterOperator } from "src/settings/base/settings";
+import type { DateGranularity } from "src/lib/dashboard-engine/dateBucket";
 
 /** Stable Svelte context key. Exported so tests can re-mount under it. */
 export const SELECTION_CONTEXT_KEY = "ppp-selection";
@@ -59,6 +60,8 @@ export interface SelectionState {
 	readonly field: string | null;
 	readonly values: ReadonlyArray<string>;
 	readonly op: SelectionOp | null;
+	/** Transient bucket meaning; the display label is not a raw stored date. */
+	readonly dateGrouping?: DateGranularity;
 }
 
 /** Initial / cleared state. Module-level frozen literal for reference equality. */
@@ -75,6 +78,7 @@ export interface SetSelectionInput {
 	readonly field: string;
 	readonly values: ReadonlyArray<string>;
 	readonly op?: SelectionOp;
+	readonly dateGrouping?: DateGranularity;
 }
 
 /** Public store API — standard Svelte writable plus typed actions. */
@@ -109,6 +113,7 @@ export function createSelectionStore(
 			current.source === next.source &&
 			current.field === next.field &&
 			current.op === op &&
+			current.dateGrouping === next.dateGrouping &&
 			current.values.length === next.values.length &&
 			current.values.every((v, i) => v === next.values[i])
 		) {
@@ -117,8 +122,9 @@ export function createSelectionStore(
 		store.set({
 			source: next.source,
 			field: next.field,
-			values: next.values,
+			values: [...next.values],
 			op,
+			...(next.dateGrouping ? { dateGrouping: next.dateGrouping } : {}),
 		});
 	}
 

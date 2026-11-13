@@ -19,6 +19,16 @@ function cond(field: string, value: string): FilterCondition {
 }
 
 describe("selectionStore — state", () => {
+	test("retains bucket meaning and owns the emitted values instead of caller mutations", () => {
+		const store = createSelectionStore(), values = ["2026-08"];
+		store.setSelection({ source: "chart:w1", field: "date", values, dateGrouping: "month" });
+		values[0] = "2026-09"; expect(get(store).values).toEqual(["2026-08"]);
+		let calls = 0; const off = store.subscribe(() => { calls++; });
+		store.setSelection({ source: "chart:w1", field: "date", values: ["2026-08"], dateGrouping: "month" });
+		expect(calls).toBe(1);
+		store.setSelection({ source: "chart:w1", field: "date", values: ["2026-08"], dateGrouping: "day" });
+		expect(calls).toBe(2); expect(get(store).dateGrouping).toBe("day"); off();
+	});
 	test("initial state is the empty sentinel", () => {
 		const store = createSelectionStore();
 		expect(get(store)).toBe(EMPTY_SELECTION);

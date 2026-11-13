@@ -8,6 +8,170 @@ Downloadable versions and their publication dates are listed in
 The version in [manifest.json](https://github.com/ParkPavel/obs-projects-plus/blob/main/manifest.json) identifies this source tree; it does not
 mean that a new release has been published.
 
+## 3.7.2 — 2026-11-14
+
+### Unified formulas
+
+- One strict evaluator now serves formulas, transform columns and Agenda filters. Existing definitions migrate with a verified settings backup and a report; results can change. Unknown future versions fail closed. Rollback requires both the original settings and the previous plugin assets; see the [upgrade guide](docs/upgrade.md).
+
+### Card controls and mobile panels
+
+- Boolean properties displayed in board cards can be toggled through the record update route without opening the note inspector. Read-only and computed values stay protected.
+- Inline palettes in forms use their parent's scroll area, including all favorite colors. New event forms start with the palette expanded.
+- The mobile agenda editor reserves the safe area once, fills the visible viewport and keeps its header actions outside the scrolling fields, including when the keyboard is shown.
+- The note inspector lays out computed results in the same scroll area as ordinary properties after a property section is collapsed.
+
+Release validation includes automated interaction and browser layout checks, plus maintainer acceptance on desktop and a physical iPhone. The iPhone Agenda fix accounts for Obsidian reporting the keyboard height as its bottom safe-area inset, so the form does not reserve that space twice. See the [release guide](docs/release-3.7.2.md) for update and migration steps.
+
+### Safety and stability
+
+- Board column dragging closes a handler leak: a column dropped where it
+  was writes nothing, and a drag that never ends is released on its own.
+- The calendar no longer freezes on the month view: day cells create no hidden frames and at most 24 months
+  stay in memory.
+- A change written into several notes at once (a board move, renaming or removing a column's option) reports
+  each note: the ones written keep their new values, only the unwritten ones are put back, and the notice
+  says how many of how many were not saved (PPP-205). When some notes refused the write, "Retry" writes just
+  those. A missing note is no longer counted as saved. Adding, renaming or deleting a field offers the same
+  retry over the notes it could not write.
+- The relations index no longer scans the vault again after the plugin is turned off or reloaded.
+- New notes are prepared with complete frontmatter before file creation; invalid template YAML refuses
+  creation. Failed property writes keep the draft for retry, and Tab waits for the write result.
+- New command "Start-up report (copy)": how long Obsidian took before the plugin and each stage of the
+  plugin's start-up, copied as text — for measuring a slow start on a phone.
+
+### Calendar
+
+- Month and two weeks: event bars are proportional to time and no longer overlap (on phones too); labels
+  are gone — an event is found by its colour and place in the day, its title is the tooltip and in the day
+  window. Extra columns go behind "+N". Multi-day strips are thin colour bands, packed per week.
+- Week and day: an event shorter than an hour (from 15 minutes) is drawn at its length; an overnight event is
+  drawn in parts per day; an event of 24 hours or more lives in the all-day row.
+- Week and day: dragging over the time grid passes the selected range to the creation form. On a phone,
+  hold empty time for 500 ms to preview it, then stretch with the same finger and release to open the form.
+  A short tap creates nothing. Small finger movements preserve the configured duration:
+  15, 30, 60 (default), 90 or 120 minutes. Moving the draft behind the form is still in development.
+- The agenda's custom list combines the selected date with its list conditions.
+- The day window on a computer opens beside the day's cell — right, else left, else under or over it — at one
+  width, whether the date, the background, "+N", the keyboard or the year view opened it (it could stand at
+  the screen's edge, far from the day). It keeps its side while open; on a phone it stays a bottom sheet.
+- Stretching a multi-day event over more days is saved; without an end field `endDate` is created.
+- A record's "Settings" in the day window open the note's properties block. The duplicate window follows
+  Obsidian's modals: a time field and an action footer.
+
+### Note properties
+
+- The Projects Plus properties block is shown at the top of every Markdown note in place of Obsidian's
+  built-in Properties. Turn it off in the plugin settings: "Properties in the note header".
+- Rename and delete a property; lists and tags as separate items (a comma inside an item is kept); status
+  picked from the values the project uses; a colour palette with shared favourites; arrow keys move between
+  rows. Nested values are read-only. Only the note's own frontmatter is written.
+- Properties reorder by drag (or Alt+Up/Down) and the order is written to the note's YAML; Tab moves to the
+  next value. The board pencil and gallery editing open the same block.
+
+### Board
+
+- During a column drag, columns fold temporarily and restore their saved collapsed state afterwards.
+- Columns drag by their grip again; the column menu has Move left / Move right.
+- Pinning a column is a view setting and no longer follows the status options.
+- Columns move at any board zoom, on a phone too; while a column or a card is being dragged, the zoom (pinch,
+  Ctrl+wheel) holds still. A column dragged on a zoomed board keeps its look.
+- On a computer the place a dragged card will land is drawn as a dashed frame of the card's size.
+
+### Dashboard and data
+
+- Block menus offer insertion above and below. Embedded board, calendar and gallery tabs expose their
+  shared view settings. New embedded calendars start in week view with event bars.
+- Adding a view chooses its type from a menu and edits its name in the tab strip before saving.
+- Formula previews use the same dependency evaluation as application, including dataset aggregates.
+  Saved formulas can be loaded for editing; empty or conflicting names and dependency cycles block Apply.
+- Favourite colours follow synced plugin settings, with a shared fallback and separate project palettes.
+  Legacy local favourites migrate only after settings load successfully.
+- "+ Block" in the plugin's bar adds a block after the selected one (a tap or click on a block's header
+  selects it, a thin frame marks it), else after the block most on screen; the block list names the place.
+  On a phone the "+" between blocks is gone.
+- A block's filter is one button with the number of active conditions, in the row of the block's views —
+  the row of filter pills is gone. The table's search folds away keeping its query (the button is marked);
+  the field's ×, or Escape, ends it.
+- The dashboard's table of contents is one button, "Blocks · N", in the plugin's bar (on computers too),
+  in place of the row of block titles: it lists the blocks in page order, marks the one on screen and a
+  collapsed one, and moves the page to the block picked.
+- A wide dashboard is a tile grid: resize a block by its corner, snapping to the grid. On a phone it is a
+  stack with a jump bar of block titles.
+- A source's "Properties" moved from the toolbar into the block menu.
+- Tables: the first column is pinned only from its header menu; a scroll that reaches the table's edge
+  carries on into the page; option pills read on any background; lists and dates in formulas show by type.
+- A filtered dashboard block can be the source of another block, a chart or a relation; loops are refused.
+  Rollups read rollups (up to three levels); formulas run in dependency order. A rollup can total a
+  formula of its own project (a client sums its visits' `IF(paid, price)`), and a formula can read a rollup.
+- Values read from Dataview keep 0, false and empty text; a date and time read as text keeps its time.
+- The demo projects compute a visit's payment, debt and session and an operation's income, expense and
+  balance with project formulas, so a change to a note moves the totals.
+- A board, calendar or gallery tab in a block can be linked to a project view: it takes that view's
+  settings, sort and filter; "Unlink" keeps them in the tab.
+- "Properties" in view settings: search, show and hide by the eye icon, order by drag; the list applies to
+  the dashboard's tables unless a table set a column itself.
+- Spreadsheet formulas: SUMIF, COUNTIF, AVERAGEIF, SUMIFS, COUNTIFS, AVERAGEIFS, MINIFS, MAXIFS; a
+  column aggregate is computed once; fields named in Cyrillic or any other script work in formulas; the
+  formula editor's highlight sits on the caret.
+
+### Gallery
+
+- The «Card» settings open as an inspector at the right, over the gallery — which keeps its columns and
+  shows each change at once — instead of a phone-width block that pushed the cards down; on a phone they
+  are a sheet. Controls are compact on a computer, finger-sized on a touch screen.
+- Cover from a list value or the note's first image, a text preview, grouping by a field, a width slider, a
+  title-only mode and lazy images. Two cards a row on a phone.
+
+### Phone and fields
+
+- The view tabs sit in the header in place of "Projects".
+- The view tabs stay in the phone's header with every theme: Things (title shown only on hover) and Minimal
+  ("hide tab title", focus mode) hid them. A header Obsidian or a theme rebuilds gets the tabs back; a theme
+  that hides the whole header row leaves them in the plugin's own bar.
+- The suggestion list opens above its field, follows it and keeps typed text. Search no longer overwrites
+  what is being typed. The field list in view settings is one line per field.
+- A value box offers the same values in every filter — the view's filter, colour rules, agenda lists — and
+  in the note editor: the values the project's notes hold for the field, after the options its settings
+  declare. The agenda no longer adds every note of the vault (other projects included). Notes in the
+  Templates or Templater folder and template text (`<% %>`, `{{ }}`) are never offered, in the note header
+  either.
+- The agenda's icon picker shows its emoji again (they were broken text); a list saved with a broken emoji
+  shows it as the emoji it was.
+- Lists that open from a field or a button stay against it: one with no room for its whole height takes
+  the side with more room and scrolls inside it, instead of jumping to the window's top edge as tall as the
+  window. Field and menu lists stop at about ten rows, and their rows are plain rows again, not raised
+  buttons (on computers too).
+- A suggestion list stands over its field when a few rows fit there, on computers as on phones.
+- Typing on an iPhone works in every field again. Obsidian does not shrink the page for the keyboard, it
+  reports the keyboard's height, and the plugin now lays out by that report as Obsidian does: sheets,
+  suggestion lists and the field being typed into stay above the keyboard instead of under it.
+- The keyboard is put away by Obsidian's own round keyboard button at the right, above the keyboard, as in
+  a note; it ends the typing like Obsidian's. The plugin's own "⌄" button, which kept the focus and blurred
+  the field on any scroll, is gone.
+- Scrolling a form or a list no longer takes the focus from the field being typed into; only a tap elsewhere
+  does. A press in the field's suggestion list or picker is not "elsewhere".
+- Choosing from a list with search on a phone (fields in filters, sorting, colour rules) has Obsidian's
+  shape: the list above, the search under it just over the keyboard; only the list scrolls. When the
+  keyboard goes, the view scrolled for it returns to where it was.
+- A name is typed where the named thing lives, not in a separate window with a name line. The agenda's "Add
+  list" puts a row with a name field at the end of the lists: Enter, ✓ or leaving the field creates the list;
+  Escape, ✕ or an empty name drops it; a taken name stays in the field, marked. The row's gear opens the full
+  settings (icon, colour, filters) with the name already typed. "Rename list" in a list's menu turns its
+  header into the name field. An item of a list value in the note editor is added by a field at the end of
+  the values (Enter adds it and keeps the field for the next one), not by an "Add list item" window.
+- An agenda list's settings take the whole visible screen above the keyboard on a phone, not the calendar's
+  strip.
+- Properties are reordered by the grip ≡ on the left — with a mouse or a finger — in the view's field list
+  and the gallery's card fields (a finger could not reorder them before), and in the note header.
+- The calendar's "Duplicate" window fits the area the keyboard leaves visible.
+- One condition editor: an agenda list's conditions are edited by the same panel as the view's filter and
+  the colour rules — the same rows, switches, groups, operators and value suggestions. Saved lists keep their
+  format. The operators are one list everywhere: text gains "regex" in the view's filter; select and status,
+  relation, formula and rollup fields get their own sets.
+- A date value can be a formula in every filter — `today`, `today+7d`, `sow` — with suggestions; the view's
+  filter and the colour rules now read it as the agenda did (it matched nothing there before).
+
 ## 3.7.0 — 2026-10-05
 
 ### Cards and gallery

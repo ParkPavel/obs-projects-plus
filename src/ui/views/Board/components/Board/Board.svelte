@@ -1,6 +1,5 @@
 <script lang="ts">
   import { i18n } from "src/lib/stores/i18n";
-  import { isTouchDevice } from "src/lib/stores/ui";
   import { getAnimationDuration } from "src/lib/helpers/animation";
   import type { DataField } from "src/lib/dataframe/dataframe";
   import {
@@ -9,18 +8,29 @@
     SHADOW_ITEM_MARKER_PROPERTY_NAME,
     SHADOW_PLACEHOLDER_ITEM_ID,
     TRIGGERS,
+    SOURCES,
   } from "svelte-dnd-action";
   import { Icon } from "obsidian-svelte";
-  import { onDestroy } from "svelte";
-  import { flip } from "svelte/animate";
+  import { onDestroy, onMount } from "svelte";
+  import { Notice } from "obsidian";
+  import { sortRecordsContext } from "src/ui/views/helpers";
+  import {
+    computeDropWrites,
+    createTouchCardDrag,
+    type DragBlockReason,
+    type TouchCardDragHandle,
+    type TouchCardDropDetail,
+  } from "./touchCardDrag";
   import { ignoreHostSwipe } from "src/ui/actions/ignoreHostSwipe";
-  import { remAt, rootFontPx, toRem } from "src/ui/utils/cssLength";
+  import { toRem } from "src/ui/utils/cssLength";
+  import { compactDraggedColumn } from "./columnClone";
+  import { provideBoardDragTypes } from "./boardDragTypes";
 
   import BoardColumn from "./BoardColumn.svelte";
   import NewColumn from "./NewColumn.svelte";
   // ios-d1: the column row is a `dragHandleZone` sharing the cards' arming
   // store, so a tap on a column grip must disarm it too (see CardList).
-  import { disarmAfterGripTap, gateDisabledGrip, isDisarmEvent, isDragZoneDisabled } from "./CardList.svelte";
+  import { disarmAfterGripTap, gateDisabledGrip, isDisarmEvent, isDragZoneDisabled, zoomHeldByDrag } from "./CardList.svelte";
   import type {
     Column,
     OnRecordAdd,
@@ -37,14 +47,21 @@
   } from "./types";
   import type { BoardThumbnailLayout } from "../../types";
   import type { CardFrame, NormalizedCardFrames } from "src/ui/components/SharedCard/cardFrames";
+  import type { ProjectDefinition } from "src/settings/settings";
 
   export let columns: Column[];
+  export let project: ProjectDefinition;
+  /** Live source/field ownership, separate from transient display columns. */
+  export let dragContext: string | undefined = undefined;
+  const dragTypes = provideBoardDragTypes();
 
   export let readonly: boolean;
   /** #C4 — see BoardView.svelte for what this covers and why it is separate from `readonly`. */
   export let dataReadOnly: boolean = false;
   export let richText: boolean;
   export let onRecordClick: OnRecordClick;
+  /** B10 — the note editor (the card's pencil); the card itself opens the peek. */
+  export let onRecordEdit: OnRecordClick | undefined = undefined;
   export let onRecordCheck: OnRecordCheck;
   export let onRecordUpdate: OnRecordUpdate;
   export let onRecordAdd: OnRecordAdd;
@@ -81,13 +98,20 @@
   let boardEditing: boolean = false;
   let onEdit = (editing: boolean) => (boardEditing = editing);
 
-  // cards-g1: 0 under reduced motion, as for cards (CardList).
+  // cards-g1: 0 under reduced motion, as for cards (CardList). stab-board: no
+  // per-item `animate:flip` here either (see CardList: it measures every item
+  // on each `consider`); the value is the library's drop animation.
   const flipDurationMs = getAnimationDuration(150);
 
   // Guard: prevent reactive prop updates from resetting DnD state mid-drag
   let isDraggingColumns = false;
   let finalizeTimeout: ReturnType<typeof setTimeout> | undefined;
   let pendingColumnOrder: string[] | undefined;
+  let columnEpoch = 0;
+  let columnCancelled = false;
+  let columnSource: string | undefined;
+  let previousDragContext = dragContext;
+  let previousDragProject: string | undefined = project?.id;
   type DndColumn = Column & Record<string, unknown>;
 
   $: pinnedColumns = columns.filter((c) => c.pinned);
@@ -101,39 +125,106 @@
     column.id === SHADOW_PLACEHOLDER_ITEM_ID ||
     column.id === SHADOW_PLACEHOLDER_ITEM_ID.toString();
 
-  const getColumnFootprint = (column: Pick<Column, "collapse"> | undefined) =>
-    column?.collapse ? COLLAPSED_COLUMN_FOOTPRINT : columnWidth;
+  const getColumnFootprint = (column: Pick<Column, "collapse"> | undefined, dragging: boolean) =>
+    dragging || column?.collapse ? COLLAPSED_COLUMN_FOOTPRINT : columnWidth;
 
   const hasMatchingOrder = (items: Column[], order: string[]) =>
     items.length === order.length && items.every((item, index) => item.id === order[index]);
 
   $: if (pendingColumnOrder && hasMatchingOrder(columns, pendingColumnOrder)) {
-    pendingColumnOrder = undefined;
-    isDraggingColumns = false;
+    releaseColumnDrag();
   }
 
   function filterShadowColumns(items: DndColumn[]): Column[] {
     return items.filter((column) => !isShadowPlaceholder(column));
   }
 
-  // ios-c1: the column row may not start a drag while editing, zoomed or
-  // read-only. `dragHandleZone` ignores its `dragDisabled`, so the grips are
-  // gated (`gateDisabledGrip`) and, as a safeguard, a drag that still starts
-  // while disabled is not committed: its finalize restores the order.
-  $: columnZoneDisabled = isDragZoneDisabled({ editing: boardEditing, locked: dataReadOnly, zoom });
+  // ios-c1: the column row may not start a drag while editing or read-only
+  // (w4-p08, N6: at any zoom). `dragHandleZone` ignores its `dragDisabled`, so
+  // the grips are gated (`gateDisabledGrip`) and, as a safeguard, a drag that
+  // still starts while disabled is not committed: its finalize restores the order.
+  $: columnZoneDisabled = isDragZoneDisabled({ editing: boardEditing, locked: dataReadOnly });
+  $: syncColumnOwner(dragContext, project?.id, columnZoneDisabled);
   let rejectedColumnDrag: DndColumn[] | undefined;
+  function syncColumnOwner(context: string | undefined, projectId: string | undefined, disabled: boolean) {
+    if (context !== previousDragContext || projectId !== previousDragProject || disabled) {
+      cancelColumnDrag();
+      touchDrag?.cancel();
+    }
+    previousDragContext = context;
+    previousDragProject = projectId;
+  }
 
   function handleDndConsider(e: CustomEvent<DndEvent<Column>>) {
     // The disarm signal is not a drag: it must not freeze the column order.
     if (isDisarmEvent(e)) return;
-    if (e.detail.info.trigger === TRIGGERS.DRAG_STARTED && columnZoneDisabled) {
-      rejectedColumnDrag = dndUnpinnedColumns;
+    if (e.detail.info.trigger === TRIGGERS.DRAG_STARTED) {
+      clearTimeout(finalizeTimeout);
+      pendingColumnOrder = undefined;
+      columnEpoch++;
+      columnCancelled = false;
+      columnSource = e.detail.info.source;
+      rejectedColumnDrag = undefined;
+      if (columnZoneDisabled) rejectedColumnDrag = dndUnpinnedColumns;
+    }
+    if (columnCancelled) return;
+    if (e.detail.info.trigger === TRIGGERS.DRAG_STOPPED) {
+      disarmDragWatchdog();
+      if (!pendingColumnOrder) releaseColumnDrag();
+      return;
     }
     isDraggingColumns = true;
     dndUnpinnedColumns = e.detail.items;
+    armDragWatchdog();
+  }
+
+  /**
+   * i3-board — a column drag that never ends. When the pressed grip is
+   * removed before the release (the column re-renders as the drag starts),
+   * the release never reaches the window, the library waits for it forever
+   * and refuses every later drag in every zone. If neither a consider nor a
+   * finalize comes for a few seconds, the release is sent for it and the
+   * board leaves its drag state.
+   */
+  const DRAG_WATCHDOG_MS = 8000;
+  let dragWatchdog: ReturnType<typeof setTimeout> | undefined;
+  // i3-final: a consider event comes only when the shadow moves, so holding a
+  // column still is not "no events". Any pointer movement during the drag
+  // re-arms the watchdog; only a drag nothing is moving ends on its own.
+  let watchedView: Window | null = null;
+  const onDragActivity = () => { if (isDraggingColumns) armDragWatchdog(); };
+  function watchActivity(view: Window | null) {
+    if (view === watchedView) return;
+    for (const type of ["pointermove", "touchmove", "mousemove"]) {
+      watchedView?.removeEventListener(type, onDragActivity, true);
+      view?.addEventListener(type, onDragActivity, { capture: true, passive: true });
+    }
+    watchedView = view;
+  }
+  function disarmDragWatchdog() {
+    clearTimeout(dragWatchdog);
+    dragWatchdog = undefined;
+    watchActivity(null);
+  }
+  function armDragWatchdog() {
+    clearTimeout(dragWatchdog);
+    const view = containerEl?.ownerDocument.defaultView ?? window;
+    watchActivity(view);
+    dragWatchdog = setTimeout(() => {
+      dragWatchdog = undefined;
+      watchActivity(null);
+      if (!isDraggingColumns) return;
+      // The library ends a drag on the window's mouseup and touchend alike.
+      cancelColumnDrag();
+    }, DRAG_WATCHDOG_MS);
   }
 
   function handleDndFinalize(e: CustomEvent<DndEvent<Column>>) {
+    disarmDragWatchdog();
+    if (columnCancelled || columnZoneDisabled || !isDraggingColumns) {
+      cancelColumnDrag();
+      return;
+    }
     if (rejectedColumnDrag) {
       dndUnpinnedColumns = rejectedColumnDrag;
       rejectedColumnDrag = undefined;
@@ -142,23 +233,85 @@
     }
     dndUnpinnedColumns = e.detail.items;
     const newUnpinned = filterShadowColumns(dndUnpinnedColumns);
-    pendingColumnOrder = [...pinnedColumns, ...newUnpinned].map((col) => col.id);
+    const order = [...pinnedColumns, ...newUnpinned].map((col) => col.id);
+    const ownIds = new Set(columns.map(column => column.id));
+    if (order.length !== columns.length || new Set(order).size !== order.length || order.some(id => !ownIds.has(id))) {
+      cancelColumnDrag();
+      return;
+    }
+    // i3-board: a column dropped where it was writes nothing. Every attempt
+    // used to save the view and the field options and rebuild every column.
+    if (hasMatchingOrder(columns, order)) {
+      releaseColumnDrag();
+      return;
+    }
+    pendingColumnOrder = order;
     // Dispatch after flip animation completes to prevent reactive cascade mid-animation
     clearTimeout(finalizeTimeout);
+    const epoch = columnEpoch;
     finalizeTimeout = setTimeout(() => {
+      if (epoch !== columnEpoch || columnCancelled || columnZoneDisabled) return;
       if (pendingColumnOrder) {
         onSortColumns(pendingColumnOrder);
       }
+      // i3-board: the drag ends here even if no matching `columns` comes back
+      // (a read-only source saves nothing, or the saved order sorts
+      // differently); waiting for that echo alone froze the board for good.
+      finalizeTimeout = setTimeout(releaseColumnDrag, COLUMN_ECHO_WAIT_MS);
     }, flipDurationMs + 50);
   }
 
-  onDestroy(() => {
-    if (pendingColumnOrder) {
-      onSortColumns(pendingColumnOrder);
-      pendingColumnOrder = undefined;
-    }
+  const COLUMN_ECHO_WAIT_MS = 1000;
+  function releaseColumnDrag() {
     clearTimeout(finalizeTimeout);
+    finalizeTimeout = undefined;
+    disarmDragWatchdog();
+    pendingColumnOrder = undefined;
     isDraggingColumns = false;
+  }
+  function cancelColumnDrag() {
+    const wasDragging = isDraggingColumns;
+    columnCancelled = true;
+    columnEpoch++;
+    rejectedColumnDrag = undefined;
+    releaseColumnDrag();
+    dndUnpinnedColumns = columns.filter(column => !column.pinned);
+    const view = containerEl?.ownerDocument.defaultView;
+    if (wasDragging && view) {
+      if (columnSource === SOURCES.KEYBOARD) view.dispatchEvent(new view.KeyboardEvent("keydown", { key: "Escape" }));
+      else view.dispatchEvent(new view.MouseEvent("mouseup"));
+    }
+  }
+  function watchColumnLifecycle(node: HTMLElement) {
+    const doc = node.ownerDocument, view = doc.defaultView;
+    const hidden = () => { if (doc.hidden) cancelColumnDrag(); };
+    const events = ["blur", "pagehide", "pointercancel", "touchcancel"];
+    for (const event of events) view?.addEventListener(event, cancelColumnDrag);
+    doc.addEventListener("visibilitychange", hidden);
+    return { destroy() {
+      for (const event of events) view?.removeEventListener(event, cancelColumnDrag);
+      doc.removeEventListener("visibilitychange", hidden);
+    } };
+  }
+
+  /**
+   * i3-board — the column menu's Move left / Move right: the same write as a
+   * drag, for the keyboard and for a phone where a grip drag is awkward.
+   * Pinned columns stay first and are not moved.
+   */
+  function moveColumn(name: string, delta: -1 | 1) {
+    if (dataReadOnly) return;
+    const unpinned = columns.filter((c) => !c.pinned).map((c) => c.id);
+    const from = unpinned.indexOf(name);
+    const to = from + delta;
+    if (from < 0 || to < 0 || to >= unpinned.length) return;
+    unpinned.splice(to, 0, ...unpinned.splice(from, 1));
+    onSortColumns([...pinnedColumns.map((c) => c.id), ...unpinned]);
+  }
+  $: unpinnedIds = columns.filter((c) => !c.pinned).map((c) => c.id);
+
+  onDestroy(() => {
+    cancelColumnDrag();
   });
 
   /**
@@ -169,10 +322,14 @@
    * v3.0.10: Also handles pinch-to-zoom on touch devices.
    */
   function wheelZoom(node: HTMLElement) {
+    // w4-p08 (N6): the zoom holds still while anything on the board is dragged.
+    const held = () => zoomHeldByDrag(node.ownerDocument, isDraggingColumns, Boolean(touchDrag?.isActive()));
+
     // --- Desktop: Ctrl+Wheel ---
     function wheelHandler(e: WheelEvent) {
       if (!e.ctrlKey && !e.metaKey) return;
       e.preventDefault();
+      if (held()) return;
       const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
       const next = Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom + delta)) * 100) / 100;
       if (next !== zoom) {
@@ -192,6 +349,9 @@
     }
 
     function touchStartHandler(e: TouchEvent) {
+      // p372-b8: a second finger cancels a card drag (touchCardDrag); while
+      // one is under way, a pinch never starts.
+      if (held()) return;
       if (e.touches.length === 2) {
         initialPinchDistance = getPinchDistance(e.touches);
         initialZoom = zoom;
@@ -201,6 +361,10 @@
     function touchMoveHandler(e: TouchEvent) {
       if (e.touches.length !== 2 || initialPinchDistance === null) return;
       e.preventDefault();
+      if (held()) {
+        initialPinchDistance = null;
+        return;
+      }
       const currentDistance = getPinchDistance(e.touches);
       const scale = currentDistance / initialPinchDistance;
       const next = Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, initialZoom * scale)) * 100) / 100;
@@ -224,6 +388,7 @@
 
     function gestureChangeHandler(e: any) {
       e.preventDefault();
+      if (held()) return;
       const next = Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, initialZoom * e.scale)) * 100) / 100;
       if (next !== zoom) {
         zoom = next;
@@ -250,39 +415,102 @@
     };
   }
 
+  // ── p372-b8: touch and pen drag cards here, not through the library ──
+  const sortRecords = sortRecordsContext.get();
+  let containerEl: HTMLElement;
+  let viewportEl: HTMLElement;
+  let touchDrag: TouchCardDragHandle | undefined;
+  let lastBlockedNotice = 0;
+
+  function touchBlockReason(columnEl: HTMLElement): DragBlockReason | null {
+    if (boardEditing) return "editing";
+    if (dataReadOnly) return "readonly";
+    if (columnEl.classList.contains("pinned")) return "pinned";
+    return null;
+  }
+
+  function onTouchBlocked(reason: DragBlockReason) {
+    const now = Date.now();
+    if (now - lastBlockedNotice < 2000) return;
+    lastBlockedNotice = now;
+    const text =
+      reason === "pinned"
+        ? $i18n.t("views.board.drag-blocked.pinned")
+        : reason === "readonly"
+          ? $i18n.t("views.board.drag-blocked.readonly")
+          : $i18n.t("views.board.drag-blocked.editing");
+    new Notice(text);
+  }
+
+  /** The same writer as the library's drop: target `addToColumn`, then source `removeFromColumn`. */
+  function onTouchDrop({ recordId, fromColumnId, toColumnId, index }: TouchCardDropDetail) {
+    if (dataReadOnly) return;
+    const writes = computeDropWrites(columns, recordId, fromColumnId, toColumnId, index);
+    const record = columns.find((c) => c.id === fromColumnId)?.records.find((r) => r.id === recordId);
+    if (!record) return;
+    for (const write of writes) {
+      const column = columns.find((c) => c.id === write.columnId);
+      if (!column) continue;
+      const records = write.trigger === "addToColumn" ? sortRecords(write.records) : write.records;
+      onRecordUpdate(record, { ...column, records }, write.trigger);
+    }
+  }
+
+  onMount(() => {
+    touchDrag = createTouchCardDrag({
+      container: containerEl,
+      viewport: viewportEl,
+      getScale: () => zoom,
+      blockReason: touchBlockReason,
+      onBlocked: onTouchBlocked,
+      onDrop: onTouchDrop,
+    });
+    return () => touchDrag?.destroy();
+  });
+
   function handleResetZoom() {
     zoom = 1;
     onZoomChange(1);
   }
+  function compactColumnClone(element: HTMLElement | undefined): void {
+    compactDraggedColumn(element, columnWidth, zoom, COLLAPSED_COLUMN_FOOTPRINT);
+  }
+
 </script>
 
 <!-- ios-g1 G2: interior swipes pan the board instead of opening Obsidian's
      drawer at the board's scroll boundary; edge swipes still reach the host. -->
-<div class="projects--board--container" use:wheelZoom use:ignoreHostSwipe>
+<div class="projects--board--container" bind:this={containerEl} use:wheelZoom use:ignoreHostSwipe use:watchColumnLifecycle>
   <div
+    bind:this={viewportEl}
     class="projects--board--viewport"
     style={zoom !== 1 ? `transform: scale(${zoom}); transform-origin: top left; width: ${100 / zoom}%; height: ${100 / zoom}%` : ""}
   >
     {#if pinnedColumns.length > 0}
       <section class="projects--board projects--board--pinned">
         {#each pinnedColumns as column (column.id)}
-          <div class="projects--board--column--dndwrapper projects--board--column--pinned">
+          <div class="projects--board--column--dndwrapper projects--board--column--pinned" style:min-height={column.collapse || isDraggingColumns ? toRem(columnWidth, containerEl?.ownerDocument) : undefined}>
             <BoardColumn
               {readonly}
               {dataReadOnly}
+              {zoom}
               {richText}
               {boardEditing}
               {onEdit}
               width={columnWidth}
               collapse={column.collapse}
+              temporaryCollapse={isDraggingColumns}
               pinned={column.pinned}
               persisted={column.persisted}
               name={column.id}
               records={column.records}
               {onRecordClick}
+              {onRecordEdit}
               {checkField}
               {onRecordCheck}
-              onRecordAdd={() => onRecordAdd(column.id)}
+              {project}
+              onRecordAdd={(name, templatePath, noteProject) =>
+                onRecordAdd(column.id, name, templatePath, noteProject)}
               onDrop={(record, records, trigger) => {
                 if (trigger === "droppedIntoAnother") return;
                 onRecordUpdate(record, { ...column, records }, "addToColumn");
@@ -324,33 +552,24 @@
 
     <section
       class="projects--board"
+      class:projects--board--zone-dragging={isDraggingColumns}
       use:dragHandleZone={{
-        type: "columns",
+        type: dragTypes.columns,
         items: dndUnpinnedColumns,
         flipDurationMs,
         dropTargetStyle: {
           outline: "none",
         },
-        transformDraggedElement: (element) => {
-          if (!element) return;
-          const rect = element.getBoundingClientRect();
-          const root = rootFontPx(element.ownerDocument);
-          const width = remAt(rect.width, root);
-          const height = remAt(rect.height, root);
-          element.style.width = width;
-          element.style.minWidth = width;
-          element.style.maxWidth = width;
-          element.style.height = height;
-          element.style.minHeight = height;
-          element.style.boxSizing = "border-box";
-          element.style.zIndex = "30";
-        },
+        transformDraggedElement: compactColumnClone,
         // Overwritten by `dragHandleZone`; `gateDisabledGrip` below enforces it.
         dragDisabled: dataReadOnly || columnZoneDisabled,
         morphDisabled: true,
-        // ios-d1: as for cards (CardList) — the column grip leads its header,
-        // so on touch centre the clone on the finger for zone hit-tests.
-        centreDraggedOnCursor: $isTouchDevice,
+        // The library's drop tween ignores individual translate/scale on the compact clone.
+        // End the preview at release; the real columns restore in their own layout.
+        dropAnimationDisabled: true,
+        // The library centres the clone on the pointer, and the compact clone keeps that
+        // centre, so the strip and the library's hit-test are under the pointer on every device.
+        centreDraggedOnCursor: true,
       }}
       use:disarmAfterGripTap={".board-column-grip"}
       use:gateDisabledGrip={{ grip: ".board-column-grip", disabled: columnZoneDisabled }}
@@ -358,15 +577,14 @@
       on:finalize={handleDndFinalize}
     >
       {#each dndUnpinnedColumns as column (column.id)}
-        {@const footprint = toRem(getColumnFootprint(column))}
+        {@const footprint = toRem(getColumnFootprint(column, isDraggingColumns), containerEl?.ownerDocument)}
         <div
           class="projects--board--column--dndwrapper"
           class:projects--board--column--dndwrapper--placeholder={isShadowPlaceholder(column)}
-          class:projects--board--column--dndwrapper--collapsed={column.collapse}
+          class:projects--board--column--dndwrapper--collapsed={column.collapse || isDraggingColumns}
           data-dnd-width={footprint}
-          style={`width: ${footprint}; min-width: ${footprint}; max-width: ${footprint};`}
+          style={`width: ${footprint}; min-width: ${footprint}; max-width: ${footprint};${column.collapse || isDraggingColumns ? ` min-height: ${toRem(columnWidth, containerEl?.ownerDocument)};` : ""}`}
           aria-hidden={isShadowPlaceholder(column) ? "true" : undefined}
-          animate:flip={{ duration: flipDurationMs }}
         >
           {#if isShadowPlaceholder(column)}
             <div class="projects--board--column--placeholder" style={`width: ${footprint}; min-width: ${footprint}; max-width: ${footprint};`}></div>
@@ -381,19 +599,24 @@
             <BoardColumn
               {readonly}
               {dataReadOnly}
+              {zoom}
               {richText}
               {boardEditing}
               {onEdit}
               width={columnWidth}
               collapse={column.collapse}
+              temporaryCollapse={isDraggingColumns}
               pinned={column.pinned}
               persisted={column.persisted}
               name={column.id}
               records={column.records}
               {onRecordClick}
+              {onRecordEdit}
               {checkField}
               {onRecordCheck}
-              onRecordAdd={() => onRecordAdd(column.id)}
+              {project}
+              onRecordAdd={(name, templatePath, noteProject) =>
+                onRecordAdd(column.id, name, templatePath, noteProject)}
               onDrop={(record, records, trigger) => {
                 switch (trigger) {
                   case "droppedIntoZone":
@@ -428,6 +651,9 @@
                   records
                 )}
               {onColumnCollapse}
+              onColumnMove={dataReadOnly ? undefined : moveColumn}
+              canMoveLeft={unpinnedIds.indexOf(column.id) > 0}
+              canMoveRight={unpinnedIds.indexOf(column.id) < unpinnedIds.length - 1}
               onColumnRename={(name) => {
                 const cols = columns.map((col) => col.id);
                 onColumnRename(cols, column.id, name, column.records);
@@ -503,8 +729,64 @@
   }
 
   .projects--board--viewport {
+    /* p372-b8: the touch drag's preview and line are placed in it. */
+    position: relative;
     display: flex;
     min-height: 100%;
+  }
+
+  /* p372-b8: the touch drag (touchCardDrag.ts). The preview is a copy of
+     the card in the scaled viewport, moved by transform only; the line marks
+     where it will land; the source stays in place, dimmed, so nothing in the
+     lists moves under the finger. */
+  .projects--board--container:global(.ppp-board-touch-dragging) {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .projects--board--viewport :global(.ppp-board-touch-preview) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: var(--ppp-z-overlay);
+    pointer-events: none;
+    min-height: 0;
+    background: none;
+    will-change: transform;
+    filter: drop-shadow(var(--shadow-s));
+  }
+  .projects--board--viewport :global(.ppp-board-touch-line) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: var(--ppp-z-overlay);
+    height: var(--ppp-border-width-thick, 0.125rem);
+    margin-top: calc(-0.5 * var(--ppp-border-width-thick, 0.125rem));
+    border-radius: var(--radius-s);
+    background: var(--interactive-accent);
+    pointer-events: none;
+  }
+  .projects--board--viewport :global(.ppp-board-touch-line.is-hidden) {
+    display: none;
+  }
+  .projects--board--viewport :global(.ppp-board-touch-source) {
+    opacity: 0.35;
+  }
+  /* p372-b8: the library's mouse clone on a zoomed board (scaleDraggedClone). */
+  :global(.ppp-board-scaled-clone) {
+    box-sizing: border-box;
+    transform-origin: top left;
+  }
+  :global(.ppp-board-column-clone),
+  :global(.ppp-board-column-clone section.projects--board--column) { box-sizing: border-box; }
+  :global(.ppp-board-column-clone) { z-index: var(--ppp-z-overlay, 30); transition: none !important; }
+  /* While a column is carried the others are strips; the drop zone then spans the whole
+     board, so the pointer is "in" it anywhere to the right of the last strip too. */
+  .projects--board--zone-dragging { flex: 1 1 auto; min-width: 0; }
+  @media (pointer: coarse) {
+    .projects--board--viewport :global(.ppp-board-card-slot) {
+      -webkit-touch-callout: none;
+    }
   }
 
   .projects--board--zoom-badge {

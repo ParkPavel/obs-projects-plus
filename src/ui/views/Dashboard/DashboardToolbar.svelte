@@ -1,43 +1,23 @@
 <script lang="ts">
-  import type { WidgetDefinition, WidgetType } from "./types";
-  import WidgetToolbar from "./widgets/WidgetToolbar.svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { Icon } from "obsidian-svelte";
   import { createEventDispatcher } from "svelte";
 
-  export let showToolbar: boolean;
   export let readonly: boolean;
   export let showFormulaBar: boolean;
-  export let currentWidgets: WidgetDefinition[];
 
   const dispatch = createEventDispatcher<{
-    toggleToolbar: void;
-    openSchema: void;
     toggleFormulaBar: void;
-    addWidget: WidgetType;
   }>();
 </script>
 
 <div class="ppp-database-toolbar">
-  <button
-    class="ppp-toolbar-btn clickable-icon"
-    on:click={() => dispatch("toggleToolbar")}
-    aria-pressed={showToolbar}
-    aria-label={showToolbar ? $i18n.t("views.dashboard.canvas.hide-toolbar") : $i18n.t("views.dashboard.canvas.show-toolbar")}
-  >
-    <Icon name={showToolbar ? "minus" : "plus"} size="sm" /> {$i18n.t("views.dashboard.canvas.widgets")}
-  </button>
   {#if !readonly}
-    <button
-      class="ppp-toolbar-btn clickable-icon"
-      on:click={() => dispatch("openSchema")}
-      aria-label={$i18n.t("views.dashboard.canvas.schema")}
-      title={$i18n.t("views.dashboard.canvas.schema-tip", {
-        defaultValue: "Manage project fields — types, relations, rollups",
-      })}
-    >
-      <Icon name="settings-2" size="sm" /> {$i18n.t("views.dashboard.canvas.schema")}
-    </button>
+    <!-- B7: no «Add widget» here — blocks are added with the «+» on the page itself.
+         i3-dash: no «Properties» either. It opened the schema of the dashboard's
+         own project with nothing saying so, on a page whose blocks may read other
+         projects; it is now in the menu of each block that reads this project,
+         named after it (layout/blockProperties.ts). The command palette keeps it. -->
     <button
       class="ppp-toolbar-btn clickable-icon"
       on:click={() => dispatch("toggleFormulaBar")}
@@ -49,36 +29,40 @@
             defaultValue: "Show formula bar — IntelliSense, live preview, syntax check",
           })}
     >
-      <Icon name="function-square" size="sm" /> {$i18n.t("views.dashboard.canvas.formula-builder", { defaultValue: "Formulas" })}
+      <Icon name="function-square" size="sm" /><span class="ppp-toolbar-label">{$i18n.t("views.dashboard.canvas.formula-builder", { defaultValue: "Formulas" })}</span>
     </button>
-  {/if}
-  {#if showToolbar && !readonly}
-    <WidgetToolbar
-      {currentWidgets}
-      on:addWidget={(e) => dispatch("addWidget", e.detail)}
-    />
   {/if}
 </div>
 
 <style>
+  /* i2-model (N23): page tools are quiet, at the end of a short row — the
+     page's content starts right under them, as in Notion. On a phone they
+     are icons; the label is the tooltip and the accessible name. */
   .ppp-database-toolbar {
     display: flex;
     align-items: center;
-    gap: 0.375rem;
-    padding: 0.25rem 0;
+    justify-content: flex-end;
+    gap: 0.25rem;
+    padding: 0;
     flex-wrap: wrap;
+  }
+
+  @media (pointer: coarse) {
+    .ppp-toolbar-label {
+      display: none;
+    }
   }
 
   .ppp-toolbar-btn {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    padding: 0.25rem 0.625rem;
-    min-height: 2.25rem;
+    padding: 0.125rem 0.5rem;
+    min-height: 1.75rem;
     font-size: var(--font-ui-small);
-    color: var(--text-muted);
+    color: var(--text-faint);
     background: transparent;
-    border: var(--ppp-border-width) solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid transparent;
     border-radius: var(--radius-s, 0.25rem);
     cursor: pointer;
     transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;

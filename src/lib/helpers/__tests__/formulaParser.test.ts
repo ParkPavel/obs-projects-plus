@@ -77,8 +77,9 @@ describe("formulaParser", () => {
     test("number offsets recover raw fragment", () => {
       expect(sliceOf("x + 42", "NUMBER")).toBe("42");
     });
-    test("negative number offsets include the sign", () => {
-      expect(sliceOf("-3", "NUMBER")).toBe("-3");
+    test("unary sign and number retain separate source offsets", () => {
+      expect(sliceOf("-3", "OPERATOR")).toBe("-");
+      expect(sliceOf("-3", "NUMBER")).toBe("3");
     });
     test("multi-char operator offsets", () => {
       expect(sliceOf("a >= 5", "OPERATOR")).toBe(">=");

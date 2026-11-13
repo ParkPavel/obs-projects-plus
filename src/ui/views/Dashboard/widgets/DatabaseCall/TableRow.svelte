@@ -10,24 +10,31 @@
   import { i18n } from "src/lib/stores/i18n";
   import type { DataFrame, DataRecord, DataField, DataValue, Optional } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
-  import { cellDisplay, type TableColumn } from "./tableCanon";
+  import { cellDisplay, isDerivedRowId, sourceIdOf, type TableColumn } from "./tableCanon";
   import EditableCell from "./EditableCell.svelte";
+  import HighlightText from "./HighlightText.svelte";
+  import type { ParsedSearch } from "./tableSearchQuery";
+
+  type DateFormatConfig = import("src/settings/v3/settings").DateFormatConfig;
 
   export let columns: TableColumn[];
   export let record: DataRecord;
   export let readonly: boolean;
   export let api: ViewApi;
   export let frame: DataFrame;
+  export let dateFormat: DateFormatConfig | undefined = undefined;
   /** R3 — this row currently drives the canvas Selection Bus. */
   export let driving = false;
   /** Field name currently edited in THIS record (single editor per table). */
   export let editingField: string | null = null;
+  export let saving = false;
+  export let retryVersion = 0;
   /** Unique value lists for Select/Status dropdowns, keyed by field name. */
   export let optionsByField: ReadonlyMap<string, string[]> = new Map();
+  export let highlight: ParsedSearch | null = null;
 
   const dispatch = createEventDispatcher<{
-    // #189: the originating event travels with the record, or the modifier the
-    // peek now lives on cannot be read by the one place allowed to read it.
+    // The originating event carries the modifier used to open the note.
     openRecord: { record: DataRecord; event: MouseEvent };
     rowMenu: { record: DataRecord; event: MouseEvent };
     startEdit: { recordId: string; field: string };
@@ -39,7 +46,7 @@
   // R3: never surface the full vault path — identity falls back to the
   // note's basename, like Notion shows the page title.
   function baseName(id: string): string {
-    return (id.split("/").pop() ?? id).replace(/\.md$/, "");
+    return (sourceIdOf(id).split("/").pop() ?? id).replace(/\.md$/, ""); // D17: a pipeline row is named by its note
   }
 
   function nameText(): string {
@@ -56,17 +63,16 @@
   {#each columns as col (col.field.name)}
     {#if col.isPrimary}
       <div class="ppp-t2-cell ppp-t2-cell--primary" role="gridcell">
-        <span class="ppp-t2-name">{nameText()}</span>
+        <button type="button" class="ppp-t2-name"
+          on:click|stopPropagation={(e) => dispatch("openRecord", { record, event: e })}
+        ><HighlightText text={nameText()} search={highlight} /></button>
         <button
-          class="ppp-t2-rowbtn clickable-icon"
+          class="ppp-t2-rowbtn ppp-t2-rowbtn--open clickable-icon"
           on:click|stopPropagation={(e) => dispatch("openRecord", { record, event: e })}
           aria-label={$i18n.t("views.dashboard.table-v2.open", { defaultValue: "Open note" })}
           title={$i18n.t("views.dashboard.table-v2.open", { defaultValue: "Open note" })}
         ><Icon name="arrow-up-right" size="sm" /></button>
-        <!-- #189 follow-up: shown on a READ-ONLY row too. The menu is where
-             "Show fields" is discoverable, and a borrowed source is exactly
-             where reading fields matters most. `buildRowMenuEntries` drops the
-             writing entries; hiding the whole button hid the reading ones. -->
+        <!-- Read-only rows still expose "Show fields"; the menu omits writes. -->
         <button
           class="ppp-t2-rowbtn clickable-icon"
           on:click|stopPropagation={(e) => dispatch("rowMenu", { record, event: e })}
@@ -78,11 +84,13 @@
       <EditableCell
         field={col.field}
         value={record.values[col.field.name]}
-        {readonly}
+        readonly={readonly || isDerivedRowId(record.id)}
         {api}
         {frame}
+        {dateFormat}
         editing={editingField === col.field.name}
-        options={optionsByField.get(col.field.name) ?? []}
+        {saving} {retryVersion}
+        options={optionsByField.get(col.field.name) ?? []} {highlight}
         on:startEdit={() => dispatch("startEdit", { recordId: record.id, field: col.field.name })}
         on:commit={(e) => dispatch("commitEdit", { record, field: col.field.name, value: e.detail })}
         on:cancel={() => dispatch("cancelEdit")}
@@ -96,7 +104,7 @@
   .ppp-t2-row {
     display: grid;
     grid-template-columns: var(--ppp-dt-columns);
-    min-height: var(--ppp-t2-row-height, 2.25rem);
+    height: var(--ppp-t2-row-height, 2.25rem); /* B3: fixed — the render window counts rows by it */
     border-bottom: 0.0625rem solid var(--background-modifier-border);
   }
 
@@ -117,10 +125,26 @@
   }
 
   .ppp-t2-name {
+    display: block; /* N17: a centred flex button clipped the name's start */
+    flex: 0 1 auto;
+    min-width: 0;
+    height: auto;
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    color: inherit;
+    font-size: inherit;
+    text-align: left;
+    cursor: pointer;
     font-weight: var(--font-medium, 500);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .ppp-t2-name:focus-visible {
+    outline: var(--ppp-border-width) solid var(--interactive-accent);
   }
 
   .ppp-t2-rowbtn {
@@ -149,9 +173,7 @@
       opacity: 0;
     }
 
-    .ppp-t2-row:hover .ppp-t2-rowbtn {
-      opacity: 1;
-    }
+    .ppp-t2-row:hover .ppp-t2-rowbtn { opacity: 1; }
 
     .ppp-t2-rowbtn:hover {
       color: var(--text-normal);
@@ -159,18 +181,17 @@
     }
   }
 
-  /* A finger has no hover to find them: both actions stay shown, each in its
-     own finger-sized box side by side, so the two targets never overlap. The
-     row grows to fit them; the name keeps its ellipsis. */
+  /* A finger has no hover: the row menu stays shown in a finger-sized box. */
   @media (pointer: coarse) {
     .ppp-t2-rowbtn {
       opacity: 1;
       width: var(--ppp-touch-target-min);
-      height: var(--ppp-touch-target-min);
+      height: 100%;
     }
 
     .ppp-t2-cell--primary {
       gap: 0;
     }
   }
+  @media (pointer: coarse) { .ppp-t2-rowbtn--open { display: none; } } /* N18: ↗ repeats a tap on the name */
 </style>

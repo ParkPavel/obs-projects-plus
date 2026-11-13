@@ -18,18 +18,22 @@
   import { dragHandleZone, SHADOW_PLACEHOLDER_ITEM_ID } from 'svelte-dnd-action';
   import { Icon } from 'obsidian-svelte';
   import { portal } from "src/ui/portal";
-  import { remAt, rootFontPx, toRem } from "src/ui/utils/cssLength";
+  import { toRem } from "src/ui/utils/cssLength";
   import { i18n } from '../../../../../lib/stores/i18n';
   import type { DataRecord, DataField } from '../../../../../lib/dataframe/dataframe';
   import type { ProjectDefinition } from '../../../../../settings/settings';
   import type { AgendaCustomList } from '../../../../../settings/v3/settings';
   import { formatDateForDisplay } from '../../../../../lib/helpers';
-  import { extractTimeWithPriority, parseDateInTimezone } from '../../../Calendar/calendar';
+  import { extractTimeWithPriority } from '../../../Calendar/calendar';
+  import { calendarRecordDates, type CalendarDateMapping } from '../../calendarRecordDates';
   import { isMobileDevice } from '../../../../../lib/stores/ui';
   import AgendaCustomListComponent from '../../agenda/AgendaCustomList.svelte';
+  import AgendaListName from '../../agenda/AgendaListName.svelte';
+  import { newAgendaList } from '../../agenda/newAgendaList';
   import AgendaListEditor from '../../agenda/AgendaListEditor.svelte';
   import { applyDragFeedback } from '../../agenda/TouchDndCoordinator';
   import { pauseGestures, resumeGestures } from '../../gestures/GestureCoordinator';
+  import { fitAgendaOverlay } from '../../agenda/fitAgendaOverlay';
   
   const dispatch = createEventDispatcher();
   
@@ -40,11 +44,13 @@
   export let currentDate: dayjs.Dayjs = dayjs();
   export let titleField: string | undefined = undefined;
   export let dateField: string | undefined = undefined;
+  export let endDateField: string | undefined = undefined;
+  export let dateMapping: CalendarDateMapping | undefined = undefined;
   export let timeField: string | undefined = undefined;
   export let colorField: string | undefined = undefined;
   export let checkField: string | undefined = undefined;
   export let timezone: string = 'local';
-  export let onRecordClick: ((id: string) => void) | undefined = undefined;
+  export let onRecordClick: ((id: string, event?: MouseEvent) => void) | undefined = undefined;
   export let onCreateRecord: ((date: dayjs.Dayjs) => void) | undefined = undefined;
   export let visible: boolean = true;  // New: controls visibility on mobile
   export let collapsed: boolean = false;  // Desktop: collapsed sidebar
@@ -80,6 +86,11 @@
   // Custom Mode State
   let showListEditor = false;
   let editingList: AgendaCustomList | null = null;
+  // w4-input2: a list is named where it lives — a row at the end of the lists
+  // (new) or its own header (rename) — not in a separate window.
+  let drafting = false;
+  let renamingListId: string | null = null;
+  let editorName = '';
   
   // Local collapse state for custom lists (NOT persisted to project settings)
   let collapsedCustomLists: Set<string> = new Set();
@@ -133,6 +144,8 @@
     allDayTime: agendaT('all-day-time'),
     todayBtn: agendaT('today-btn'),
     addNote: agendaT('add-note'),
+    expand: agendaT('expand'),
+    collapse: agendaT('collapse'),
   };
   
   // LIFECYCLE
@@ -252,17 +265,13 @@
   }
   
   // DATA PROCESSING
-  function getRecordDate(record: DataRecord): dayjs.Dayjs | null {
-    const fieldName = dateField ?? 'startDate';
-    const value = record.values[fieldName] ?? record.values['date'] ?? record.values['deadline'];
-    if (!value) return null;
-    return parseDateInTimezone(value, timezone);
-  }
-  
-  function getEndDate(record: DataRecord): dayjs.Dayjs | null {
-    const value = record.values['endDate'] ?? record.values['end'];
-    if (!value) return null;
-    return parseDateInTimezone(value, timezone);
+  interface AgendaFields {
+    dates: CalendarDateMapping;
+    preferredDate: string | undefined;
+    title: string | undefined;
+    time: string | undefined;
+    color: string | undefined;
+    check: string | undefined;
   }
   
   function categorize(
@@ -318,29 +327,29 @@
     });
   }
 
-  function buildAgenda(recs: DataRecord[], baseDate: dayjs.Dayjs): AgendaEvent[] {
+  function buildAgenda(recs: DataRecord[], baseDate: dayjs.Dayjs, writeFormat: string | undefined, mapping: AgendaFields, allDayTime: string): AgendaEvent[] {
     const result: AgendaEvent[] = [];
     
     for (const record of recs) {
-      const rawTitle = titleField && record.values[titleField]
-        ? String(record.values[titleField])
+      const rawTitle = mapping.title && record.values[mapping.title]
+        ? String(record.values[mapping.title])
         : record.id.split('/').pop()?.replace('.md', '') ?? record.id;
       const title = stripWikilinks(rawTitle);
       
-      const date = getRecordDate(record);
-      const endDate = getEndDate(record);
+      const { startDate, endDate } = calendarRecordDates(record, mapping.dates, writeFormat, mapping.preferredDate);
+      const date = startDate ?? endDate;
       
       // Check if task is completed
-      const isCompleted = checkField 
-        ? record.values[checkField] === true 
+      const isCompleted = mapping.check
+        ? record.values[mapping.check] === true
         : false;
       
       let timeMinutes = -1;
-      let timeDisplay = labels.allDayTime;
+      let timeDisplay = allDayTime;
       let isAllDay = true;
       
-      if (timeField) {
-        const extracted = extractTimeWithPriority(record, timeField);
+      if (mapping.time) {
+        const extracted = extractTimeWithPriority(record, mapping.time);
         if (extracted) {
           const parts = extracted.split(':').map(Number);
           const h = parts[0];
@@ -354,7 +363,7 @@
       }
       
       const category = categorize(date, endDate, isAllDay, baseDate, isCompleted);
-      const color = colorField ? record.values[colorField] as string : undefined;
+      const color = mapping.color ? record.values[mapping.color] as string : undefined;
       
       let spanInfo: string | undefined;
       let dateStr: string | undefined;
@@ -402,7 +411,16 @@
     });
   }
   
-  $: agenda = buildAgenda(records, selectedDate);
+  $: agendaDates = dateMapping ?? { startDateField: dateField, endDateField, timezone };
+  $: agenda = buildAgenda(records, selectedDate, project.dateFormat?.writeFormat,
+    { dates: agendaDates, preferredDate: dateField, title: titleField, time: timeField, color: colorField, check: checkField }, labels.allDayTime);
+  // Custom lists are local views of the selected day, not independent vault
+  // queries. Reuse the calendar's parsing/timezone and multi-day classification
+  // before the list applies its own conditions (date AND list conditions).
+  $: dayRecordIds = new Set(agenda
+    .filter(event => event.category === 'today' || event.category === 'allday' || event.category === 'multiday')
+    .map(event => event.id));
+  $: customRecords = records.filter(record => dayRecordIds.has(record.id));
   
   $: grouped = CATEGORY_ORDER.reduce((acc, cat) => {
     acc[cat] = agenda.filter(e => e.category === cat);
@@ -435,13 +453,10 @@
     saveState();
   }
   
+  // B10: the event goes up with the id, so Shift (window) and Ctrl/Meta (tab)
+  // reach the view's one activation rule; a plain click opens the peek.
   function handleClick(event: MouseEvent, id: string) {
-    // Ctrl+Click (Windows/Linux) or Cmd+Click (Mac) = open in new window
-    if (event.ctrlKey || event.metaKey) {
-      dispatch('openInNewWindow', { id });
-      return;
-    }
-    onRecordClick?.(id);
+    onRecordClick?.(id, event);
   }
   
   function handleAdd() {
@@ -450,12 +465,31 @@
   
   // CUSTOM MODE HANDLERS
   function handleAddList() {
+    renamingListId = null;
+    drafting = true;
+  }
+
+  function handleCreateList(name: string) {
+    drafting = false;
+    dispatch('saveList', { list: newAgendaList(name, customLists.length) });
+  }
+
+  /** The draft row's gear: the full editor, starting from the typed name. */
+  function handleDraftSettings(name: string) {
+    drafting = false;
     editingList = null;
+    editorName = name;
     showListEditor = true;
+  }
+
+  function handleRenameList(list: AgendaCustomList, name: string) {
+    renamingListId = null;
+    if (name !== list.name) dispatch('saveList', { list: { ...list, name } });
   }
   
   function handleEditList(list: AgendaCustomList) {
     editingList = list;
+    editorName = '';
     showListEditor = true;
   }
   
@@ -490,7 +524,9 @@
   // 3. Overlay starts BELOW navigation tabs (tabs are outside .calendar-zoom-container)
   // 4. Overlay click-to-dismiss works across the full area
   function portalOverlay(node: HTMLElement) {
-    const container = node.parentElement?.closest('.calendar-zoom-container') as HTMLElement | null;
+    // w4-input2: on a phone the calendar is a strip of the screen; the editor
+    // takes the whole visible screen, as its mobile styles say.
+    const container = isMobile ? null : node.parentElement?.closest('.calendar-zoom-container') as HTMLElement | null;
 
     // #192: the move itself goes through the shared primitive; the bounds
     // tracking below stays here, because it is this component's geometry and
@@ -501,23 +537,11 @@
     // Codex review of 125c617); only the container's measured bounds are inline.
     node.classList.add('obsidian-projects-agenda-overlay');
     node.classList.toggle('obsidian-projects-agenda-overlay--viewport', !container);
-    function update() {
-      if (!container) return;
-      const rect = container.getBoundingClientRect();
-      const root = rootFontPx(node.ownerDocument);
-      node.style.top = remAt(rect.top, root);
-      node.style.left = remAt(rect.left, root);
-      node.style.width = remAt(rect.width, root);
-      node.style.height = remAt(rect.height, root);
-    }
-
-    update();
-    const ro = container ? new ResizeObserver(update) : null;
-    if (container) ro!.observe(container);
+    const fitted = fitAgendaOverlay(node, container);
 
     return {
       destroy() {
-        ro?.disconnect();
+        fitted.destroy();
         // #192: the restore branch that used to live here was dead code, and
         // that is measured rather than argued -- `A192_portalContract.test.ts`
         // shows Svelte 3.59.2 detaching the element BEFORE running an action's
@@ -654,9 +678,22 @@
   {/if}
   
   <header class="header">
+    {#if !isMobile}
+      <!-- Desktop handle: collapsing keeps the panel as a strip, so it can always be reopened -->
+      <button
+        class="collapse-handle"
+        type="button"
+        aria-expanded={!collapsed}
+        aria-label={collapsed ? labels.expand : labels.collapse}
+        title={collapsed ? labels.expand : labels.collapse}
+        on:click={() => dispatch('toggle')}
+      >
+        <Icon name={collapsed ? 'chevron-left' : 'chevron-right'} size="sm" />
+      </button>
+    {/if}
     {#if !collapsed}
       <div class="date-picker-container">
-        <button class="date-btn" on:click={toggleDatePicker}>
+        <button class="date-btn" type="button" title={dateDisplay} on:click={toggleDatePicker}>
           <span class="date-icon"><Icon name="calendar" size="sm" /></span>
           <span class="date-text">{dateDisplay}</span>
           <span class="date-arrow"><Icon name={showDatePicker ? 'chevron-up' : 'chevron-down'} size="xs" /></span>
@@ -711,7 +748,7 @@
       </div>
       
       {#if onCreateRecord}
-        <button class="add-btn" on:click={handleAdd} title={labels.addNote}>
+        <button class="ppp-agenda-add-record" type="button" aria-label={labels.addNote} on:click={handleAdd} title={labels.addNote}>
           <Icon name="plus" size="md" />
         </button>
       {/if}
@@ -743,14 +780,20 @@
             {#each dndLists as list (list.id)}
               {#if list.id !== SHADOW_PLACEHOLDER_ITEM_ID}
                 <AgendaCustomListComponent
+                  {fields}
                   {list}
                   collapsed={collapsedCustomLists.has(list.id)}
-                  {records}
+                  records={customRecords}
                   {titleField}
                   {onRecordClick}
                   {selectedDate}
                   isFirst={dndLists.indexOf(list) === 0}
                   isLast={dndLists.indexOf(list) === dndLists.length - 1}
+                  renaming={renamingListId === list.id}
+                  takenNames={customLists.filter(l => l.id !== list.id).map(l => l.name)}
+                  on:renameStart={() => { drafting = false; renamingListId = list.id; }}
+                  on:renameEnd={() => renamingListId = null}
+                  on:rename={(e) => handleRenameList(list, e.detail)}
                   on:edit={() => handleEditList(list)}
                   on:delete={() => handleDeleteList(list.id)}
                   on:toggle={() => handleToggleList(list.id)}
@@ -765,7 +808,7 @@
               {/if}
             {/each}
           </div>
-        {:else}
+        {:else if !drafting}
           <div class="custom-lists">
             <div class="custom-empty">
               <p>{$i18n.t('views.calendar.agenda.custom.no-lists')}</p>
@@ -777,6 +820,18 @@
           </div>
         {/if}
         
+        {#if drafting}
+          <div class="custom-list-draft">
+            <AgendaListName
+              takenNames={customLists.map(l => l.name)}
+              withSettings
+              on:save={(e) => handleCreateList(e.detail)}
+              on:settings={(e) => handleDraftSettings(e.detail)}
+              on:cancel={() => drafting = false}
+            />
+          </div>
+        {/if}
+
         {#if showListEditor}
           <!-- svelte-ignore a11y-click-events-have-key-events -->
           <div class="ppp-list-editor-overlay" use:portalOverlay on:click|self={handleCancelListEditor}>
@@ -785,7 +840,10 @@
                 list={editingList}
                 {fields}
                 {records}
+                previewRecords={customRecords}
+                referenceDate={selectedDate}
                 existingLists={customLists}
+                initialName={editorName}
                 on:save={handleSaveList}
                 on:cancel={handleCancelListEditor}
               />
@@ -907,6 +965,7 @@
   /* Base container */
   .agenda {
     width: var(--w, var(--agenda-width));
+    box-sizing: border-box;
     min-width: var(--w, var(--agenda-width));
     max-width: var(--w, var(--agenda-width));
     background: var(--background-secondary);
@@ -927,20 +986,46 @@
   }
   
   .agenda.resizing { transition: none; }
+
+  .collapse-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-width: var(--agenda-touch-min);
+    min-height: var(--agenda-touch-min);
+    padding: 0;
+    border: none;
+    border-radius: var(--ppp-radius-sm, var(--radius-s));
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    box-shadow: none;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .collapse-handle:hover {
+      background: var(--background-modifier-hover);
+      color: var(--text-normal);
+    }
+  }
+  .agenda.collapsed .collapse-handle { min-width: 100%; }
+  .agenda.collapsed .header {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+    border-bottom: none;
+  }
   
   /* Mobile: Full drawer from right (no collapsed state, just show/hide) */
   .agenda.mobile {
     position: absolute;
     top: 0;
     right: 0;
-    /* ios-s1: the drawer stops where Obsidian's floating navbar begins, so its
-       own bottom controls stay tappable. The host's `--view-bottom-spacing`
-       (Obsidian app.css, `.is-phone`; 0 by default, navbar + home-indicator
-       inset with the floating nav — what Bases reserves) is the obstruction;
-       0/unset on desktop and tablets. Because the box itself is bounded, the
-       list inside no longer pads for the bar (see `.agenda.mobile .content`). */
-    bottom: var(--view-bottom-spacing, 0);
-    width: 85vw;
+    /* Embedded calendars reserve the host bar once, outside the widget.
+       A negative host inset during keyboard animation must not grow this box. */
+    bottom: var(--ppp-calendar-bottom-spacing, var(--view-bottom-spacing, 0));
+    max-height: 100%;
+    width: 85%;
     max-width: 20rem;
     min-width: auto;
     /* CRITICAL: Lower than SettingsMenu (101) to avoid overlap */
@@ -965,7 +1050,8 @@
     inset: 0;
     /* ios-s1: level with the drawer's bottom — the strip under Obsidian's bar
        belongs to the host, a tap there must not be read as "outside". */
-    bottom: var(--view-bottom-spacing, 0);
+    bottom: var(--ppp-calendar-bottom-spacing, var(--view-bottom-spacing, 0));
+    max-height: 100%;
     /* Layer scale, not a raw number: --agenda-z-overlay is declared on .agenda and the
        scrim is its sibling, so read the global token (30) directly; still below the drawer (50) */
     z-index: var(--ppp-z-overlay, 30);
@@ -981,7 +1067,6 @@
   /* Landscape orientation: narrower sidebar on mobile */
   @media (max-width: 48rem) and (orientation: landscape) { /* 768 at 16 base */
     .agenda.mobile {
-      width: 50vw;
       max-width: 16rem;
     }
   }
@@ -989,7 +1074,6 @@
   /* Portrait orientation: wider sidebar for better touch targets */
   @media (max-width: 48rem) and (orientation: portrait) { /* 768 at 16 base */
     .agenda.mobile {
-      width: 85vw;
       max-width: 22rem;
     }
   }
@@ -1037,6 +1121,7 @@
     align-items: center;
     gap: var(--agenda-gap-md);
     width: 100%;
+    min-width: 0;
     padding: var(--agenda-gap-md) var(--agenda-gap-lg);
     background: var(--background-primary);
     border: 0.0625rem solid var(--background-modifier-border);
@@ -1053,7 +1138,7 @@
     align-items: center;
     color: var(--text-muted);
   }
-  .date-text { flex: 1; text-align: left; font-weight: var(--ppp-font-weight-medium, 500); }
+  .date-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; font-weight: var(--ppp-font-weight-medium, 500); }
   .date-arrow { 
     display: flex; 
     align-items: center;
@@ -1196,9 +1281,13 @@
   .stat-overdue { background: rgba(var(--color-red-rgb, 244, 67, 54), 0.15); color: var(--text-error); }
   
   /* Add button */
-  .add-btn {
-    width: var(--ppp-icon-size-lg, 1.5rem);
-    height: var(--ppp-icon-size-lg, 1.5rem);
+  .ppp-agenda-add-record {
+    width: var(--agenda-touch-min);
+    height: var(--agenda-touch-min);
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: var(--interactive-accent);
     color: var(--text-on-accent);
     border: none;
@@ -1208,7 +1297,7 @@
     font-weight: var(--ppp-font-weight-semibold, 600);
     flex-shrink: 0;
   }
-  .add-btn:hover { opacity: 0.9; transform: scale(1.05); }
+  @media (hover: hover) and (pointer: fine) { .ppp-agenda-add-record:hover { opacity: 0.9; } }
   
   /* Content */
   .content {
@@ -1230,7 +1319,7 @@
   .content::after {
     content: "";
     display: block;
-    height: var(--view-bottom-spacing, 0);
+    height: var(--ppp-calendar-bottom-spacing, var(--view-bottom-spacing, 0));
   }
 
   /* Categories */
@@ -1424,13 +1513,6 @@
   .agenda.mobile .events { 
     max-height: 16rem; 
   }
-  .agenda.mobile .add-btn {
-    min-width: var(--agenda-touch-min);
-    min-height: var(--agenda-touch-min);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
   
   /* CUSTOM MODE STYLES */
   .custom-lists {
@@ -1438,6 +1520,15 @@
     flex-direction: column;
     gap: var(--ppp-gap-block-md, 0.75rem);
     padding: var(--agenda-gap-lg);
+  }
+
+  /* w4-input2: the name row of a list being added, where the list will be. */
+  .custom-list-draft {
+    padding: var(--agenda-gap-lg);
+  }
+
+  .custom-lists + .custom-list-draft {
+    padding-top: 0;
   }
 
   /*
@@ -1510,6 +1601,7 @@
      The .ppp-list-editor-overlay class prefix prevents collisions. */
   :global(.ppp-list-editor-overlay) {
     position: fixed;
+    box-sizing: border-box;
     inset: 0;
     background: var(--background-modifier-cover);
     backdrop-filter: blur(0.125rem);
@@ -1545,26 +1637,32 @@
   /* Keyframes ppp-fade-in and ppp-slide-up are defined in styles.css (global)
      because the overlay is portaled to document.body outside Svelte's scope */
   
-  /* v3.1.0: Mobile — full-screen takeover modal for agenda editor.
-     Full screen avoids all guesswork re: toolbars, safe areas, etc.
-     The inner AgendaListEditor handles its own scroll + footer padding. */
+  /* The portal owns viewport/keyboard sizing and reserves the safe area once.
+     Children fill this content box; only the editor body scrolls. */
   @media (max-width: 37.5rem) {
     :global(.ppp-list-editor-overlay) {
-      padding: 0;
+      /* On iOS Obsidian's bottom safe area becomes the keyboard height.
+         fitAgendaOverlay already excludes that keyboard from this box. */
+      padding: max(env(safe-area-inset-top, 0rem), var(--safe-area-inset-top, 0rem), var(--view-top-spacing, 0rem))
+        env(safe-area-inset-right, 0rem)
+        max(0rem, calc(max(env(safe-area-inset-bottom, 0rem), var(--safe-area-inset-bottom, 0rem)) - var(--keyboard-height, 0rem)))
+        env(safe-area-inset-left, 0rem);
       align-items: stretch;
     }
     
     :global(.ppp-list-editor-modal) {
+      min-height: 0;
       max-width: 100%;
       max-height: none;
-      height: 100%;
+      height: auto;
+      align-self: stretch;
       border-radius: 0;
     }
   }
   
   /* Reduced motion */
   @media (prefers-reduced-motion: reduce) {
-    .agenda, .event, .add-btn, .date-btn, .custom-add-btn, .custom-add-empty { transition: none; }
+    .agenda, .event, .ppp-agenda-add-record, .date-btn, .custom-add-btn, .custom-add-empty { transition: none; }
     .agenda-scrim { animation: none; }
   }
 </style>

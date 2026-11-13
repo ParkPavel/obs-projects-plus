@@ -7,10 +7,12 @@ export {
   validateFormulaExpression,
   getFormulaFunctions,
   isStyledValue,
+  createFormulaPass,
 } from "src/lib/formula";
 export type {
   StyledValue,
   FormulaResult,
+  FormulaPass,
 } from "src/lib/formula";
 
 export {

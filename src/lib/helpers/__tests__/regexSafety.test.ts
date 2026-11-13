@@ -9,6 +9,8 @@
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import {
+  compileSafeRegex,
+  getRegexPatternIssue,
   isUnsafePattern,
   MAX_REGEX_INPUT_LENGTH,
   MAX_REGEX_PATTERN_LENGTH,
@@ -17,13 +19,7 @@ import {
 const SRC = resolve(__dirname, "..", "..", "..");
 const read = (rel: string) => readFileSync(resolve(SRC, rel), "utf8");
 
-/**
- * The lookaround guard exactly as it appears in source, escaping included.
- * The first version of this constant omitted the backslashes, so the three
- * "no copy here" assertions below passed against any file at all — a guard test
- * that could not fail. The positive assertion is what caught it.
- */
-const GUARD_FRAGMENT = String.raw`\(\?[<!=]`;
+const ANALYZER_FRAGMENT = "function analyzePattern";
 
 describe("#126 isUnsafePattern", () => {
   it.each([
@@ -37,6 +33,15 @@ describe("#126 isUnsafePattern", () => {
     ["nested star quantifier", "(a*)+"],
     ["adjacent quantifiers", "a+*"],
     ["quantified brace then quantifier", "a{2}+"],
+    ["overlapping alternatives in a repeated group", "^(a|aa)+$"],
+    // R22 probe: these short ambiguous alternatives passed the former
+    // heuristic but stalled native RegExp on a short near-match.
+    ["duplicate alternatives in a repeated group", "^(a|a)+$"],
+    ["duplicate multi-character alternatives in a repeated group", "^(ab|ab)+$"],
+    ["overlapping repeated atoms", "^a*a*a*b$"],
+    ["overlapping repeats separated by their own literal", "^a+aa+$"],
+    ["escaped overlapping separator", "^a+\\x61a+$"],
+    ["backreferences", "^(a+)\\1$"],
   ])("rejects %s", (_label, pattern) => {
     expect(isUnsafePattern(pattern)).toBe(true);
   });
@@ -45,37 +50,52 @@ describe("#126 isUnsafePattern", () => {
     ["a plain literal", "hello"],
     ["a character class", "[a-z]+"],
     ["an anchored word", "^done$"],
+    ["repeats separated by a disjoint literal", "^a+ba+$"],
     ["a legitimate alternation", "(cat|dog)"],
+    ["disjoint alternatives in a repeated group", "^(?:cat|dog)+$"],
+    ["escaped regex syntax", String.raw`^\(\+\)\*$`],
+    ["legacy non-Unicode brace escape", String.raw`\u{61}`],
+    ["quantifier characters inside a class", "^[+*]+$"],
   ])("accepts %s", (_label, pattern) => {
     expect(isUnsafePattern(pattern)).toBe(false);
   });
 
-  it("does not detect alternation-based backtracking — a documented gap", () => {
-    // ^(a|a)+$ is catastrophic but passes. Recorded rather than silently
-    // tolerated: closing it naively would also reject (cat|dog)+, which users
-    // legitimately write. MAX_REGEX_PATTERN_LENGTH is the blunt bound meanwhile.
-    expect(isUnsafePattern("^(a|a)+$")).toBe(false);
+  it("keeps disjoint alternatives safe when matching case-insensitively", () => {
+    expect(isUnsafePattern("^(?:cat|dog)+$", "i")).toBe(false);
+    expect(isUnsafePattern("^[a-z]+$", "i")).toBe(false);
+  });
+
+  it("rejects case-insensitive overlapping alternatives in a repeated group", () => {
+    expect(isUnsafePattern("^(a|A)+$", "i")).toBe(true);
+  });
+
+  it("rejects case-insensitive overlap between a range and a literal", () => {
+    expect(isUnsafePattern("^(?:[a-z]|A)+$", "i")).toBe(true);
+  });
+
+  it("rejects repeated non-ASCII alternatives when case folding is unknown", () => {
+    expect(isUnsafePattern("^(?:é|è)+$", "i")).toBe(true);
   });
 });
 
 describe("#126 the policy has exactly one implementation", () => {
-  it("only regexSafety defines the guard", () => {
-    expect(read("lib/helpers/regexSafety.ts")).toContain(GUARD_FRAGMENT);
+  it("only regexSafety defines the structural analyzer", () => {
+    expect(read("lib/helpers/regexSafety.ts")).toContain(ANALYZER_FRAGMENT);
   });
 
   it.each([
     "lib/engine/filterEvaluator.ts",
-    "lib/formula/extendedEvaluator.ts",
+    "lib/formula/computedFunctions.ts",
     "lib/dashboard-engine/transformExecutor.ts",
   ])("%s uses the shared guard instead of a copy", (rel) => {
     const source = read(rel);
 
-    expect(source).toContain("isUnsafePattern");
-    expect(source).not.toContain(GUARD_FRAGMENT);
+    expect(source).toContain("compileSafeRegex");
+    expect(source).not.toContain(ANALYZER_FRAGMENT);
   });
 
   it("no consumer hardcodes the pattern-length bound", () => {
-    for (const rel of ["lib/engine/filterEvaluator.ts", "lib/formula/extendedEvaluator.ts"]) {
+    for (const rel of ["lib/engine/filterEvaluator.ts", "lib/formula/computedFunctions.ts"]) {
       expect(read(rel)).not.toMatch(/pattern\.length\s*>\s*\d+/);
     }
   });
@@ -83,5 +103,43 @@ describe("#126 the policy has exactly one implementation", () => {
   it("exposes both bounds so no consumer needs its own", () => {
     expect(MAX_REGEX_PATTERN_LENGTH).toBeGreaterThan(0);
     expect(MAX_REGEX_INPUT_LENGTH).toBeGreaterThan(MAX_REGEX_PATTERN_LENGTH);
+  });
+
+  it("compiles only valid patterns within the shared safety policy", () => {
+    expect(compileSafeRegex("^alpha$", "i")).toMatchObject({ ok: true });
+    expect(getRegexPatternIssue("[")).toBe("invalid");
+    expect(getRegexPatternIssue("^(a|a)+$")).toBe("unsafe");
+    expect(getRegexPatternIssue("a".repeat(MAX_REGEX_PATTERN_LENGTH + 1))).toBe("too-long");
+  });
+
+  it("compiles exact-match patterns with grouped alternatives and preserved captures", () => {
+    const result = compileSafeRegex("(foo|bar)(\\d+)", "", { fullMatch: true });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.regex.exec("bar2")?.[1]).toBe("bar");
+    expect(result.regex.exec("xbar2")).toBeNull();
+    expect(result.regex.exec("foo2tail")).toBeNull();
+  });
+
+  it("applies the pattern limit to user text, not the exact-match wrapper", () => {
+    expect(compileSafeRegex("a".repeat(MAX_REGEX_PATTERN_LENGTH), "", { fullMatch: true }).ok).toBe(true);
+  });
+  it.each([
+    ["foo", "i", "FOO foo"],
+    ["\\s", "g", "x\ufeff\u00a0 y"],
+    [".", "g", "😀x"],
+    ["^([a-z]+)-(\\d+)$", "i", "Item-42"],
+    ["\\q", "", "q"],
+    ["^\\d{1,2}:\\d{2}$", "", "09:30"],
+    ["(?<word>foo)", "g", "foo foo"],
+  ])("admitted %s /%s keeps native matching, captures and replacement", (pattern, flags, text) => {
+    const result = compileSafeRegex(pattern, flags);
+    expect(result.ok).toBe(true); if (!result.ok) return;
+    expect(text.match(result.regex)).toEqual(text.match(new RegExp(pattern, flags)));
+    const replacement = compileSafeRegex(pattern, flags); if (!replacement.ok) throw new Error("Admission changed");
+    expect(text.replace(replacement.regex, "<$&:$1>")).toBe(text.replace(new RegExp(pattern, flags), "<$&:$1>"));
+  });
+  it("does not execute Unicode set syntax without analysis support", () => {
+    expect(compileSafeRegex("alpha", "v").ok).toBe(false);
   });
 });

@@ -1,4 +1,5 @@
 <script lang="ts" context="module">
+  let sequence = 0;
   export type FormulaSnippet = {
     label: string;
     insert: string;
@@ -25,38 +26,55 @@
   //     on:commit={() => handleApply()}
   //   />
 
-  import { createEventDispatcher } from "svelte";
+  import { afterUpdate, createEventDispatcher, onDestroy, tick } from "svelte";
+  import { suggestIndexCache, type FormulaSuggestionEntry } from "src/lib/engine/formulaSuggestIndex";
+  import { debounceLatest } from "src/lib/engine/debounceLatest";
   import {
-    validateFormulaExpression,
-    getFormulaFunctions,
+    validateExpression,
+    getFormulaCatalog,
+    type FormulaSemantics,
   } from "src/lib/formula";
   import {
     getFormulaMetadata,
     findEnclosingCall,
+    localizedFormulaDoc,
     type FormulaMetadata,
   } from "src/lib/dashboard-engine/formulaMetadata";
   import { i18n } from "src/lib/stores/i18n";
   import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
+  import { isImeKey, recordImeCompositionEnd } from "src/ui/components/fields/draftController";
+  import { keepInView } from "src/ui/components/fields/keepInView";
+  import { releaseOnOutsideTap } from "src/ui/components/fields/releaseOnOutsideTap";
   import { tokenize, type Token } from "src/lib/helpers/formulaParser";
+  import { MAX_FORMULA_INPUT_LENGTH } from "src/lib/formula/limits";
+  import { optionDomId } from "src/ui/components/fields/comboOptions";
+  import { revealInList } from "src/ui/components/fields/revealInList";
+  import { createOwnerFrames } from "src/ui/utils/ownerFrames";
+  import { registerFormField } from "src/ui/components/fields/formFields";
 
   // ── Snippets catalog (default) ──────────────────────────────
   // Small built-in catalog for empty-state Ctrl+Space discovery. Each surface
   // (FormulaBar / YamlVisualizer / custom) can override via `snippets` prop.
+  // i3-final: descriptions in the reader's language (they were Russian for
+  // everyone); CONCAT is not a function of the engine, the conditional
+  // aggregates are.
   const DEFAULT_SNIPPETS: FormulaSnippet[] = [
-    { label: "SUM(field)", insert: "SUM(", description: "Сумма значений поля" },
-    { label: "AVG(field)", insert: "AVG(", description: "Среднее значение" },
-    { label: "COUNT()", insert: "COUNT(", description: "Количество записей" },
-    { label: "IF(cond, then, else)", insert: "IF(", description: "Условное выражение" },
-    { label: "TODAY()", insert: "TODAY()", description: "Сегодняшняя дата" },
-    { label: "CONCAT(a, b)", insert: "CONCAT(", description: "Склейка строк" },
+    { label: "SUM(@column)", insert: "SUM(@", description: $i18n.t("views.dashboard.formula.snippet-sum") },
+    { label: "AVG(@column)", insert: "AVG(@", description: $i18n.t("views.dashboard.formula.snippet-avg") },
+    { label: "COUNT()", insert: "COUNT(", description: $i18n.t("views.dashboard.formula.snippet-count") },
+    { label: "IF(cond, then, else)", insert: "IF(", description: $i18n.t("views.dashboard.formula.snippet-if") },
+    { label: "TODAY()", insert: "TODAY()", description: $i18n.t("views.dashboard.formula.snippet-today") },
+    { label: 'SUMIF(@range, ">0", @sum_range)', insert: "SUMIF(@", description: $i18n.t("views.dashboard.formula.snippet-sumif") },
+    { label: 'COUNTIF(@range, "done")', insert: "COUNTIF(@", description: $i18n.t("views.dashboard.formula.snippet-countif") },
   ];
 
   // ── Props ───────────────────────────────────────────────────
   export let value: string = "";
   export let fields: string[] = [];
   /** Custom validator; defaults to the canonical formula validator. */
-  export let validate: (expr: string, fields: string[]) => string[] =
-    (expr, flds) => validateFormulaExpression(expr, flds);
+  export let semantics: FormulaSemantics = "unified-v1";
+  export let ariaLabel: string = "";
+  export let validate: ((expr: string, fields: string[]) => string[]) | undefined = undefined;
   export let placeholder: string = "";
   export let rows: number = 3;
   export let disabled: boolean = false;
@@ -77,6 +95,7 @@
     change: string;
     /** Emitted on Ctrl+Enter when the expression is valid. */
     commit: void;
+    validation: { errors: string[]; pending: boolean; value: string };
   }>();
 
   // ── State ───────────────────────────────────────────────────
@@ -84,12 +103,39 @@
   let showSuggestions = false;
   let cursorWord = "";
   let cursorPosition = 0;
-  let filteredSuggestions: string[] = [];
+  let filteredSuggestions: FormulaSuggestionEntry[] = [];
+  let columnContext = false;
   let selectedSuggestionIndex = -1;
   let activeSignature: FormulaMetadata | null = null;
   let textareaEl: HTMLTextAreaElement;
   let highlightEl: HTMLDivElement | null = null;
   let suggestionListEl: HTMLDivElement | null = null;
+  let composing = false;
+  let alive = true;
+  onDestroy(() => (alive = false));
+  registerFormField({ isComposing: () => !disabled && composing, syncForSubmit: () => disabled || syncForSubmit() });
+  const listId = `ppp-fc-list-${++sequence}`;
+  const frames = createOwnerFrames(); onDestroy(frames.destroy);
+  let suggestionsVisible = false;
+  $: if (!showSuggestions) suggestionsVisible = false;
+  $: expanded = showSuggestions && suggestionsVisible;
+  $: suggestionKeys = snippetsMode ? snippets.map(snippet => `snippet:${snippet.label}:${snippet.insert}`) : filteredSuggestions.map(suggestion => `${suggestion.kind}:${suggestion.label}`);
+  $: activeId = expanded && selectedSuggestionIndex >= 0 && suggestionKeys[selectedSuggestionIndex] ? optionDomId(listId, suggestionKeys[selectedSuggestionIndex]!) : undefined;
+
+  /** Help and external tools insert at the native selection, preserving surrounding text. */
+  export function insertText(text: string): void {
+    if (disabled || composing || !textareaEl) return;
+    const start = textareaEl.selectionStart ?? value.length;
+    const end = textareaEl.selectionEnd ?? start;
+    value = value.slice(0, start) + text + value.slice(end);
+    dispatch("change", value);
+    void tick().then(() => {
+      if (!textareaEl?.isConnected) return;
+      textareaEl.focus();
+      textareaEl.setSelectionRange(start + text.length, start + text.length);
+      updateCursor(textareaEl);
+    });
+  }
 
   // ── Syntax highlight (#077) ─────────────────────────────────
   type HighlightSegment = { text: string; cls: string };
@@ -115,9 +161,11 @@
   // Split `expr` into colored token segments + uncolored gaps (whitespace,
   // comments). Falls back to a single plain segment if the tokenizer throws.
   function buildHighlightSegments(expr: string): HighlightSegment[] {
+    // Keep pasted source intact without building an unbounded token/DOM tree.
+    if (expr.length > MAX_FORMULA_INPUT_LENGTH) return [{ text: expr, cls: "" }];
     if (expr === "") return [];
     try {
-      const tokens = tokenize(expr);
+      const tokens = tokenize(expr, "strict");
       const segments: HighlightSegment[] = [];
       let pos = 0;
       for (const tok of tokens) {
@@ -148,28 +196,81 @@
       highlightEl.scrollLeft = textareaEl.scrollLeft;
     }
   }
+  // i3-final: a value set from outside (a snippet, a parent) moves the
+  // textarea's scroll without a scroll event; the layer follows after render.
+  afterUpdate(syncScroll);
   /**
    * True when Ctrl+Space forced suggestions open without a cursor word.
    * Auto-resets when the user types (cursorWord appears) or cancels (Esc/insert).
    */
   let forceOpen = false;
 
-  const allFunctions = getFormulaFunctions();
+  $: allFunctions = getFormulaCatalog(semantics).map(definition => definition.name);
+  function bareField(name: string): boolean {
+    return /^[\p{L}_][\p{L}\p{N}_]*$/u.test(name) && !["TRUE", "FALSE", "NULL"].includes(name.toUpperCase());
+  }
+  $: suggestibleFields = fields;
+  const EMPTY_NAMES: readonly string[] = [];
+  $: contextFields = columnContext ? fields.filter(name => /^[\p{L}_][\p{L}\p{N}_]*$/u.test(name)) : suggestibleFields;
 
   // Snippets shown when forceOpen and value is empty; otherwise hidden.
   $: snippetsMode = forceOpen && value.trim() === "" && snippets.length > 0;
 
   // ── Reactive derived ────────────────────────────────────────
-  $: errors = value.trim() ? validate(value, fields) : [];
+  // B5 — validation parses the whole expression against every field, so it
+  // waits for a pause in typing; suggestions answer at once from an index
+  // built once per schema (src/lib/engine/formulaSuggestIndex.ts).
+  // i2-data (D20): 700 ms, not 150 — «paid +» is a formula being typed, not
+  // an error; the message waits until the person stops.
+  const validation = debounceLatest((expr: string) => {
+    errors = expr.trim() ? (validate ? validate(expr, fields) : validateExpression(expr, fields, semantics)) : [];
+    dispatch("validation", { errors, pending: false, value: expr });
+  }, 700);
+  onDestroy(() => validation.cancel());
+  $: {
+    void fields;
+    void semantics;
+    void validate;
+    dispatch("validation", { errors: [], pending: true, value });
+    validation.call(value);
+  }
+  /** Answers a commit on the expression as it is now, not as it was 150 ms ago. */
+  function validateNow(): void {
+    validation.call(value);
+    validation.flush();
+  }
+
+  /** A containing form validates and adopts the final original draft without applying it separately. */
+  export function syncForSubmit(): boolean {
+    if (!alive || disabled || composing) return false;
+    readNativeDraft();
+    validateNow();
+    if (errors.length) return false;
+    dispatch("change", value);
+    return true;
+  }
+
+  /** Buttons and keyboard shortcuts commit the same currently visible native draft. */
+  export function commitCurrent(): boolean {
+    if (!alive || disabled || composing) return false;
+    readNativeDraft();
+    validateNow();
+    if (errors.length || !value.trim()) return false;
+    dispatch("commit");
+    return true;
+  }
+
+  const suggestCache = suggestIndexCache();
+  $: suggestIndex = suggestCache.get(columnContext ? EMPTY_NAMES : allFunctions, contextFields);
 
   $: {
     const word = cursorWord.toUpperCase();
     if (word.length > 0) {
-      const fnMatches = allFunctions.filter((f) => f.startsWith(word));
-      const fieldMatches = fields.filter((f) => f.toUpperCase().startsWith(word));
-      filteredSuggestions = [...fnMatches, ...fieldMatches].slice(0, 12);
+      filteredSuggestions = suggestIndex.suggestEntries(word, 12);
     } else if (forceOpen && value.trim() !== "") {
-      filteredSuggestions = allFunctions.slice(0, 12);
+      filteredSuggestions = columnContext
+        ? contextFields.slice(0, 12).map(label => ({ label, kind: "field" }))
+        : allFunctions.slice(0, 12).map(label => ({ label, kind: "function" }));
     } else {
       filteredSuggestions = [];
     }
@@ -184,21 +285,36 @@
     let meta: FormulaMetadata | undefined;
     if (showSuggestions && selectedSuggestionIndex >= 0) {
       const candidate = filteredSuggestions[selectedSuggestionIndex];
-      if (candidate) meta = getFormulaMetadata(candidate);
+      if (candidate?.kind === "function") meta = getFormulaMetadata(candidate.label, semantics);
     }
     if (!meta) {
-      const enclosing = findEnclosingCall(value, cursorPosition);
-      if (enclosing) meta = getFormulaMetadata(enclosing);
+      const enclosing = findEnclosingCall(value, cursorPosition, semantics);
+      if (enclosing) meta = getFormulaMetadata(enclosing, semantics);
     }
     activeSignature = meta ?? null;
   }
 
   // ── Event handlers ──────────────────────────────────────────
   function handleInput(e: Event) {
+    if (!alive || disabled) return;
     const target = e.target as HTMLTextAreaElement;
     value = target.value;
     dispatch("change", value);
     updateCursor(target);
+  }
+
+  function readNativeDraft(): void {
+    if (textareaEl && textareaEl.value !== value) {
+      value = textareaEl.value;
+      dispatch("change", value);
+    }
+  }
+  function finishComposition(event: CompositionEvent): void {
+    if (!alive || disabled) return;
+    recordImeCompositionEnd(event);
+    composing = false;
+    readNativeDraft();
+    handleCursorMove(event);
   }
 
   function handleCursorMove(e: Event) {
@@ -206,11 +322,13 @@
   }
 
   function updateCursor(el: HTMLTextAreaElement) {
+    if (composing) return;
     const pos = el.selectionStart ?? 0;
     cursorPosition = pos;
     const before = value.substring(0, pos);
-    const match = before.match(/[A-Za-z_][A-Za-z0-9_]*$/);
+    const match = before.match(/[\p{L}_][\p{L}\p{N}_]*$/u);
     cursorWord = match ? match[0] : "";
+    columnContext = before[pos - cursorWord.length - 1] === "@";
     // Typing a word past force-open mode returns control to normal cursor-driven flow.
     if (cursorWord.length > 0) forceOpen = false;
     showSuggestions =
@@ -218,17 +336,20 @@
       (forceOpen && (filteredSuggestions.length > 0 || snippetsMode));
   }
 
-  function insertSuggestion(suggestion: string) {
+  function insertSuggestion(suggestion: FormulaSuggestionEntry) {
     const textarea = textareaEl;
     if (!textarea) return;
 
     const pos = textarea.selectionStart ?? 0;
     const before = value.substring(0, pos);
     const after = value.substring(pos);
-    const match = before.match(/[A-Za-z_][A-Za-z0-9_]*$/);
+    const match = before.match(/[\p{L}_][\p{L}\p{N}_]*$/u);
     const replaceFrom = match ? pos - match[0].length : pos;
     // Functions get opening paren appended so cursor lands inside the call.
-    const insert = allFunctions.includes(suggestion) ? suggestion + "(" : suggestion;
+    const name = suggestion.label;
+    const quoted = name.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
+    const insert = suggestion.kind === "function" ? name + "("
+      : columnContext || bareField(name) ? name : `PROP("${quoted}")`;
 
     value = value.substring(0, replaceFrom) + insert + after;
     dispatch("change", value);
@@ -236,7 +357,7 @@
     forceOpen = false;
     cursorWord = "";
 
-    requestAnimationFrame(() => {
+    frames.schedule(textarea, () => {
       textarea.focus();
       const newPos = replaceFrom + insert.length;
       textarea.setSelectionRange(newPos, newPos);
@@ -254,7 +375,7 @@
     forceOpen = false;
     cursorWord = "";
 
-    requestAnimationFrame(() => {
+    frames.schedule(textarea, () => {
       textarea.focus();
       const newPos = value.length;
       textarea.setSelectionRange(newPos, newPos);
@@ -263,14 +384,15 @@
   }
 
   function scrollSuggestionIntoView() {
-    requestAnimationFrame(() => {
+    frames.schedule(textareaEl, () => {
       // suggestionListEl lives inside FloatingPopup portal (outside containerEl DOM tree).
       const el = suggestionListEl?.querySelector(".ppp-fc-suggestion--selected");
-      if (el) el.scrollIntoView({ block: "nearest" });
+      if (el) revealInList(el as HTMLElement, suggestionListEl?.parentElement ?? null);
     });
   }
 
   function handleKeydown(e: KeyboardEvent) {
+    if (composing || isImeKey(e)) return;
     // Ctrl+Space: force-open suggestions even when cursor word is empty.
     // Empty textarea → snippet catalog; otherwise → first 12 functions.
     if (e.ctrlKey && (e.code === "Space" || e.key === " ")) {
@@ -292,7 +414,7 @@
 
     const listLen = snippetsMode ? snippets.length : filteredSuggestions.length;
 
-    if (showSuggestions && listLen > 0) {
+    if (expanded && listLen > 0) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
         selectedSuggestionIndex =
@@ -316,7 +438,7 @@
         if (snippetsMode) {
           insertSnippet(snippets[selectedSuggestionIndex] as FormulaSnippet);
         } else {
-          insertSuggestion(filteredSuggestions[selectedSuggestionIndex] as string);
+          insertSuggestion(filteredSuggestions[selectedSuggestionIndex]!);
         }
         return;
       }
@@ -326,14 +448,14 @@
         if (snippetsMode) {
           insertSnippet(snippets[idx] as FormulaSnippet);
         } else {
-          insertSuggestion(filteredSuggestions[idx] as string);
+          insertSuggestion(filteredSuggestions[idx]!);
         }
         return;
       }
     }
 
     if (e.key === "Enter" && e.ctrlKey) {
-      if (errors.length === 0 && value.trim()) dispatch("commit");
+      commitCurrent();
     }
   }
 </script>
@@ -343,11 +465,13 @@
     <div class="ppp-fc-input-stack" class:ppp-fc-input-stack--disabled={disabled}>
       {#if highlight}
         <div class="ppp-fc-highlight" bind:this={highlightEl} aria-hidden="true">
-          {#each highlightSegments as seg}<span class={seg.cls}>{seg.text}</span>{/each}
+          {#each highlightSegments as seg}<span class={seg.cls}>{seg.text}</span>{/each}{#if value.endsWith("\n")}<span>{" "}</span>{/if}
         </div>
       {/if}
       <textarea
         bind:this={textareaEl}
+        use:keepInView={{ confirm: commitCurrent }}
+        use:releaseOnOutsideTap
         class="ppp-fc-textarea"
         class:ppp-fc-textarea--error={errors.length > 0}
         class:ppp-fc-textarea--highlight={highlight}
@@ -355,11 +479,17 @@
         {rows}
         {disabled}
         {placeholder}
+        aria-label={ariaLabel || $i18n.t("views.dashboard.formula.title")}
+        role="combobox" aria-autocomplete="list" aria-haspopup="listbox" aria-expanded={expanded}
+        aria-controls={expanded ? listId : undefined} aria-activedescendant={activeId}
         on:input={(e) => { handleInput(e); syncScroll(); }}
         on:click={handleCursorMove}
         on:keyup={handleCursorMove}
         on:focus={handleCursorMove}
         on:scroll={syncScroll}
+        on:blur={frames.clear}
+        on:compositionstart={() => { composing = true; showSuggestions = false; }}
+        on:compositionend={finishComposition}
         spellcheck="false"
       ></textarea>
     </div>
@@ -370,9 +500,9 @@
         <code class="ppp-fc-signature-code">{activeSignature.signature}</code>
         <span class="ppp-fc-signature-meta">
           <span>{$i18n.t("views.dashboard.formula.signature-returns")}: <strong>{activeSignature.returnType}</strong></span>
-          <span>{activeSignature.category}</span>
+          <span>{$i18n.t(`views.dashboard.formula.help-category.${activeSignature.category}`)}</span>
         </span>
-        <p class="ppp-fc-signature-doc">{activeSignature.doc}</p>
+        <p class="ppp-fc-signature-doc">{localizedFormulaDoc(activeSignature.name, activeSignature.doc, (key, options) => $i18n.t(key, options), semantics)}</p>
       </div>
     {/if}
 
@@ -382,12 +512,16 @@
     <FloatingPopup
       triggerEl={textareaEl}
       open={showSuggestions && (snippetsMode || filteredSuggestions.length > 0)}
-      placement="bottom-start"
+      placement="above-field"
+      id={listId}
       offsetRem={0.25}
       role="listbox"
       autoFocus={false}
-      ariaLabel={snippetsMode ? "Formula snippets" : "Formula suggestions"}
+      ariaLabel={snippetsMode
+        ? $i18n.t("views.dashboard.formula.snippets-label")
+        : $i18n.t("views.dashboard.formula.suggestions-label")}
       on:close={() => { showSuggestions = false; forceOpen = false; }}
+      on:position={(event) => { suggestionsVisible = event.detail.visible; }}
     >
       {#if snippetsMode}
         <div
@@ -399,7 +533,9 @@
               class="ppp-fc-suggestion ppp-fc-suggestion--snippet"
               class:ppp-fc-suggestion--selected={i === selectedSuggestionIndex}
               role="option"
+              id={optionDomId(listId, suggestionKeys[i] ?? "")}
               aria-selected={i === selectedSuggestionIndex}
+              on:mousedown|preventDefault
               on:click|stopPropagation={() => insertSnippet(snippet)}
             >
               <span class="ppp-fc-snippet-label">{snippet.label}</span>
@@ -414,13 +550,15 @@
           {#each filteredSuggestions as suggestion, i}
             <button
               class="ppp-fc-suggestion"
-              class:ppp-fc-suggestion--fn={allFunctions.includes(suggestion)}
+              class:ppp-fc-suggestion--fn={suggestion.kind === "function"}
               class:ppp-fc-suggestion--selected={i === selectedSuggestionIndex}
               role="option"
+              id={optionDomId(listId, suggestionKeys[i] ?? "")}
               aria-selected={i === selectedSuggestionIndex}
+              on:mousedown|preventDefault
               on:click|stopPropagation={() => insertSuggestion(suggestion)}
             >
-              {suggestion}
+              {suggestion.label}{suggestion.kind === "function" ? "(" : ""}
             </button>
           {/each}
         </div>
@@ -443,6 +581,10 @@
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    /* N31: the visible text is the highlight layer, which inherited Obsidian's
+       right-aligned setting control while the transparent textarea stayed at
+       the start — the formula read right-aligned, the caret at the left. */
+    text-align: start;
   }
 
   .ppp-fc-editor {
@@ -453,41 +595,65 @@
     position: relative;
   }
 
-  .ppp-fc-textarea {
-    width: 100%;
+  /* Highlight overlay (#077). The underlay paints colored tokens; the
+     textarea sits on top with transparent text but a visible caret.
+     i3-final: the glyphs drifted off the caret because the two layers had
+     different boxes — a 0.0625rem border under a var(--ppp-border-width) one,
+     and a textarea scrollbar narrowing the text column the layer kept. Both
+     layers now take every box and text metric from this ONE rule, and both
+     reserve the same scrollbar gutter, so a line wraps at the same glyph in
+     each and the layer is scrolled with the textarea (syncScroll). */
+  .ppp-fc-textarea,
+  .ppp-fc-highlight {
+    margin: 0;
     padding: 0.5rem;
     border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
-    background: var(--background-secondary);
-    color: var(--text-normal);
     font-family: var(--font-monospace);
     font-size: var(--font-ui-small);
+    font-weight: normal;
+    font-style: normal;
+    font-variant-ligatures: none;
     line-height: 1.4;
     letter-spacing: normal;
-    resize: vertical;
-    min-height: 4rem;
+    word-spacing: normal;
+    text-indent: 0;
+    text-transform: none;
+    tab-size: 4;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    scrollbar-gutter: stable;
     box-sizing: border-box;
   }
 
-  /* Highlight overlay (#077). The underlay paints colored tokens; the
-     textarea sits on top with transparent text but a visible caret.
-     Typography MUST match the textarea exactly so glyphs align 1:1. */
+  .ppp-fc-textarea {
+    display: block;
+    width: 100%;
+    background: var(--background-secondary);
+    color: var(--text-normal);
+    resize: vertical;
+    min-height: 4rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  /* The shared touch input floor in tokens.css also enlarges textareas.
+     Its painted underlay must receive the same size or glyphs leave the caret. */
+  @media (pointer: coarse) {
+    .ppp-fc-textarea,
+    .ppp-fc-highlight {
+      font-size: var(--ppp-input-font-size) !important;
+    }
+  }
+
   .ppp-fc-highlight {
     position: absolute;
     inset: 0;
-    margin: 0;
-    padding: 0.5rem;
-    border: 0.0625rem solid transparent;
-    border-radius: var(--radius-s, 0.25rem);
-    font-family: var(--font-monospace);
-    font-size: var(--font-ui-small);
-    line-height: 1.4;
-    letter-spacing: normal;
-    white-space: pre-wrap;
-    word-break: break-word;
+    border-color: transparent;
+    background: var(--background-secondary);
     overflow: hidden;
     pointer-events: none;
-    box-sizing: border-box;
     color: var(--text-normal);
   }
 
@@ -496,8 +662,16 @@
     background: transparent;
     color: transparent;
     caret-color: var(--text-normal);
-    white-space: pre-wrap;
-    word-break: break-word;
+  }
+
+  /* On touch and high-contrast surfaces the native textarea paints both text
+     and caret. Independent overlay font metrics cannot separate them. */
+  @media (pointer: coarse), (forced-colors: active) {
+    .ppp-fc-highlight { display: none; }
+    .ppp-fc-textarea--highlight {
+      color: var(--text-normal);
+      background: var(--background-secondary);
+    }
   }
 
   .ppp-fc-input-stack--disabled .ppp-fc-highlight {
@@ -534,18 +708,19 @@
   .ppp-fc-suggestions {
     display: flex;
     flex-direction: column;
-    min-width: 12rem;
-    max-height: 12rem;
-    overflow-y: auto;
+    min-width: 0;
   }
 
   .ppp-fc-suggestions--snippets {
-    min-width: 16rem;
+    width: 100%;
   }
 
   .ppp-fc-suggestion {
     display: block;
     width: 100%;
+    min-height: var(--ppp-touch-target-min);
+    height: auto;
+    box-shadow: none;
     text-align: left;
     padding: 0.25rem 0.5rem;
     border: none;
@@ -556,10 +731,10 @@
     font-size: var(--font-ui-small);
   }
 
-  .ppp-fc-suggestion:hover,
   .ppp-fc-suggestion--selected {
     background: var(--background-modifier-hover);
   }
+  @media (hover: hover) and (pointer: fine) { .ppp-fc-suggestion:hover { background: var(--background-modifier-hover); } }
 
   .ppp-fc-suggestion--fn {
     color: var(--text-accent);

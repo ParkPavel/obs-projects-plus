@@ -2,24 +2,19 @@
   /**
    * DataTableContent — #074 (TABLE_V2_CANON): Table V2 orchestrator.
    *
-   * Zones: ControlBar → sticky Header → windowed Body (rows) → inline «+ New»
-   * → sticky aggregation Footer, sharing one CSS grid context through
-   * --ppp-dt-columns. Editing: a single in-place editor at a time, persisted
-   * through viewApi.updateRecord (§6.3 bidirectionality). Row menu and header
-   * menu both go through the canonical contextMenu; column sort/hide/calculate/
-   * width/group patches come from tableHeaderOps.
+   * Windowed rows share a grid with their controls, header and footer.
+   * Draft controllers own acknowledged writes; row/header menus use contextMenu.
    */
-  import type { DataFrame, DataRecord, DataField, DataValue, Optional } from "src/lib/dataframe/dataframe";
+  import type { DataFrame, DataRecord, DataField } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
   import type { DataTableConfig, FieldPreset } from "../../types";
-  import type { ProjectDefinition } from "src/settings/settings";
+  import type { ProjectDefinition, FilterCondition } from "src/settings/settings";
   import { createEventDispatcher, getContext, onDestroy } from "svelte";
-  import { get } from "svelte/store";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
+  import { templateFoldersOf } from "src/lib/suggestions/valueSuggestions";
   import { openRecord, modeFromEvent } from "src/lib/record/openRecord";
   import { settings as settingsStore } from "src/lib/stores/settings";
-  import { createRelationSetupController } from "src/ui/views/Dashboard/relationSetupController";
   import {
     SELECTION_CONTEXT_KEY,
     EMPTY_SELECTION,
@@ -27,17 +22,22 @@
     type SelectionState,
   } from "../../canvasSelectionStore";
   import { computeAggregations } from "src/lib/dashboard-engine/aggregation";
-  import { updateRecordValues } from "src/lib/datasources/helpers";
-  import { openContextMenu } from "src/lib/contextMenu";
   import { emitCommand } from "src/lib/stores/commandBus";
-  import { toRem } from "src/ui/utils/cssLength";
-  import { buildRowMenuEntries, createNamedRecord, isRowDriving, toggleRowSelection } from "./tableRowOps";
-  import { applySortPatch, applyHidePatch, applyCalculatePatch, applyWidthPatch, applyGroupPatch, toggleGroupCollapsed, optionPools } from "./tableHeaderOps";
+  import { rootFontPx, toRem } from "src/ui/utils/cssLength";
+  import { rowWindow, type TableViewport } from "./tableWindow";
+  import { editWindow } from "./tableEditWindow";
+  import { createTableEditing } from "./tableEditing";
+  import { createTableSearch } from "./tableSearch";
+  import { parseSearchQuery } from "./tableSearchQuery";
+  import TableScrollFrame from "./TableScrollFrame.svelte";
+  import { isRowDriving } from "./tableRowOps";
+  import { bindTableCreation, tableCreationContext } from "./tableCreation";
+  import { openTableRowMenu, setupTableRelation } from "./tableInteractions";
+  import { applySortPatch, applyHidePatch, applyCalculatePatch, applyWidthPatch, applyGroupPatch, toggleGroupCollapsed, optionPools, applyFreezePatch } from "./tableHeaderOps";
   import {
     buildColumns,
     gridTemplate,
     applySort,
-    applySearch,
     activeSortCriteria,
     buildRenderRows,
   } from "./tableCanon";
@@ -59,6 +59,7 @@
   export let project: ProjectDefinition | undefined = undefined;
   /** This table's actual project, when it differs from `project` — see tableRowOps. */
   export let sourceProjectId: string | undefined = undefined;
+  export let creationConditions: FilterCondition[] = [];
   /** R3 — Selection Bus driver identity (canvas widget id). */
   export let widgetId: string | undefined = undefined;
   /**
@@ -70,7 +71,6 @@
 
   // F2.4+ consumers; accepted so the DatabaseCallBlock bridge stays stable.
   $: void getRecordColor; $: void fieldPresets; $: void activeFieldPresetId;
-
   // ── Selection Bus (driver) ───────────────────────────────────
   const selectionStore: SelectionStore | undefined = getContext(SELECTION_CONTEXT_KEY);
   let selection: SelectionState = EMPTY_SELECTION;
@@ -83,7 +83,18 @@
   }>();
 
   let searchQuery = "";
-
+  let visibleRecords: DataRecord[] = [];
+  let searching = false;
+  const search = createTableSearch(
+    (records) => { visibleRecords = records; },
+    (pending) => { searching = pending; },
+  );
+  onDestroy(search.destroy);
+  const editing = createTableEditing(() => api, () => fields, () => sourceProjectId ?? project?.id, () => readonly);
+  onDestroy(editing.destroy);
+  $: editing.refresh(api, fields, sourceProjectId ?? project?.id, readonly);
+  $: createRow = bindTableCreation(project, fields, api, creationConditions);
+  $: createContext = tableCreationContext(project, sourceProjectId, fields, creationConditions, readonly, api);
   $: columns = buildColumns(fields, config);
   // F2.4: live resize preview overrides one column width until commit.
   let liveWidth: { field: string; rem: number } | null = null;
@@ -92,39 +103,26 @@
   );
   $: sortCriteria = activeSortCriteria(config);
   $: sorted = applySort(frame.records, config);
-  $: visibleRecords = applySearch(sorted, searchQuery);
+  $: fieldNames = fields.map((f) => f.name);
+  $: search.update(sorted, searchQuery, bodyEl?.ownerDocument.defaultView ?? window, fieldNames);
+  $: highlight = searching ? null : parseSearchQuery(searchQuery, fieldNames);
   // F2.5: grouping flattens into the render list (group headers + records).
-  $: renderRows = buildRenderRows(visibleRecords, config);
-
+  // A dirty editor owns its row until commit/cancel. Background sort/search
+  // and optimistic refresh must not replace the input carrying that draft.
+  $: renderRows = $editing.rows ?? buildRenderRows(visibleRecords, config);
   $: rowHeightRem = config?.rowHeight === "compact" ? 1.75 : config?.rowHeight === "expanded" ? 3 : 2.25;
-
-  $: optionsByField = optionPools(fields, frame.records);
+  $: optionsByField = optionPools(fields, frame.records, { templateFolders: templateFoldersOf($app) });
+  $: frozen = !!config?.freezeUpTo && columns.some((c) => c.field.name === config?.freezeUpTo); // i3-table: pinned only on request
 
   // ── Windowing (canon: simple overscan, no framework) ─────────
-  const OVERSCAN = 12;
   let bodyEl: HTMLDivElement | null = null;
-  let scrollTop = 0;
-  let viewportPx = 600;
-  $: rowPx = rowHeightRem * 16;
-  $: start = Math.max(0, Math.floor(scrollTop / rowPx) - OVERSCAN);
-  $: end = Math.min(renderRows.length, Math.ceil((scrollTop + viewportPx) / rowPx) + OVERSCAN);
-  $: windowed = renderRows.slice(start, end);
-
-  function onScroll() {
-    if (!bodyEl) return;
-    scrollTop = bodyEl.scrollTop;
-    viewportPx = bodyEl.clientHeight;
-  }
-
-  // ── Editing (F2.2): one in-place editor per table ────────────
-  let editingCell: { recordId: string; field: string } | null = null;
-
-  function handleCommitEdit(e: CustomEvent<{ record: DataRecord; field: string; value: Optional<DataValue> }>) {
-    const { record, field, value } = e.detail;
-    editingCell = null;
-    if (record.values[field] === value) return;
-    api.updateRecord(updateRecordValues(record, { [field]: value }), fields);
-  }
+  let viewport: TableViewport = { scrollTop: 0, viewportPx: 600 };
+  // B3: a scroll that keeps the same rows in the window is not handed to Svelte.
+  const onViewport = (v: TableViewport) => { const w = rowWindow(renderRows.length, rowPx, v); if (w.start !== start || w.end !== end) viewport = v; };
+  // Visible part: measured against the scrolling ancestors (in a tile, the page), see tableWindow.
+  $: rowPx = rowHeightRem * rootFontPx(bodyEl?.ownerDocument);
+  $: ({ start, end } = rowWindow(renderRows.length, rowPx, viewport));
+  $: windowed = editWindow(renderRows, start, end, $editing.cell?.recordId);
 
   // ── Row operations (F2.3) ────────────────────────────────────
   function handleOpenRecord(e: CustomEvent<{ record: DataRecord; event: MouseEvent }>) {
@@ -135,19 +133,12 @@
   }
 
   function handleRowMenu(e: CustomEvent<{ record: DataRecord; event: MouseEvent }>) {
-    const record = e.detail.record;
-    const primaryField = columns.find((c) => c.isPrimary)?.field.name ?? "name";
-    const entries = buildRowMenuEntries({
-      record, project, fields, api, readonly, sourceProjectId, app: $app ?? undefined,
+    openTableRowMenu(e.detail, {
+      project, fields, api, readonly, sourceProjectId, app: $app ?? undefined,
+      primaryField: columns.find((c) => c.isPrimary)?.field.name ?? "name",
+      selectionStore, selection, widgetId,
       t: (k, d) => $i18n.t(k, { defaultValue: d }),
-      selectionEntry: selectionStore && widgetId
-        ? {
-            driving: isRowDriving(selection, widgetId, record),
-            onToggle: () => toggleRowSelection({ store: selectionStore, selection, widgetId: widgetId!, primaryField, record }),
-          }
-        : undefined,
     });
-    openContextMenu(entries, e.detail.event);
   }
 
   // ── Aggregation footer ───────────────────────────────────────
@@ -170,32 +161,30 @@
   }
 
   function handleSetupRelation(field: DataField): void {
-    if (!project?.id) return;
-    const rel = (field.typeConfig as { relation?: { targetProjectId?: string; displayField?: string } } | undefined)?.relation;
-    const displayField = rel?.displayField;
-    void createRelationSetupController({ app: $app, api, getProjectId: () => project.id, getFrame: () => frame, getProjects: () => get(settingsStore).projects, t: (k, o) => o ? $i18n.t(k, o) : $i18n.t(k) })
-      .open({ fieldName: field.name, targetProjectId: rel?.targetProjectId ?? "", createSourceField: false, ...(displayField !== undefined ? { displayField } : {}) });
+    setupTableRelation(field, { app: $app, api, project, frame, t: (k, o) => o ? $i18n.t(k, o) : $i18n.t(k) });
   }
 </script>
 
-<div class="ppp-dt-content" style:--ppp-dt-columns={template} style:--ppp-t2-row-height={`${rowHeightRem}rem`}>
+<div class="ppp-dt-content" aria-busy={searching} style:--ppp-dt-columns={template} style:--ppp-t2-row-height={`${rowHeightRem}rem`}>
   <TableControlBar
     {sortCriteria}
     recordCount={visibleRecords.length}
+    {searching}
     {readonly}
+    {fieldNames}
+    records={sorted}
     on:search={(e) => (searchQuery = e.detail)}
     on:removeSort={handleRemoveSort}
   />
-  <!-- UT-R2 #083: ONE scroll container for header+rows+footer — horizontal
-       scroll moves them as a unit; header/footer stay sticky vertically. -->
-  <div class="ppp-t2-scroll" bind:this={bodyEl} on:scroll={onScroll} role="rowgroup">
+  <!-- UT-R2 #083 + B3: ONE scroll owner for header+rows+footer, both axes. -->
+  <TableScrollFrame bind:scroller={bodyEl} {onViewport} {frozen} firstColRem={frozen ? columns[0]?.widthRem ?? 0 : 0}>
     <div class="ppp-t2-table">
       <TableHeader
         {columns}
         {sortCriteria}
         aggregations={config?.aggregations ?? {}}
         groupByField={config?.groupBy?.field}
-        {readonly}
+        {readonly} {frozen} on:freeze={(e) => dispatch("configChange", applyFreezePatch(config, e.detail.freeze ? e.detail.field : null))}
         on:sort={(e) => dispatch("configChange", applySortPatch(config, e.detail.field, e.detail.order))}
         on:hide={(e) => dispatch("configChange", applyHidePatch(config, e.detail))}
         on:calculate={(e) => dispatch("configChange", applyCalculatePatch(config, e.detail.field, e.detail.fn))}
@@ -204,9 +193,15 @@
         on:resizeCommit={handleResizeCommit}
         on:addProperty={() => emitCommand("add-field")}
       />
-      {#if start > 0}<div style:height={toRem(start * rowPx)} aria-hidden="true" />{/if}
-      {#each windowed as row (row.kind === "record" ? row.record.id : `g:${row.key}`)}
-        {#if row.kind === "group"}
+      {#if !searching && searchQuery.trim() !== "" && visibleRecords.length === 0}
+        <div class="ppp-t2-search-empty" role="status">
+          {$i18n.t("views.dashboard.database-call.no-matches", { defaultValue: "No matches" })}
+        </div>
+      {/if}
+      {#each windowed as row (row.kind === "record" ? row.record.id : row.kind === "spacer" ? row.key : `g:${row.key}`)}
+        {#if row.kind === "spacer"}
+          <div style:height={toRem(row.count * rowPx)} aria-hidden="true" />
+        {:else if row.kind === "group"}
           <TableGroupSection
             groupKey={row.key}
             count={row.count}
@@ -220,28 +215,31 @@
             {readonly}
             {api}
             {frame}
+            dateFormat={(sourceProjectId ? $settingsStore.projects.find(p => p.id === sourceProjectId) : project)?.dateFormat}
             driving={widgetId ? isRowDriving(selection, widgetId, row.record) : false}
-            editingField={editingCell?.recordId === row.record.id ? editingCell.field : null}
+            editingField={$editing.cell?.recordId === row.record.id ? $editing.cell.field : null}
+            saving={$editing.saving}
+            retryVersion={$editing.retry}
             {optionsByField}
+            {highlight}
             on:openRecord={handleOpenRecord}
             on:rowMenu={handleRowMenu}
-            on:startEdit={(e) => (editingCell = e.detail)}
-            on:commitEdit={handleCommitEdit}
-            on:cancelEdit={() => (editingCell = null)}
+            on:startEdit={(e) => editing.start(e.detail, renderRows)}
+            on:commitEdit={(e) => editing.commit(e.detail)}
+            on:cancelEdit={editing.cancel}
             on:setupRelation={(e) => handleSetupRelation(e.detail)}
           />
         {/if}
       {/each}
-      {#if end < renderRows.length}<div style:height={toRem((renderRows.length - end) * rowPx)} aria-hidden="true" />{/if}
       {#if !readonly && project}
-        <TableNewRow openSignal={newRowSignal} on:create={(e) => { if (project) createNamedRecord(e.detail, project, fields, api); }} />
+        <TableNewRow openSignal={newRowSignal} contextKey={createContext} save={createRow} />
       {/if}
       {#if showFooter}
         <span class="ppp-t2-footer-spacer" />
         <TableFooter {columns} {aggregations} />
       {/if}
     </div>
-  </div>
+  </TableScrollFrame>
 </div>
 
 <style>
@@ -257,11 +255,6 @@
        CONTAINER_ROOTS, which excludes `.ppp-dt-content` by design. */
   }
 
-  .ppp-t2-scroll {
-    flex: 1;
-    overflow: auto;
-  }
-
   /* Width = widest grid row (fixed tracks), so sticky header/footer and
      rows share one horizontal coordinate system. */
   .ppp-t2-table {
@@ -271,7 +264,10 @@
     min-height: 100%;
   }
 
-  .ppp-t2-footer-spacer {
-    flex: 1;
+  .ppp-t2-footer-spacer { flex: 1; }
+
+  .ppp-t2-search-empty {
+    padding: var(--ppp-space-lg);
+    color: var(--text-muted);
   }
 </style>

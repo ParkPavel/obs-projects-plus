@@ -1,4 +1,7 @@
+import { prepareFormulaMigration, migrateFormulaSettings } from "src/lib/formula/settingsMigration";
 import dayjs from "dayjs";
+import { migrateLegacyFavorites } from "src/lib/stores/palettes";
+import { installCrashLog, installLongTaskWatch } from "src/lib/errors/crashLog";
 import isoWeek from "dayjs/plugin/isoWeek";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 
@@ -12,7 +15,6 @@ import "./ui/tokens/tokens.css";
 
 import { either } from "fp-ts";
 import { Plugin, TFile, TFolder, WorkspaceLeaf, addIcon, Notice } from "obsidian";
-import "obsidian-dataview";
 import { createDataRecord, createProject } from "src/lib/dataApi";
 import { api } from "src/lib/stores/api";
 import { i18n, syncLocale } from "src/lib/stores/i18n";
@@ -22,12 +24,15 @@ import { settings } from "src/lib/stores/settings";
 import { CreateNoteModal } from "src/ui/modals/createNoteModal";
 import { CreateProjectModal } from "src/ui/modals/createProjectModal";
 import { createDemoWithNotices } from "src/ui/app/onboarding/demoRun";
+import { startupReport } from "src/lib/startup/startupReport";
 import { hasCanvasCommandTarget } from "src/ui/views/Dashboard/dashboardCommands";
 import { commandBus, emitCommand } from "src/lib/stores/commandBus";
 import {
   VIEW_TYPE_VISUALIZER_PANE,
-  VisualizerPaneView,
+  RetiredVisualizerPaneView,
 } from "src/ui/views/VisualizerPane/visualizerPaneView";
+import { NotePropertiesManager } from "src/ui/properties/notePropertiesManager";
+import NotePropertiesBlock from "src/ui/properties/NotePropertiesBlock.svelte";
 import {
   RelationPickerModal,
   pathFromFile,
@@ -41,8 +46,10 @@ import {
 import { get, type Unsubscriber } from "svelte/store";
 import {
   createSettingsWriter,
+  SETTINGS_WRITE_REFUSED,
   type SettingsWriter,
 } from "src/lib/settings/settingsWriter";
+import { saveCheckedSettings } from "src/lib/settings/settingsCheckedSave";
 import {
   onSaveFailureEpisode,
   saveStatus,
@@ -133,6 +140,7 @@ export default class ProjectsPlusPlugin extends Plugin {
   unsubscribeCommandBus?: Unsubscriber;
   unsubscribeSaveStatus?: Unsubscriber;
   inverseIndexStore?: InverseIndexStore;
+  propertiesManager?: NotePropertiesManager;
   /** REFACTOR-008: command registration is delegated to a dedicated manager. */
   private commandManager?: CommandManager;
   /** REFACTOR-205: stored so the lifecycle is explicit and reload-safe. */
@@ -147,12 +155,15 @@ export default class ProjectsPlusPlugin extends Plugin {
   private loadedSettings?: LatestProjectsPluginSettings;
   /** #185: version found on disk when it differed from the current one. */
   private migratedFromVersion: number | null = null;
+  private formulaSettingsMigrated = false;
   /**
    * #199: the canonical form of what `data.json` last held, as far as this
    * plugin knows. It is what separates "our write did not land" from "someone
    * else wrote something else" when the read-back does not match.
    */
   private confirmedOnDisk: string | null = null;
+  /** Recovery's exact bytes when the seen version is not parseable JSON. */
+  private confirmedRawOnDisk: string | null = null;
   /**
    * #212: what an adoption decided inside the lease, to be published to the
    * store after it. It is not a second source of truth — it is only read when
@@ -165,13 +176,23 @@ export default class ProjectsPlusPlugin extends Plugin {
     settings: LatestProjectsPluginSettings;
     base: string | null;
     carried: boolean;
+    formulasMigrated: boolean;
   } | null = null;
 
   /**
    * onload runs when the plugin is enabled.
    */
   async onload(): Promise<void> {
+    // w4-p12: the first mark is also the time Obsidian took before the plugin.
+    startupReport.mark("onload start");
+    this.app.workspace.onLayoutReady(() => startupReport.mark("layout ready"));
+    // i2-schema (D13): a crash on the phone leaves a readable trace in the vault.
+    const crashPath = `${this.manifest.dir ?? `${this.app.vault.configDir}/plugins/${this.manifest.id}`}/crash.log`;
+    this.register(installCrashLog(window, this.app.vault.adapter, crashPath, this.manifest.id));
+    // 17.10: a freeze throws nothing — long main-thread tasks are logged with what was mounted.
+    this.register(installLongTaskWatch(window, this.app.vault.adapter, crashPath));
     await this.loadSettings();
+    startupReport.mark("settings loaded");
 
     // Re-detect locale now that Obsidian app is fully initialized
     syncLocale();
@@ -202,18 +223,24 @@ export default class ProjectsPlusPlugin extends Plugin {
       (leaf) => new ProjectsView(leaf, this)
     );
 
-    // R1.1 — Visualizer sidebar leaf. Default OFF (per Revision 3 §5.6),
-    // available via command palette (`toggle-visualizer-pane`) and file menu
-    // (`Open in YAML Visualizer`).
+    // 3.7.2 B2 — the Visualizer side pane is retired; a leaf restored from a
+    // saved workspace closes itself. Properties live in the note header.
     this.registerView(
       VIEW_TYPE_VISUALIZER_PANE,
-      (leaf) => new VisualizerPaneView(leaf, this),
+      (leaf) => new RetiredVisualizerPaneView(leaf),
     );
 
     // R2.4 — single shared inverse-relation index for all Visualizer panes
     // and (future) Database widgets. Lifecycle is bound to the plugin so
     // we never duplicate event handlers.
     this.inverseIndexStore = createInverseIndexStore(this.app);
+    // The first value is the empty index; the next one is the first build.
+    let indexValues = 0;
+    const unsubscribeIndexMark = this.inverseIndexStore.subscribe(() => {
+      if (++indexValues === 2) startupReport.mark("relations index built");
+    });
+    this.register(unsubscribeIndexMark);
+    startupReport.mark("views and index registered");
 
     this.registerHoverLinkSource(VIEW_TYPE_PROJECTS, {
       defaultMod: true,
@@ -298,6 +325,19 @@ export default class ProjectsPlusPlugin extends Plugin {
       },
     });
 
+    // w4-p12: where the start-up's time went, as text a phone can paste.
+    this.addCommand({
+      id: "startup-report",
+      name: t("commands.startup-report.name"),
+      callback: () => {
+        // The report is measurements, not interface text; only the note is.
+        const report = startupReport.text();
+        void navigator.clipboard?.writeText(report).catch(() => undefined);
+        const message = [report, t("commands.startup-report.copied")].join("\n\n");
+        new Notice(message, 15000);
+      },
+    });
+
     // Command to create a new note.
     this.addCommand({
       id: "create-note",
@@ -314,8 +354,10 @@ export default class ProjectsPlusPlugin extends Plugin {
               project,
               (name, templatePath, project) => {
                 const record = createDataRecord(name, project);
-                get(api).createNote(record, [], templatePath).catch(console.error);
-              }
+                return get(api).createNote(record, [], templatePath);
+              },
+              // The general command is the one place a project is picked.
+              { chooseProject: true }
             ).open();
           }
 
@@ -426,13 +468,11 @@ export default class ProjectsPlusPlugin extends Plugin {
       this.activateView(projectId, viewId);
     });
 
-    // #185 — one writer owns `data.json`. `saveData` is handed to it rather
-    // than imported, which is what makes a failing write expressible in a test
-    // at all; the outcome leaves through `saveStatus` instead of being returned,
-    // because under coalescing a per-call promise describes no single write.
+    // One writer owns data.json. Its injected save checks the base inside the
+    // adapter's queue (#213); the status remains out of band under coalescing.
     const writer = createSettingsWriter<LatestProjectsPluginSettings>({
-      save: (value) => this.saveData(value),
-      // #199: `saveData` resolving is a claim, not a fact. A live run with
+      save: (value) => this.saveSettingsWithCheck(value),
+      // #199: a host write resolving is a claim, not a fact. A live run with
       // `data.json` made read-only had it report success while the file did
       // not change — and #185's whole visibility hangs off a rejection that
       // never arrived. So the file is read back and compared.
@@ -465,7 +505,7 @@ export default class ProjectsPlusPlugin extends Plugin {
     // the first firing a no-op.
     if (this.loadedSettings) {
       writer.prime(this.loadedSettings);
-      if (this.migratedFromVersion !== null) {
+      if (this.migratedFromVersion !== null || this.formulaSettingsMigrated) {
         // …but that echo was also the ONLY thing persisting a migration.
         // Skipping it alone would leave a v1 file on disk indefinitely, so the
         // migration is written here by name: because the version changed, not
@@ -479,6 +519,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       this.ensureCommands(value.preferences.commands, value.projects);
       writer.push(value);
     });
+    migrateLegacyFavorites(this.confirmedOnDisk !== null);
 
     // Best effort on shutdown: the last coalesced write is torn off the
     // debounce. Obsidian documents this event as "not guaranteed to actually
@@ -502,7 +543,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       if (!msg || msg.ts <= lastBusTs) return;
       lastBusTs = msg.ts;
       if (msg.action === "toggle-visualizer-pane") {
-        void this.toggleVisualizerPane();
+        this.toggleVisualizerPane();
       } else if (msg.action === "open-visualizer-for-file") {
         const payload = msg.payload as { filePath?: string } | undefined;
         void this.revealVisualizerPane(payload?.filePath);
@@ -516,16 +557,35 @@ export default class ProjectsPlusPlugin extends Plugin {
 
     registerFileEvents(this.fileSystemWatcher);
 
-    // R5-012 — When the user has opted to replace Obsidian's built-in
-    // Properties pane, detach any `file-properties` leaves on every
-    // active-leaf-change and surface our YAML Visualizer pane in the
-    // right sidebar instead. Default flag is false; toggling lives in
-    // the plugin Settings tab.
-    this.registerEvent(
-      this.app.workspace.on("active-leaf-change", () => {
-        void this.maybeReplacePropertiesPane();
-      }),
+    // 3.7.2 B2 — properties block in the header of every Markdown note.
+    const inverseIndexStore = this.inverseIndexStore;
+    const propertiesManager = new NotePropertiesManager(
+      this.app,
+      () => get(settings).preferences.propertiesInNoteHeader !== false,
+      (target, file) => {
+        const block = new NotePropertiesBlock({
+          target,
+          props: { app: this.app, file, inverseIndexStore },
+        });
+        return {
+          setFile: (next) => block.$set({ file: next }),
+          destroy: () => block.$destroy(),
+        };
+      },
     );
+    this.propertiesManager = propertiesManager;
+    this.app.workspace.onLayoutReady(() => propertiesManager.start());
+    // Reading mode re-renders sections; re-place the block after it does.
+    this.registerMarkdownPostProcessor(() => propertiesManager.schedule());
+    startupReport.mark("onload end");
+    let lastPropsSetting: boolean | null = null;
+    const unsubscribeProps = settings.subscribe((value) => {
+      const next = value.preferences.propertiesInNoteHeader !== false;
+      if (next === lastPropsSetting) return;
+      lastPropsSetting = next;
+      propertiesManager.schedule();
+    });
+    this.register(unsubscribeProps);
   }
 
   /**
@@ -562,6 +622,10 @@ export default class ProjectsPlusPlugin extends Plugin {
     if (this.unsubscribeCommandBus) {
       this.unsubscribeCommandBus();
     }
+    if (this.propertiesManager) {
+      this.propertiesManager.dispose();
+      delete this.propertiesManager;
+    }
     if (this.inverseIndexStore) {
       this.inverseIndexStore.destroy();
       delete this.inverseIndexStore;
@@ -576,59 +640,41 @@ export default class ProjectsPlusPlugin extends Plugin {
   }
 
   /**
-   * R5-012 — Hide Obsidian's built-in Properties pane (`file-properties`
-   * leaves) and reveal the YAML Visualizer pane when the
-   * `replaceObsidianProperties` preference is on. No-op when the
-   * preference is off, so users can switch the behavior at runtime
-   * without restarting the plugin.
+   * 3.7.2 B2 — `toggle-visualizer-pane`: turn the properties block in the
+   * note header on or off (the setting "Properties in the note header").
    */
-  async maybeReplacePropertiesPane(): Promise<void> {
+  toggleVisualizerPane(): void {
     const prefs = get(settings).preferences;
-    if (!prefs.replaceObsidianProperties) return;
-    const propsLeaves = this.app.workspace.getLeavesOfType("file-properties");
-    if (propsLeaves.length === 0) return;
-    for (const leaf of propsLeaves) {
-      leaf.detach();
-    }
-    if (this.app.workspace.getLeavesOfType(VIEW_TYPE_VISUALIZER_PANE).length === 0) {
-      await this.revealVisualizerPane();
-    }
+    settings.updatePreferences({
+      ...prefs,
+      propertiesInNoteHeader: prefs.propertiesInNoteHeader === false,
+    });
   }
 
   /**
-   * R1.1 — Toggle the Visualizer sidebar pane. Reveals when hidden,
-   * detaches when already open. Bound to `toggle-visualizer-pane` action.
-   */
-  async toggleVisualizerPane(): Promise<void> {
-    const existing = this.app.workspace.getLeavesOfType(VIEW_TYPE_VISUALIZER_PANE);
-    if (existing.length > 0) {
-      // Already open — hide all and return.
-      for (const leaf of existing) {
-        leaf.detach();
-      }
-      return;
-    }
-    await this.revealVisualizerPane();
-  }
-
-  /**
-   * R1.1 — Reveal the Visualizer pane in the right sidebar, optionally
-   * focusing the workspace on a given file first so the pane reflects it.
+   * 3.7.2 B2 — `open-visualizer-for-file`: open the note (when given) and
+   * bring its properties block into view. Turns the block on if it was off.
    */
   async revealVisualizerPane(filePath?: string): Promise<void> {
+    const prefs = get(settings).preferences;
+    if (prefs.propertiesInNoteHeader === false) {
+      settings.updatePreferences({ ...prefs, propertiesInNoteHeader: true });
+    }
     if (filePath) {
       const file = this.app.vault.getAbstractFileByPath(filePath);
       if (file instanceof TFile) {
-        await this.app.workspace.getLeaf("tab").openFile(file);
+        const active = this.app.workspace.getActiveFile();
+        if (active?.path !== file.path) {
+          await this.app.workspace.getLeaf("tab").openFile(file);
+        }
       }
     }
-    const right = this.app.workspace.getRightLeaf(false);
-    if (!right) return;
-    await right.setViewState({
-      type: VIEW_TYPE_VISUALIZER_PANE,
-      active: true,
-    });
-    await this.app.workspace.revealLeaf(right);
+    this.propertiesManager?.sync();
+    const leaf = this.app.workspace.getMostRecentLeaf();
+    const host = leaf?.view.containerEl.querySelector<HTMLElement>(
+      ".ppp-note-props-host",
+    );
+    host?.scrollIntoView({ block: "start" });
   }
 
   /**
@@ -654,31 +700,15 @@ export default class ProjectsPlusPlugin extends Plugin {
   }
 
   /**
-   * #200 — somebody else wrote `data.json`.
-   *
-   * Obsidian calls this when the file changes on disk from outside the app: a
-   * second window, a synchroniser, a hand edit. It exists on every host this
-   * plugin claims (`Plugin#onExternalSettingsChange`, v1.5.7; `minAppVersion`
-   * is v1.5.7), and the step-0 spike confirmed in a live vault both that an
-   * external write fires it with the NEW contents already readable, and that
-   * our own `saveData` does not fire it.
-   *
-   * Every judgement is in `settingsReconcile.ts`, on purpose: this method
-   * cannot be unit-tested in this tree at all, so it holds only the wiring —
-   * read, decide, apply. What it does with each decision is the thing to keep
-   * honest, and each branch is one statement.
-   */
-  /**
    * #212 — is `data.json` still what this session last confirmed?
    *
    * `false` stops the write and turns it into a divergence, and reconciliation
    * is scheduled at once rather than waited for: the host's change event is
    * what we were racing, so depending on it here would reproduce the defect.
    *
-   * Unknowns answer `true` deliberately. With no base, or a file that cannot be
-   * read at all, refusing every write would turn a rare event into a session
-   * where nothing saves — the model `PLAN_200` §2 rejected — and the post-write
-   * verification still stands behind it.
+   * This early check defers unknown or unreadable bases to the checked save.
+   * That save requires a confirmed canonical or exact recovery base; an
+   * unknown base never authorizes a blind write.
    */
   private async settingsAreStillOurs(): Promise<boolean> {
     if (this.confirmedOnDisk === null) return true;
@@ -703,9 +733,12 @@ export default class ProjectsPlusPlugin extends Plugin {
     console.warn(
       "[Projects+] the settings file changed before our write; reconciling instead of overwriting"
     );
-    // One at a time. A refused write that scheduled another episode on every
-    // attempt would answer a single external change with a storm of them.
-    if (this.reconcileScheduled) return false;
+    this.scheduleSettingsReconciliation();
+    return false;
+  }
+
+  private scheduleSettingsReconciliation(): void {
+    if (this.reconcileScheduled) return;
     this.reconcileScheduled = true;
     // Not awaited, and not called directly: this runs inside the write, and the
     // lease waits for writes in flight — awaiting it here would wait for
@@ -714,7 +747,20 @@ export default class ProjectsPlusPlugin extends Plugin {
       this.reconcileScheduled = false;
       void this.onExternalSettingsChange();
     }, 0);
-    return false;
+  }
+
+  /** The writer's only mutation primitive; refusal keeps its queued value. */
+  private async saveSettingsWithCheck(
+    value: LatestProjectsPluginSettings
+  ): Promise<void | typeof SETTINGS_WRITE_REFUSED> {
+    const path = settingsFilePath(this.manifest.dir);
+    if (path === null) throw new Error("cannot determine the plugin settings path");
+    const result = await saveCheckedSettings(this.app.vault.adapter, path, {
+      canonical: this.confirmedOnDisk,
+      raw: this.confirmedRawOnDisk,
+    }, value);
+    if (result === SETTINGS_WRITE_REFUSED) this.scheduleSettingsReconciliation();
+    return result;
   }
 
   /**
@@ -723,9 +769,9 @@ export default class ProjectsPlusPlugin extends Plugin {
    * Obsidian calls this when the file changes on disk from outside the app: a
    * second window, a synchroniser, a hand edit. It exists on every host this
    * plugin claims (`Plugin#onExternalSettingsChange`, v1.5.7; `minAppVersion`
-   * is v1.5.7), and the step-0 spike confirmed in a live vault both that an
-   * external write fires it with the NEW contents already readable, and that
-   * our own `saveData` does not fire it.
+   * is v1.5.7). The earlier saveData spike confirmed external notification;
+   * checked adapter writes must also tolerate notifications for their own
+   * changes. Reconciliation compares the file instead of assuming its origin.
    *
    * #212: this method is wiring and nothing else. The decision lives in
    * `settingsReconcile.ts`, how the episode ends lives in `settingsEpisode.ts`,
@@ -767,12 +813,15 @@ export default class ProjectsPlusPlugin extends Plugin {
     // what is on disk, and normalisation happens only in memory — exactly as at
     // load, which does not rewrite the file for filling in a default.
     this.confirmedOnDisk = adoption.base;
+    this.confirmedRawOnDisk = null;
     settings.set(adoption.settings);
-    if (adoption.carried) {
+    if (adoption.carried || adoption.formulasMigrated) {
       // The one merged field (user's decision, 2026-09-07): a project's
       // `uniqueIdCounter` was higher here than on disk. Memory now holds the
       // higher one, and the file must too — otherwise the next window to adopt
-      // this file reissues identifiers that are already in notes.
+      // this file reissues identifiers that are already in notes. A verified
+      // formula migration also owes a write; the store subscription skips the
+      // just-adopted reference. The existing checked writer retains disk guards.
       writer.pushNow(adoption.settings);
     }
     console.debug("[Projects+] settings adopted from disk");
@@ -783,6 +832,7 @@ export default class ProjectsPlusPlugin extends Plugin {
     settings: LatestProjectsPluginSettings;
     base: string | null;
     carried: boolean;
+    formulasMigrated: boolean;
   } | null {
     const adoption = this.pendingAdoption;
     this.pendingAdoption = null;
@@ -875,12 +925,14 @@ export default class ProjectsPlusPlugin extends Plugin {
           );
           return this.refuseAsConflict(raw, "unresolvable");
         }
+        const adopted = await this.prepareCurrentFormulas(resolved.right, JSON.parse(raw));
         this.pendingAdoption = {
-          settings: resolved.right,
+          settings: adopted,
           base: canonical(JSON.parse(raw)),
           carried: episode.outcome.carried,
+          formulasMigrated: adopted !== resolved.right,
         };
-        return { kind: "adopted", settings: resolved.right };
+        return { kind: "adopted", settings: adopted };
       }
     }
   }
@@ -931,6 +983,9 @@ export default class ProjectsPlusPlugin extends Plugin {
       console.debug(
         "[Projects+] the settings file stayed empty; releasing the episode"
       );
+      // The bounded wait accepted exactly these empty bytes. Carry that base
+      // into the checked save; a completed external version still refuses it.
+      this.noteFileAsSeen(raw);
       return { kind: "release" };
     }
     try {
@@ -975,10 +1030,12 @@ export default class ProjectsPlusPlugin extends Plugin {
    *
    * Called by an episode that has read the file and decided to write over it:
    * from that moment the pre-write check has nothing to warn about, because the
-   * change it would warn about is the one just handled. Unparsable bytes leave
-   * no base, which the check reads as "unknown" and allows.
+   * change it would warn about is the one just handled. Unparsable bytes keep
+   * their exact recovery base for the checked save, rather than allowing any
+   * unknown version to be overwritten.
    */
   private noteFileAsSeen(raw: string): void {
+    this.confirmedRawOnDisk = raw;
     try {
       this.confirmedOnDisk = canonical(JSON.parse(raw));
     } catch {
@@ -1087,9 +1144,8 @@ export default class ProjectsPlusPlugin extends Plugin {
   /**
    * #199 — is `value` what `data.json` now holds?
    *
-   * `true` when the plugin folder is unknown: without it there is nothing to
-   * read back, and a permanent false alarm would be worse than the weaker
-   * guarantee. Any other doubt — unreadable file, mismatch, unparseable text —
+   * An unknown plugin folder cannot confirm a save. Any other doubt —
+   * unreadable file, mismatch, unparseable text —
    * is reported as a failed write, because a half-written file is exactly the
    * case worth catching.
    */
@@ -1097,7 +1153,7 @@ export default class ProjectsPlusPlugin extends Plugin {
     value: LatestProjectsPluginSettings
   ): Promise<WriteVerdict> {
     const path = settingsFilePath(this.manifest.dir);
-    if (path === null) return "confirmed";
+    if (path === null) return "not-written";
     // A mismatch is looked at more than once before it is believed. The host
     // may resolve its write before the bytes land, and a check that raced it
     // would raise the "not saved" chip on perfectly good saves — a control
@@ -1117,6 +1173,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       const verdict = classifyDisk(value, raw, this.confirmedOnDisk);
       if (verdict === "confirmed") {
         this.confirmedOnDisk = canonical(value);
+        this.confirmedRawOnDisk = null;
         return "confirmed";
       }
       if (verdict === "superseded") {
@@ -1128,6 +1185,7 @@ export default class ProjectsPlusPlugin extends Plugin {
         // is unknown rather than to pick a side. #200 covers reconciling it.
         logWarning(SETTINGS_SUPERSEDED, "not retrying");
         this.confirmedOnDisk = null;
+        this.confirmedRawOnDisk = null;
         new Notice(noticeFor(SETTINGS_SUPERSEDED), 15000);
         // #200 step 1: this used to return `true` — the writer filed a write it
         // could not confirm as a success. Every argument about who owns the
@@ -1147,6 +1205,11 @@ export default class ProjectsPlusPlugin extends Plugin {
    * exists to prevent, one level down.
    */
   private async copyBrokenSettings(reason: string): Promise<string | null> {
+    // Observing damaged bytes does not authorize replacing their only copy.
+    // Clear stale permission before recovery; grant an exact base only after
+    // the sibling copy has been written AND read back without alteration.
+    this.confirmedOnDisk = null;
+    this.confirmedRawOnDisk = null;
     const adapter = this.app.vault.adapter;
     const dir = this.manifest.dir;
     const raw = await readRawSettings(adapter, dir);
@@ -1159,6 +1222,8 @@ export default class ProjectsPlusPlugin extends Plugin {
     const path = await writeBrokenCopy(adapter, dir, raw, reason, new Date());
     if (path === null) {
       console.error("[Projects+] Failed to write the forensic copy of settings");
+    } else {
+      this.confirmedRawOnDisk = raw;
     }
     return path;
   }
@@ -1176,15 +1241,12 @@ export default class ProjectsPlusPlugin extends Plugin {
       const copiedTo = await this.copyBrokenSettings(
         err instanceof Error ? err.message : String(err)
       );
-      // #202 adds the token and leaves the sentences alone. Both branches are
-      // the same event with different outcomes for the forensic copy — one
-      // code, and which branch ran is what the words already say. The warning
-      // about the next save overwriting the evidence is load-bearing and stays
-      // in the Notice rather than moving to a tooltip nothing raises here.
+      // The same event has two outcomes: only a verified copy grants a raw
+      // recovery base. Without one, checked persistence refuses the overwrite.
       new Notice(
         withCode(
           copiedTo === null
-            ? "Projects+: failed to load settings — using defaults. The file on disk was left untouched but could NOT be copied: back it up before changing anything, or the next save overwrites it. See the console."
+            ? "Projects+: failed to load settings — using defaults. The original could NOT be copied and verified. It is left untouched; changes cannot be saved until a recovery copy is verified. Check storage access and keep a manual backup. See the console."
             : `Projects+: failed to load settings — using defaults. The unreadable file was copied to "${copiedTo}".`,
           SETTINGS_UNREADABLE
         ),
@@ -1213,7 +1275,7 @@ export default class ProjectsPlusPlugin extends Plugin {
         withCode(
           copiedTo !== null
             ? `Projects+: settings file is corrupted (${result.left.message}). Defaults restored; the original payload was copied to "${copiedTo}".`
-            : `Projects+: settings file is corrupted (${result.left.message}). Defaults restored, but the original payload could NOT be copied — do not change any setting if you want to recover it, because the next save rewrites data.json. See the console.`,
+            : `Projects+: settings file is corrupted (${result.left.message}). Defaults are used in this session, but the original could NOT be copied and verified. It is left untouched; changes cannot be saved until a recovery copy is verified. Check storage access and keep a manual backup. See the console.`,
           SETTINGS_CORRUPTED
         ),
         15000
@@ -1231,13 +1293,29 @@ export default class ProjectsPlusPlugin extends Plugin {
     // where `raw` really is what is on disk — the corruption paths publish
     // defaults, which the file does NOT hold.
     this.confirmedOnDisk = canonical(raw);
-    this.publishSettings(result.right);
+    this.confirmedRawOnDisk = null;
+    const migration = await this.prepareCurrentFormulas(result.right, raw);
+    this.formulaSettingsMigrated = migration !== result.right;
+    this.publishSettings(migration);
   }
 
   /**
    * #185 — put `value` into the store and remember the exact object, so the
    * writer can be primed with the reference that is already on disk.
    */
+  private async prepareCurrentFormulas(value: LatestProjectsPluginSettings, expectedDisk: unknown): Promise<LatestProjectsPluginSettings> {
+    if (!migrateFormulaSettings(value).changed) return value;
+    const dir = this.manifest.dir;
+    if (!dir) throw new Error("Cannot determine formula migration backup directory");
+    const rawText = await this.readSettingsFile();
+    if (rawText === null || canonical(JSON.parse(rawText)) !== canonical(expectedDisk)) {
+      throw new Error("Cannot verify original formula settings; reopen the plugin");
+    }
+    const migration = await prepareFormulaMigration(this.app.vault.adapter, dir, rawText, value);
+    if (migration.reportPath) new Notice(get(i18n).t("formula-migration.completed", { path: migration.reportPath }), 15000);
+    return migration.settings;
+  }
+
   private publishSettings(value: LatestProjectsPluginSettings): void {
     this.loadedSettings = value;
     settings.set(value);

@@ -25,9 +25,6 @@ jest.mock("src/lib/record/openRecord", () => ({
   ...jest.requireActual("src/lib/record/openRecord"),
   openRecord: jest.fn(() => Promise.resolve()),
 }));
-jest.mock("src/ui/modals/editNoteModal", () => ({
-  EditNoteModal: jest.fn().mockImplementation(() => ({ open: jest.fn() })),
-}));
 jest.mock("src/ui/modals/createNoteModal", () => ({
   CreateNoteModal: jest.fn().mockImplementation(() => ({ open: jest.fn() })),
 }));
@@ -123,7 +120,7 @@ describe("cards-g3 — a config without the new keys renders as before", () => {
     expect(m.cards()).toHaveLength(records.length);
     for (const card of m.cards()) {
       expect(card.parentElement).toBe(m.section());
-      const lanes = Array.from(card.children);
+      const lanes = Array.from(card.children).filter((el) => !el.hasAttribute("data-gallery-card-more"));
       expect(lanes).toHaveLength(2);
       expect(lanes[0]).toHaveClass("projects--gallery--card__media");
       expect(lanes[1]).toHaveClass("projects--gallery--card__body");
@@ -165,7 +162,7 @@ describe("cards-g3 — layouts", () => {
     expect(m.section()).toHaveClass("ppp-gallery--list");
     expect(m.section()).toHaveAttribute("data-layout", "list");
     for (const card of m.cards()) {
-      const lanes = Array.from(card.children);
+      const lanes = Array.from(card.children).filter((el) => !el.hasAttribute("data-gallery-card-more"));
       expect(lanes).toHaveLength(2);
       expect(lanes[0]).toHaveClass("projects--gallery--card__media");
       expect(lanes[1]).toHaveClass("projects--gallery--card__body");
@@ -211,8 +208,10 @@ describe("cards-g3 — cover ratio and fit", () => {
       const m = mountGallery({ layout, coverAspectRatio: "none" });
       expect(m.target.querySelector(".projects--gallery--card__media")).toBeNull();
       for (const card of m.cards()) {
-        expect(card.children).toHaveLength(1);
+        // B9: the body, then the card's ⋯.
+        expect(card.children).toHaveLength(2);
         expect(card.children[0]).toHaveClass("projects--gallery--card__body");
+        expect(card.children[1]).toHaveAttribute("data-gallery-card-more");
       }
       // The title link still opens the record.
       expect(m.card(0).querySelector("a.internal-link")).not.toBeNull();
@@ -221,20 +220,22 @@ describe("cards-g3 — cover ratio and fit", () => {
   });
 
   it("with no media area the whole card opens the record, once, and modifiers still route", () => {
-    const { EditNoteModal } = require("src/ui/modals/editNoteModal") as { EditNoteModal: jest.Mock };
     const { openRecord } = require("src/lib/record/openRecord") as { openRecord: jest.Mock };
     const m = mountGallery({ coverAspectRatio: "none" });
     const body = m.card(1).querySelector<HTMLElement>(".projects--gallery--card__body") as HTMLElement;
 
-    EditNoteModal.mockClear();
+    openRecord.mockClear();
     body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(EditNoteModal).toHaveBeenCalledTimes(1);
-    expect(EditNoteModal.mock.calls[0][3]).toMatchObject({ id: records[1]?.id });
+    // B9: the plain open is the peek.
+    expect(openRecord).toHaveBeenCalledTimes(1);
+    expect(openRecord).toHaveBeenCalledWith(expect.objectContaining({ id: records[1]?.id }), "peek", expect.anything());
 
     // The title link opens through its own handler and stops the click there.
-    EditNoteModal.mockClear();
+    openRecord.mockClear();
     m.card(1).querySelector<HTMLElement>("a.internal-link")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(EditNoteModal).toHaveBeenCalledTimes(1);
+    // i3-close: the editor entry is the properties block in the peek.
+    expect(openRecord).toHaveBeenCalledTimes(1);
+    expect(openRecord).toHaveBeenLastCalledWith(expect.objectContaining({ id: records[1]?.id }), "peek", expect.anything());
 
     openRecord.mockClear();
     body.dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey: true }));
@@ -242,14 +243,15 @@ describe("cards-g3 — cover ratio and fit", () => {
     m.destroy();
   });
 
-  it("with a media area the body is not an open target, as before", () => {
-    const { EditNoteModal } = require("src/ui/modals/editNoteModal") as { EditNoteModal: jest.Mock };
+  it("B9: with a media area the body opens the record too, once per click", () => {
+    const { openRecord } = require("src/lib/record/openRecord") as { openRecord: jest.Mock };
     const m = mountGallery();
-    EditNoteModal.mockClear();
+    openRecord.mockClear();
     m.card(0).querySelector<HTMLElement>(".projects--gallery--card__body")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(EditNoteModal).not.toHaveBeenCalled();
+    expect(openRecord).toHaveBeenCalledTimes(1);
     m.media(0)?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(EditNoteModal).toHaveBeenCalledTimes(1);
+    expect(openRecord).toHaveBeenCalledTimes(2);
+    expect(openRecord).toHaveBeenLastCalledWith(expect.objectContaining({ id: records[0]?.id }), "peek", expect.anything());
     m.destroy();
   });
 });

@@ -59,6 +59,8 @@ export type ProjectDefinition<ViewDef> = {
    * back-compat: undefined → treat as 0 on first read.
    */
   readonly uniqueIdCounter?: number;
+  /** Undefined inherits the shared palette; an empty array intentionally clears this project's palette. */
+  readonly colorFavorites?: import("../base/settings").ColorFavorite[];
 };
 
 export type UnsavedProjectDefinition = Omit<
@@ -109,7 +111,7 @@ export const DEFAULT_SETTINGS: ProjectsPluginSettings<
     showViewTitles: true,
     animationBehavior: "smooth",
     disableHapticFeedback: false,
-    replaceObsidianProperties: false,
+    propertiesInNoteHeader: true,
   },
 };
 
@@ -208,7 +210,7 @@ export const DEFAULT_PREFERENCES: ProjectsPluginPreferences = {
   showViewTitles: true,
   animationBehavior: "smooth",
   disableHapticFeedback: false,
-  replaceObsidianProperties: false,
+  propertiesInNoteHeader: true,
 };
 
 export function resolvePreferences(

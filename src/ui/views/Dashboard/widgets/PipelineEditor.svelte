@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from "svelte";
+  import { onDestroy, createEventDispatcher } from "svelte";
   import type {
     TransformPipeline,
     TransformStep,
@@ -9,6 +9,7 @@
     ComputeStep,
     UnpivotStep,
     JoinStep,
+    TransformStopReason,
   } from "src/lib/dashboard-engine/transformTypes";
   import type { DataField } from "src/lib/dataframe/dataframe";
   import type { BlockSource } from "./linkedSourceState";
@@ -17,11 +18,21 @@
   import { aggregationLabel, type AggregationName } from "src/lib/dashboard-engine/aggregationOptions";
   import { get } from "svelte/store";
   import { Icon } from "obsidian-svelte";
+  import VersionedFormulaEditor from "src/ui/components/FormulaEditor/VersionedFormulaEditor.svelte";
+  import ComboField from "src/ui/components/fields/ComboField.svelte";
+  import TextField from "src/ui/components/fields/TextField.svelte";
+  import { currentFormFields } from "src/ui/components/fields/formFields";
+  const formFields = currentFormFields();
+  let computeEditors: Record<string, VersionedFormulaEditor | undefined> = {};
+  import { namesToOptions } from "src/ui/components/fields/comboOptions";
   import { getOperatorsForField, getOperatorLabel } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
   import { operatorNeedsValue } from "src/settings/base/settings";
   import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
+  import { createTransformBudget } from "src/lib/dashboard-engine/transformBudget";
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import { detectArrayFields } from "./_shared/arrayFieldDetection";
+  import type { PipelineIntent } from "./widgetMenu";
+  import { INTENT_COPY, missingIntentSteps } from "./pipelineIntent";
   import {
     updateStep as applyStepUpdate,
     toggleDisableStep as toggleStepDisabled,
@@ -45,6 +56,16 @@
    * than offering the parent project's fields — which is what it used to do.
    */
   export let sourceState: BlockSource = { kind: "parent", frame: { fields: [], records: [] } as unknown as DataFrame };
+
+  /** B7: opened from a plain-words «⋯» entry — one hint and one button for that step. */
+  export let intent: PipelineIntent | null = null;
+  $: intentCopy = intent ? INTENT_COPY[intent] : null;
+  $: intentMissing = intent ? missingIntentSteps(intent, steps) : [];
+  function addIntentSteps() {
+    const first = steps.length;
+    for (const type of intentMissing) addStep(type);
+    expandedStep = steps.length > first ? first : expandedStep;
+  }
 
   const dispatch = createEventDispatcher<{
     save: TransformPipeline;
@@ -75,18 +96,40 @@
   $: fieldMap = new Map(fields.map(f => [f.name, f]));
 
   // Live per-step counters: N → M records (executor meta).
-  $: stepCounts = (() => {
-    const frame = source as DataFrame | null;
-    if (!frame || steps.length === 0) return [] as Array<{ rowsIn: number; rowsOut: number }>;
-    const out: Array<{ rowsIn: number; rowsOut: number }> = [];
-    let prev = frame.records.length;
-    for (let i = 0; i < steps.length; i++) {
-      const result = executeTransform(frame, { steps: steps.slice(0, i + 1) }, { rightFrames });
-      out.push({ rowsIn: prev, rowsOut: result.meta.outputRowCount });
-      prev = result.meta.outputRowCount;
+  // i2-perf (A4 H4): one pass — each step runs on the previous step's output —
+  // after a 250 ms pause in typing. Re-running every prefix on each keystroke
+  // cost 107 / 527 ms per key at 1k / 5k records.
+  let stepCounts: Array<{ rowsIn: number; rowsOut: number }> = [];
+  let stepInputFields: string[][] = [];
+  let previewStopped: TransformStopReason | undefined;
+  let countsTimer: ReturnType<typeof setTimeout> | null = null;
+  $: scheduleCounts(source as DataFrame | null, steps, rightFrames);
+  function scheduleCounts(frame: DataFrame | null, list: typeof steps, right: typeof rightFrames): void {
+    if (countsTimer) clearTimeout(countsTimer);
+    countsTimer = setTimeout(() => { stepCounts = countSteps(frame, list, right); }, 250);
+  }
+  function countSteps(frame: DataFrame | null, list: typeof steps, right: typeof rightFrames): Array<{ rowsIn: number; rowsOut: number }> {
+    previewStopped = undefined;
+    if (!frame || list.length === 0) {
+      if (stepInputFields.length) stepInputFields = [];
+      return [];
     }
+    const budget = createTransformBudget(undefined, performance.now());
+    const out: Array<{ rowsIn: number; rowsOut: number }> = [];
+    let current = frame;
+    const schemas: string[][] = [];
+    for (const step of list) {
+      schemas.push(current.fields.map(field => field.name));
+      const result = executeTransform(current, { steps: [step] }, { rightFrames: right, budget });
+      if (result.meta.stopped) { previewStopped = result.meta.stopped; break; }
+      out.push({ rowsIn: current.records.length, rowsOut: result.meta.outputRowCount });
+      current = result.data;
+    }
+    if (schemas.length !== stepInputFields.length || schemas.some((names, i) =>
+      names.length !== stepInputFields[i]?.length || names.some((name, j) => name !== stepInputFields[i]?.[j]))) stepInputFields = schemas;
     return out;
-  })();
+  }
+  onDestroy(() => { clearTimeout(applyTimer); if (countsTimer) clearTimeout(countsTimer); });
 
   // Detect array-valued fields in the source data to suggest Unnest. Powers a
   // discoverability banner pointing users at the Unnest transform when their
@@ -103,10 +146,10 @@
     "STD_DEV", "PCT_EMPTY", "PCT_NOT_EMPTY",
   ];
 
-  const FORMULA_SUGGESTIONS = [
-    "SUM(", "AVG(", "COUNT(", "MIN(", "MAX(", "MEDIAN(",
-    "IF(", "IFBLANK(", "ROUND(", "CONCAT(", "LEFT(", "RIGHT(", "DATE(",
-  ];
+  // The suggestion lists the inputs above choose from (they were native datalists).
+  // A function is chosen from its list only; a field or a formula is free text.
+  const AGG_OPTIONS = namesToOptions(AGG_FUNCTIONS);
+  $: fieldOptions = namesToOptions(fieldNames);
 
   function normalizeAggFunction(value: string, fallback: AggregationFunction): AggregationFunction {
     const normalized = value.trim().toUpperCase() as AggregationFunction;
@@ -330,15 +373,30 @@
     const step = steps[stepIndex] as ComputeStep;
     updateStep(stepIndex, {
       ...step,
-      columns: [...step.columns, { name: `computed_${step.columns.length + 1}`, expression: "" }],
+      columns: [...step.columns, { name: `computed_${step.columns.length + 1}`, expression: "", formulaVersion: "unified-v1" }],
     });
   }
 
-  function updateComputeColumn(stepIndex: number, colIndex: number, name: string, expression: string) {
+  function updateComputeColumn(stepIndex: number, colIndex: number, name: string | undefined, expression: string | undefined) {
     const step = steps[stepIndex] as ComputeStep;
     const cols = [...step.columns];
-    cols[colIndex] = { name, expression };
+    cols[colIndex] = { ...cols[colIndex]!, ...(name !== undefined ? {name} : {}), ...(expression !== undefined ? {expression} : {}) };
     updateStep(stepIndex, { ...step, columns: cols });
+  }
+
+  function updateComputeMode(stepIndex: number, colIndex: number, version: string | undefined) {
+    const step = steps[stepIndex] as ComputeStep;
+    const cols = [...step.columns];
+    const { formulaVersion: _previousVersion, ...column } = cols[colIndex]!;
+    cols[colIndex] = { ...column, ...(version !== undefined ? { formulaVersion: version } : {}) };
+    updateStep(stepIndex, { ...step, columns: cols });
+  }
+
+  function computeFieldNames(list: readonly TransformStep[], names: string[], schemas: string[][], stepIndex: number, columnIndex: number): string[] {
+    const prior = list.slice(0, stepIndex).flatMap(step => !step.disabled && step.type === "compute" ? step.columns.map(column => column.name) : []);
+    const inputs = schemas[stepIndex] ?? [...names, ...prior];
+    const current = (list[stepIndex] as ComputeStep).columns.slice(0, columnIndex).map(column => column.name);
+    return [...new Set([...inputs, ...current])];
   }
 
   function removeComputeColumn(stepIndex: number, colIndex: number) {
@@ -367,10 +425,10 @@
     });
   }
 
-  function updateUnpivotGroup(stepIndex: number, gIndex: number, pattern: string, outputName: string) {
+  function updateUnpivotGroup(stepIndex: number, gIndex: number, pattern: string | undefined, outputName: string | undefined) {
     const step = steps[stepIndex] as UnpivotStep;
     const groups = [...step.fieldGroups];
-    groups[gIndex] = { pattern, outputName };
+    groups[gIndex] = { ...groups[gIndex]!, ...(pattern !== undefined ? {pattern} : {}), ...(outputName !== undefined ? {outputName} : {}) };
     updateStep(stepIndex, { ...step, fieldGroups: groups });
   }
 
@@ -420,10 +478,6 @@
     return (e.target as HTMLSelectElement).value;
   }
 
-  function inputVal(e: Event): string {
-    return (e.target as HTMLInputElement).value;
-  }
-
   function checkVal(e: Event): boolean {
     return (e.currentTarget as HTMLInputElement).checked;
   }
@@ -438,8 +492,17 @@
   $: sampleAfter = i18nList($i18n, "views.dashboard.pipeline.empty.sampleAfter");
 
   function handleDone() {
+    if (formFields && !formFields.syncForSubmit()) return;
+    if (!flushPending(false)) return;
     clearTimeout(applyTimer);
     dispatch("save", { steps });
+  }
+  /** Synchronize definitions before the containing popup removes its controls. */
+  export function flushPending(apply = true): boolean {
+    if (!Object.values(computeEditors).every(editor => !editor || editor.commitCurrent())) return false;
+    clearTimeout(applyTimer);
+    if (apply) dispatch("apply", { steps });
+    return true;
   }
 
   // #075 (Decision 1C): one-click clear of the steps only — source untouched,
@@ -460,10 +523,22 @@
       {$i18n.t("views.dashboard.pipeline.live", { defaultValue: "Changes apply instantly" })}
     </span>
   </div>
-  <!-- #118: pipeline is the advanced surface; ordinary scope/grouping is view-level. -->
-  <p class="ppp-pipeline-advanced-hint">
-    {$i18n.t("views.dashboard.pipeline.advanced-hint")}
-  </p>
+  {#if previewStopped}
+    <div class="ppp-pipeline-intent" role="alert"><p class="ppp-pipeline-intent-hint">{$i18n.t("views.dashboard.pipeline.execution-stopped")} {$i18n.t(`views.dashboard.pipeline.execution.${previewStopped}`)}</p></div>
+  {/if}
+  {#if intentCopy}
+    <div class="ppp-pipeline-intent" role="note">
+      <p class="ppp-pipeline-intent-hint">{$i18n.t(intentCopy.hintKey, { defaultValue: intentCopy.hintDefault })}</p>
+      {#if intentMissing.length > 0}
+        <button class="mod-cta ppp-pipeline-intent-add" on:click={addIntentSteps}>{$i18n.t(intentCopy.actionKey, { defaultValue: intentCopy.actionDefault })}</button>
+      {/if}
+    </div>
+  {:else}
+    <!-- #118: pipeline is the advanced surface; ordinary scope/grouping is view-level. -->
+    <p class="ppp-pipeline-advanced-hint">
+      {$i18n.t("views.dashboard.pipeline.advanced-hint")}
+    </p>
+  {/if}
 
   <!--
     #137: with no resolved source there is no schema to configure against. The
@@ -616,13 +691,14 @@
                 {@const fieldType = (fieldMap.get(cond.field)?.type ?? "string")}
                 {@const operators = getOperatorsForField(fieldType)}
                 <div class="ppp-filter-row">
-                  <input
-                    class="ppp-filter-field-select"
-                    type="text"
-                    list="ppp-pipeline-fields"
+                  <ComboField
+                    inputClass="ppp-filter-field-select"
                     value={cond.field}
+                    options={fieldOptions}
+                    allowCustom
                     placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Field…" })}
-                    on:input={(e) => updateFilterField(i, ci, inputVal(e))}
+                    ariaLabel={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Field…" })}
+                    on:commit={(e) => updateFilterField(i, ci, e.detail.value)}
                   />
                   <select
                     class="ppp-filter-op-select"
@@ -634,12 +710,12 @@
                     {/each}
                   </select>
                   {#if operatorNeedsValue(cond.operator)}
-                    <input
-                      class="ppp-filter-value-input"
-                      type="text"
+                    <TextField
+                      inputClass="ppp-filter-value-input"
                       value={cond.value ?? ""}
                       placeholder={$i18n.t("common.value-placeholder")}
-                      on:input={(e) => updateFilterValue(i, ci, inputVal(e))}
+                      on:input={(e) => updateFilterValue(i, ci, e.detail)}
+                      on:commit={(e) => updateFilterValue(i, ci, e.detail.value)}
                     />
                   {/if}
                   <button class="ppp-step-btn ppp-step-btn--danger" on:click={() => removeFilterCondition(i, ci)}>?</button>
@@ -652,17 +728,15 @@
 
             <!-- === GROUP-BY === -->
             {:else if step.type === "group-by"}
+              <!-- svelte-ignore a11y-label-has-associated-control -->
               <label class="ppp-step-field">
                 <span>{$i18n.t("views.dashboard.pipeline.group-field", { defaultValue: "Group by field" })}</span>
-                <input
-                  type="text"
-                  list="ppp-pipeline-fields"
+                <ComboField
                   value={step.fields[0] ?? ""}
+                  options={fieldOptions}
+                  allowCustom
                   placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Select field…" })}
-                  on:input={(e) => {
-                    const val = inputVal(e);
-                    updateStep(i, { ...step, fields: val ? [val] : [] });
-                  }}
+                  on:commit={(e) => updateStep(i, { ...step, fields: e.detail.value ? [e.detail.value] : [] })}
                 />
               </label>
 
@@ -670,21 +744,22 @@
             {:else if step.type === "aggregate"}
               {#each step.columns as col, ci}
                 <div class="ppp-agg-row">
-                  <input
-                    class="ppp-agg-field-select"
-                    type="text"
-                    list="ppp-pipeline-fields"
+                  <ComboField
+                    inputClass="ppp-agg-field-select"
                     value={col.sourceField}
+                    options={fieldOptions}
+                    allowCustom
                     placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Field…" })}
-                    on:input={(e) => updateAggColumn(i, ci, inputVal(e), col.function)}
+                    ariaLabel={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Field…" })}
+                    on:commit={(e) => updateAggColumn(i, ci, e.detail.value, col.function)}
                   />
-                  <input
-                    class="ppp-agg-fn-select"
-                    type="text"
-                    list="ppp-pipeline-agg-functions"
+                  <ComboField
+                    inputClass="ppp-agg-fn-select"
                     value={col.function}
+                    options={AGG_OPTIONS}
                     placeholder="SUM"
-                    on:input={(e) => updateAggColumn(i, ci, col.sourceField, inputVal(e))}
+                    ariaLabel={$i18n.t("views.dashboard.pipeline.aggregation-fn", { defaultValue: "Aggregation function" })}
+                    on:commit={(e) => updateAggColumn(i, ci, col.sourceField, e.detail.value)}
                   />
                   <button class="ppp-step-btn ppp-step-btn--danger" on:click={() => removeAggColumn(i, ci)}>?</button>
                 </div>
@@ -697,21 +772,26 @@
             {:else if step.type === "compute"}
               {#each step.columns as col, ci}
                 <div class="ppp-compute-row">
-                  <input
-                    class="ppp-compute-name"
-                    type="text"
+                  <TextField
+                    inputClass="ppp-compute-name"
                     placeholder={$i18n.t("views.dashboard.pipeline.column-name", { defaultValue: "Column name" })}
                     value={col.name}
-                    on:change={(e) => updateComputeColumn(i, ci, e.currentTarget.value, col.expression)}
+                    on:commit={(e) => updateComputeColumn(i, ci, e.detail.value, undefined)}
                   />
-                  <input
-                    class="ppp-compute-expr"
-                    type="text"
-                    list="ppp-pipeline-formula-hints"
-                    placeholder={$i18n.t("views.dashboard.pipeline.formula-placeholder")}
-                    value={col.expression}
-                    on:input={(e) => updateComputeColumn(i, ci, col.name, inputVal(e))}
-                  />
+                  <div class="ppp-compute-expr">
+                    <VersionedFormulaEditor
+                      bind:this={computeEditors[`${i}:${ci}`]}
+                      expression={col.expression}
+                      version={col.formulaVersion}
+                      fields={computeFieldNames(steps, fieldNames, stepInputFields, i, ci)}
+                      rows={3}
+                      showApply
+                      placeholder={$i18n.t("views.dashboard.pipeline.formula-placeholder")}
+                      ariaLabel={$i18n.t("views.dashboard.pipeline.formula-placeholder")}
+                      on:modechange={(event) => updateComputeMode(i, ci, event.detail.formulaVersion)}
+                      on:commit={(event) => updateComputeColumn(i, ci, undefined, event.detail)}
+                    />
+                  </div>
                   <button class="ppp-step-btn ppp-step-btn--danger" on:click={() => removeComputeColumn(i, ci)}>?</button>
                 </div>
               {/each}
@@ -721,34 +801,36 @@
 
             <!-- === PIVOT === -->
             {:else if step.type === "pivot"}
+              <!-- svelte-ignore a11y-label-has-associated-control -->
               <label class="ppp-step-field">
                 <span>{$i18n.t("views.dashboard.pipeline.category-field", { defaultValue: "Category field" })}</span>
-                <input
-                  type="text"
-                  list="ppp-pipeline-fields"
+                <ComboField
                   value={step.categoryField}
+                  options={fieldOptions}
+                  allowCustom
                   placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Select field…" })}
-                  on:input={(e) => updateStep(i, { ...step, categoryField: inputVal(e) })}
+                  on:commit={(e) => updateStep(i, { ...step, categoryField: e.detail.value })}
                 />
               </label>
+              <!-- svelte-ignore a11y-label-has-associated-control -->
               <label class="ppp-step-field">
                 <span>{$i18n.t("views.dashboard.pipeline.value-field", { defaultValue: "Value field" })}</span>
-                <input
-                  type="text"
-                  list="ppp-pipeline-fields"
+                <ComboField
                   value={step.valueField}
+                  options={fieldOptions}
+                  allowCustom
                   placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Select field…" })}
-                  on:input={(e) => updateStep(i, { ...step, valueField: inputVal(e) })}
+                  on:commit={(e) => updateStep(i, { ...step, valueField: e.detail.value })}
                 />
               </label>
+              <!-- svelte-ignore a11y-label-has-associated-control -->
               <label class="ppp-step-field">
                 <span>{$i18n.t("views.dashboard.pipeline.aggregation-fn", { defaultValue: "Aggregation function" })}</span>
-                <input
-                  type="text"
-                  list="ppp-pipeline-agg-functions"
+                <ComboField
                   value={step.aggregation}
+                  options={AGG_OPTIONS}
                   placeholder="SUM"
-                  on:input={(e) => updatePivotAggregation(i, inputVal(e).toUpperCase())}
+                  on:commit={(e) => updatePivotAggregation(i, e.detail.value.toUpperCase())}
                 />
               </label>
 
@@ -771,17 +853,15 @@
                 <span class="ppp-section-label">{$i18n.t("views.dashboard.pipeline.field-groups", { defaultValue: "Field groups (columns to unpivot)" })}</span>
                 {#each step.fieldGroups as group, gi}
                   <div class="ppp-unpivot-row">
-                    <input
-                      type="text"
+                    <TextField
                       placeholder={$i18n.t("views.dashboard.pipeline.pattern", { defaultValue: "Pattern (regex)" })}
                       value={group.pattern}
-                      on:change={(e) => updateUnpivotGroup(i, gi, e.currentTarget.value, group.outputName)}
+                      on:commit={(e) => updateUnpivotGroup(i, gi, e.detail.value, undefined)}
                     />
-                    <input
-                      type="text"
+                    <TextField
                       placeholder={$i18n.t("views.dashboard.pipeline.output-name", { defaultValue: "Output name" })}
                       value={group.outputName}
-                      on:change={(e) => updateUnpivotGroup(i, gi, group.pattern, e.currentTarget.value)}
+                      on:commit={(e) => updateUnpivotGroup(i, gi, undefined, e.detail.value)}
                     />
                     <button class="ppp-step-btn ppp-step-btn--danger" on:click={() => removeUnpivotGroup(i, gi)}>?</button>
                   </div>
@@ -793,25 +873,26 @@
 
             <!-- === UNNEST === -->
             {:else if step.type === "unnest"}
+              <!-- svelte-ignore a11y-label-has-associated-control -->
               <label class="ppp-step-field">
                 <span>{$i18n.t("views.dashboard.pipeline.source-field", { defaultValue: "Array field to expand" })}</span>
-                <input
-                  type="text"
-                  list="ppp-pipeline-fields"
+                <ComboField
                   value={step.field}
+                  options={fieldOptions}
+                  allowCustom
                   placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Select field…" })}
-                  on:input={(e) => updateStep(i, { ...step, field: inputVal(e) })}
+                  on:commit={(e) => updateStep(i, { ...step, field: e.detail.value })}
                 />
               </label>
-              <label class="ppp-step-field">
+              <div class="ppp-step-field">
                 <span>{$i18n.t("views.dashboard.pipeline.prefix", { defaultValue: "Prefix for extracted fields" })}</span>
-                <input
-                  type="text"
+                <TextField
+                  ariaLabel={$i18n.t("views.dashboard.pipeline.prefix", { defaultValue: "Prefix for extracted fields" })}
                   placeholder={$i18n.t("views.dashboard.pipeline.optional", { defaultValue: "Optional" })}
                   value={step.prefix ?? ""}
-                  on:change={(e) => { const v = inputVal(e); updateStep(i, v ? { ...step, prefix: v } : { ...step }); }}
+                  on:commit={(e) => { const { prefix: _old, ...rest } = step; updateStep(i, e.detail.value ? { ...step, prefix: e.detail.value } : rest); }}
                 />
-              </label>
+              </div>
               <label class="ppp-step-field ppp-step-field--row">
                 <input
                   type="checkbox"
@@ -855,15 +936,16 @@
                   {/each}
                 </select>
               </label>
-              <label class="ppp-step-field">
+              <div class="ppp-step-field">
                 <span>{$i18n.t("views.dashboard.pipeline.join-right-key", { defaultValue: "Right key" })}</span>
-                <input
-                  type="text"
+                <TextField
+                  ariaLabel={$i18n.t("views.dashboard.pipeline.join-right-key", { defaultValue: "Right key" })}
                   value={step.on.rightKey}
                   placeholder={$i18n.t("views.dashboard.pipeline.join-right-key-placeholder", { defaultValue: "field name in right source" })}
-                  on:input={(e) => updateJoinStep(i, { on: { leftKey: step.on.leftKey, rightKey: inputVal(e) } })}
+                  on:input={(e) => updateJoinStep(i, { on: { leftKey: step.on.leftKey, rightKey: e.detail } })}
+                  on:commit={(e) => updateJoinStep(i, { on: { leftKey: step.on.leftKey, rightKey: e.detail.value } })}
                 />
-              </label>
+              </div>
               <label class="ppp-step-field">
                 <span>{$i18n.t("views.dashboard.pipeline.join-how", { defaultValue: "Join type" })}</span>
                 <select
@@ -920,24 +1002,6 @@
     {/each}
   </div>
 
-  <datalist id="ppp-pipeline-fields">
-    {#each fieldNames as name}
-      <option value={name} />
-    {/each}
-  </datalist>
-
-  <datalist id="ppp-pipeline-agg-functions">
-    {#each AGG_FUNCTIONS as fn}
-      <option value={fn} />
-    {/each}
-  </datalist>
-
-  <datalist id="ppp-pipeline-formula-hints">
-    {#each FORMULA_SUGGESTIONS as fnHint}
-      <option value={fnHint} />
-    {/each}
-  </datalist>
-
   <div class="ppp-pipeline-footer">
     {#if steps.length > 0}
       <button class="ppp-btn ppp-btn--ghost" on:click={handleClearPipeline}>
@@ -952,6 +1016,8 @@
 </div>
 
 <style>
+  .ppp-pipeline-intent { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; padding: 0.5rem; border-radius: var(--radius-s, 0.25rem); background: var(--background-secondary); }
+  .ppp-pipeline-intent-hint { margin: 0; flex: 1 1 12rem; font-size: var(--font-ui-small); color: var(--text-normal); }
   .ppp-pipeline-editor {
     display: flex;
     flex-direction: column;
@@ -1224,7 +1290,7 @@
     gap: 0.375rem;
   }
 
-  .ppp-step-field input[type="text"] {
+  .ppp-step-field :global(input[type="text"]) {
     padding: 0.25rem 0.375rem;
     font-size: var(--font-ui-small);
     background: var(--background-primary);
@@ -1334,8 +1400,12 @@
     flex-wrap: wrap;
   }
 
-  .ppp-filter-field-select {
+  /* The field box is a ComboField: its wrapper takes the room, its input the look. */
+  .ppp-filter-row > :global(.ppp-combo) {
     min-width: 7rem;
+  }
+
+  .ppp-filter-row :global(.ppp-filter-field-select) {
     padding: 0.25rem 0.375rem;
     font-size: var(--font-ui-smaller);
     background: var(--background-primary);
@@ -1354,7 +1424,7 @@
     color: var(--text-normal);
   }
 
-  .ppp-filter-value-input {
+  :global(.ppp-filter-value-input) {
     flex: 1;
     min-width: 5rem;
     padding: 0.25rem 0.375rem;
@@ -1372,8 +1442,8 @@
     gap: 0.25rem;
   }
 
-  .ppp-agg-field-select,
-  .ppp-agg-fn-select {
+  .ppp-agg-row :global(.ppp-agg-field-select),
+  .ppp-agg-row :global(.ppp-agg-fn-select) {
     padding: 0.25rem 0.375rem;
     font-size: var(--font-ui-smaller);
     background: var(--background-primary);
@@ -1382,23 +1452,24 @@
     color: var(--text-normal);
   }
 
-  .ppp-agg-field-select {
+  /* Both boxes are ComboFields: the wrapper takes the room, the input the look. */
+  .ppp-agg-row > :global(.ppp-combo:nth-child(1)) {
     flex: 1;
     min-width: 7rem;
   }
 
-  .ppp-agg-fn-select {
+  .ppp-agg-row > :global(.ppp-combo:nth-child(2)) {
     min-width: 6rem;
   }
 
   /* -- Compute rows -- */
   .ppp-compute-row {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.25rem;
   }
 
-  .ppp-compute-name {
+  :global(.ppp-compute-name) {
     width: 8rem;
     padding: 0.25rem 0.375rem;
     font-size: var(--font-ui-smaller);
@@ -1410,14 +1481,13 @@
 
   .ppp-compute-expr {
     flex: 1;
-    min-width: 8rem;
-    padding: 0.25rem 0.375rem;
-    font-size: var(--font-ui-smaller);
-    background: var(--background-primary);
-    border: var(--ppp-border-width) solid var(--background-modifier-border);
-    border-radius: var(--radius-s, 0.25rem);
-    color: var(--text-normal);
-    font-family: var(--font-monospace);
+    min-width: 0;
+  }
+
+  @media (max-width: 40rem) {
+    .ppp-compute-row { flex-wrap: wrap; }
+    :global(.ppp-compute-name) { flex: 1; min-width: 0; }
+    .ppp-compute-expr { order: 1; flex-basis: 100%; }
   }
 
   /* -- Unpivot -- */
@@ -1466,7 +1536,7 @@
     gap: 0.25rem;
   }
 
-  .ppp-unpivot-row input {
+  .ppp-unpivot-row :global(input) {
     flex: 1;
     padding: 0.25rem 0.375rem;
     font-size: var(--font-ui-smaller);

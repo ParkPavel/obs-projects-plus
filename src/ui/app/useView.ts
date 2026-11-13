@@ -28,7 +28,7 @@ export interface ViewProps {
 export function useView(node: HTMLElement, props: ViewProps) {
   // Keep track of previous view id to determine if view should be invalidated.
   let viewId: string;
-  const projectId = props.project.id;
+  let projectId = props.project.id;
    
   let projectView: ProjectView<never> | undefined;
   let prevConfigJson: string = "";
@@ -75,6 +75,7 @@ export function useView(node: HTMLElement, props: ViewProps) {
       }
 
       viewId = newprops.view.id;
+      projectId = newprops.project.id;
     } else {
       // Batch prop changes into a single $set call to avoid multiple reactive waves
        

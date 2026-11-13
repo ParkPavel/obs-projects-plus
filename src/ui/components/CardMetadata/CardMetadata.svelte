@@ -14,6 +14,8 @@
   import Datetime from "./Datetime.svelte";
   import Number from "./Number.svelte";
   import RollupCellRenderer from "src/ui/components/RollupCellRenderer/RollupCellRenderer.svelte";
+  // i2-board: a link reads as its note's name, «Жанна Соколова», not «[[Жанна Соколова]]».
+  import { stripToDisplay } from "src/lib/engine/wikilink";
 
   export let fields: DataField[];
   export let record: DataRecord;
@@ -23,16 +25,40 @@
    * Hidden, the name stays the value's tooltip.
    */
   export let showLabels = true;
+  /**
+   * i3-gallery: an empty value keeps its line (an empty row), so cards of one
+   * gallery row line their properties up and keep one height, as Notion and
+   * Bases cards do. Off by default: every other consumer is unchanged.
+   */
+  export let reserveEmpty = false;
+  /** A writable card supplies its existing record-update route. */
+  export let onBooleanChange: ((field: DataField, checked: boolean) => void) | undefined = undefined;
 
   setContext<string>("sourcePath", record.id);
+
+  const isEmpty = (value: unknown): boolean =>
+    value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
+
+  /** i3-gallery: one item of a list value as chip text (a link reads as its name). */
+  function itemText(item: unknown): string {
+    if (item instanceof globalThis.Date) return item.toLocaleDateString();
+    return stripToDisplay(String(item));
+  }
 </script>
 
 {#each fields as field (field.name)}
   {@const value = record.values[field.name]}
-  {#if value !== undefined && value !== null}
-    <div class="field-label" title={showLabels ? undefined : field.name}>
+  {#if reserveEmpty && isEmpty(value)}
+    <div class="field-label ppp-card-meta-reserved" class:has-label={showLabels} aria-hidden="true" data-card-meta-reserved={field.name}>
       {#if showLabels}
-        <div class="setting-item-description" style:margin-bottom={"0.25rem"}>
+        <div class="setting-item-description field-name">{field.name}</div>
+      {/if}
+      <span class="ppp-card-meta-blank">{" "}</span>
+    </div>
+  {:else if value !== undefined && value !== null}
+    <div class="field-label" class:has-label={showLabels} title={showLabels ? undefined : field.name}>
+      {#if showLabels}
+        <div class="setting-item-description field-name">
           {field.name}
         </div>
       {/if}
@@ -46,9 +72,20 @@
       {:else if field.repeated}
         {#if field.type === DataFieldType.String}
           <Tags {field} {value} />
+        {:else if Array.isArray(value)}
+          <!-- i3-gallery: a list of numbers, dates, links … rendered nothing; each item is a chip now. -->
+          <span class="ppp-card-meta-relations" data-card-meta-list>
+            {#each value as item, i}
+              {#if item !== null && item !== undefined && item !== ""}
+                <span class="ppp-card-meta-chip" class:ppp-card-meta-chip--relation={field.type === DataFieldType.Relation}>{itemText(item)}</span>{#if i < value.length - 1}{" "}{/if}
+              {/if}
+            {/each}
+          </span>
+        {:else}
+          <span class="ppp-card-meta-chip">{itemText(value)}</span>
         {/if}
       {:else if field.type === DataFieldType.Boolean}
-        <Checkbox {field} {value} />
+        <Checkbox {field} {value} onChange={onBooleanChange && !field.derived && !field.identifier ? checked => onBooleanChange?.(field, checked) : undefined} />
       {:else if field.type === DataFieldType.String}
         <Text {field} {value} />
       {:else if field.type === DataFieldType.Number}
@@ -68,13 +105,13 @@
           <span class="ppp-card-meta-relations">
             {#each value as item, i}
               <span class="ppp-card-meta-chip ppp-card-meta-chip--relation">
-                {String(item)}
+                {stripToDisplay(String(item))}
               </span>{#if i < value.length - 1}{" "}{/if}
             {/each}
           </span>
         {:else}
           <span class="ppp-card-meta-chip ppp-card-meta-chip--relation">
-            {String(value)}
+            {stripToDisplay(String(value))}
           </span>
         {/if}
       {:else if field.type === DataFieldType.Formula}
@@ -96,10 +133,38 @@
 <style>
   .field-label {
     margin-bottom: 0.5rem;
+    /* B9: a long value wraps inside the card instead of pushing the grid. */
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .field-label:last-child {
     margin-bottom: 0;
+  }
+
+  /* i2-board: one line per property, name left and muted, value right — a
+     name above every value made a phone card 500 px tall for five values. */
+  .field-label.has-label {
+    display: grid;
+    grid-template-columns: minmax(4em, 38%) minmax(0, 1fr);
+    gap: 0.5em;
+    align-items: baseline;
+    margin-bottom: 0.25em;
+  }
+
+  /* i3-gallery: an empty value's reserved line is as tall as a chip line, so
+     a row of cards keeps one height whichever values each card has. */
+  .ppp-card-meta-blank {
+    display: inline-block;
+    min-height: 1.4em;
+  }
+
+  .field-name {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .ppp-card-meta-chip {
@@ -111,6 +176,11 @@
     font-size: var(--font-ui-smaller, 0.75rem);
     line-height: 1.4;
     white-space: nowrap;
+    /* B9: a long chip ends in an ellipsis inside the card, never widens it. */
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: top;
   }
 
   .ppp-card-meta-chip--relation {

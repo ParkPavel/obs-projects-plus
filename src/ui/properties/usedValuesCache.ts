@@ -1,0 +1,101 @@
+/**
+ * i3-final — the values a key holds across this project's notes, memoized.
+ *
+ * The block asked for them on every render (the colour palette, each opened
+ * select), and every ask scanned every markdown file of the vault (audit P2).
+ * The other notes' values are now kept per (note, scope, key) and dropped when
+ * the metadata cache reports a change — debounced, so a burst of `changed`
+ * events during a sync costs one clear. The note's own values are read fresh
+ * on every ask and always come first, so an edit in this note shows at once.
+ */
+
+import { inTemplateFolder } from "src/lib/suggestions/valueSuggestions";
+import { inScope, valuesForKey, type NoteScope } from "./noteProperties";
+
+export interface UsedValuesSource {
+  /** Every markdown file of the vault. */
+  files(): ReadonlyArray<{ path: string }>;
+  frontmatterOf(file: { path: string }): Record<string, unknown> | null | undefined;
+  /** w4-p05: folders whose notes are templates; their values are never offered. */
+  templateFolders?(): readonly string[];
+}
+
+export interface UsedValuesCache {
+  /** The values of `key`: the note's own first, then the other notes' in `scope`. */
+  get(
+    path: string,
+    own: Record<string, unknown> | null | undefined,
+    key: string,
+    scope: NoteScope,
+    purpose?: "filter" | "edit",
+  ): string[];
+  /** Drop every memo now. */
+  invalidate(): void;
+  /** Drop every memo once the events stop for `debounceMs`. */
+  invalidateSoon(): void;
+  /** Cancel a pending clear (the block is gone). */
+  dispose(): void;
+  /** Vault scans made so far (for tests and diagnostics). */
+  scans(): number;
+}
+
+export function createUsedValuesCache(
+  source: UsedValuesSource,
+  debounceMs = 300,
+  onInvalidated?: () => void,
+): UsedValuesCache {
+  const memo = new Map<string, string[]>();
+  let timer: number | null = null;
+  let scanCount = 0;
+
+  function others(path: string, key: string, scope: NoteScope, purpose: "filter" | "edit"): string[] {
+    const id = `${path}\u0000${scope.folder}\u0000${scope.recursive ? 1 : 0}\u0000${key}\u0000${purpose}`;
+    const hit = memo.get(id);
+    if (hit) return hit;
+    scanCount += 1;
+    const templates = source.templateFolders?.() ?? [];
+    const values = valuesForKey(
+      source
+        .files()
+        .filter((f) => f.path !== path && inScope(f.path, scope) && !inTemplateFolder(f.path, templates))
+        .map((f) => source.frontmatterOf(f)),
+      key,
+      // The shared combobox limits the rendered page after searching this pool.
+      Infinity,
+      purpose,
+    );
+    memo.set(id, values);
+    return values;
+  }
+
+  function cancel(): void {
+    if (timer !== null) window.clearTimeout(timer);
+    timer = null;
+  }
+
+  return {
+    get(path, own, key, scope, purpose = "filter") {
+      const mine = valuesForKey([own], key, Infinity, purpose);
+      const merged = new Set(mine);
+      for (const v of others(path, key, scope, purpose)) {
+        merged.add(v);
+      }
+      return [...merged];
+    },
+    invalidate() {
+      cancel();
+      memo.clear();
+      onInvalidated?.();
+    },
+    invalidateSoon() {
+      cancel();
+      timer = window.setTimeout(() => {
+        timer = null;
+        memo.clear();
+        onInvalidated?.();
+      }, debounceMs);
+    },
+    dispose: cancel,
+    scans: () => scanCount,
+  };
+}

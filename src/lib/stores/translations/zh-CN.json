@@ -1,5 +1,81 @@
 ﻿{
     "translation": {
+        "formula-migration": {
+            "completed": "Projects+：公式已迁移到统一规则。已验证的备份和报告：{{path}}"
+        },
+        "formula-mode": {
+            "prepare": "使用新规则前，请更新所有设备并备份设置。",
+            "label": "公式规则",
+            "legacy": "兼容模式",
+            "modern": "新规则",
+            "checking": "正在检查…",
+            "warning": "选择新规则前，请在所有设备上更新 Projects Plus 并备份设置。旧版本会忽略此选项；回退时需要恢复设置，或比较结果后转换公式。",
+            "matches": "所选日期共有 {{total}} 条记录，其中 {{count}} 条匹配。"
+        },
+        "formula-profile-docs": {
+            "unified-v1": {
+                "COUNT": "计算非 null 值和列表项。跳过 null 和缺失项；false、零和空文本均计数。",
+                "WORKDAYS": "计算（较早日期，较晚日期] 内的有符号工作日差。交换日期会改变正负号；同一天为零。",
+                "TODAY": "所选参考日期，格式为 YYYY-MM-DD。",
+                "NOW": "此次计算固定使用的参考时刻。"
+            }
+        },
+        "formula-errors": {
+            "column-mode": "Agenda 中的列引用需要新规则。请明确选择该模式，或使用针对当前记录的条件。",
+            "version": "此公式使用不支持的版本。请先更新 Projects Plus，再计算或更改公式。",
+            "number": "数字格式不正确。请检查正负号、小数点和指数。",
+            "string": "请使用相同类型的引号结束文本。",
+            "escape": "反斜杠后的字符不受支持。请检查转义序列。",
+            "column": "请在 @ 后输入列名。",
+            "frame": "没有可用于计算此列的数据。请打开项目后重试。",
+            "limit": "公式超出计算限制。请简化表达式或减少处理的值。",
+            "unknown-field": "没有属性“{{name}}”",
+            "unknown-field-hint": "没有属性“{{name}}”。是否是“{{hint}}”？",
+            "unknown-function": "没有函数“{{name}}”",
+            "unfinished": "公式尚未完成——请补充一个值",
+            "operator": "运算符旁缺少值——请填入数字、属性或函数",
+            "character": "无法识别的字符“{{char}}”",
+            "bracket": "缺少括号或逗号",
+            "arguments": "{{name}} 需要 {{count}} 个值",
+            "token": "这里有多余的内容 — 请检查括号和逗号",
+            "missing-argument": "函数缺少一个值",
+            "unknown-operator": "无法识别的符号「{{op}}」",
+            "invalid": "无法读取公式：{{detail}}"
+        },
+        "regex-errors": {
+            "invalid": "正则表达式语法无效。",
+            "unsafe": "不支持此正则表达式，因为无法可靠限制其计算时间。",
+            "too-long": "正则表达式超过了允许的长度。",
+            "input-too-long": "文本超过了正则表达式处理长度限制。",
+            "unverified": "无法在检查限制内验证此正则表达式的复杂度。请简化表达式。"
+        },
+        "formula-docs": {
+            "IS_EMPTY": "值缺失、空文本或空列表时返回 true；零和 false 视为已填写。",
+            "IS_NOT_EMPTY": "值存在且不是空文本或空列表时返回 true。",
+            "NOT_CONTAINS": "CONTAINS 的否定形式，不区分大小写。",
+            "TOMORROW": "参考日期的下一天，格式为 YYYY-MM-DD。",
+            "YESTERDAY": "参考日期的前一天，格式为 YYYY-MM-DD。",
+            "IS_TODAY": "日期与参考日相同时返回 true。",
+            "IS_THIS_WEEK": "日期属于参考周时返回 true；周的划分遵循当前日期区域设置。",
+            "IS_THIS_MONTH": "日期属于参考月份时返回 true。",
+            "IS_BEFORE": "日期早于另一个日历日时返回 true。",
+            "IS_AFTER": "日期晚于另一个日历日时返回 true。",
+            "IS_ON_AND_BEFORE": "日期等于或早于另一个日历日时返回 true。",
+            "IS_ON_AND_AFTER": "日期等于或晚于另一个日历日时返回 true。",
+            "IS_OVERDUE": "有效日期严格早于参考日时返回 true。",
+            "IS_UPCOMING": "有效日期严格晚于参考日时返回 true。",
+            "HAS_ANY_OF": "两个列表包含公共项时返回 true；使用严格相等比较。",
+            "HAS_ALL_OF": "列表包含第二个列表的所有项时返回 true；使用严格相等比较。",
+            "HAS_NONE_OF": "两个列表没有公共项时返回 true；使用严格相等比较。",
+            "SUMIF": "满足条件的单元格之和（或同一行第三列之和）：5、\">10\"、\"完成\"、\"<>x\"、\"a*\"。",
+            "COUNTIF": "满足条件的单元格数量：5、\">10\"、\"完成\"、\"<>x\"、\"a*\"，\"\" 表示空白。",
+            "AVERAGEIF": "满足条件的单元格（或第三列）的平均值。无匹配时为空。",
+            "SUMIFS": "在满足所有「列 — 条件」对的行上，第一列之和。",
+            "COUNTIFS": "满足所有「列 — 条件」对的行数。",
+            "AVERAGEIFS": "在满足所有条件对的行上，第一列的平均值。",
+            "MINIFS": "匹配行中第一列的最小值（无匹配时为 0）。",
+            "MAXIFS": "匹配行中第一列的最大值（无匹配时为 0）。"
+        },
         "data-types": {
             "string": "文本",
             "number": "数字",
@@ -47,16 +123,20 @@
                 "name": "添加字段"
             },
             "toggle-visualizer-pane": {
-                "name": "切换 YAML 可视化器面板"
+                "name": "切换笔记顶部的属性块"
             },
             "open-visualizer-for-file": {
-                "name": "在 YAML 可视化器中打开当前笔记"
+                "name": "显示当前笔记的属性"
             },
             "add-relation": {
                 "name": "为当前笔记添加关系"
             },
             "open-formula-editor": {
                 "name": "打开公式编辑器"
+            },
+            "startup-report": {
+                "name": "启动报告（复制）",
+                "copied": "已复制到剪贴板。"
             },
             "create-demo-project": {
                 "name": "创建演示项目",
@@ -65,7 +145,6 @@
                 "repaired": "演示已存在；缺失的笔记已恢复。",
                 "repair-failed": "演示项目已存在。有 {{count}} 篇缺失的笔记无法写入 — 详见控制台。"
             }
-
         },
         "menus": {
             "project": {
@@ -75,7 +154,7 @@
             },
             "file": {
                 "open-in-visualizer": {
-                    "title": "在 YAML 可视化器中打开"
+                    "title": "显示属性"
                 },
                 "add-relation": {
                     "title": "添加为关系…"
@@ -308,6 +387,8 @@
                     "name-taken-error": "已经存在一个同名文件。",
                     "empty-name-error": "文件名不能为空。",
                     "dot-start-error": "文件名不能以句点开头。",
+                    "save-error": "无法创建笔记：{{message}}",
+                    "creating": "正在创建…",
                     "create": "新建笔记",
                     "readonly": {
                         "title": "只读项目",
@@ -368,6 +449,8 @@
                     },
                     "empty-name-error": "字段名不能为空。",
                     "existing-name-error": "不能重命名为已有字段。",
+                    "save-error": "无法保存字段更改：{{message}}",
+                    "saving": "正在保存…",
                     "type": {
                         "name": "字段类型",
                         "description": "转换字段为另一种类型。兼容的值将被保留。"
@@ -484,6 +567,20 @@
                     "no-default-stage-a": "该类型为计算或关联字段 — 无需设置默认值。",
                     "empty-name-error": "字段名不能为空。",
                     "existing-name-error": "字段名称重复。",
+                    "flow": {
+                        "group-basic": "基础",
+                        "group-linked": "关联与计算",
+                        "create-relation-option": "新建与 {{project}} 的关联",
+                        "new-relation-note": "同时创建关联“{{name}}”到 {{project}}。",
+                        "example": "基于 {{n}} 条记录的示例：{{values}} → {{result}}",
+                        "example-empty": "关联项目暂无记录——有记录后会显示示例。",
+                        "relation-failed": "关联未创建，因此属性未添加。请重试。",
+                        "choose-property": "选择属性…",
+                        "formula-name": "公式",
+                        "formula-description": "输入字段或函数名称——提示会立即出现。",
+                        "all-calculations": "更多计算"
+                    },
+                    "write-failed": "字段未能添加到所有笔记。已保留您的输入，请重试。",
                     "type": {
                         "name": "字段类型",
                         "description": ""
@@ -502,7 +599,8 @@
                     },
                     "create": "添加字段",
                     "reserved-name-error": "以 __resolved__ 开头的名称为插件自身的列保留。",
-                    "bulk-write-notice": "将 '{{field}}' 添加到 {{count}} 篇笔记。会写入空值；现有值不会更改。"
+                    "bulk-write-notice": "将 '{{field}}' 的默认值写入数据库的 {{count}} 篇笔记。",
+                    "declared-notice": "'{{field}}' 将添加到数据库。在你填写值之前，笔记不会更改。"
                 }
             },
             "schema": {
@@ -544,6 +642,7 @@
                 "read-only-fields": "只读字段"
             },
             "date-format": {
+                "invalid": "请输入有效的日期格式",
                 "name": "日期格式",
                 "desc": "创建或编辑笔记时日期的格式",
                 "preset": {
@@ -604,6 +703,36 @@
                         "empty": "还没有笔记链接到这里。",
                         "via": "通过"
                     }
+                },
+                "block": {
+                    "title": "属性",
+                    "add": "+ 属性",
+                    "name-placeholder": "属性名称",
+                    "options": "属性选项",
+                    "more": "属性操作",
+                    "empty": "空",
+                    "read-only": "计算值，只读",
+                    "type": "属性类型",
+                    "actions": {
+                        "rename": "重命名属性",
+                        "delete": "删除属性"
+                    },
+                    "nested": "嵌套值：请在笔记的 YAML 中编辑",
+                    "chips": {
+                        "add": "添加项目",
+                        "remove": "移除 {{item}}",
+                        "pick-note": "选择笔记"
+                    },
+                    "color": {
+                        "palette": "调色板",
+                        "project": "此项目中的颜色"
+                    },
+                    "errors": {
+                        "exists": "已存在同名属性",
+                        "reserved": "以 pp_ 或 $ 开头的名称为保留名称",
+                        "empty": "请输入名称"
+                    },
+                    "reorder": "拖动以调整顺序（Alt+↑ / Alt+↓）"
                 }
             },
             "developer": {
@@ -660,7 +789,12 @@
                 "unfreeze-all": "取消冻结所有列",
                 "records_other": "条记录",
                 "drag-column": "拖动以重新排序列",
-                "reset-zoom": "重置缩放"
+                "reset-zoom": "重置缩放",
+                "drag-blocked": {
+                    "pinned": "列已固定：取消固定后才能移动卡片",
+                    "readonly": "数据为只读：无法移动卡片",
+                    "editing": "请先完成列名编辑"
+                }
             },
             "calendar": {
                 "name": "日历",
@@ -708,7 +842,9 @@
                     "cancel": "取消",
                     "confirm": "复制",
                     "time": "时间",
-                    "today": "今天"
+                    "today": "今天",
+                    "start-time": "开始时间",
+                    "end-time": "结束时间"
                 },
                 "navigation": {
                     "aria-label": "日历导航",
@@ -773,6 +909,7 @@
                         "add-list": "添加列表",
                         "edit-list": "编辑列表",
                         "delete-list": "删除列表",
+                        "rename-list": "重命名列表",
                         "move-up": "上移",
                         "move-down": "下移",
                         "empty-list": "没有匹配筛选条件的记录",
@@ -927,10 +1064,48 @@
                 "next-year": "下一年",
                 "events-count_other": "{{count}} 个事件",
                 "reset-to-original": "重置为原始值",
-                "reset-to-original-time": "重置为原始时间"
+                "reset-to-original-time": "重置为原始时间",
+                "draft": {
+                    "title": "新建事件",
+                    "resize": "调整事件表单高度：拖动分隔条或使用方向键",
+                    "discard": "放弃事件",
+                    "start": "开始",
+                    "end": "结束",
+                    "done": "已完成",
+                    "status": "状态",
+                    "icon": "图标",
+                    "color": "颜色",
+                    "clear-color": "清除颜色",
+                    "computed": "只读计算字段：{{fields}}",
+                    "mapping-conflict": "保存前请为各项选择不同的映射属性：{{fields}}",
+                    "template-default": "来自模板",
+                    "template-hint": "未更改的属性保留模板值。使用橡皮擦可明确清除值。",
+                    "clear-value": "清除 {{field}}",
+                    "separate-end": "此持续时间需要在视图设置中选择单独的结束日期属性。",
+                    "computed-time": "此视图使用计算日期或时间属性。请选择可写的日期和时间映射以在此创建事件。"
+                }
             },
             "gallery": {
                 "name": "画册",
+                "card-panel": {
+                    "open": "卡片选项",
+                    "title": "卡片",
+                    "cover": "封面",
+                    "fields": "属性",
+                    "close": "关闭",
+                    "width-value": "{{value}} px",
+                    "preview": "卡片预览",
+                    "preview-options": {
+                        "cover": "封面或第一张图片",
+                        "property": "仅封面属性",
+                        "content": "页面内容"
+                    },
+                    "compact": "仅标题",
+                    "group-by": "分组依据"
+                },
+                "card-more": "“{{name}}”的更多操作",
+                "cover-broken": "未找到图片",
+                "cover-broken-hint": "请修正“{{field}}”中的路径：{{path}}",
                 "fields": {
                     "cover": "图片源",
                     "none": "未选择"
@@ -956,12 +1131,15 @@
                 "empty": "该视图还没有数据。",
                 "empty-hint": "创建一篇笔记以开始",
                 "records_other": "条记录",
-                "cover-alt": "标题"
+                "cover-alt": "标题",
+                "group": {
+                    "no-value": "无值"
+                },
+                "show-more": "显示更多 ({{n}})"
             },
             "dashboard": {
                 "name": "数据库",
                 "add-row": "新建笔记",
-
                 "table": {
                     "header-hint": "右击列标题可重命名、更改类型、隐藏、固定或重新排序。拖动边缘可调整宽度。",
                     "row-height": "行高",
@@ -977,6 +1155,29 @@
                         "rollup-mode": "Rollup 模式"
                     }
                 },
+                "insert": {
+                    "here": "在此添加区块",
+                    "after": "在“{{name}}”之后",
+                    "start": "在开头",
+                    "block": "区块",
+                    "add": "添加区块",
+                    "database": "数据库",
+                    "database-desc": "由笔记生成的表格、看板或日历",
+                    "chart": "图表",
+                    "chart-desc": "按属性值绘制柱状、折线或饼图",
+                    "stats": "统计",
+                    "stats-desc": "一眼看到数量、总和与平均值",
+                    "text": "文本",
+                    "text-desc": "备注、标题或说明",
+                    "checklist": "清单",
+                    "checklist-desc": "将笔记勾选为已完成",
+                    "filter-tabs": "筛选标签",
+                    "filter-tabs-desc": "缩小页面上所有区块范围的标签",
+                    "cover": "封面",
+                    "cover-desc": "页面顶部的通栏图片",
+                    "divider": "分隔线",
+                    "divider-desc": "章节之间的线"
+                },
                 "canvas": {
                     "widgets": "组件",
                     "hide-toolbar": "隐藏组件工具栏",
@@ -986,21 +1187,22 @@
                     "layout-stack": "列表",
                     "hide-formula-bar": "隐藏公式栏",
                     "show-formula-bar": "显示公式栏",
-                    "formula-builder": "公式",
-                    "schema": "模式",
-                    "schema-tip": "管理项目字段 — 类型、关系、汇总",
+                    "formula-builder": "计算字段",
                     "filter-bridge-global": "全局筛选器：{{count}} 个条件",
                     "filter-bridge-local": "本地：{{field}} = {{value}}",
                     "filter-bridge-clear": "清除本地筛选器",
                     "filter-bridge-promote": "保存为全局筛选器",
-                    "empty-title": "空画布",
-                    "empty-hint": "从数据块开始",
-                    "empty-add-block": "添加数据块",
+                    "empty-title": "此页面暂无内容",
+                    "empty-hint": "仪表板是由区块组成的页面。从数据库开始：用本项目的笔记生成表格、看板或日历。",
+                    "empty-add-block": "添加数据库",
                     "recalculating": "正在重新计算…",
-                    "show-formula-bar-tip": "显示公式编辑器 — 提示、实时预览、语法检查",
+                    "show-formula-bar-tip": "根据此仪表板中的记录添加或修改计算字段",
                     "add-widget": "添加组件",
                     "error-add-field": "添加字段失败。请重试。",
-                    "error-reopen-schema": "重新打开模式失败。"
+                    "error-reopen-schema": "重新打开模式失败。",
+                    "jump-bar": "本页的区块",
+                    "blocks": "区块",
+                    "collapsed-block": "已折叠"
                 },
                 "field-presets": {
                     "label": "布局",
@@ -1016,7 +1218,17 @@
                     "confirm-delete": "删除此布局预设？"
                 },
                 "widget": {
-                    "expand": "展开组件",
+                    "menu-source": "数据源与设置…",
+                    "menu-filter": "对此区块所有视图筛选…",
+                    "menu-summarize": "分组并计数…",
+                    "menu-pivot": "数据透视表…",
+                    "menu-join": "与其他数据源合并…",
+                    "menu-collapse": "折叠",
+                    "menu-duplicate": "复制",
+                    "menu-insert-after": "在后面插入块",
+                    "menu-insert-before": "在前面插入块",
+                    "locked": "位置已固定",
+                    "expand": "展开",
                     "collapse": "折叠组件",
                     "drag-handle": "拖动以重新排列组件",
                     "chart-settings": "图表设置",
@@ -1035,14 +1247,15 @@
                         "missing": "{{id}} — 已不在本项目中",
                         "single": "本项目只从一个来源收集记录，因此暂时无从缩小范围。"
                     },
-                    "menu": "组件菜单 — 配置、管道、重命名、删除",
+                    "menu": "区块菜单",
                     "menu-configure": "配置组件…",
-                    "menu-pipeline": "数据管道 — 筛选、分组、计算…",
-                    "menu-pipeline-active": "数据管道（{{count}}）",
+                    "menu-more": "更多…",
+                    "menu-pipeline": "分组、计数、合并…",
+                    "menu-pipeline-active": "数据步骤（{{count}}）…",
                     "menu-rename": "重命名",
-                    "menu-remove": "移除组件",
-                    "lock": "锁定组件位置",
-                    "unlock": "解锁组件",
+                    "menu-remove": "删除区块",
+                    "lock": "固定位置",
+                    "unlock": "取消固定位置",
                     "removed": "块“{{title}}”已移除",
                     "undo": "撤销",
                     "chart-not-configured": "图表尚未配置",
@@ -1065,11 +1278,9 @@
                         "column-count-title": "可见列",
                         "grouped": "已分组",
                         "grouped-title": "按“{{field}}”分组"
-                    }
-                },
-                "quick": {
-                    "group": "快速操作",
-                    "formula": "公式构建器"
+                    },
+                    "resize": "调整区块大小：拖动或使用方向键",
+                    "menu-properties": "«{{source}}» 的属性…"
                 },
                 "types": {
                     "data-table": "数据表",
@@ -1091,6 +1302,11 @@
                 },
                 "formula": {
                     "title": "公式编辑器",
+                    "remove": "删除计算字段 {{name}}",
+                    "applied": "字段“{{name}}”已保存。它已作为列出现在表格以及区块（统计、图表）的字段列表中。",
+                    "scope": "为此仪表板中的每条记录创建或更新计算字段。预览显示仪表板数据中的第一条记录；列聚合使用完整数据集。Markdown 属性保持不变。",
+                    "saved": "已保存的仪表板公式 — 选择以编辑",
+                    "cycle": "此公式会产生循环依赖。请先移除引用循环再应用。",
                     "hint": "Ctrl+Enter 应用，Esc 取消",
                     "field-name": "字段名称",
                     "field-placeholder": "例如 计算预算",
@@ -1119,7 +1335,16 @@
                     "debug-cursor": "光标位置",
                     "debug-copy": "复制错误",
                     "debug-dismiss": "关闭",
-                    "runtime-error": "运行时错误"
+                    "runtime-error": "运行时错误",
+                    "snippet-sum": "列的总和",
+                    "snippet-avg": "平均值",
+                    "snippet-count": "记录数",
+                    "snippet-if": "条件取值",
+                    "snippet-today": "今天的日期",
+                    "snippet-sumif": "按条件求和",
+                    "snippet-countif": "按条件计数",
+                    "suggestions-label": "公式提示",
+                    "snippets-label": "公式模板"
                 },
                 "block-filter": {
                     "aria": "区块筛选",
@@ -1128,6 +1353,14 @@
                     "scope": "此区块 — 其所有视图"
                 },
                 "pipeline": {
+                    "intent": {
+                        "summarize-hint": "每组一行，附带数量或总和——例如每个人有多少任务。",
+                        "summarize-add": "添加分组与计数",
+                        "pivot-hint": "某个属性的值变成列——类似电子表格的数据透视表。",
+                        "pivot-add": "添加数据透视表",
+                        "join-hint": "按共同值从另一个项目添加列——例如在每个订单旁显示客户所在城市。",
+                        "join-add": "添加其他数据源"
+                    },
                     "title": "高级转换",
                     "advanced-hint": "普通的筛选和分组现在位于视图本身——这些步骤用于重塑数据。",
                     "steps": "个步骤",
@@ -1216,7 +1449,13 @@
                     "optional": "可选",
                     "keep-original": "保留原始数组字段",
                     "config-hint": "无法配置",
-                    "formula-placeholder": "例如 fieldA + fieldB * 2"
+                    "formula-placeholder": "例如 fieldA + fieldB * 2",
+                    "execution-stopped": "数据转换已停止",
+                    "execution": {
+                        "work-limit": "请减少输入数据或计算复杂度后重试。结果尚不完整。",
+                        "deadline": "已达到处理时限。请减少输入数据或拆分转换步骤。",
+                        "cancelled": "处理已取消。请重新运行转换以获取完整结果。"
+                    }
                 },
                 "database-call": {
                     "empty": "尚未配置视图",
@@ -1240,7 +1479,9 @@
                         "relation-missing-hint": "没有关联字段指向关联块所属的项目 - 请添加一个以便按其筛选。",
                         "relation-open-schema": "打开模式编辑器",
                         "title": "数据来源",
-                        "subtitle": "从其他项目加载数据，而不是使用当前视图。"
+                        "subtitle": "从其他项目加载数据，而不是使用当前视图。",
+                        "source-any": "数据源",
+                        "source-hint-any": "默认情况下，区块显示此视图的记录。可选择其他项目、已保存的选择或本页的其他区块——其筛选后的行会保持最新。"
                     },
                     "tab-add": "添加视图",
                     "tab-rename": "重命名",
@@ -1270,17 +1511,52 @@
                     "filtered-by-canvas": "按画布选择筛选",
                     "relation-not-configured": "未配置关联",
                     "relation-broken": "关联已失效",
-                    "filter-master": "显示 {{name}} 通过 {{field}} 链接的内容"
+                    "filter-master": "显示 {{name}} 通过 {{field}} 链接的内容",
+                    "link-view": "关联到视图",
+                    "link-view-none": "项目中没有此类型的视图",
+                    "unlink-view": "取消关联并保留设置",
+                    "linked-view-label": "跟随项目视图“{{name}}”",
+                    "linked-view-missing": "关联的视图已被删除——此标签页显示其自身的设置",
+                    "tab-unavailable": "此类视图无法在块中显示",
+                    "tab-unavailable-hint": "请在标签页菜单中删除此视图，或添加表格、看板、日历或画廊视图。",
+                    "tab-needs-project": "此视图需要一个项目才能显示",
+                    "local-settings-hint": "更改这些设置会为此区块创建本地副本。项目视图和其他区块将保留各自的设置。"
                 },
                 "group": {
                     "empty": "（空）"
                 },
                 "chart": {
+                    "tabs": {
+                        "setup": "设置",
+                        "customize": "自定义"
+                    },
+                    "repick": "按数据重新选择",
+                    "repick-hint": "根据数据源的字段选择图表类型和坐标轴。",
+                    "x-none": "全部记录（一个总计）",
+                    "title": "图表标题",
+                    "title-placeholder": "无标题",
+                    "colors": "颜色",
+                    "color-schemes": {
+                        "auto": "自动",
+                        "accent": "强调色",
+                        "categorical": "不同颜色",
+                        "sequential": "同一颜色的深浅"
+                    },
+                    "empty": {
+                        "no-records": "数据源中还没有记录——请添加笔记或放宽筛选条件。",
+                        "no-x": "请在“设置”中为 X 轴选择字段。",
+                        "missing-field": "数据源中已没有字段“{{field}}”——请在“设置”中选择其他字段。",
+                        "no-numeric": "没有可用于“{{operation}}”的数字字段——请选择“全部计数”。",
+                        "not-numeric": "“{{field}}”不是数字，无法进行“{{operation}}”——请选择数字字段或“全部计数”。",
+                        "scatter-needs-numbers": "散点图需要两个数字字段：一个用于 X，一个用于 Y。",
+                        "x-all-empty": "所有记录的“{{field}}”均为空——请填写或为 X 轴选择其他字段。"
+                    },
                     "no-data": "暂无数据",
                     "type": "图表类型",
                     "x-axis": "X 轴",
                     "y-axis": "Y 轴",
                     "aggregation": "汇总方式",
+                    "unsupported-aggregation": "所选字段不支持此汇总操作。请选择兼容的操作。",
                     "sort-by": "排序方式",
                     "height": "高度",
                     "granularity": "日期分组方式",
@@ -1417,6 +1693,8 @@
                         "fmt-currency": "货币",
                         "fmt-duration": "时长"
                     },
+                    "summary-hint": "数值摘要 — 每张卡片的字段和聚合方式均在设置中指定。如需图表，请添加“图表”组件。",
+                    "empty-cards": "请在组件设置中添加卡片。",
                     "field-not-found": "未找到字段",
                     "filtered-title": "已按画布选择筛选",
                     "filtered-aria": "{{value}} — 已按画布选择筛选",
@@ -1514,6 +1792,21 @@
                     "new-name": "笔记名称…",
                     "search": "搜索记录",
                     "search-placeholder": "搜索…",
+                    "searching": "正在搜索…",
+                    "search-hints": "搜索建议",
+                    "search-tip": "提示：字段:值，字段: 为空，字段:* 为已填写",
+                    "readonly-reason": {
+                        "rollup-from": "来自「{{source}}」的汇总 — 自动计算",
+                        "rollup": "汇总 — 自动计算",
+                        "formula": "公式 — 自动计算",
+                        "derived": "计算字段 — 只读",
+                        "source": "外部来源为只读",
+                        "list": "此处暂不支持编辑值列表 — 请打开记录"
+                    },
+                    "invalid-number": "请输入有效数字；已保存的值未更改",
+                    "invalid-date": "请完成日期输入；已保存的值未更改",
+                    "list-add": "添加项",
+                    "list-remove": "移除第 {{index}} 项",
                     "remove-sort": "移除排序",
                     "controls": "表格控件",
                     "sort-asc": "升序排序",
@@ -1522,6 +1815,8 @@
                     "calculate": "计算",
                     "calc-none": "无",
                     "hide-field": "在视图中隐藏",
+                    "freeze": "滚动时固定列",
+                    "unfreeze": "取消固定列",
                     "add-property": "添加属性",
                     "group-by": "按此字段分组",
                     "ungroup": "取消分组",
@@ -1531,12 +1826,15 @@
                     "relation-cancel": "取消",
                     "filter-canvas": "按此行筛选关联的块",
                     "unfilter-canvas": "停止按此行筛选画布",
-                    "group-empty": "无值"
+                    "group-empty": "无值",
+                    "relation-load-error": "无法加载关联数据库中的记录。请重试或检查数据源。",
+                    "relation-retry": "重试"
                 },
                 "record-card": {
                     "change-icon": "更换图标",
                     "icon-input": "表情符号或图标名称",
                     "frontmatter": "Frontmatter 属性",
+                    "computed-properties": "计算属性",
                     "unresolved": "未找到笔记：",
                     "empty": "未选择记录"
                 },
@@ -1640,6 +1938,10 @@
                     "label": "跟随选择来源",
                     "none": "— 不跟随 —",
                     "field": "通过关联字段"
+                },
+                "source-catalogue": {
+                    "block": "区块 «{{title}}»（已筛选）",
+                    "cycle": "循环数据源：此区块通过另一个区块读取自身。请选择其他数据源。"
                 }
             }
         },
@@ -1694,7 +1996,9 @@
                     "pin": "固定列表",
                     "unpin": "取消固定",
                     "persist": "为空时保留",
-                    "unpersist": "为空时移除"
+                    "unpersist": "为空时移除",
+                    "move-left": "左移",
+                    "move-right": "右移"
                 }
             },
             "color": {
@@ -1710,8 +2014,9 @@
                 "pick-color": "选择颜色",
                 "favorites": "收藏",
                 "favorites-empty-hint": "按 ⭐ 添加",
+                "used-in-notes": "笔记中使用的颜色",
                 "hex-code": "HEX 代码",
-                "invalid-format": "格式无效",
+                "invalid-format": "请输入 #RGB 或 #RRGGBB",
                 "expand-palette": "展开调色板",
                 "collapse-palette": "折叠调色板"
             },
@@ -1898,8 +2203,8 @@
                     "desc": "在移动设备拖放操作时关闭振动反馈"
                 },
                 "replace-properties": {
-                    "name": "替换 Obsidian 属性面板",
-                    "desc": "关闭内置的文件属性面板，改为显示 YAML Visualizer 面板。"
+                    "name": "笔记顶部的属性",
+                    "desc": "在每篇笔记顶部显示 Projects Plus 属性（置顶、隐藏、排序、类型、关系），替代 Obsidian 内置的属性块。"
                 }
             },
             "front-matter": {
@@ -1946,6 +2251,7 @@
             "fieldWritePartial": "'{{field}}' 已写入 {{written}} 篇笔记；{{unwritten}} 篇无法更新。列表请见控制台。",
             "inverseWriteFailed": "无法将 '{{field}}' 的反向链接写入 {{count}} 篇笔记。详见控制台。",
             "recordsWriteFailed": "无法保存 {{count}} 条记录；已恢复之前的值。",
+            "recordsWritePartial": "{{count}} 条笔记中有 {{unwritten}} 条未保存，已恢复其原值；其余已保存。",
             "migrationBackupFailed": "仪表盘配置已迁移，但无法写入其还原点。详见控制台。",
             "renameFailed": "无法重命名该笔记。",
             "settingsUnreadable": "无法读取设置文件；正在使用默认值。",
@@ -1956,9 +2262,10 @@
                 "settings-unreadable": "无法读取或解析 data.json，因此插件使用默认值启动，并保持磁盘上的文件不变。",
                 "settings-corrupted": "data.json 已解析，但与任何已知的设置版本都不匹配，因此没有可迁移的内容。",
                 "settings-conflict": "本次会话持有自己的更改时，其他窗口、同步工具或手动编辑替换了 data.json，因此无法直接丢弃任何一个版本。",
-                "settings-conflict-uncopied": "data.json 旁的副本和库中的笔记都无法写入，因此另一个版本只保留在两个位置：控制台输出，以及 data.json 本身 — 本次会话会将其保持未写入状态，直到您下次更改。",
+                "settings-conflict-uncopied": "data.json 旁的副本和恢复笔记均未能完成写入并完整读回。原文件受到保护，不会被覆盖。",
                 "record-write-failed": "写入笔记的 frontmatter 失败，因此屏幕上的值已回滚到磁盘上的内容。",
                 "records-write-failed": "批量写入在中途失败，因此该批次中的每条记录都已回滚到磁盘上的内容。",
+                "records-write-partial": "对多条笔记的更改会逐条写入；部分笔记不存在或拒绝写入。列表见控制台。",
                 "record-file-missing": "该笔记在视图加载后被重命名、移动或删除，因此没有可写入的文件。",
                 "field-write-partial": "新字段会逐篇写入项目的笔记，其中部分写入未成功。",
                 "rename-failed": "Obsidian 拒绝了重命名 — 通常是新名称已被占用，或包含文件系统不允许的字符。",
@@ -2034,17 +2341,17 @@
                 "notice": "Projects+：设置未能写入磁盘。更改仍在，但重新加载后会丢失。可在工具栏的「未保存」标记处重试。"
             },
             "diverged": {
-                "label": "\u5916\u90e8\u5df2\u66f4\u6539",
-                "tooltip": "data.json \u5df2\u5728\u6b64\u7a97\u53e3\u4e4b\u5916\u88ab\u66ff\u6362\u3002\u60a8\u7684\u66f4\u6539\u4ecd\u5728\uff1b\u91cd\u8bd5\u5199\u5165\u4f1a\u8986\u76d6\u5bf9\u65b9\u7684\u7248\u672c\uff0c\u56e0\u6b64\u4e0d\u63d0\u4f9b\u91cd\u8bd5\u3002"
+                "label": "外部已更改",
+                "tooltip": "data.json 已在此窗口之外被替换。您的更改仍在；重试写入会覆盖对方的版本，因此不提供重试。"
             },
             "superseded": {
                 "notice": "Projects+：data.json 已在此窗口之外被修改。您最近的更改可能未保存 — 请先重新打开仓库再继续。"
             },
             "conflict": {
-                "notice": "Projects+\uff1adata.json \u5df2\u5728\u6b64\u7a97\u53e3\u4e4b\u5916\u88ab\u4fee\u6539\uff0c\u65e0\u6cd5\u76f4\u63a5\u91c7\u7528\u3002\u5df2\u4fdd\u7559\u60a8\u7684\u7248\u672c\uff0c\u78c1\u76d8\u4e0a\u7684\u7248\u672c\u53e6\u5b58\u4e3a {{path}}\u3002"
+                "notice": "Projects+：data.json 已在此窗口之外被修改，无法直接采用。已保留您的版本，磁盘上的版本另存为 {{path}}。"
             },
             "conflict-uncopied": {
-                "notice": "Projects+\uff1adata.json \u5df2\u5728\u6b64\u7a97\u53e3\u4e4b\u5916\u88ab\u4fee\u6539\uff0c\u4e14\u5bf9\u65b9\u7684\u7248\u672c\u65e0\u5904\u4fdd\u5b58 \u2014 \u65e2\u65e0\u6cd5\u5b58\u653e\u5728\u8be5\u6587\u4ef6\u65c1\uff0c\u4e5f\u65e0\u6cd5\u4f5c\u4e3a\u5e93\u4e2d\u7684\u7b14\u8bb0\u3002\u5b83\u73b0\u5728\u53ea\u5b58\u5728\u4e8e\u4e24\u5904\uff1a\u5f00\u53d1\u8005\u63a7\u5236\u53f0\uff0c\u4ee5\u53ca data.json \u672c\u8eab\uff1b\u5728\u60a8\u81ea\u884c\u66f4\u6539\u8bbe\u7f6e\u4e4b\u524d\uff0c\u4e0d\u4f1a\u6709\u4efb\u4f55\u5185\u5bb9\u8986\u76d6\u5b83\u3002"
+                "notice": "Projects+：data.json 已被此窗口以外的程序修改，但恢复副本未能通过验证。原文件受到保护；在副本通过验证之前，更改不会保存。请检查仓库访问权限并手动备份。在桌面端，开发者控制台中也有另一版本的内容。"
             }
         },
         "settings-menu": {
@@ -2081,6 +2388,8 @@
                     "interval": "时间间隔",
                     "layout": "布局",
                     "time-format": "时间格式",
+                    "creation-duration": "新事件时长",
+                    "minutes": "{{count}} 分钟",
                     "timezone": "时区",
                     "show-agenda": "显示日程",
                     "hide-agenda": "隐藏日程",
@@ -2119,15 +2428,17 @@
                         "end-date": "结束 (endDate)",
                         "start-time": "开始时间 (startTime)",
                         "end-time": "结束时间 (endTime)",
-                        "check": "状态字段 (check)",
+                        "check": "完成复选框字段",
                         "hints": {
                             "date": "创建笔记时自动填充。不参与确定事件开始时间",
                             "start-date": "多日事件的开始日期",
                             "end-date": "多日事件的结束日期",
                             "start-time": "单独的开始时间字段 (HH:mm)",
                             "end-time": "单独的结束时间字段",
-                            "check": "用于标记完成状态的字段 (completed, done 等)"
-                        }
+                            "check": "用于标记完成状态的字段 (completed, done 等)",
+                            "status": "例如“待处理”或“进行中”的文本阶段，与完成复选框分开。"
+                        },
+                        "status": "状态字段"
                     }
                 },
                 "board": {
@@ -2187,7 +2498,7 @@
                     },
                     "hints": {
                         "card-width": "每张画册卡片宽度（像素）",
-                        "cover-field": "包含图片路径的文本字段",
+                        "cover-field": "默认使用 cover 属性。清空此字段可停用属性图片。封面和内容预览仍可使用笔记中的第一张图片。",
                         "include-fields": "选择要在卡片上显示的字段",
                         "card-fields": "按此顺序显示在每张卡片的标题下方"
                     }
@@ -2195,10 +2506,19 @@
                 "table": {
                     "hide-fields": "隐藏字段",
                     "hints": {
-                        "hide-fields": "选择要在表格中隐藏的字段"
+                        "hide-fields": "选择要在表格中隐藏的字段",
+                        "properties": "显示、隐藏并排序此视图中表格的列。已单独设置某列的表格保留其自身的选择。"
                     },
                     "hidden-fields": "隐藏的字段",
-                    "show-all": "显示所有字段"
+                    "show-all": "显示所有字段",
+                    "properties": "属性",
+                    "search-properties": "搜索属性",
+                    "shown-fields": "在表格中显示",
+                    "move-field": "移动“{{name}}”：拖动，或按上下方向键",
+                    "hide-field": "隐藏“{{name}}”",
+                    "show-field": "显示“{{name}}”",
+                    "primary-field": "标题列始终显示",
+                    "no-matching-properties": "没有匹配的属性"
                 },
                 "shared": {
                     "icon-field": "图标字段",
@@ -2249,6 +2569,8 @@
             "intro": "从演示开始——三个相互关联的项目展示表格、看板、日历、图表以及跨项目计算——或创建你自己的项目。"
         },
         "common": {
+            "clear": "清除",
+            "search": "搜索",
             "yesterday": "昨天",
             "tomorrow": "明天",
             "close": "关闭",
@@ -2271,6 +2593,8 @@
             "select-project": "选择项目",
             "syntax-help": "语法帮助",
             "date-placeholder": "YYYY-MM-DD",
+            "date-typed-placeholder": "日.月.年",
+            "datetime-typed-placeholder": "日.月.年 时:分",
             "datetime-placeholder": "YYYY-MM-DD HH:MM",
             "field": "字段",
             "projects": "项目",
@@ -2279,12 +2603,14 @@
             "enable": "启用",
             "disable": "禁用",
             "remove": "移除",
+            "add-item": "添加项",
             "apply": "应用",
             "field-placeholder": "字段",
             "add-criterion": "添加条件",
             "scroll-left": "向左滚动",
             "scroll-right": "向右滚动",
             "retry": "重试",
+            "hide-keyboard": "收起键盘",
             "loading": "加载中...",
             "drag-to-reorder": "拖动以重新排序",
             "confirm": "确认",
@@ -2333,6 +2659,12 @@
             "text": "创建演示——三个带有表格、看板、日历和图表的关联项目——或从文件夹、标签或查询开始你自己的项目。",
             "create-demo": "创建演示：三个关联项目",
             "create-project": "创建项目"
+        },
+        "automatic-fields": {
+            "generated": "自动生成的字段——只读",
+            "unknown": "请先选择字段类型，再编辑此值",
+            "prefix-label": "ID 前缀",
+            "prefix-hint": "生成 ID 的前缀，例如 TASK-。每个新笔记和副本都会获得新的 ID。"
         }
     }
 }

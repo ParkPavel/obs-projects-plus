@@ -11,15 +11,25 @@ export interface CalendarConfig {
   readonly startTimeField?: string;  // default: "startTime"
   readonly endTimeField?: string;    // default: "endTime"
   readonly eventColorField?: string; // default: "eventColor" (hex color for event bars)
+  /**
+   * w4-p07 (decision 24.10 #14): the length of an event created by a tap or
+   * click on the time grid, in minutes (15/30/60/90/120). Default 60. A drag
+   * over the grid sets its own length.
+   */
+  readonly creationDuration?: number;
   readonly startHour?: number;       // default: 6 (timeline start hour)
   readonly endHour?: number;         // default: 22 (timeline end hour)
   // Creation date field — auto-filled when creating notes, NOT used for event start detection
   readonly dateField?: string;       // default: "date" (creation date)
   readonly checkField?: string;
+  /** A textual status, separate from the completion checkbox. */
+  readonly statusField?: string;
   /** NPLAN-D2 — page-level icon field (emoji or lucide icon name). */
   readonly iconField?: string;
   readonly centerOn?: string | null;
   readonly agendaOpen?: boolean;
+  /** A block's custom lists; project-level agenda remains the standalone default. */
+  readonly localAgenda?: import("src/settings/settings").ProjectDefinition["agenda"];
   readonly timezone?: string;
   readonly timeFormat?: string;
 }

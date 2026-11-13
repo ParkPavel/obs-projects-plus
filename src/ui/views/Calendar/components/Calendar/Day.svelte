@@ -1,10 +1,12 @@
 <script lang="ts">
   import dayjs from "dayjs";
+  import { observeHeight } from "src/ui/actions/observeHeight";
   import type { DataRecord } from "src/lib/dataframe/dataframe";
   import { EventRenderType, type ProcessedRecord } from "../../types";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
   import { openRecord } from "src/lib/record/openRecord";
+  import { isDraftId } from "../../draft/calendarDraft";
   import { createEventDispatcher, onMount } from "svelte";
   import DateDisplay from "./Date.svelte";
   import EventList from "./EventList.svelte";
@@ -12,6 +14,7 @@
   import { parseDateInTimezone } from "src/ui/views/Calendar/calendar";
   import { openContextMenuDeferred } from "src/lib/contextMenu";
   import { toRem } from "src/ui/utils/cssLength";
+  import { layoutOverlapClusters, stackCell } from "../../utils/eventLayout";
 
   /**
    * Specifies the date of the day.
@@ -85,7 +88,7 @@
    * Callback when day is tapped on mobile (opens popup)
    * Third parameter is optional event for positioning
    */
-  export let onDayTap: ((date: dayjs.Dayjs, records: DataRecord[], event?: MouseEvent | TouchEvent) => void) | undefined;
+  export let onDayTap: ((date: dayjs.Dayjs, records: DataRecord[], event?: Event) => void) | undefined;
   
   /**
    * Display mode for events in month view:
@@ -138,9 +141,24 @@
       })
     : records; // Fallback if no processed data
 
-  // Limit visible events to prevent overflow
-  const MAX_VISIBLE_EVENTS = 4;
-  $: hiddenCount = Math.max(0, cellRecords.length - MAX_VISIBLE_EVENTS);
+  // Month cell stack: as many cards as fit the measured area, the rest behind "+N".
+  // Row height is measured from the first rendered card (fallback 1.5rem + gap).
+  let scrollAreaHeight = 0;
+  let rowPx = 0;
+  const FALLBACK_ROW_PX = 26;
+  // Measured once per cell (a card's height does not change): reading
+  // offsetHeight in every cell on every update forced a layout per cell.
+  $: if (eventScrollArea && cellRecords.length > 0 && rowPx === 0) {
+    const first = eventScrollArea.querySelector('.event-list > *');
+    const h = first instanceof HTMLElement ? first.offsetHeight : 0;
+    if (h > 0) rowPx = h + 2;
+  }
+  $: rowsThatFit = scrollAreaHeight > 0
+    ? scrollAreaHeight / (rowPx || FALLBACK_ROW_PX)
+    : cellRecords.length;
+  $: stack = stackCell(cellRecords.length, rowsThatFit);
+  $: visibleCellRecords = cellRecords.slice(0, stack.visible);
+  $: hiddenCount = stack.hidden;
 
   // NOTE: Multi-day and All-day events are now handled by HeaderStripsSection.svelte
   // Day.svelte only renders TIMED events (bars or list mode)
@@ -165,70 +183,23 @@
     totalColumns: number;  // Total columns in overlap group
   }
   
-  /**
-   * Calculate overlapping groups and assign columns to events
-   * v3.3.0: GREEDY column assignment - reuse columns when possible
-   * Events that don't overlap in time can share the same column
-   */
+  /** Cluster-of-overlaps → columns (shared with the week timeline). */
   function calculateOverlapLayout(bars: Omit<TimedBar, 'column' | 'totalColumns'>[]): TimedBar[] {
-    if (bars.length === 0) return [];
-    if (bars.length === 1) {
-      const bar = bars[0];
-      if (!bar) return [];
-      return [{ ...bar, column: 0, totalColumns: 1 }];
-    }
-    
-    // v8.1: No buffer needed - adjacent events can share column
-    // Only truly overlapping events (start < previousEnd) need separate columns
-    
-    // Sort by start time, then by duration (longer first for better visual layout)
-    const sorted = [...bars].sort((a, b) => 
-      a.startMinutes - b.startMinutes || (b.endMinutes - b.startMinutes) - (a.endMinutes - a.startMinutes)
-    );
-    
-    // GREEDY column assignment: each event gets first available column
-    // columnEndTimes[col] = when that column becomes free
-    const columnEndTimes: number[] = [];
-    const assignments: { bar: typeof sorted[0], column: number }[] = [];
-    
-    for (const bar of sorted) {
-      if (!bar) continue;
-      
-      // Find first column that's free when this event starts
-      // v8.1.3: Use strict > instead of >= because endMinutes includes visual height
-      // If event A visually ends at 10:30 (due to min-height) and B starts at 10:00,
-      // they should NOT share a column even though real times don't overlap
-      let assignedColumn = -1;
-      for (let col = 0; col < columnEndTimes.length; col++) {
-        const colEndTime = columnEndTimes[col] ?? 0;
-        // Column is free ONLY if this event starts AFTER the visual end of previous
-        if (bar.startMinutes > colEndTime) {
-          assignedColumn = col;
-          break;
-        }
-      }
-      
-      // No free column found - create new one
-      if (assignedColumn === -1) {
-        assignedColumn = columnEndTimes.length;
-        columnEndTimes.push(0);
-      }
-      
-      // Update column end time
-      columnEndTimes[assignedColumn] = bar.endMinutes;
-      
-      assignments.push({ bar, column: assignedColumn });
-    }
-    
-    const totalColumns = columnEndTimes.length;
-    
-    return assignments.map(({ bar, column }) => ({
-      ...bar,
-      column,
-      totalColumns,
-    }));
+    const slots = layoutOverlapClusters(bars.map((b) => ({ start: b.startMinutes, end: b.endMinutes })));
+    return bars.map((bar, i) => ({ ...bar, ...(slots[i] ?? { column: 0, totalColumns: 1 }) }));
   }
-  
+
+  /**
+   * i3-calendar — side by side, a month cell holds this many bars: a phone's
+   * cell is ~3.4rem wide, so four columns were 8 px each. A bar past the
+   * limit is not drawn; the cell's "+N" opens the day with all of them.
+   */
+  $: maxBarColumns = isMobile ? 3 : 5;
+  $: shownBars = timedBars
+    .filter((b) => b.column < maxBarColumns)
+    .map((b) => ({ ...b, totalColumns: Math.min(b.totalColumns, maxBarColumns) }));
+  $: hiddenBarCount = timedBars.length - shownBars.length;
+
   // Get timed events with calculated positions for relative bars
   $: timedBars = (() => {
     if (!isVisible) return [];
@@ -253,7 +224,10 @@
         // Calculate percentages
         const topPercent = ((clampedStart - START_HOUR) / HOUR_RANGE) * 100;
         // v8.1: Reduced min height from 10% to 5% to prevent overlap of adjacent short events
-        // 5% of 14h range = ~42min visual minimum, still visible but less overlap
+        // 5% of 14h range = ~42min visual minimum, still visible but less overlap.
+        // i3-calendar: this is the ONLY minimum — the CSS min-heights (0.75rem,
+        // 1.25rem on touch) drew bars taller than the layout reserved, so bars
+        // it placed one under another overlapped.
         const MIN_HEIGHT_PERCENT = 5;
         const actualHeightPercent = ((clampedEnd - clampedStart) / HOUR_RANGE) * 100;
         const heightPercent = Math.max(MIN_HEIGHT_PERCENT, actualHeightPercent);
@@ -404,8 +378,11 @@
    */
   function handleBarClick(event: MouseEvent, record: DataRecord) {
     event.stopPropagation();
-    
-    if (event.shiftKey) {
+
+    // w4-calendar-draft: a draft has no note to open in a tab or window.
+    if (isDraftId(record.id)) {
+      onRecordClick?.(record);
+    } else if (event.shiftKey) {
       // Shift+click: open in new window
       void openRecord({ id: record.id }, "window", { app: $app });
     } else if (event.ctrlKey || event.metaKey) {
@@ -578,7 +555,7 @@
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       if (isMobile) {
-        onDayTap?.(date, records);
+        onDayTap?.(date, records, e);
       } else {
         handleDblClick(new MouseEvent('dblclick', { bubbles: true }));
       }
@@ -612,17 +589,18 @@
     <!-- CONTENT ZONE: Only TIMED events -->
     <!-- BARS MODE: Relative time bars (7:00-21:00 scale) -->
     {#if displayMode === 'bars' && timedBars.length > 0}
+      <!-- i3-calendar: the bars carry no title. In month and two-week view a
+           note is found by its colour and its place in the day's hours; the
+           title is the tooltip and the accessible name, and the day popup
+           lists every event by name. -->
       <div class="timed-bars-container" aria-label={$i18n.t("views.calendar.timed-events")}>
-        {#each timedBars as bar (bar.record.id)}
-          {@const gapPx = bar.totalColumns > 1 ? 4 : 0}
+        {#each shownBars as bar (bar.record.id)}
+          {@const gapPx = bar.totalColumns > 1 ? 2 : 0}
           {@const leftPercent = (bar.column / bar.totalColumns) * 100}
           {@const widthPercent = 100 / bar.totalColumns}
-          {@const isNarrow = bar.totalColumns > 1}
           {@const isLastColumn = bar.column === bar.totalColumns - 1}
           <button
             class="timed-bar"
-            class:narrow={isNarrow}
-            class:last-column={isLastColumn}
             type="button"
             style={`
               top: ${bar.topPercent}%;
@@ -633,20 +611,22 @@
             `}
             on:click={(e) => handleBarClick(e, bar.record)}
             title={`${bar.label}\n${bar.startTime} - ${bar.endTime}`}
-          >
-            <div class="timed-bar-content">
-              <span class="bar-label">{bar.label}</span>
-            </div>
-          </button>
+            aria-label={`${bar.label}, ${bar.startTime} - ${bar.endTime}`}
+          ></button>
         {/each}
       </div>
+      {#if hiddenBarCount > 0}
+        <button class="more-events-btn more-events-btn--bars" on:click|stopPropagation={(event) => onDayTap?.(date, records, event)}>
+          +{hiddenBarCount}
+        </button>
+      {/if}
     {:else if displayMode === 'list'}
       <!-- LIST MODE: Scrollable event list (Shift+wheel to scroll) -->
-      <div class="event-scroll-area" bind:this={eventScrollArea}>
+      <div class="event-scroll-area" bind:this={eventScrollArea} use:observeHeight={(h) => { scrollAreaHeight = h; }}>
         <EventList
           {checkField}
           {iconField}
-          records={cellRecords}
+          records={visibleCellRecords}
           {onRecordClick}
           {onRecordCheck}
           {isMobile}
@@ -654,7 +634,7 @@
         />
       </div>
       {#if hiddenCount > 0}
-        <button class="more-events-btn" on:click|stopPropagation={() => onDayTap?.(date, records)}>
+        <button class="more-events-btn" on:click|stopPropagation={(event) => onDayTap?.(date, records, event)}>
           +{hiddenCount}
         </button>
       {/if}
@@ -699,9 +679,10 @@
   }
 
   .more-events-btn {
-    background: linear-gradient(transparent, var(--background-primary) 60%);
+    flex: 0 0 auto;
+    background: transparent;
     border: none;
-    padding: 0.75rem var(--ppp-spacing-2xs, 0.25rem) var(--ppp-spacing-3xs, 0.125rem);
+    padding: var(--ppp-spacing-3xs, 0.125rem) var(--ppp-spacing-2xs, 0.25rem);
     font-size: 0.625em;
     color: var(--text-muted);
     cursor: pointer;
@@ -709,8 +690,6 @@
     width: 100%;
     border-radius: 0.25rem;
     position: relative;
-    margin-top: -0.75rem;
-    z-index: 2;
   }
 
   .more-events-btn:hover {
@@ -720,8 +699,12 @@
 
   /* NOTE: Multi-day and All-day styles moved to HeaderStripsSection.svelte */
 
-  .day-cell:not(.outside-month):hover {
-    background: var(--background-secondary);
+  /* N44: on a touch screen :hover sticks to the last tapped day — hover
+     shades only where there is a pointer that hovers. */
+  @media (hover: hover) {
+    .day-cell:not(.outside-month):hover {
+      background: var(--background-secondary);
+    }
   }
 
   .day-cell:not(.outside-month):focus {
@@ -741,8 +724,10 @@
     animation: today-pulse 2s ease-out 1;
   }
 
-  .day-cell.today:hover {
-    background: hsla(var(--interactive-accent-hsl), 0.12);
+  @media (hover: hover) {
+    .day-cell.today:hover {
+      background: hsla(var(--interactive-accent-hsl), 0.12);
+    }
   }
   
   /* Today pulse animation for edge centering visibility */
@@ -766,8 +751,10 @@
     background: var(--background-primary-alt);
   }
 
-  .day-cell.weekend:not(.outside-month):not(.today):hover {
-    background: var(--background-modifier-hover);
+  @media (hover: hover) {
+    .day-cell.weekend:not(.outside-month):not(.today):hover {
+      background: var(--background-modifier-hover);
+    }
   }
 
   /* Outside month (inactive days) */
@@ -846,101 +833,58 @@
     /* aspect-ratio: 1 / 2; — disabled, flex works better */
   }
   
+  /* i3-calendar: a bar is a colour segment at its true height — no padding,
+     no label, no min-height, so what is drawn is what the layout reserved. */
   .timed-bar {
     --bar-color: var(--interactive-accent);
     position: absolute;
     /* left and width are set via inline style for column layout */
     box-sizing: border-box;
-    background: color-mix(in srgb, var(--bar-color) 15%, transparent);
+    background: color-mix(in srgb, var(--bar-color) 45%, transparent);
     border: none;
     border-left: var(--ppp-border-width-thick, 0.125rem) solid var(--bar-color);
-    border-radius: var(--ppp-radius-md, 0.25rem);
-    padding: 0 0.25rem;
-    font-size: var(--ppp-font-size-xs, 0.6875rem);
-    line-height: 1;
+    border-radius: var(--ppp-radius-sm, 0.125rem);
+    padding: 0;
     overflow: hidden;
     cursor: pointer;
     transition: background var(--ppp-duration-fast, 0.1s) var(--ppp-ease-out, ease),
                 box-shadow var(--ppp-duration-fast, 0.1s) var(--ppp-ease-out, ease);
-    /* v8.0: Minimum height ensures bar is always visible */
-    min-height: 0.75rem;
     /* NO default margins - controlled via gap in width calculation */
     margin: 0;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
   }
 
-  .timed-bar-content {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    height: 100%;
-    overflow: hidden;
-    pointer-events: none;
+  /* i3-calendar: styles.css gives every plugin button a 2.75rem minimum on a
+     coarse pointer (.workspace-leaf-content[…] button, 0-2-1). That made each
+     bar 44 px tall on a phone, over the bars below it; this selector (0-3-0
+     with Svelte's class) outranks it, so a bar keeps its layout height. */
+  .timed-bars-container .timed-bar,
+  .day-cell .more-events-btn {
+    min-height: 0;
+    min-width: 0;
   }
-  
+
+  .more-events-btn--bars {
+    align-self: flex-end;
+    flex: none;
+  }
+
   .timed-bar:hover {
-    background: color-mix(in srgb, var(--bar-color) 25%, transparent);
+    background: color-mix(in srgb, var(--bar-color) 65%, transparent);
     box-shadow: var(--shadow-s);
     z-index: 10;
   }
-  
+
   .timed-bar:active {
-    background: color-mix(in srgb, var(--bar-color) 35%, transparent);
+    background: color-mix(in srgb, var(--bar-color) 75%, transparent);
   }
   .timed-bar:focus-visible {
     outline: 0.125rem solid var(--bar-color);
-    outline-offset: 0.125rem;
+    outline-offset: 0.0625rem;
     z-index: 10;
   }
-  
-  /* Narrow bars (when multiple columns) - hide label if too narrow */
-  .timed-bar.narrow {
-    padding: 0.0625rem 0.125rem;
-  }
-  
-  .timed-bar.narrow .bar-label {
-    /* Hide text when bar is very narrow, show only colored bar */
-    font-size: 0.5625rem;
-    line-height: 1;
-  }
-  
-  /* When there are 3+ columns, hide label completely */
-  @container (max-width: 2.5rem) {
-    .bar-label {
-      display: none;
-    }
-  }
-  
-  .bar-label {
-    display: block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: var(--text-normal);
-    font-weight: 500;
-    /* Clamp to single line, hide if doesn't fit */
-    max-height: 1.1em;
-    line-height: 1.1;
-  }
-  
-  /* Touch device: ensure minimum tap target for timed bars */
-  @media (pointer: coarse) {
-    .timed-bar {
-      min-height: 1.25rem;
-    }
-  }
-  
-  /* Mobile responsive timed bars — v8.2: @container view-content */
-  @container view-content (max-width: 48rem) {
-    .timed-bar {
-      padding: 0.0625rem 0.1875rem;
-      font-size: var(--ppp-font-size-xs, 0.6875rem);
-      border-left-width: var(--ppp-border-width-thick, 0.125rem);
-    }
-    
-    .timed-bar:active {
-      background: color-mix(in srgb, var(--bar-color) 40%, transparent);
-    }
-  }
+
+  /* i3-calendar: the touch target is the day cell (a tap opens the day with
+     every event); a bar keeps its real height on touch screens too. */
 </style>

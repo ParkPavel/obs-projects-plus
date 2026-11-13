@@ -48,6 +48,15 @@ export const DEFAULT_SELECT_COLORS = [
 
 // ── Helpers ──────────────────────────────────────────────────
 
+function coloredOptions(value: unknown): value is SelectOption[] {
+  if (!Array.isArray(value)) return false;
+  for (const option of value as unknown[]) {
+    if (!option || typeof option !== "object" || !("name" in option) || !("color" in option) ||
+      typeof option.name !== "string" || typeof option.color !== "string") return false;
+  }
+  return true;
+}
+
 export function isSelectConfig(
   config: unknown
 ): config is SelectFieldTypeConfig {
@@ -55,7 +64,8 @@ export function isSelectConfig(
     typeof config === "object" &&
     config !== null &&
     "type" in config &&
-    (config as Record<string, unknown>)["type"] === "select"
+    (config as Record<string, unknown>)["type"] === "select" &&
+    coloredOptions((config as Record<string, unknown>)["options"])
   );
 }
 
@@ -66,7 +76,8 @@ export function isStatusConfig(
     typeof config === "object" &&
     config !== null &&
     "type" in config &&
-    (config as Record<string, unknown>)["type"] === "status"
+    (config as Record<string, unknown>)["type"] === "status" &&
+    coloredOptions((config as Record<string, unknown>)["groups"])
   );
 }
 
@@ -86,7 +97,7 @@ export function isFormulaConfig(
  * Returns null if no matching option found.
  */
 export function getOptionColor(
-  config: ExtendedFieldTypeConfig,
+  config: unknown,
   value: string
 ): string | null {
   if (isSelectConfig(config)) {

@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ProjectViewProps } from "src/customViewApi";
   import { createDataRecord } from "src/lib/dataApi";
+  import { DataFieldType } from "src/lib/dataframe/dataframe";
   import type {
     DataField,
     DataFrame,
@@ -10,12 +11,10 @@
   import { notUndefined } from "src/lib/helpers";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
-  import { openRecord, modeFromNewLeaf, PLAIN_MODE } from "src/lib/record/openRecord";
+  import { activateRecord } from "src/lib/record/openRecord";
   import { Notice } from "obsidian";
   import type { ViewApi } from "src/lib/viewApi";
   import type { ProjectDefinition } from "src/settings/settings";
-  import { CreateNoteModal } from "src/ui/modals/createNoteModal";
-  import { EditNoteModal } from "src/ui/modals/editNoteModal";
   import {
     getRecordColorContext,
     sortRecordsContext,
@@ -46,11 +45,7 @@
   import { settings } from "src/lib/stores/settings";
   import type { FilterCondition } from "src/settings/settings";
   import { getFilterValuesFromConditions } from "src/lib/helpers";
-  import { noticeFor } from "src/lib/errors/errorText";
-  import { logError } from "src/lib/errors/errorLog";
-
-  /** #202 — the same event as the Calendar's rename failure, so the same code. */
-  const RENAME_FAILED = "PPP-301";
+  import { creationContextKey } from "src/ui/utils/creationContext";
 
   export let project: ProjectDefinition;
   export let frame: DataFrame;
@@ -71,12 +66,15 @@
 
   export let config: BoardConfig | undefined;
   export let onConfigChange: (cfg: BoardConfig) => void;
+  /** Automatic normalization must not detach a linked block from its source. */
+  export let embedded: boolean = false;
 
   export let hasSort: boolean;
   export let hasFilter: boolean;
   export let filterConditions: FilterCondition[] = [];
 
   $: ({ fields, records } = frame);
+  $: columnDragContext = creationContextKey(project, config?.groupByField, fields, [], dataReadOnly, api);
   $: orderSyncField =
     (config?.orderSyncField && getFieldByName(fields, config.orderSyncField)) ||
     undefined;
@@ -89,7 +87,7 @@
     if (prevGroupByField !== undefined && currentGroupBy !== prevGroupByField) {
       // groupByField changed — persistedStatuses are from old field, reset
       const { persistedStatuses: _, ...restConfig } = config ?? {};
-      saveConfig(restConfig);
+      applyAutomaticConfig(restConfig);
     }
     prevGroupByField = currentGroupBy;
   }
@@ -99,54 +97,35 @@
     hasSort ? sortRecords(records) : [...records]
   );
 
+  /**
+   * B10 — a tap on a card opens the record in the peek, like the gallery and
+   * the calendar (decision 2026-10-14 in `openRecord.ts`); the card handles
+   * Shift/Ctrl itself. A read-only source opens a read-only peek.
+   */
   const handleRecordClick: OnRecordClick = (record) => {
-    if (dataReadOnly) {
-      void openRecord({ id: record.id }, PLAIN_MODE, { app: $app });
-      return;
-    }
-    new EditNoteModal(
-      $app,
-      fields,
-      (record) => api.updateRecord(record, fields),
-      record,
-      records,
-      // v3.0.8: Unified note open with modifier-based navigation
-      (openMode) => {
-        void openRecord({ id: record.id }, modeFromNewLeaf(openMode), { app: $app });
-      },
-      // v3.0.1: Rename note callback
-      async (newName: string) => {
-        try {
-          const file = $app.vault.getAbstractFileByPath(record.id);
-          if (file && 'parent' in file) {
-            const newPath = file.parent?.path 
-              ? `${file.parent.path}/${newName}.md`
-              : `${newName}.md`;
-            await $app.fileManager.renameFile(file as any, newPath);
-          }
-        } catch (e) {
-          // #202, from the adversarial review: the code names the EVENT, and it
-          // must not swallow the CAUSE. This used to show the thrown message,
-          // and a name collision, a permission error and an illegal filename
-          // ask for three different things from the user. The notice stays one
-          // sentence with one code; the reason goes to the console, which is
-          // where the code page tells people to look.
-          logError(RENAME_FAILED, record.id, e);
-          new Notice(noticeFor(RENAME_FAILED));
-        }
-      },
-      // v3.0.4: Autosave setting from project
-      project.autosave ?? true
-    ).open();
+    void activateRecord({ id: record.id, readonly: dataReadOnly || readonly }, undefined, { app: $app });
+  };
+
+  /**
+   * The card's pencil. i3-close: it opens the note's properties block in the
+   * peek — the editor the calendar uses too — instead of the older
+   * EditNoteModal, which showed a different, partial set of fields. The peek
+   * is read-only only on read-only DATA (#C4), as the editor was: a Dataview
+   * board's generic `readonly` never stopped editing a card's note.
+   */
+  const handleRecordEdit: OnRecordClick = (record) => {
+    void activateRecord({ id: record.id, readonly: dataReadOnly }, undefined, { app: $app });
   };
 
   const handleRecordCheck =
     (checkField: string): OnRecordCheck =>
-    (record, checked) => {
+    (record, checked, fieldName = checkField) => {
       if (dataReadOnly) return;
+      const field = fields.find(f => f.name === fieldName);
+      if (!field || field.type !== DataFieldType.Boolean || field.repeated || field.derived || field.identifier) return;
       api.updateRecord(
         updateRecordValues(record, {
-          [checkField]: checked,
+          [fieldName]: checked,
         }),
         fields
       );
@@ -276,36 +255,35 @@
 
   const handleRecordAdd =
     (field: DataField | undefined): OnRecordAdd =>
-    (column: string) => {
-      new CreateNoteModal($app, project, (name, templatePath) => {
-        const filterValues = getFilterValuesFromConditions(filterConditions, field?.name);
-        api.addRecord(
-          createDataRecord(
-            name,
-            project,
-            {
-              ...filterValues,
-              ...(field
-                ? {
-                    [field.name]:
-                      column !== $i18n.t("views.board.no-status")
-                        ? column
-                        : undefined,
-                  }
-                : {}),
-            }
-          ),
-          fields,
-          templatePath
-        );
-      }).open();
+    (column, name, templatePath, noteProject) => {
+      if (readonly || dataReadOnly) return;
+      const filterValues = getFilterValuesFromConditions(filterConditions, field?.name);
+      return api.addRecord(
+        createDataRecord(
+          name,
+          noteProject,
+          {
+            ...filterValues,
+            ...(field
+              ? {
+                  [field.name]:
+                    column !== $i18n.t("views.board.no-status")
+                      ? column
+                      : undefined,
+                }
+              : {})
+          }
+        ),
+        fields,
+        templatePath
+      );
     };
 
   const handleSortColumns =
     (field: DataField | undefined): OnSortColumns =>
     (columns) => {
-      if (dataReadOnly) return;
-      if (field?.name && field?.typeConfig && field.typeConfig?.options) {
+      // Column order is local presentation in a block, never shared schema.
+      if (!embedded && !dataReadOnly && field?.name && field?.typeConfig && field.typeConfig?.options) {
         settings.updateFieldConfig(
           project.id,
           field?.name,
@@ -332,7 +310,7 @@
   const handleColumnAdd =
     (field: DataField | undefined): OnColumnAdd =>
     (columns, name) => {
-      if (!field) return;
+      if (dataReadOnly || !field) return;
 
       settings.updateFieldConfig(
         project.id,
@@ -451,62 +429,30 @@
     });
   };
 
-  const toggleColumnPin =
-    (field: DataField | undefined): OnColumnPin =>
-    (columns, name) => {
-      if (!field) return;
-
-      if (field.typeConfig && field.typeConfig.options) {
-        let options = [...field.typeConfig.options];
-        const pinned = options.includes(name);
-
-        if (pinned) {
-          options = options.filter((v) => v !== name);
-        } else {
-          options = columns.filter((v) => options.includes(v) || v === name);
-          // Pinning implies persist — ensure column stays visible after unpin
-          const current = config?.persistedStatuses ?? [];
-          if (!current.includes(name)) {
-            saveConfig({
-              ...config,
-              persistedStatuses: [...current, name],
-            });
-          }
-        }
-
-        settings.updateFieldConfig(
-          project.id,
-          field.name,
-          fields.map((f) => f.name),
-          {
-            ...field.typeConfig,
-            options,
-          }
-        );
-      } else {
-        // First pin — also persist
-        const current = config?.persistedStatuses ?? [];
-        if (!current.includes(name)) {
-          saveConfig({
-            ...config,
-            persistedStatuses: [...current, name],
-          });
-        }
-        settings.updateFieldConfig(
-          project.id,
-          field.name,
-          fields.map((f) => f.name),
-          {
-            ...field.typeConfig,
-            options: [name],
-          }
-        );
-      }
-    };
+  // i3-board: a pin is a view setting (config.columns[name].pinned). The
+  // status field's options are its values, not a pin list; they stay as
+  // they are. Pinning also keeps the column when it empties, as before.
+  const toggleColumnPin = (): OnColumnPin => (_columns, name) => {
+    const pinned = config?.columns?.[name]?.pinned === true;
+    const current = config?.persistedStatuses ?? [];
+    saveConfig({
+      ...config,
+      persistedStatuses: pinned || current.includes(name) ? current : [...current, name],
+      columns: {
+        ...config?.columns,
+        [name]: { ...config?.columns?.[name], pinned: !pinned },
+      },
+    });
+  };
 
   function saveConfig(cfg: BoardConfig) {
     config = cfg;
     onConfigChange(cfg);
+  }
+
+  function applyAutomaticConfig(cfg: BoardConfig) {
+    if (embedded) config = cfg;
+    else saveConfig(cfg);
   }
 
   // cards-g5: saved card frames. A resize commits one card's override here,
@@ -539,7 +485,7 @@
     const groupByFieldForInit = fields.find(f => config?.groupByField === f.name);
     if (config?.persistedStatuses === undefined && groupByFieldForInit) {
       const initialColumns = getColumns(records, config?.columns ?? {}, groupByFieldForInit, orderSyncField, !hasSort);
-      saveConfig({
+      applyAutomaticConfig({
         ...config,
         persistedStatuses: initialColumns.map(c => c.id),
       });
@@ -567,6 +513,7 @@
   let:coverField
 >
   <Board
+    {project}
     columns={getColumns(
       records,
       config?.columns ?? {},
@@ -579,7 +526,7 @@
     {columnWidth}
     zoom={config?.boardZoom ?? 1}
     onZoomChange={(z) => saveConfig({ ...config, boardZoom: z })}
-    checkField={fields.find((field) => field.name === config?.checkField)?.name}
+    checkField={fields.find((field) => field.name === config?.checkField && field.type === DataFieldType.Boolean && !field.repeated && !field.derived && !field.identifier)?.name}
     includeFields={fields.filter((field) => includeFields.includes(field.name))}
     customHeader={fields.find((field) => field.name === customHeader)}
     iconField={fields.find((field) => field.name === iconField)}
@@ -588,6 +535,7 @@
     {cardFrames}
     onCardFrameChange={handleCardFrameChange}
     onRecordClick={handleRecordClick}
+    onRecordEdit={handleRecordEdit}
     onRecordCheck={handleRecordCheck(checkField)}
     onRecordAdd={handleRecordAdd(groupByField)}
     onRecordUpdate={handleRecordUpdate(groupByField)}
@@ -595,9 +543,10 @@
     onColumnDelete={handleColumnDelete(groupByField)}
     onColumnRename={handleColumnRename(groupByField)}
     onColumnCollapse={toggleColumnCollapse()}
-    onColumnPin={toggleColumnPin(groupByField)}
+    onColumnPin={toggleColumnPin()}
     onColumnPersist={handleColumnPersist}
     onSortColumns={handleSortColumns(groupByField)}
+    dragContext={columnDragContext}
     {readonly}
     {dataReadOnly}
     validateStatusField={() => {

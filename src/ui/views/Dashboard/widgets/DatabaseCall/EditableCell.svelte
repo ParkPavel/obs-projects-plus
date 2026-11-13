@@ -1,13 +1,13 @@
 <script lang="ts">
-  /**
-   * EditableCell — F2.2 (TABLE_V2_CANON §2/§3). Cell = typed property edited
-   * in place. Display and editor live together so a cell has exactly one
-   * source of truth. Editor dispatch is STRICTLY by DataFieldType
-   * (invariant #1). Commit on blur/Enter/option-click, revert on Esc.
-   * Boolean toggles instantly. Relation editing is #081
-   * (RelationPickerPopover); derived types are read-only by contract.
-   */
-  import { createEventDispatcher, tick } from "svelte";
+  /** EditableCell — F2.2 (TABLE_V2_CANON §2/§3): typed property edited in place; editor by DataFieldType (invariant #1).
+   * Commit on blur/Enter/option-click, Esc reverts, Boolean toggles. B3: a locked cell shows why; a tap edits, a drag scrolls. */
+  import { createEventDispatcher, onDestroy } from "svelte";
+  import { i18n } from "src/lib/stores/i18n";
+  import { cellAccess } from "./tableCellAccess";
+  import { cellTouch, liftOnKeyboard, timedDismiss } from "./tableTouch";
+  import type { ParsedSearch } from "./tableSearchQuery";
+  import CellLockReason from "./CellLockReason.svelte";
+  import HighlightText from "./HighlightText.svelte";
   import {
     DataFieldType,
     type DataField,
@@ -17,20 +17,28 @@
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
   import { cellDisplay } from "./tableCanon";
-  import { toNumber } from "src/lib/engine/numeric";
+  import { editedCellValue } from "./editedCellValue";
+  import TypedCellEditor from "./TypedCellEditor.svelte";
+  import ListCellEditor from "./ListCellEditor.svelte";
   import CellChoiceDropdown from "./CellChoiceDropdown.svelte";
   import RelationPickerPopover from "./RelationPickerPopover.svelte";
   import RollupCellRenderer from "src/ui/components/RollupCellRenderer/RollupCellRenderer.svelte";
+
+  type DateFormatConfig = import("src/settings/v3/settings").DateFormatConfig;
 
   export let field: DataField;
   export let value: Optional<DataValue>;
   export let readonly: boolean;
   export let editing: boolean;
+  export let saving = false;
+  export let retryVersion = 0;
   /** Unique existing values for Select/Status dropdowns (parent-computed). */
   export let options: string[] = [];
   /** #081 — the Relation picker resolves the target project's records. */
   export let api: ViewApi;
   export let frame: DataFrame;
+  export let dateFormat: DateFormatConfig | undefined = undefined;
+  export let highlight: ParsedSearch | null = null;
 
   const dispatch = createEventDispatcher<{
     startEdit: void;
@@ -39,26 +47,32 @@
     setupRelation: DataField;
   }>();
 
-  $: cell = cellDisplay(field, value);
-  $: editable = !readonly && !field.derived &&
-    field.type !== DataFieldType.Formula &&
-    field.type !== DataFieldType.Rollup &&
-    !field.typeConfig?.rollup;
+  $: cell = cellDisplay(field, value, dateFormat);
+  $: access = cellAccess(field, value, readonly);
+  $: editable = access.editable;
+  $: reason = access.editable ? "" : $i18n.t(access.reason.key, { defaultValue: access.reason.defaultValue, ...access.reason.params });
+  let cellEl: HTMLDivElement;
+  let reasonOpen = false; const reasonClose = timedDismiss(() => { reasonOpen = false; }, 2500, () => cellEl?.ownerDocument ?? null); onDestroy(() => reasonClose(false)); // D16
+  $: reasonClose(reasonOpen);
   $: isChoice = field.type === DataFieldType.Select || field.type === DataFieldType.Status;
+  let draft = "", wasEditing = false, invalid = false;
 
-  let draft = "";
-  let inputEl: HTMLInputElement | null = null;
-  let committed = false;
-
-  $: if (editing) {
-    draft = value === null || value === undefined ? "" : String(value);
-    committed = false;
-    void tick().then(() => inputEl?.focus());
+  // Seeded on the turn INTO editing, inside a function: `draft` is bound, and a `$:` that assigns it re-seeds per keystroke (R0.34).
+  function onEditing(on: boolean) {
+    if (on && !wasEditing) {
+      draft = value == null ? "" : String(value);
+      invalid = false;
+    }
+    wasEditing = on;
   }
+  $: onEditing(editing);
 
+  // The cell's Enter handler takes only its own Enter: the editor's bubbles up after the browser flushed `editing = false`, reopening the cell.
   function handleCellClick() {
+    if (saving) return;
+    if (!editable) reasonOpen = true;
     if (!editable || editing) return;
-    if (field.type === DataFieldType.Boolean) {
+    if (field.type === DataFieldType.Boolean && !field.repeated && !Array.isArray(value)) {
       dispatch("commit", value !== true);
       return;
     }
@@ -66,59 +80,38 @@
   }
 
   function commitDraft(raw: string) {
-    if (committed) return;
-    committed = true;
-    if (field.type === DataFieldType.Number) {
-      // #180a: was `Number(raw)` plus a hand-rolled empty/NaN guard — the rule
-      // restated in miniature. `toNumber` already returns null for both.
-      dispatch("commit", toNumber(raw));
-      return;
-    }
-    dispatch("commit", raw);
+    if (saving) return;
+    if (isChoice && raw === (value == null ? "" : String(value))) { dispatch("cancel"); return; }
+    dispatch("commit", editedCellValue(field, value, raw, dateFormat));
   }
 
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      commitDraft(draft);
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      committed = true;
-      dispatch("cancel");
-    }
-  }
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
+  bind:this={cellEl}
   class="ppp-t2-cell"
-  class:ppp-t2-cell--number={cell.kind === "number"}
-  class:ppp-t2-cell--editable={editable}
-  class:ppp-t2-cell--editing={editing}
-  role="gridcell"
-  tabindex={editable ? 0 : -1}
-  on:click={handleCellClick}
-  on:keydown={(e) => { if (e.key === "Enter" && !editing) { e.preventDefault(); handleCellClick(); } }}
+  class:ppp-t2-cell--number={cell.kind === "number"} class:ppp-t2-cell--editable={editable}
+  class:ppp-t2-cell--editing={editing && editable} class:ppp-t2-cell--invalid={invalid}
+  role="gridcell" tabindex="0" aria-readonly={editable ? undefined : "true"} title={reason || undefined}
+  use:cellTouch={handleCellClick} use:liftOnKeyboard={editing && editable}
+  on:focus={() => { reasonOpen = !editable; }} on:blur={() => { reasonOpen = false; }}
+  on:keydown={(e) => { if (e.target === e.currentTarget && e.key === "Enter" && !editing) { e.preventDefault(); handleCellClick(); } }}
 >
-  {#if editing && field.type === DataFieldType.Date}
-    <input bind:this={inputEl} class="ppp-t2-editor" type="date" bind:value={draft}
-      on:keydown={handleKeydown} on:blur={() => commitDraft(draft)} />
-  {:else if editing && field.type === DataFieldType.Number}
-    <input bind:this={inputEl} class="ppp-t2-editor ppp-t2-editor--number" type="text" inputmode="decimal"
-      bind:value={draft} on:keydown={handleKeydown} on:blur={() => commitDraft(draft)} />
-  {:else if editing && field.type === DataFieldType.Relation}
-    <span class="ppp-t2-text">{cell.kind === "text" ? cell.text : ""}</span>
-    <RelationPickerPopover {field} {value} {api} {frame}
-      on:commit={(e) => { committed = true; dispatch("commit", e.detail); }}
-      on:cancel={() => { committed = true; dispatch("cancel"); }}
-      on:setupRelation={() => { committed = true; dispatch("setupRelation", field); }} />
-  {:else if editing && isChoice}
-    <CellChoiceDropdown bind:draft {options}
+  {#if editing && editable && field.type === DataFieldType.Relation}
+    <RelationPickerPopover {field} {value} {api} {frame} triggerEl={cellEl}
+      {saving}
+      on:commit on:cancel
+      on:setupRelation={() => dispatch("setupRelation", field)} />
+  {:else if editing && editable && (field.repeated || field.type === DataFieldType.List || field.type === DataFieldType.String && Array.isArray(value))}
+    <ListCellEditor {field} {value} {options} {dateFormat} {saving} {retryVersion} on:commit on:cancel />
+  {:else if editing && editable && (isChoice || (field.type === DataFieldType.String && options.length > 0))}
+    <CellChoiceDropdown bind:draft {field} {options} {saving} {retryVersion}
       on:commit={(e) => commitDraft(e.detail)}
-      on:cancel={() => { committed = true; dispatch("cancel"); }} />
-  {:else if editing}
-    <input bind:this={inputEl} class="ppp-t2-editor" type="text" bind:value={draft}
-      on:keydown={handleKeydown} on:blur={() => commitDraft(draft)} />
+      on:cancel />
+  {:else if editing && editable}
+    <TypedCellEditor {field} {value} {options} {dateFormat} {saving} {retryVersion}
+      on:commit on:cancel on:invalid={(e) => { invalid = e.detail; }} />
   {:else if field.type === DataFieldType.Rollup || field.typeConfig?.rollup}
     <!-- #045.4: shown by its mode (percent bar, show chips, plain count); read-only like every derived field.
          A rollup column keeps its detected type (a sum is a Number); its typeConfig.rollup says what it is. -->
@@ -126,12 +119,12 @@
   {:else if cell.kind === "empty"}
     <span class="ppp-t2-empty" aria-hidden="true">—</span>
   {:else if cell.kind === "check"}
-    <input type="checkbox" checked={cell.checked} disabled={!editable} class="ppp-t2-check"
+    <input type="checkbox" checked={cell.checked} disabled={!editable || saving} class="ppp-t2-check"
       on:click|stopPropagation={() => { if (editable) dispatch("commit", value !== true); }} />
   {:else if cell.kind === "pills"}
     <span class="ppp-t2-pills">
-      {#each cell.pills as pill (pill.label)}
-        <span class="ppp-t2-pill" style:background-color={pill.color ?? ""}>
+      {#each cell.pills as pill}
+        <span class="ppp-t2-pill" class:ppp-t2-pill--tinted={!!pill.color} style:--ppp-t2-pill-color={pill.color ?? null}>
           {#if cell.status}<span class="ppp-t2-pill-dot" aria-hidden="true">●</span>{/if}{pill.label}
         </span>
       {/each}
@@ -140,8 +133,9 @@
   {:else if cell.kind === "number"}
     {cell.text}
   {:else}
-    <span class="ppp-t2-text">{cell.text}</span>
+    <span class="ppp-t2-text"><HighlightText text={cell.text} search={highlight} field={field.name} /></span>
   {/if}
+  {#if reasonOpen && reason}<CellLockReason text={reason} />{/if}
 </div>
 
 <style>
@@ -168,39 +162,18 @@
   /* Canon §2: the editing cell becomes a popover — ring + shadow */
   .ppp-t2-cell--editing {
     background: var(--background-primary);
-    box-shadow: 0 0 0 0.125rem var(--interactive-accent), var(--ppp-shadow-md);
+    box-shadow: 0 0 0 0.125rem var(--ppp-t2-editor-ring, var(--interactive-accent)), var(--ppp-shadow-md);
     border-radius: var(--radius-s, 0.25rem);
     z-index: 2;
   }
 
-  .ppp-t2-editor {
-    width: 100%;
-    min-width: 0;
-    border: none;
-    background: transparent;
-    font-size: var(--font-ui-small);
-    color: var(--text-normal);
-    outline: none;
-    padding: 0;
-    height: 100%;
+  .ppp-t2-cell--invalid {
+    --ppp-t2-editor-ring: var(--text-error);
   }
 
-  .ppp-t2-editor--number {
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .ppp-t2-empty {
-    color: transparent;
-  }
-
-  .ppp-t2-cell:hover .ppp-t2-empty {
-    color: var(--text-faint);
-  }
-
-  .ppp-t2-check {
-    margin: 0;
-  }
+  .ppp-t2-empty { color: transparent; }
+  .ppp-t2-cell:hover .ppp-t2-empty { color: var(--text-faint); }
+  .ppp-t2-check { margin: 0; }
 
   .ppp-t2-pills {
     display: flex;
@@ -224,9 +197,12 @@
     text-overflow: ellipsis;
   }
 
+  /* i3-table: an option colour tints the pill (a raw fill hid dark text). */
+  .ppp-t2-pill--tinted { background: color-mix(in srgb, var(--ppp-t2-pill-color) 22%, var(--background-primary)); box-shadow: inset 0.25em 0 0 var(--ppp-t2-pill-color); }
   .ppp-t2-pill-dot {
     font-size: 0.5rem;
     line-height: 1;
+    color: var(--ppp-t2-pill-color, inherit);
   }
 
   .ppp-t2-pill--more {

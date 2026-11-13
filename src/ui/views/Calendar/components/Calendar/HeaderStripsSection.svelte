@@ -226,7 +226,11 @@
     const weekStart = dates[0];
     const weekEnd = dates[dates.length - 1];
     
-    // Track lanes we've seen
+    // i3-calendar: lanes are packed per week. The global lanes (processor)
+    // only had their gaps renumbered here, so a week could show more rows
+    // than events overlapping in it; now each event takes the first row free
+    // over its days in THIS week, earlier and longer events first.
+    const inWeek: { pr: (typeof data.processed)[number]; from: number; to: number; start: dayjs.Dayjs; end: dayjs.Dayjs }[] = [];
     const laneMap = new Map<number, Map<string, MultiDaySegment>>();
     const processedEvents = new Set<string>(); // Track by record ID to avoid duplicates
     
@@ -263,47 +267,38 @@
       }
       
       processedEvents.add(pr.record.id);
-      
-      const lane = pr.lane ?? 0;
-      const label = getDisplayName(pr.record.id) ?? pr.record.id;
-      
-      if (!laneMap.has(lane)) {
-        laneMap.set(lane, new Map());
-      }
-      
+      const days = dates.map((d, i) => ({ d, i })).filter(({ d }) =>
+        (d.isSame(eventStart, 'day') || d.isAfter(eventStart, 'day')) &&
+        (d.isSame(effectiveEnd, 'day') || d.isBefore(effectiveEnd, 'day')));
+      if (days.length === 0) continue;
+      inWeek.push({ pr, from: days[0]!.i, to: days[days.length - 1]!.i, start: eventStart, end: effectiveEnd });
+    }
+
+    inWeek.sort((a, b) => a.from - b.from || (b.to - b.from) - (a.to - a.from) || a.start.valueOf() - b.start.valueOf());
+    const laneEnds: number[] = []; // last day index taken in each lane
+    for (const ev of inWeek) {
+      let lane = laneEnds.findIndex((end) => end < ev.from);
+      if (lane === -1) { lane = laneEnds.length; laneEnds.push(ev.to); } else laneEnds[lane] = ev.to;
+      if (!laneMap.has(lane)) laneMap.set(lane, new Map());
       const laneSegments = laneMap.get(lane)!;
-      
-      // Create segments for ALL days this event spans within this week
-      for (const weekDate of dates) {
-        const isWithinSpan = 
-          (weekDate.isSame(eventStart, 'day') || weekDate.isAfter(eventStart, 'day')) &&
-          (weekDate.isSame(effectiveEnd, 'day') || weekDate.isBefore(effectiveEnd, 'day'));
-        
-        if (isWithinSpan) {
-          const segmentDateKey = weekDate.format('YYYY-MM-DD');
-          const isStart = eventStart.isSame(weekDate, 'day');
-          const isEnd = effectiveEnd.isSame(weekDate, 'day');
-          
-          laneSegments.set(segmentDateKey, {
-            record: pr.record,
-            lane,
-            isStart,
-            isEnd,
-            color: pr.color,
-            label,
-          });
-        }
+      const label = getDisplayName(ev.pr.record.id) ?? ev.pr.record.id;
+      for (let i = ev.from; i <= ev.to; i++) {
+        const weekDate = dates[i]!;
+        laneSegments.set(weekDate.format('YYYY-MM-DD'), {
+          record: ev.pr.record,
+          lane,
+          isStart: ev.start.isSame(weekDate, 'day'),
+          isEnd: ev.end.isSame(weekDate, 'day'),
+          color: ev.pr.color,
+          label,
+        });
       }
     }
-    
-    // CRITICAL: Renumber lanes locally to remove gaps
-    // If global lanes are [0, 2, 5], renumber to [0, 1, 2] for compact display
-    const usedLanes = Array.from(laneMap.keys()).sort((a, b) => a - b);
-    const compactLanes: LaneData[] = usedLanes.map((globalLane, localIndex) => ({
-      lane: localIndex, // Renumbered for display
-      segments: laneMap.get(globalLane)!
-    }));
-    
+
+    const compactLanes: LaneData[] = Array.from(laneMap.keys())
+      .sort((a, b) => a - b)
+      .map((lane) => ({ lane, segments: laneMap.get(lane)! }));
+
     return { multiDayByLane: compactLanes };
   }
   
@@ -386,15 +381,12 @@
               title={segment.label}
               aria-label={segment.label}
             >
-              {#if segment.isStart || (segment.isStart && segment.isEnd)}
+              <!-- i3-calendar: no title in the strip. A note is found by its
+                   colour and the days it covers; the title is the tooltip and
+                   the accessible name, and the day popup lists it by name. -->
+              {#if segment.isStart && !segment.isEnd && onRecordChange}
                 <!-- v3.2.0 DnD: Resize handle on left edge (multi-day only, not single-day) -->
-                {#if onRecordChange && !(segment.isStart && segment.isEnd)}
-                  <div class="resize-handle-start" aria-hidden="true"></div>
-                {/if}
-                <span class="strip-dot"></span>
-                <span class="strip-label">{segment.label}</span>
-              {:else}
-                <span class="strip-continuation"></span>
+                <div class="resize-handle-start" aria-hidden="true"></div>
               {/if}
               {#if segment.isEnd && onRecordChange}
                 <!-- v3.2.0 DnD: Resize handle on right edge (incl. single-day to allow extending) -->
@@ -441,6 +433,9 @@
      v6.3: Added background isolation to prevent timeline overlap
      ═══════════════════════════════════════════════════════════════ */
   .header-strips-section {
+    /* i3-calendar: a strip without a title is a colour band; it no longer
+       needs a text line's height, and the week's cells get the room back. */
+    --_strip-h: 0.625rem;
     display: flex;
     flex-direction: column;
     border-bottom: 0.0625rem solid var(--background-modifier-border);
@@ -469,9 +464,9 @@
      * which CAN cause sub-pixel drift. Grid shares one column-sizing pass. */
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    height: var(--ppp-event-strip-height, 1.25rem);
-    min-height: var(--ppp-event-strip-height, 1.25rem);
-    max-height: var(--ppp-event-strip-height, 1.25rem);
+    height: var(--_strip-h);
+    min-height: var(--_strip-h);
+    max-height: var(--_strip-h);
     width: 100%;
     /* Solid background prevents timeline bleedthrough */
     background: var(--background-primary);
@@ -627,30 +622,6 @@
     padding-right: 0;
   }
 
-  .strip-dot {
-    width: var(--ppp-space-2, 0.25rem);
-    height: var(--ppp-space-2, 0.25rem);
-    border-radius: var(--ppp-radius-full, 624.9375rem);
-    background: var(--strip-color);
-    flex-shrink: 0;
-  }
-
-  .strip-label {
-    color: var(--text-normal);
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex: 1;
-    min-width: 0;
-  }
-
-  .strip-continuation {
-    /* v3.3.4: Hidden — mid/end segments now show only the semi-transparent background
-       with border-top for a clean, consistent strip appearance matching week view */
-    display: none;
-  }
-
   .strip-empty {
     /* v9.3: flex: 1 1 0 removed — parent .multiday-lane is now CSS Grid. */
     min-width: 0;
@@ -669,77 +640,17 @@
 
 
   /* ═══════════════════════════════════════════════════════════════
-     RESPONSIVE - v9.4 MOBILE VISUAL PARITY
-     Match PC appearance: dots visible, labels readable, same tone.
-     Only reduce padding/gap — keep all decorations and colors intact.
+     RESPONSIVE — i3-calendar
+     A strip is a colour band without text, so every width keeps the same
+     band height (--_strip-h, set on the section) and only the
+     edge rounding tightens on narrow columns.
      ═══════════════════════════════════════════════════════════════ */
-
-  /* Mobile portrait (panel width < 30rem) */
   @container view-content (max-width: 30rem) {
     .multiday-lane {
-      height: var(--ppp-event-strip-height, 1.25rem);
-      min-height: var(--ppp-event-strip-height, 1.25rem);
-      max-height: var(--ppp-event-strip-height, 1.25rem);
       margin-bottom: var(--ppp-event-strip-gap, var(--ppp-space-1, 0.125rem));
-      overflow: hidden;
-    }
-
-    .strip-segment {
-      padding: 0 var(--ppp-space-1, 0.125rem);
-      font-size: var(--ppp-font-size-xs, 0.6875rem);
-    }
-
-    /* v9.4: Keep dot visible — reduced size for compact columns */
-    .strip-dot {
-      width: 0.1875rem;
-      height: 0.1875rem;
-    }
-
-    /* v9.4: Labels use same font as desktop for readability */
-    .strip-segment.is-start .strip-label,
-    .strip-segment.is-only .strip-label {
-      display: block;
-      font-size: var(--ppp-font-size-xs, 0.6875rem);
-    }
-
-    /* v9.4: Tighter inset indicator + radius on narrow mobile columns
-     * to avoid perceived left-shift from disproportionate 2 shadow */
-    .strip-segment.is-start {
-      --_strip-inset-shadow: inset 0.0625rem 0 0 var(--strip-color);
-      border-top-left-radius: var(--ppp-radius-sm, 0.125rem);
-      border-bottom-left-radius: var(--ppp-radius-sm, 0.125rem);
-    }
-    .strip-segment.is-end {
-      --_strip-inset-shadow: inset -0.0625rem 0 0 var(--strip-color);
-      border-top-right-radius: var(--ppp-radius-sm, 0.125rem);
-      border-bottom-right-radius: var(--ppp-radius-sm, 0.125rem);
-    }
-    .strip-segment.is-start.is-end,
-    .strip-segment.is-only {
-      --_strip-inset-shadow: inset 0.0625rem 0 0 var(--strip-color), inset -0.0625rem 0 0 var(--strip-color);
-      border-radius: var(--ppp-radius-sm, 0.125rem);
-    }
-  }
-  @media (max-height: 30rem) and (orientation: landscape) {
-    .multiday-lane {
-      height: var(--ppp-event-strip-height, 1.25rem);
-      min-height: var(--ppp-event-strip-height, 1.25rem);
-      max-height: var(--ppp-event-strip-height, 1.25rem);
-      margin-bottom: var(--ppp-event-strip-gap, var(--ppp-space-1, 0.125rem));
-      overflow: hidden;
     }
     .strip-segment {
-      padding: 0 var(--ppp-space-1, 0.125rem);
-      font-size: var(--ppp-font-size-xs, 0.6875rem);
-    }
-    .strip-dot {
-      width: 0.1875rem;
-      height: 0.1875rem;
-    }
-    .strip-segment.is-start .strip-label,
-    .strip-segment.is-only .strip-label {
-      display: block;
-      font-size: var(--ppp-font-size-xs, 0.6875rem);
+      padding: 0;
     }
     .strip-segment.is-start {
       --_strip-inset-shadow: inset 0.0625rem 0 0 var(--strip-color);
@@ -755,59 +666,6 @@
     .strip-segment.is-only {
       --_strip-inset-shadow: inset 0.0625rem 0 0 var(--strip-color), inset -0.0625rem 0 0 var(--strip-color);
       border-radius: var(--ppp-radius-sm, 0.125rem);
-    }
-  }
-
-  /* Tablet sizing (above mobile, but below desktop) */
-  /* v8.2: @container view-content for panel-aware breakpoint */
-  @container view-content (min-width: 30.1rem) and (max-width: 48rem) {
-    .multiday-lane {
-      height: 1.5rem;
-      min-height: 1.5rem;
-      margin-bottom: var(--ppp-space-1, 0.125rem);
-    }
-
-    .strip-segment {
-      padding: 0 var(--ppp-space-2, 0.25rem);
-      font-size: var(--ppp-font-size-xs, 0.6875rem);
-      /* use token — same as base class border-top-width */
-      border-top-width: var(--ppp-border-width-thick, 0.125rem);
-    }
-    
-    .strip-segment.is-start,
-    .strip-segment.is-end,
-    .strip-segment.is-only {
-      padding-left: var(--ppp-space-2, 0.25rem);
-      padding-right: var(--ppp-space-2, 0.25rem);
-    }
-    
-    .strip-dot {
-      width: var(--ppp-space-2, 0.25rem);
-      height: var(--ppp-space-2, 0.25rem);
-    }
-  }
-
-  /* Tablet landscape (height-based — not available in @container) */
-  @media (min-height: 30.1rem) and (max-height: 48rem) and (orientation: landscape) {
-    .multiday-lane {
-      height: 1.5rem;
-      min-height: 1.5rem;
-      margin-bottom: var(--ppp-event-strip-gap, var(--ppp-space-1, 0.125rem));
-    }
-    .strip-segment {
-      padding: 0 var(--ppp-space-2, 0.25rem);
-      font-size: var(--ppp-font-size-xs, 0.6875rem);
-      border-top-width: var(--ppp-border-width-thick, 0.125rem);
-    }
-    .strip-segment.is-start,
-    .strip-segment.is-end,
-    .strip-segment.is-only {
-      padding-left: var(--ppp-space-2, 0.25rem);
-      padding-right: var(--ppp-space-2, 0.25rem);
-    }
-    .strip-dot {
-      width: var(--ppp-space-2, 0.25rem);
-      height: var(--ppp-space-2, 0.25rem);
     }
   }
 
@@ -815,25 +673,16 @@
      TOUCH OVERRIDE — v9.3
      styles.css sets button { min-height: 2.75rem; min-width: 2.75rem }
      for @media (pointer: coarse). Strip-segment is a <button> but its
-     height is governed by --ppp-event-strip-height via the .multiday-lane
+     height is governed by --_strip-h via the .multiday-lane
      parent. Without this override, strips balloon to 2.75rem on touch.
+     i3-calendar: the lanes no longer grow to a finger's height (ios-c1) —
+     each lane took 2.75rem from a phone's week row. A tap on the day opens
+     it with every event by name; a strip stays tappable at its band height.
      ═══════════════════════════════════════════════════════════════ */
   @media (pointer: coarse) {
     .strip-segment {
       min-height: 0;
       min-width: 0;
-    }
-
-    /* ios-c1: EVERY lane — and the segments filling it — is a finger tall
-       (ios-t1 grew only a week with one lane). The lanes are stacked rows of
-       a flex column, and the section and its week track size to them, so each
-       segment's hit area is its own lane: none reaches into the lane beside
-       it. This rule follows the width/landscape rules above so it wins over
-       their strip height on touch; a fine pointer keeps the strip height. */
-    .header-strips-section .multiday-lane {
-      height: var(--ppp-touch-target-min);
-      min-height: var(--ppp-touch-target-min);
-      max-height: var(--ppp-touch-target-min);
     }
   }
 

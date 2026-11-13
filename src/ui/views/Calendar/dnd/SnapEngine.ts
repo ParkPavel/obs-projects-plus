@@ -88,13 +88,14 @@ export function yPositionToMinutes(
 
 /**
  * Convert minutes from midnight to a "HH:mm" string.
+ * Clamped to the day: the end of the day (1440) is 23:59. Clamping the hour
+ * alone turned 24:00 into 23:00 and cut an hour off events dragged to midnight.
  */
 export function minutesToTime(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  const clampedH = Math.min(23, Math.max(0, h));
-  const clampedM = Math.max(0, m);
-  return `${clampedH.toString().padStart(2, '0')}:${clampedM.toString().padStart(2, '0')}`;
+  const total = Math.max(0, Math.min(24 * 60 - 1, Math.round(minutes)));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 }
 
 /**

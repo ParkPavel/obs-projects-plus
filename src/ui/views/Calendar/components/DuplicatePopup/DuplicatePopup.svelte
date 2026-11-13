@@ -1,12 +1,16 @@
 <script lang="ts">
-  import { onMount, onDestroy, createEventDispatcher } from "svelte";
+  import { onDestroy, createEventDispatcher } from "svelte";
+  import { Icon } from "obsidian-svelte";
   import dayjs from "dayjs";
   import type { ProcessedRecord, ProcessedCalendarData } from "../../types";
   import { duplicateStore } from "src/lib/stores/duplicateStore";
   import { i18n } from "src/lib/stores/i18n";
+  import { focusTrap } from "src/lib/a11y/focusTrap";
+  import { portal } from "src/ui/portal";
+  import { fitVisibleViewport } from "src/ui/actions/fitVisibleViewport";
   import DuplicateCalendarView from "./DuplicateCalendarView.svelte";
   import { calendarLogger } from '../../logger';
-  
+
   export let visible: boolean = false;
   export let sourceRecord: ProcessedRecord;
   export let existingData: ProcessedCalendarData;
@@ -67,22 +71,43 @@
     }
   }
   
+  // Escape is heard on the window itself, not on the document: it closes this
+  // window and nothing behind it. The trap keeps focus inside, so the key
+  // always starts here; stopping it keeps Obsidian from also acting on it.
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape') {
+      e.stopPropagation();
       handleClose();
     }
   }
   
+  /** "HH:mm" from a time input, or null while it is empty or partial. */
+  function parseClock(text: string): { h: number; m: number } | null {
+    const match = /^(\d{1,2}):(\d{2})/.exec(text);
+    // coercion-exempt: Class B - lexing an HH:MM token from a time input
+    return match ? { h: parseInt(match[1] ?? "0", 10), m: parseInt(match[2] ?? "0", 10) } : null;
+  }
+
+  // i3-close: the end never falls before the start. A later start carries
+  // the end with it (the duration is kept); an end before the start is not
+  // taken, and the field shows the kept end again.
+  let endInputKey = 0;
   function updateStartTime(h: number, m: number) {
     if (store.editedTime) {
-      const newStart = store.editedTime.startTime.hour(h).minute(m);
+      const { startTime, endTime } = store.editedTime;
+      const newStart = startTime.hour(h).minute(m);
       duplicateStore.setStartTime(newStart);
+      if (!endTime.isAfter(newStart)) duplicateStore.setEndTime(newStart.add(Math.max(15, endTime.diff(startTime, "minute")), "minute"));
     }
   }
-  
+
   function updateEndTime(h: number, m: number) {
     if (store.editedTime) {
       const newEnd = store.editedTime.endTime.hour(h).minute(m);
+      if (!newEnd.isAfter(store.editedTime.startTime)) {
+        endInputKey += 1;
+        return;
+      }
       duplicateStore.setEndTime(newEnd);
     }
   }
@@ -107,98 +132,94 @@
     }
   }
   
-  onMount(() => {
-    window.addEventListener('keydown', handleKeydown);
-  });
-  
   onDestroy(() => {
-    window.removeEventListener('keydown', handleKeydown);
     duplicateStore.reset();
   });
 </script>
 
 {#if visible}
-  <div 
-    class="duplicate-backdrop" 
+  <!-- `use:portal` is declared BEFORE `use:focusTrap`: the trap moves focus
+       inside on mount, and reparenting a subtree that holds focus drops it. The
+       window lives on the body of its own document, above every leaf layer, so
+       the day popup it was opened from cannot cover it. `ppp-modal` is the
+       shared plugin-modal root: the reduced-motion and coarse-pointer rules in
+       tokens.css reach a body-level surface through it. w4-p06: the backdrop
+       is the keyboard-visible area (the same rule as the shared popups), so a
+       time field's keyboard does not cover the window or its footer. -->
+  <div
+    class="duplicate-backdrop ppp-modal"
     bind:this={backdropElement}
+    use:portal={{ to: "document-body" }}
+    use:fitVisibleViewport
+    use:focusTrap
     on:click={handleBackdropClick}
+    on:keydown={handleKeydown}
     role="presentation"
   >
-    <div class="duplicate-modal">
-      <!-- HEADER: Title + Close button -->
+    <div
+      class="duplicate-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="duplicate-modal-title"
+      tabindex="-1"
+    >
+      <!-- i3-calendar: laid out like Obsidian's own modals — title and a plain
+           close icon on top, the controls in the body, the actions in a footer
+           (on a phone a sheet whose footer sits above the home indicator, the
+           primary action under the thumb). -->
       <header class="modal-header">
-        <h2 class="modal-title">{$i18n.t("views.calendar.duplicate.title")}</h2>
-        <button 
-          class="close-btn" 
-          on:click={handleClose} 
+        <h2 id="duplicate-modal-title" class="modal-title">{$i18n.t("views.calendar.duplicate.title")}</h2>
+        <button
+          class="close-btn clickable-icon"
+          on:click={handleClose}
           aria-label={$i18n.t('common.close')}
         >
-          ✕
+          <Icon name="x" size="sm" />
         </button>
       </header>
-      
-      <!-- TOOLBAR: Today + Status + Confirm -->
+
       <div class="modal-toolbar">
-        <button 
-          class="toolbar-btn today-btn" 
+        <button
+          class="toolbar-btn today-btn"
           on:click={handleScrollToToday}
           title={$i18n.t('views.calendar.duplicate.today')}
         >
-          📅 {$i18n.t("views.calendar.duplicate.today")}
+          <Icon name="calendar" size="sm" /> {$i18n.t("views.calendar.duplicate.today")}
         </button>
-        
-        <div class="toolbar-status">
-          {#if selectedCount > 0}
-            <span class="status-badge">{selectedCount}</span>
-            {#if hasCollisions}
-              <span class="collision-warning">⚠️ {collisionCount}</span>
-            {/if}
-          {/if}
-        </div>
-        
-        <button 
-          class="toolbar-btn confirm-btn" 
-          on:click={handleConfirm}
-          disabled={selectedCount === 0}
-        >
-          ✓ {$i18n.t("views.calendar.duplicate.confirm") || "Дублировать"}
-        </button>
+        {#if hasCollisions}
+          <span class="collision-warning"><Icon name="alert-triangle" size="xs" /> {collisionCount}</span>
+        {/if}
       </div>
       
       <!-- TIME EDITOR (if timed event) -->
       {#if hasTimed && store.editedTime && sourceRecord.timeInfo}
         {@const editedTime = store.editedTime}
         <div class="time-row">
-          <span class="time-label">{$i18n.t("views.calendar.duplicate.time") || "Время"}:</span>
-          <input 
-            type="time" 
-            value={editedTime.startTime.format('HH:mm')}
-            on:change={(e) => {
-              const input = e.target;
-              if (input instanceof HTMLInputElement) {
-                const [h, m] = input.value.split(':').map(Number);
-                if (h !== undefined && m !== undefined) {
-                  updateStartTime(h, m);
-                }
-              }
-            }}
-            class="time-input"
-          />
+          <span class="time-label">{$i18n.t("views.calendar.duplicate.time")}:</span>
+          <!-- i3-calendar: only the clock is chosen here (the day is picked on
+               the grid), so the field is a time field — a date-time field
+               showed «07.10…», the source's date. -->
+          <div class="time-field">
+            <input
+              type="time"
+              class="time-input"
+              value={editedTime.startTime.format("HH:mm")}
+              aria-label={$i18n.t("views.calendar.duplicate.start-time")}
+              on:change={(e) => { const t = parseClock(e.currentTarget.value); if (t) updateStartTime(t.h, t.m); }}
+            />
+          </div>
           <span class="time-sep">—</span>
-          <input 
-            type="time" 
-            value={editedTime.endTime.format('HH:mm')}
-            on:change={(e) => {
-              const input = e.target;
-              if (input instanceof HTMLInputElement) {
-                const [h, m] = input.value.split(':').map(Number);
-                if (h !== undefined && m !== undefined) {
-                  updateEndTime(h, m);
-                }
-              }
-            }}
-            class="time-input"
-          />
+          <div class="time-field">
+            {#key endInputKey}
+              <input
+                type="time"
+                class="time-input"
+                value={editedTime.endTime.format("HH:mm")}
+                aria-label={$i18n.t("views.calendar.duplicate.end-time")}
+                on:change={(e) => { const t = parseClock(e.currentTarget.value); if (t) updateEndTime(t.h, t.m); }}
+              />
+            {/key}
+          </div>
         </div>
       {/if}
       
@@ -213,236 +234,163 @@
           {endHour}
         />
       </div>
+
+      <footer class="modal-footer">
+        <button class="footer-btn" on:click={handleClose}>{$i18n.t("views.calendar.duplicate.cancel")}</button>
+        <button class="footer-btn mod-cta" on:click={handleConfirm} disabled={selectedCount === 0}>
+          {$i18n.t("views.calendar.duplicate.confirm")}{#if selectedCount > 0}&nbsp;({selectedCount}){/if}
+        </button>
+      </footer>
     </div>
   </div>
 {/if}
 
 <style>
+  /* i3-calendar: Obsidian's modal grammar. Desktop: a centred card on the
+     cover. Narrow window or phone: a full-height sheet whose footer clears
+     the home indicator. Layer: Obsidian's modal layer, not a literal 1100,
+     so the field lists (popover layer) still open above it. */
   .duplicate-backdrop {
     position: fixed;
     inset: 0;
     background: var(--background-modifier-cover);
-    backdrop-filter: blur(0.25rem);
-    z-index: 1100;
+    z-index: var(--layer-modal, 50);
     display: flex;
     align-items: center;
     justify-content: center;
   }
-  
+
   .duplicate-modal {
-    background: var(--background-primary);
-    border-radius: 0.75rem;
+    background: var(--modal-background, var(--background-primary));
+    border: var(--modal-border-width, 0.0625rem) solid var(--modal-border-color, var(--background-modifier-border));
+    border-radius: var(--modal-radius, var(--radius-l));
     width: 90%;
-    max-width: 26rem;
-    max-height: 85vh;
+    max-width: 28rem;
+    max-height: min(85vh, 100%);
     display: flex;
     flex-direction: column;
     box-shadow: var(--shadow-l);
     overflow: hidden;
   }
-  
-  /* ========== HEADER ========== */
+
   .modal-header {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.75rem 1rem;
-    border-bottom: 0.0625rem solid var(--background-modifier-border);
-    background: var(--background-secondary);
+    align-items: flex-start;
+    gap: var(--size-4-2);
+    padding: var(--size-4-4) var(--size-4-4) var(--size-4-2);
     flex-shrink: 0;
   }
-  
+
   .modal-title {
-    font-size: 0.875rem;
-    font-weight: 600;
+    flex: 1;
+    min-width: 0;
     margin: 0;
+    font-size: var(--font-ui-large, 1.125rem);
+    font-weight: var(--font-semibold, 600);
+    line-height: 1.3;
     color: var(--text-normal);
+    text-wrap: balance;
   }
-  
+
   .close-btn {
-    width: 1.75rem;
-    height: 1.75rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    border-radius: 50%;
-    background: transparent;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 1rem;
+    flex: none;
   }
-  
-  .close-btn:hover {
-    background: var(--background-modifier-hover);
-  }
-  
-  /* ========== TOOLBAR ========== */
+
   .modal-toolbar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 0.5rem 0.75rem;
-    gap: 0.5rem;
-    background: var(--background-primary);
-    border-bottom: 0.0625rem solid var(--background-modifier-border);
+    gap: var(--size-4-2);
+    padding: 0 var(--size-4-4) var(--size-4-2);
     flex-shrink: 0;
   }
-  
+
   .toolbar-btn {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0.375rem 0.625rem;
-    border: none;
-    border-radius: 0.375rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-    cursor: pointer;
-    white-space: nowrap;
+    gap: var(--size-4-1);
   }
-  
-  .today-btn {
-    background: var(--background-modifier-hover);
-    color: var(--text-normal);
-  }
-  
-  .today-btn:hover {
-    background: var(--background-modifier-border);
-  }
-  
-  .confirm-btn {
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
-  }
-  
-  .confirm-btn:hover:not(:disabled) {
-    filter: brightness(1.1);
-  }
-  
-  .confirm-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  
-  .toolbar-status {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-  }
-  
-  .status-badge {
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
-    padding: 0.125rem 0.5rem;
-    border-radius: 1rem;
-    font-size: 0.6875rem;
-    font-weight: 600;
-  }
-  
+
   .collision-warning {
-    font-size: 0.6875rem;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--size-4-1);
+    font-size: var(--font-ui-smaller);
     color: var(--text-warning);
   }
-  
-  /* ========== TIME ROW ========== */
+
   .time-row {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    background: var(--background-secondary);
-    border-bottom: 0.0625rem solid var(--background-modifier-border);
+    gap: var(--size-4-2);
+    padding: var(--size-4-2) var(--size-4-4);
+    border-top: var(--border-width, 0.0625rem) solid var(--background-modifier-border);
     flex-shrink: 0;
   }
-  
+
   .time-label {
-    font-size: 0.75rem;
+    font-size: var(--font-ui-small);
     color: var(--text-muted);
     flex-shrink: 0;
   }
-  
-  .time-input {
-    padding: 0.25rem 0.375rem;
-    border: 0.0625rem solid var(--background-modifier-border);
-    border-radius: 0.25rem;
-    background: var(--background-primary);
-    color: var(--text-normal);
-    font-size: 0.75rem;
-    width: 4.5rem;
+
+  .time-field {
+    flex: 1 1 0;
+    min-width: 0;
   }
-  
+
+  .time-input {
+    width: 100%;
+    font-variant-numeric: tabular-nums;
+  }
+
   .time-sep {
     color: var(--text-muted);
-    font-size: 0.75rem;
   }
-  
-  /* ========== CALENDAR CONTAINER ========== */
+
   .calendar-container {
     flex: 1 1 auto;
     overflow: auto;
     min-height: 0;
+    border-top: var(--border-width, 0.0625rem) solid var(--background-modifier-border);
   }
-  
-  /* ========== MOBILE ========== */
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--size-4-2);
+    padding: var(--size-4-3) var(--size-4-4);
+    border-top: var(--border-width, 0.0625rem) solid var(--background-modifier-border);
+    flex-shrink: 0;
+  }
+
+  .footer-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* A narrow window (a phone, a split pane): the sheet fills it, and the two
+     actions share the footer's width so the primary one is easy to reach. */
   @media (max-width: 30rem) {
     .duplicate-backdrop {
-      /* iOS safe area support */
-      padding-top: env(safe-area-inset-top, 0);
-      padding-bottom: env(safe-area-inset-bottom, 0);
-      align-items: flex-start;
+      align-items: stretch;
     }
-    
+
     .duplicate-modal {
       width: 100%;
       max-width: 100%;
-      height: 100%;
       max-height: 100%;
+      border: none;
       border-radius: 0;
-      /* Ensure modal respects safe areas */
-      margin-top: env(safe-area-inset-top, 0);
+      padding-top: env(safe-area-inset-top, 0);
     }
-    
-    .modal-header {
-      padding: 1rem;
-      /* Extra padding top for status bar overlap safety */
-      padding-top: max(1rem, env(safe-area-inset-top, 1rem));
-      min-height: 3.5rem;
-      position: relative;
+
+    .modal-footer {
+      padding-bottom: max(var(--size-4-3), env(safe-area-inset-bottom, 0));
     }
-    
-    .modal-title {
-      font-size: 1rem;
-      padding-right: 3rem; /* Space for close button */
-    }
-    
-    /* Larger close button for mobile touch targets - ALWAYS VISIBLE */
-    .close-btn {
-      position: absolute;
-      top: 50%;
-      right: 0.75rem;
-      transform: translateY(-50%);
-      width: 2.75rem;
-      height: 2.75rem;
-      min-width: 2.75rem;
-      min-height: 2.75rem;
-      font-size: 1.25rem;
-      background: var(--background-modifier-hover);
-      border: 0.125rem solid var(--background-modifier-border);
-      border-radius: 0.5rem;
-      z-index: 10;
-    }
-    
-    /* Larger toolbar buttons for mobile */
-    .toolbar-btn {
-      min-height: 2.75rem;
-      padding: 0.5rem 0.75rem;
-      font-size: 0.875rem;
-    }
-    
-    .time-input {
-      min-height: 2.75rem;
-      font-size: 0.875rem;
+
+    .modal-footer .footer-btn {
+      flex: 1;
+      min-height: var(--ppp-touch-target-min);
     }
   }
 </style>

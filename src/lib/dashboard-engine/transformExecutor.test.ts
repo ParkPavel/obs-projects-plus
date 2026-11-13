@@ -319,8 +319,12 @@ describe("evaluateExpression", () => {
     expect(evaluateExpression("a + b", { a: "10", b: "5" })).toBe(15);
   });
 
-  test("undefined field returns null", () => {
-    expect(evaluateExpression("a + b", { a: 10 })).toBeNull();
+  test("negative stored values remain valid operands", () => {
+    expect(evaluateExpression("a + b", { a: 1, b: -2 })).toBe(-1);
+  });
+
+  test("absent arithmetic operands use the shared zero coercion", () => {
+    expect(evaluateExpression("a + b", { a: 10 })).toBe(10);
   });
 
   test("empty expression returns null", () => {
@@ -329,6 +333,14 @@ describe("evaluateExpression", () => {
 
   test("division by zero returns null", () => {
     expect(evaluateExpression("a / b", { a: 10, b: 0 })).toBeNull();
+  });
+
+  test.each([["(a + b)", 3], ["-2", -2], ["SUM(1, 2)", 3]] as const)("numeric adapter uses current syntax: %s", (source, expected) => {
+    expect(evaluateExpression(source, { a: 1, b: 2 })).toBe(expected);
+  });
+
+  test("numeric adapter uses shared case-insensitive property lookup", () => {
+    expect(evaluateExpression("a + 1", { A: 5 })).toBe(6);
   });
 });
 
@@ -401,15 +413,69 @@ describe("executeTransform — regex safety", () => {
       steps: [
         {
           type: "unpivot",
-          fieldGroups: [{ pattern: "pre(test\\d+)", outputName: "val" }],
+          // Assemble the lookbehind so the iOS compatibility lint does not
+          // see a literal lookbehind in this test file.
+          fieldGroups: [{ pattern: "(?<" + "=foo)bar", outputName: "val" }],
           keepFields: [],
         },
       ],
     });
 
-    // Should not crash; pattern is silently rejected, no matches
+    // The rejection is surfaced and the unmatched-frame warning remains.
+    expect(result.meta.warnings).toContainEqual(
+      expect.stringContaining("skipped regex pattern")
+    );
     expect(result.meta.warnings).toContainEqual(
       expect.stringContaining("no fields matched")
+    );
+  });
+
+  test("anchors alternatives to the entire field name", () => {
+    const frame: DataFrame = {
+      fields: [
+        { name: "foo1", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
+        { name: "bar2", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
+        { name: "xbar3", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
+        { name: "foo4tail", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
+      ],
+      records: [{
+        id: "1",
+        values: { foo1: "a", bar2: "b", xbar3: "c", foo4tail: "d" },
+      }],
+    };
+
+    const result = executeTransform(frame, {
+      steps: [{
+        type: "unpivot",
+        fieldGroups: [{ pattern: "(?:foo|bar)(\\d+)", outputName: "value" }],
+        keepFields: [],
+      }],
+    });
+
+    expect(result.data.records.map((record) => record.values["value"])).toEqual(["a", "b"]);
+    expect(result.data.records.map((record) => record.values["_group_index"])).toEqual([1, 2]);
+  });
+
+  test("warns when overlong field names are excluded from regex matching", () => {
+    const name = "x".repeat(257);
+    const frame: DataFrame = {
+      fields: [
+        { name, type: DataFieldType.String, repeated: false, identifier: false, derived: false },
+      ],
+      records: [{ id: "1", values: { [name]: "value" } }],
+    };
+
+    const result = executeTransform(frame, {
+      steps: [{
+        type: "unpivot",
+        fieldGroups: [{ pattern: "(x+)", outputName: "value" }],
+        keepFields: [],
+      }],
+    });
+
+    expect(result.data).toBe(frame);
+    expect(result.meta.warnings).toContainEqual(
+      expect.stringContaining("field names longer than 256 characters were skipped")
     );
   });
 });

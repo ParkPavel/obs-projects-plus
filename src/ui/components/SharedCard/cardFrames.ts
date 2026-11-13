@@ -180,11 +180,15 @@ export function spanAfterDrag(startSpan: number, dxCss: number, stepCss: number)
 /**
  * Columns an auto-fill grid lays out: `repeat(auto-fill, minmax(min(c, 100%), 1fr))`
  * in a content box `width` wide with column gap `gap` (all CSS pixels).
+ * i3-gallery: up to `narrowMax` wide (the narrow-gallery container rule in
+ * styles.css) a column is at most half the box, so a phone shows two cards
+ * a row instead of one, whatever card width was saved on a desktop.
  */
-export function gridColumnCount(width: number, columnMin: number, gap: number): number {
+export function gridColumnCount(width: number, columnMin: number, gap: number, narrowMax = 0): number {
   if (!(width > 0) || !(columnMin > 0)) return 1;
-  const track = Math.min(columnMin, width);
   const g = gap > 0 ? gap : 0;
+  const half = width <= narrowMax ? (width - g) / 2 : Infinity;
+  const track = Math.min(columnMin, width, half);
   return Math.max(1, Math.floor((width + g) / (track + g) + 1e-6));
 }
 

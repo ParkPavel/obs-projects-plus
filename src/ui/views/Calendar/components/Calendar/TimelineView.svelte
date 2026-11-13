@@ -4,11 +4,13 @@
   import { remAt, rootFontPx } from "src/ui/utils/cssLength";
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import dayjs from 'dayjs';
+  import { ALL_DAY_ROW_MIN_HOURS } from '../../utils/eventLayout';
   import type { DataRecord } from '../../../../../lib/dataframe/dataframe';
   import { EventRenderType, type ProcessedRecord } from '../../types';
   import { getDisplayName, cleanWikiLink } from "src/ui/views/Board/components/Board/boardHelpers";
   import { app } from "src/lib/stores/obsidian";
   import { openRecord, modeFromNewLeaf } from "src/lib/record/openRecord";
+  import { isDraftId } from "../../draft/calendarDraft";
   import EventTimeline from './EventTimeline.svelte';
   import CurrentTimeLine from './CurrentTimeLine.svelte';
   import DayColumn from './DayColumn.svelte';
@@ -64,8 +66,10 @@
   export let fixedAllDayHeight: number | undefined = undefined; // v3.0.3: Sync with shared axis
   export let onRecordClick: ((record: DataRecord) => void) | undefined;
   /** Callback when user wants to add a record. Receives date and optional time (HH:mm) */
-  export let onRecordAdd: ((date: dayjs.Dayjs, startTime?: string) => void) | undefined;
-  export let onDayTap: ((date: dayjs.Dayjs, records: DataRecord[], event?: MouseEvent | TouchEvent) => void) | undefined;
+  export let onRecordAdd: ((date: dayjs.Dayjs, startTime?: string, endTime?: string) => void) | undefined;
+  /** w4-p07: the length a tap creates (the view setting), shown by the preview. */
+  export let creationDuration = 60;
+  export let onDayTap: ((date: dayjs.Dayjs, records: DataRecord[], event?: Event) => void) | undefined;
   export let isMobile: boolean = false;
   export let now: dayjs.Dayjs | null = null;
   /** Hide time axis (used when shared axis is rendered externally) */
@@ -132,16 +136,24 @@
    * v7.1: Derive headerEventsByDay reactively
    * This creates a new object reference when data changes, forcing re-render
    */
+  function isAllDayRowSpan(r: ProcessedRecord): boolean {
+    const t = r.timeInfo;
+    return !t || t.endTime.diff(t.startTime, 'hour', true) >= ALL_DAY_ROW_MIN_HOURS;
+  }
+
   $: headerEventsByDay = (() => {
     void dataVersion; // Force reactivity
     const result: Record<string, ProcessedRecord[]> = {};
     for (const day of days) {
       const dateStr = day.format('YYYY-MM-DD');
       const records = processedGroupedRecords[dateStr] || [];
+      // i3-calendar: a timed span joins the all-day row only from 24 hours
+      // on; a shorter overnight one is drawn as clipped segments in the
+      // day columns (DayColumn), not twice.
       result[dateStr] = records.filter(r =>
         r.renderType === EventRenderType.ALL_DAY ||
         r.renderType === EventRenderType.MULTI_DAY_ALLDAY ||
-        r.renderType === EventRenderType.MULTI_DAY_TIMED
+        (r.renderType === EventRenderType.MULTI_DAY_TIMED && isAllDayRowSpan(r))
       );
     }
     return result;
@@ -216,7 +228,8 @@
       if (!records) continue;
       const found = records.find(r => r.record.id === recordId);
       if (found) {
-        if (openMode) {
+        // w4-calendar-draft: a draft has no note to open in a tab or window.
+        if (openMode && !isDraftId(found.record.id)) {
           // Ctrl/Shift+click: open in tab or window
           void openRecord({ id: found.record.id }, modeFromNewLeaf(openMode), { app: $app });
         } else if (onRecordClick) {
@@ -230,11 +243,11 @@
 
   // Mobile: Detect tap on day column
   // Extracts DataRecord[] from ProcessedRecord[] for backwards compatibility
-  function handleDayTap(day: dayjs.Dayjs) {
+  function handleDayTap(day: dayjs.Dayjs, event?: Event) {
     if (isMobile && onDayTap) {
       const processed = processedGroupedRecords[day.format('YYYY-MM-DD')] || [];
       const records = processed.map(p => p.record);
-      onDayTap(day, records);
+      onDayTap(day, records, event);
     }
   }
   
@@ -577,21 +590,43 @@
     {/if}
     
     <!-- Header row with day names (below AllDay section) -->
+    <!-- w4-p07 (audit F09): on a phone a tap on empty time creates (the
+         preview, then the form), as in Apple and Google calendars; the day's
+         records open from its header. Before, the day took every tap and the
+         creation preview could not be reached. -->
     <div class="projects-calendar-timeline-days-header" class:sticky-mobile={isMobile}>
       {#each days as day}
-        <div 
-          class="projects-calendar-day-header" 
-          class:today={isToday(day)}
-          class:weekend={day.day() === 0 || day.day() === 6}
-          data-date={day.format('YYYY-MM-DD')}
-        >
-          <div class="projects-calendar-day-name">
-            {day.format('ddd')}
+        {#if isMobile && onDayTap}
+          <button
+            type="button"
+            class="projects-calendar-day-header opens-day"
+            class:today={isToday(day)}
+            class:weekend={day.day() === 0 || day.day() === 6}
+            data-date={day.format('YYYY-MM-DD')}
+            on:click={(event) => handleDayTap(day, event)}
+          >
+            <div class="projects-calendar-day-name">
+              {day.format('ddd')}
+            </div>
+            <div class="projects-calendar-day-date">
+              {day.format('D')}
+            </div>
+          </button>
+        {:else}
+          <div
+            class="projects-calendar-day-header"
+            class:today={isToday(day)}
+            class:weekend={day.day() === 0 || day.day() === 6}
+            data-date={day.format('YYYY-MM-DD')}
+          >
+            <div class="projects-calendar-day-name">
+              {day.format('ddd')}
+            </div>
+            <div class="projects-calendar-day-date">
+              {day.format('D')}
+            </div>
           </div>
-          <div class="projects-calendar-day-date">
-            {day.format('D')}
-          </div>
-        </div>
+        {/if}
       {/each}
     </div>
     
@@ -614,8 +649,9 @@
             {endHour}
             {timezone}
             {onRecordClick}
-            onRecordAdd={onRecordAdd ? (d, time) => onRecordAdd(d, time) : undefined}
-            onDayTap={isMobile ? () => handleDayTap(day) : undefined}
+            onRecordAdd={onRecordAdd ? (d, time, end) => onRecordAdd(d, time, end) : undefined}
+            {creationDuration}
+            onDayTap={isMobile && !onRecordAdd ? () => handleDayTap(day) : undefined}
             {isMobile}
             isToday={isToday(day)}
             hourHeightRem={HOUR_HEIGHT_REM}
@@ -800,6 +836,27 @@
     border-right: var(--ppp-border-width) solid var(--background-modifier-border);
     padding: 0.5rem;
     transition: background-color 0.2s ease;
+  }
+
+  /* w4-p07: on a phone the header is a button that opens the day; it keeps
+     the header's look — no capsule, fill or shadow from Obsidian's button. */
+  .projects-calendar-day-header.opens-day {
+    appearance: none;
+    -webkit-appearance: none;
+    min-width: 0;
+    height: auto;
+    margin: 0;
+    border-top: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: inherit;
+    font: inherit;
+    white-space: normal;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
   }
   
   .projects-calendar-day-header:last-child {

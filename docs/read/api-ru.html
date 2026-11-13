@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="API пользовательских видов"><meta name="color-scheme" content="light dark">
+<meta name="referrer" content="strict-origin-when-cross-origin"><title>API пользовательских видов · Projects Plus</title>
+<meta property="og:type" content="website"><meta property="og:title" content="API пользовательских видов"><meta property="og:description" content="API пользовательских видов"><meta property="og:url" content="https://parkpavel.github.io/obs-projects-plus/read/api-ru.html"><meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://parkpavel.github.io/obs-projects-plus/read/api-ru.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/site.css">
+<script type="module" src="../assets/site.js"></script></head>
+<body data-prefix="../" data-language="ru"><a class="skip-link" href="#main">К содержимому</a>
+<header class="site-header"><a class="wordmark" href="../index.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
+<nav aria-label="Основная навигация"><a href="../index.html#ideas">Сад идей</a><a href="../read/user-guide.html">Документация</a><a class="language" href="../read/api.html" hreflang="en">English</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../index.html">← Все возможности</a><strong>На этой странице</strong><nav aria-label="На этой странице"><a href="#регистрация">Регистрация</a><a href="#жизненный-цикл">Жизненный цикл</a><a href="#данные-и-параметры">Данные и параметры</a><a href="#запись-изменений">Запись изменений</a><a href="#ограничения-совместимости">Ограничения совместимости</a></nav></aside><article class="doc-article"><p class="doc-version">Документация исходного кода; установленный выпуск может отличаться.</p><h1 id="api-пользовательских-видов">API пользовательских видов</h1>
+<p><a href="../read/api.html">English version</a></p>
+<p>Projects Plus может подключить вид, предоставленный другим включённым плагином Obsidian. API экспериментальный: совместимость нужно проверять с конкретной версией Projects Plus. Модули и хранилища состояния внутри <code>src</code> не являются стабильным публичным SDK.</p>
+<h2 id="регистрация">Регистрация</h2>
+<p>При открытии панели Projects функция <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/view.ts">getProjectViews()</a> ищет у включённых плагинов метод <code>onRegisterProjectView</code>. Возвращённый экземпляр регистрируется под ключом из <code>getViewType()</code>.</p>
+<p>Возвращайте новый экземпляр. Для ключа используйте уникальное имя с префиксом вашего плагина, например <code>my-plugin-summary</code>. Встроенные виды регистрируются после внешних и заменяют совпадающие ключи. После включения расширения переоткройте панель Projects, чтобы регистрация выполнилась снова.</p>
+<h2 id="жизненный-цикл">Жизненный цикл</h2>
+<table>
+<thead>
+<tr>
+<th>Метод</th>
+<th>Назначение</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>getViewType()</code></td>
+<td>Уникальный ключ вида</td>
+</tr>
+<tr>
+<td><code>getDisplayName()</code></td>
+<td>Название в интерфейсе</td>
+</tr>
+<tr>
+<td><code>getIcon()</code></td>
+<td>Имя значка Obsidian</td>
+</tr>
+<tr>
+<td><code>onOpen(props)</code></td>
+<td>Создание интерфейса в <code>props.contentEl</code></td>
+</tr>
+<tr>
+<td><code>onData(result)</code></td>
+<td>Отображение текущих данных</td>
+</tr>
+<tr>
+<td><code>updateProps(updates)</code></td>
+<td>Обновление настроек вида или проекта без пересоздания</td>
+</tr>
+<tr>
+<td><code>onClose()</code></td>
+<td>Освобождение подписок, обработчиков и других ресурсов</td>
+</tr>
+</tbody></table>
+<p>Порядок вызовов определён в <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/ui/app/useView.ts">useView.ts</a>. После <code>onOpen</code> сразу вызывается <code>onData</code>; завершения асинхронных методов хост не ожидает. Первичную подготовку выполняйте синхронно, а фоновую работу и её отмену организуйте внутри вида.</p>
+<p>Полный минимальный пример находится в <a href="../read/api.html">английском справочнике</a>. Он показывает регистрацию и отображение количества записей. Метод <code>updateProps</code> в примере обязателен для текущего хоста, хотя базовый класс в пакете типов его пока не содержит.</p>
+<h2 id="данные-и-параметры">Данные и параметры</h2>
+<p>Актуальный контракт хоста — <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/customViewApi.ts">src/customViewApi.ts</a>, структура данных — <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/dataframe/dataframe.ts">dataframe.ts</a>.</p>
+<p><code>DataQueryResult</code> содержит <code>data</code>, признаки <code>hasSort</code> и <code>hasFilter</code>, необязательный счётчик <code>dataGeneration</code> и список <code>filterConditions</code>. Хост также передаёт полный <code>filter</code>: с отключёнными условиями и вложенными группами. При сохранении фильтра нельзя заменять его только видимыми включёнными условиями — часть настроек потеряется.</p>
+<p>В <code>data</code> находятся поля <code>fields</code>, записи <code>records</code> и необязательные ошибки разбора <code>errors</code>. Идентификатор записи <code>id</code> — путь заметки в хранилище. Значения находятся в <code>values</code>. Отсутствующее свойство и явное значение <code>null</code> имеют разный смысл. Вычисляемые поля не следует записывать в свойства заметки.</p>
+<table>
+<thead>
+<tr>
+<th>Параметр <code>ProjectViewProps</code></th>
+<th>Назначение</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>viewId</code>, <code>project</code></td>
+<td>Текущий вид и проект</td>
+</tr>
+<tr>
+<td><code>config</code>, <code>saveConfig</code></td>
+<td>Чтение и сохранение настроек вида</td>
+</tr>
+<tr>
+<td><code>contentEl</code></td>
+<td>Контейнер интерфейса</td>
+</tr>
+<tr>
+<td><code>viewApi</code></td>
+<td>Операции с записями и полями</td>
+</tr>
+<tr>
+<td><code>readonly</code></td>
+<td>Признак источника только для чтения</td>
+</tr>
+<tr>
+<td><code>saveViewFilter?</code></td>
+<td>Сохранение фильтра, если хост предоставил callback</td>
+</tr>
+<tr>
+<td><code>getRecordColor</code></td>
+<td>Цвет записи по правилам проекта</td>
+</tr>
+<tr>
+<td><code>sortRecords</code></td>
+<td>Сортировка списка по настройкам хоста</td>
+</tr>
+<tr>
+<td><code>getRecord</code></td>
+<td>Поиск записи по идентификатору</td>
+</tr>
+</tbody></table>
+<h2 id="запись-изменений">Запись изменений</h2>
+<p>Используйте экземпляр <code>viewApi</code>, полученный от хоста. Он поддерживает создание, изменение, пакетное изменение и удаление записей, а также создание, изменение и удаление полей. <code>deleteField</code> принимает <strong>имя поля</strong>, а не объект поля.</p>
+<p>Поведение записи и обработка ошибок реализованы в <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/viewApi.ts">src/lib/viewApi.ts</a>. Часть методов асинхронна, а пакет типов не описывает все возвращаемые значения точно. Например, хост возвращает из <code>updateRecord</code> значение <code>Promise&lt;boolean&gt;</code>, а пакет объявляет <code>void</code>. Возврат из такого вызова и изменение на экране сами по себе не подтверждают сохранение файла.</p>
+<p>Отключайте редактирование при <code>readonly</code> и учитывайте признак вычисляемого поля. Не создавайте <code>ViewApi</code> из пакета: его методы — пустые заглушки для описания типов. Этот класс также не совпадает с конструктором реализации хоста, поэтому проверка через его <code>instanceof</code> ненадёжна.</p>
+<h2 id="ограничения-совместимости">Ограничения совместимости</h2>
+<p><a href="../read/obsidian-projects-types-readme.html">Пакет типов</a> имеет собственную версию <code>3.0.0</code>, отдельную от версии плагина. В нём пока отсутствуют <code>updateProps</code>, полный <code>filter</code> и вариант источника <code>native-query</code>. Типы значений и результатов записи также отличаются от хоста.</p>
+<p>Реализуйте <code>updateProps</code>, даже если обновлять ничего не требуется. Если расширение использует остальные возможности хоста, проверяйте и описывайте этот интерфейс для поддерживаемого выпуска. Компиляции с пакетом типов недостаточно: проверьте в Obsidian открытие вида, обновление данных, изменение настроек и закрытие.</p>
+<p>Инструкции по сборке и проверке — в <a href="../read/contributing.html">Contributing</a>, расположение реализации — в <a href="../read/architecture.html">карте архитектуры</a>.</p>
+<p class="doc-source"><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/docs/api-RU.md">Исходник страницы ↗</a></p></article></main>
+<footer class="site-footer"><a class="wordmark" href="../index.html">Projects Plus</a><p>Открытый проект Park Pavel. Основан на Obsidian Projects Маркуса Олссона.</p><div><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache-2.0</a><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE">Attribution</a><a href="https://github.com/ParkPavel/obs-projects-plus/issues">Обратная связь</a></div></footer>
+<aside class="search-panel" aria-label="Поиск по документации"><label for="doc-search">Поиск по документации</label><div class="search-input-wrap"><input id="doc-search" type="search" placeholder="Поиск…" autocomplete="off" aria-controls="search-results"><kbd>/</kbd></div><ul id="search-results" hidden></ul><p id="search-status" role="status" aria-live="polite" data-empty="Ничего не найдено. Попробуйте «календарь», «formula» или «источник»."></p></aside>
+</body></html>

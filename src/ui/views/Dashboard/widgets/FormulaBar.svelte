@@ -9,11 +9,13 @@
   // The visual node-editor approach was rejected — code mode is the only mode.
 
   import { createEventDispatcher, onDestroy } from "svelte";
-  import {
-    evaluateFormulaWithError,
-    validateFormulaExpression,
-  } from "src/lib/dashboard-engine/formulaEngine";
-  import type { DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
+  import { Icon } from "obsidian-svelte";
+  import { evaluateVersionedFormula, validateVersionedFormula, formulaEditorSemantics } from "src/lib/formula/version";
+  import type { DataFrame, DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
+  import type { FormulaFieldDef } from "../types";
+  import { previewFormulaField, formulaWouldCycle } from "./formulaPreview";
+  import { isImeKey, recordImeCompositionEnd } from "src/ui/components/fields/draftController";
+  import TextField from "src/ui/components/fields/TextField.svelte";
   import { i18n } from "src/lib/stores/i18n";
   import FormulaConstructor from "src/ui/components/FormulaConstructor/FormulaConstructor.svelte";
   import FormulaDebugPanel from "./FormulaDebugPanel.svelte";
@@ -21,47 +23,123 @@
   export let expression: string = "";
   export let fields: string[] = [];
   export let previewRecord: DataRecord | undefined = undefined;
+  export let previewFrame: DataFrame | undefined = undefined;
+  export let formulaFields: readonly FormulaFieldDef[] = [];
 
   const dispatch = createEventDispatcher<{
-    apply: { name: string; expression: string };
+    apply: { name: string; expression: string; draft?: { formulaVersion?: string } };
     cancel: void;
+    remove: string;
   }>();
 
   let fieldName = "";
+  let editingName: string | undefined;
+  // New definitions use current rules; selecting a saved one keeps its stored profile.
+  const FORMULA_VERSION = "unified-v1";
+  let draftVersion: string | undefined = FORMULA_VERSION;
+  $: draft = draftVersion === undefined ? {} : { formulaVersion: draftVersion };
+  $: semantics = formulaEditorSemantics(draftVersion);
   let inputValue = expression;
-  // Keep inputValue in sync when parent changes formula (e.g. field switch).
-  // Svelte reactive assignment, not an event — avoids double-fire on user input.
-  let lastExpression = expression;
-  $: if (expression !== lastExpression) {
-    inputValue = expression;
-    lastExpression = expression;
+  let adopted = expression;
+  let barEl: HTMLElement | null = null;
+  let editor: FormulaConstructor;
+  // Keep inputValue in sync when the parent changes the formula (e.g. a field
+  // switch) — only on a real change, and not while the user types in it. The
+  // assignment lives in a function the `$:` calls: `inputValue` is bound, and
+  // a bound variable assigned inside a `$:` statement is re-run over the
+  // user's text on the next flush in Svelte 3 (R0.34).
+  function adoptExpression(next: string): void {
+    if (next === inputValue) {
+      adopted = next;
+      // A parent that comes back to what is shown cancels an earlier deferred change.
+      deferred = null;
+      return;
+    }
+    if (next === adopted) {
+      deferred = null;
+      return;
+    }
+    const active = barEl?.ownerDocument.activeElement;
+    if (active?.tagName === "TEXTAREA" && barEl?.contains(active)) {
+      deferred = next;
+      return;
+    }
+    deferred = null;
+    adopted = next;
+    inputValue = next;
   }
+
+  /** A parent change that arrived while the user was in the formula. */
+  let deferred: string | null = null;
+
+  /**
+   * On leaving the formula, take a deferred parent change if the user did not
+   * edit the text meanwhile; text the user typed wins over it.
+   */
+  function adoptDeferred(e: FocusEvent): void {
+    if (deferred === null) return;
+    const target = e.relatedTarget as Node | null;
+    if (target && typeof target.nodeType === "number" && barEl?.contains(target)) return;
+    const next = deferred;
+    deferred = null;
+    if (inputValue !== adopted) return;
+    adopted = next;
+    inputValue = next;
+  }
+  $: adoptExpression(expression);
 
   let previewValue: Optional<DataValue> = null;
   let runtimeError: string | null = null;
   let debugDismissed = false;
   let cursorPosition = 0;
+  let validationPending = true;
+  let validationErrors: string[] = [];
+  let validatedSource = "";
+  let validatedVersion: string | undefined;
+  let validatedFields: string[] | undefined;
+  function trackValidation(event: CustomEvent<{ pending: boolean; errors: string[]; value: string }>): void {
+    validationPending = event.detail.pending;
+    validationErrors = event.detail.errors;
+    validatedSource = event.detail.value;
+    validatedVersion = draftVersion;
+    validatedFields = fields;
+  }
+  let cycleCheck: { expression: string; name: string; version: string | undefined; definitions: readonly FormulaFieldDef[]; cyclic: boolean } | undefined;
+  $: cycleCurrent = cycleCheck?.expression === inputValue && cycleCheck?.name === fieldName.trim()
+    && cycleCheck?.version === draftVersion && cycleCheck?.definitions === formulaFields;
+  $: previewCyclic = cycleCurrent && !!cycleCheck?.cyclic;
+  $: nameTaken = fields.includes(fieldName.trim()) && fieldName.trim() !== editingName;
+  $: canApply = !!semantics && !!fieldName.trim() && !!inputValue.trim() && !nameTaken && cycleCurrent && !previewCyclic
+    && !validationPending && !validationErrors.length && validatedSource === inputValue && validatedVersion === draftVersion && validatedFields === fields;
 
-  // DG-9: debounce live preview 300ms so formula evaluation doesn't fire on every keystroke
+  // DG-9 / B5: preview waits for a 150 ms pause in typing; hints do not wait
   let previewTimer: ReturnType<typeof setTimeout> | undefined;
 
-  function schedulePreview(expr: string) {
+  function schedulePreview(expr: string, name: string, source: DataFrame | undefined, definitions: readonly FormulaFieldDef[], version: string | undefined, fieldNames: string[], sample: DataRecord | undefined) {
     clearTimeout(previewTimer);
+    cycleCheck = undefined;
+    previewValue = null;
     previewTimer = setTimeout(() => {
       const hasContent = expr.trim().length > 0;
-      const isValid = validateFormulaExpression(expr, fields).length === 0;
-      if (hasContent && isValid && previewRecord) {
-        const result = evaluateFormulaWithError(expr, previewRecord);
+      const isValid = validateVersionedFormula(expr, fieldNames, version).length === 0;
+      cycleCheck = { expression: expr, name: name.trim(), version, definitions,
+        cyclic: hasContent && isValid && formulaWouldCycle(definitions, name.trim(), expr, version === undefined ? {} : { formulaVersion: version }) };
+      if (hasContent && isValid && source) {
+        const result = previewFormulaField(source, definitions, name.trim(), expr, version === undefined ? {} : { formulaVersion: version });
+        previewValue = result.value;
+        runtimeError = result.error;
+      } else if (hasContent && isValid && sample) {
+        const result = evaluateVersionedFormula(expr, version, { record: sample });
         previewValue = result.value;
         runtimeError = result.error ?? null;
       } else {
         previewValue = null;
         runtimeError = null;
       }
-    }, 300);
+    }, 150);
   }
 
-  $: schedulePreview(inputValue);
+  $: schedulePreview(inputValue, fieldName, previewFrame, formulaFields, draftVersion, fields, previewRecord);
 
   onDestroy(() => clearTimeout(previewTimer));
 
@@ -77,38 +155,76 @@
   }
 
   function handleApply() {
-    dispatch("apply", { name: fieldName.trim(), expression: inputValue.trim() });
+    const name = fieldName.trim();
+    // commitCurrent just validated the native editor's current draft. Read that
+    // event state directly: Svelte derived statements may not have flushed yet.
+    const expr = validatedSource;
+    const taken = fields.includes(name) && name !== editingName;
+    if (!semantics || validationPending || validationErrors.length || validatedVersion !== draftVersion || validatedFields !== fields
+      || !name || !expr.trim() || taken || formulaWouldCycle(formulaFields, name, expr, draft)) return;
+    dispatch("apply", { name, expression: expr.trim(), draft });
   }
 </script>
 
-<div class="ppp-formula-bar">
+<div class="ppp-formula-bar" bind:this={barEl} on:focusout={adoptDeferred}
+  on:keydown={(event) => { if (event.key === "Escape" && !isImeKey(event)) dispatch("cancel"); }}
+  on:compositionend={recordImeCompositionEnd}>
   <div class="ppp-formula-header">
     <span class="ppp-formula-title">{$i18n.t("views.dashboard.formula.title")}</span>
     <span class="ppp-formula-hint">{$i18n.t("views.dashboard.formula.hint")}</span>
   </div>
+  <p class="ppp-formula-scope">{$i18n.t("views.dashboard.formula.scope")}</p>
+  {#if formulaFields.length > 0}
+    <div class="ppp-formula-saved" aria-label={$i18n.t("views.dashboard.formula.saved")}>
+      {#each formulaFields as definition (definition.name)}
+        <div class="ppp-formula-saved-item">
+          <button type="button" on:click={() => { fieldName = definition.name; editingName = definition.name; draftVersion = definition.formulaVersion; inputValue = definition.expression; }}>
+            ƒ {definition.name}
+          </button>
+          <button
+            type="button"
+            class="ppp-formula-saved-remove clickable-icon"
+            aria-label={$i18n.t("views.dashboard.formula.remove", { name: definition.name })}
+            title={$i18n.t("views.dashboard.formula.remove", { name: definition.name })}
+            on:click={() => dispatch("remove", definition.name)}
+          ><Icon name="x" size="xs" /></button>
+        </div>
+      {/each}
+    </div>
+  {/if}
 
   <div class="ppp-formula-name-row">
     <label class="ppp-formula-label" for="formula-name">
       {$i18n.t("views.dashboard.formula.field-name")}
     </label>
-    <input
+    <TextField
       id="formula-name"
-      class="ppp-formula-name-input"
-      type="text"
-      bind:value={fieldName}
+      inputClass="ppp-formula-name-input"
+      value={fieldName}
+      on:input={(event) => (fieldName = event.detail)}
+      on:cancel={() => dispatch("cancel")}
       placeholder={$i18n.t("views.dashboard.formula.field-placeholder")}
     />
   </div>
+  {#if nameTaken}<p role="alert">{$i18n.t("modals.field.create.existing-name-error")}</p>{/if}
+  {#if previewCyclic}<p role="alert">{$i18n.t("views.dashboard.formula.cycle")}</p>{/if}
 
+  {#if semantics}
   <FormulaConstructor
+    bind:this={editor}
+    {semantics}
     bind:value={inputValue}
     {fields}
     highlight
     placeholder={$i18n.t("views.dashboard.formula.expression-placeholder")}
     rows={3}
     on:change={(e) => { inputValue = e.detail; }}
+    on:validation={trackValidation}
     on:commit={handleApply}
   />
+  {:else}
+    <textarea value={inputValue} readonly aria-label={$i18n.t("views.dashboard.formula.title")}></textarea>
+  {/if}
 
   {#if runtimeError && !debugDismissed}
     <FormulaDebugPanel
@@ -132,8 +248,8 @@
     </button>
     <button
       class="ppp-btn ppp-btn--primary"
-      disabled={!inputValue.trim() || !fieldName.trim()}
-      on:click={handleApply}
+      disabled={!canApply}
+      on:click={() => editor?.commitCurrent()}
     >
       {$i18n.t("views.dashboard.formula.apply")}
     </button>
@@ -141,6 +257,10 @@
 </div>
 
 <style>
+  .ppp-formula-scope { margin: 0; color: var(--text-muted); }
+  .ppp-formula-saved { display: flex; flex-wrap: wrap; gap: 0.25em; }
+  .ppp-formula-saved-item { display: inline-flex; align-items: center; gap: 0.125em; }
+  .ppp-formula-saved-remove { display: inline-flex; align-items: center; justify-content: center; }
   .ppp-formula-bar {
     display: flex;
     flex-direction: column;
@@ -181,7 +301,7 @@
     white-space: nowrap;
   }
 
-  .ppp-formula-name-input {
+  .ppp-formula-name-row :global(.ppp-formula-name-input) {
     flex: 1;
     padding: 0.25rem 0.5rem;
     border: var(--ppp-border-width) solid var(--background-modifier-border);

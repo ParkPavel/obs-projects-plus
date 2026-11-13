@@ -29,10 +29,13 @@ function body(rel: string): string {
     .replace(/<!--[\s\S]*?-->/g, "");
 }
 
+// B10: DayPopup left this list by joining the first entry — it renders through
+// FloatingPopup now and owns no layer, listener or measurement of its own
+// (pinned at the end of this file).
 const TRAVELLERS = [
   "ui/components/FloatingPopup/FloatingPopup.svelte",
-  "ui/views/Calendar/components/DayPopup/DayPopup.svelte",
 ];
+const DAY_POPUP = "ui/views/Calendar/components/DayPopup/DayPopup.svelte";
 
 describe("A192 — a portaled popup belongs to one window, wholly", () => {
   it("registers no listener on a global document or window", () => {
@@ -70,10 +73,9 @@ describe("A192 — a portaled popup belongs to one window, wholly", () => {
   });
 
   it("can move its binding, because the document is not known at mount", () => {
-    // Both components can be mounted before the thing that names their
-    // document exists: FloatingPopup's anchor arrives when a popover opens,
-    // DayPopup's layer is built by an action that runs on a conditional
-    // branch. A binding made once at mount would stay on the main window.
+    // FloatingPopup can be mounted before the thing that names its document
+    // exists: its anchor arrives when a popover opens. A binding made once at
+    // mount would stay on the main window.
     for (const file of TRAVELLERS) {
       expect(body(file)).toMatch(/function bindTo\(/);
     }
@@ -82,6 +84,12 @@ describe("A192 — a portaled popup belongs to one window, wholly", () => {
   it("does not bind the key handler through svelte:window", () => {
     // `<svelte:window>` is the bundle's window by definition, so a popup that
     // can be in another one cannot use it for dismissal.
-    expect(body(TRAVELLERS[1] as string)).not.toMatch(/<svelte:window[^>]*keydown/);
+    expect(body(DAY_POPUP)).not.toMatch(/<svelte:window[^>]*keydown/);
+  });
+
+  it("the day window rides the engine instead of keeping a layer of its own (B10)", () => {
+    const code = body(DAY_POPUP);
+    expect(code).toMatch(/<FloatingPopup\b/);
+    expect(code).not.toMatch(/addEventListener|getComputedStyle|position:\s*fixed/);
   });
 });

@@ -8,10 +8,12 @@
   import { onDestroy } from "svelte";
   import { getTabStripScrollLeft } from "./tabStripScroll";
   import { getScrollBehavior } from "src/lib/helpers/animation";
+  import ViewNameDraft from "./ViewNameDraft.svelte";
 
   export let views: ViewDefinition[] = [];
   export let activeViewId: ViewId | undefined;
   export let onSelect: (viewId: ViewId) => void;
+  export let newView: { name: string; commit: (name: string) => void; cancel: () => void } | null = null;
 
   $: showTitles = $settings.preferences.showViewTitles ?? true;
 
@@ -241,6 +243,13 @@
         {/if}
       </button>
     {/each}
+    {#if newView}
+      {#key newView}
+        <ViewNameDraft initialName={newView.name} existingNames={views.map((view) => view.name)}
+          onCommit={newView.commit} onCancel={newView.cancel}
+          onReady={() => viewSwitcherElement?.scrollTo({ left: viewSwitcherElement.scrollWidth, behavior: "auto" })} />
+      {/key}
+    {/if}
   </div>
   {#if canScrollRight && !$isTouchDevice}
     <button

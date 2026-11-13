@@ -113,6 +113,13 @@ function createDataFrame() {
       notifyDataFrameInvalidation();
       update((state) => {
         const fields = [...state.fields];
+        // M03: retrying a create after a partial write must not add a second
+        // column of the same name — the field is replaced where it stands.
+        const existing = fields.findIndex((f) => f.name === newField.name);
+        if (existing !== -1) {
+          fields[existing] = newField;
+          return { ...state, fields };
+        }
         if (position) fields.splice(position, 0, newField);
         else fields.push(newField);
         return { ...state, fields };

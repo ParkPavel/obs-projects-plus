@@ -58,6 +58,8 @@ async function type(input: HTMLInputElement, value: string): Promise<void> {
   input.value = value;
   input.dispatchEvent(new Event("input", { bubbles: true }));
   input.dispatchEvent(new Event("change", { bubbles: true }));
+  // B1b: text and number fields commit when the user leaves them (TextField).
+  input.dispatchEvent(new FocusEvent("blur"));
   await tick();
 }
 
@@ -70,8 +72,9 @@ describe.each(["gallery", "board"])("cards-g5 — %s settings: card frames", (vi
     const m = mount(viewType);
     expect(m.height()).not.toBeNull();
     expect(m.height()?.value).toBe("");
-    expect(m.height()).toHaveAttribute("min", "6");
-    expect(m.height()).toHaveAttribute("max", "40");
+    // B1b: a NumberField (text with inputmode) has no min/max attributes; the
+    // bounds are applied by clamping, below.
+    expect(m.height()).toHaveAttribute("inputmode", "decimal");
     expect(m.reset()).not.toBeNull();
     expect(m.reset()).toBeDisabled();
     expect(m.updates).toEqual([]);
