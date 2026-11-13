@@ -113,6 +113,8 @@ export interface ProbeSpec {
    * Tab at all, so a keyboard claim tested there is a claim about the test.
    */
   readonly evaluate?: string;
+  /** Explicit mouse input for acceptance of (pointer: fine), including headless Linux. */
+  readonly finePointer?: boolean;
 }
 
 export type ProbeResult = Record<string, Record<string, string>>;
@@ -259,6 +261,7 @@ export function renderProbe(spec: ProbeSpec, options: ProbeOptions = {}): ProbeR
       "--no-sandbox",
       "--no-first-run",
       "--disable-extensions",
+      ...(spec.finePointer ? ["--blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4"] : []),
       `--window-size=${spec.width ?? 1400},${spec.height ?? 900}`,
       "--virtual-time-budget=2000",
       `--user-data-dir=${path.join(dir, "profile")}`,

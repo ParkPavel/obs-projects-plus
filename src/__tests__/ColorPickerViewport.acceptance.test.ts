@@ -44,13 +44,16 @@ describeWithChrome("ColorPicker responsive size", () => {
     const result = renderProbe({
       width: 1280,
       height: 900,
+      finePointer: true,
       css: [cssFile("ui/tokens/tokens.css"), colorPickerCss, "#host{width:28rem}"],
       html: pickerMarkup,
+      evaluate: 'probe.finePointer=String(matchMedia("(pointer: fine)").matches);',
       measure: [
         { id: "sat", props: ["boxHeight"] },
         { id: "picker", props: ["boxWidth", "boxHeight", "max-block-size"] },
       ],
     });
+    expect(result["__probe"]!["finePointer"]).toBe("true");
     expect(Number(result["sat"]!["boxHeight"])).toBe(96);
     expect(Number(result["picker"]!["boxWidth"])).toBeLessThanOrEqual(28 * 16);
     expect(Number(result["picker"]!["boxHeight"])).toBeLessThanOrEqual(34 * 16);

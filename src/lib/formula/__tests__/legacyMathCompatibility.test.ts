@@ -17,5 +17,16 @@ function encode(value: unknown): unknown {
 }
 
 test.each(baseline.rows)("saved mathematical formula matches frozen current-rule mathematics: $expression", expected => {
-  expect(encode(evaluateFormulaWithError(expected.expression, { id: "synthetic.md", values: {} }))).toEqual(expected.result);
+  const actual = encode(evaluateFormulaWithError(expected.expression, { id: "synthetic.md", values: {} }));
+  const value = expected.result.value;
+  if (typeof value === "number" && !Number.isInteger(value)) {
+    // Native math libraries/V8 versions can differ by a few rounding bits.
+    // Keep result shape/types/errors exact; permit only machine-scale drift.
+    expect(actual).toEqual({ ...expected.result, value: expect.any(Number) });
+    const number = (actual as { value: number }).value;
+    expect(Number.isFinite(number)).toBe(true);
+    expect(Math.abs(number - value)).toBeLessThanOrEqual(32 * Number.EPSILON * Math.max(1, Math.abs(value)));
+  } else {
+    expect(actual).toEqual(expected.result);
+  }
 });

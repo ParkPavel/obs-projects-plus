@@ -37,11 +37,13 @@ describe("date grouping reads text in written order", () => {
 describe("earliest/latest read text in written order", () => {
   it("earliest of 10.04.2026 and 05.05.2026 is April 10", () => {
     const out = computeAggregations(frameOf(["10.04.2026", "05.05.2026"]), { date: "earliest" });
-    expect(String(out["date"]?.value)).toContain("2026-04-0");
+    const date = new Date(String(out["date"]?.value));
+    expect([date.getFullYear(), date.getMonth(), date.getDate()]).toEqual([2026, 3, 10]);
   });
 
   it("an impossible day is skipped, not counted as March 1", () => {
     const out = computeAggregations(frameOf(["2024-02-30", "2024-02-10"]), { date: "latest" });
-    expect(String(out["date"]?.value)).toContain("2024-02-");
+    const date = new Date(String(out["date"]?.value));
+    expect([date.getFullYear(), date.getMonth(), date.getDate()]).toEqual([2024, 1, 10]);
   });
 });

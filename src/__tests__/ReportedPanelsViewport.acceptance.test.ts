@@ -44,7 +44,13 @@ describeWithChrome("reported panel geometry", () => {
     }
   });
   test("agenda body survives focusing a field then opening the keyboard in a resized window", () => {
-    const bundle=execFileSync(process.execPath,[resolve(__dirname,"../../node_modules/esbuild/bin/esbuild"),"--bundle","--platform=browser","--format=iife","--log-level=error"],{cwd:resolve(__dirname,"../.."),input:'import {fitAgendaOverlay} from "./src/ui/views/Calendar/agenda/fitAgendaOverlay"; globalThis.fitAgenda=fitAgendaOverlay;',encoding:"utf8",windowsHide:true});
+    // esbuild/bin/esbuild is a native ELF executable after installation on Linux.
+    // A separate Node process keeps esbuild outside Jest's DOM realm on every OS.
+    const bundle=execFileSync(process.execPath,["-e",`
+      const {buildSync}=require('esbuild');
+      const {readFileSync}=require('node:fs');
+      process.stdout.write(buildSync({stdin:{contents:readFileSync(0,'utf8'),resolveDir:process.cwd()},bundle:true,write:false,platform:'browser',format:'iife',logLevel:'error'}).outputFiles[0].text);
+    `],{cwd:resolve(__dirname,"../.."),input:'import {fitAgendaOverlay} from "./src/ui/views/Calendar/agenda/fitAgendaOverlay"; globalThis.fitAgenda=fitAgendaOverlay;',encoding:"utf8",windowsHide:true});
     const barCss=readFileSync(resolve(__dirname,"../../styles.css"),"utf8").match(/\.ppp-keyboard-bar\s*\{[^}]+\}/)![0];
     const result=renderProbe({width:390,height:844,
       css:[reset,...css("ui/views/Calendar/components/Timeline/AgendaSidebar.svelte","ui/views/Calendar/agenda/AgendaListEditor.svelte"),barCss,":root{--safe-area-inset-top:47px;--safe-area-inset-bottom:34px}"],
