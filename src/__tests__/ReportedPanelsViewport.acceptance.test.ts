@@ -8,6 +8,41 @@ const css = (...files: string[]) => files.map(file => unscope(svelteStyle(file))
 const reset = "*{box-sizing:border-box}body{margin:0;font:16px sans-serif}*{animation:none!important;transition:none!important}";
 
 describeWithChrome("reported panel geometry", () => {
+  test("Agenda does not reserve the iPhone keyboard again through Obsidian's safe-area inset", () => {
+    // Owner's iPhone trace, 2026-11-13: 812px window, toolbar top 459px,
+    // safe-area-bottom changes 34 -> 301 together with keyboard-height 0 -> 301.
+    const result = renderProbe({ width: 375, height: 812,
+      css: [reset, ...css("ui/views/Calendar/components/Timeline/AgendaSidebar.svelte", "ui/views/Calendar/agenda/AgendaListEditor.svelte"),
+        ":root{--safe-area-inset-top:44px}body{--view-top-spacing:calc(44px + 44px + 8px)}"],
+      html: '<div id="overlay" class="ppp-list-editor-overlay"><div id="modal" class="ppp-list-editor-modal"><div class="agenda-list-editor"><header id="header" class="editor-header"><button class="header-cancel">Cancel</button><h3 class="editor-title">New list</h3><div class="header-actions"><button class="header-save">Create list</button></div></header><div id="body" class="ppp-agenda-editor-body"><label>Name<input id="name"></label><div style="height:800px;flex:none">Filters</div><label>Condition<input id="condition"></label></div></div></div></div>',
+      evaluate: `
+        const overlay=document.getElementById('overlay'),body=document.getElementById('body');
+        const states=[];
+        for(const keyboard of [0,301,0]) {
+          document.documentElement.style.setProperty('--keyboard-height',keyboard+'px');
+          document.documentElement.style.setProperty('--safe-area-inset-bottom',(keyboard||34)+'px');
+          overlay.style.height=(keyboard?459:812)+'px';
+          const field=document.getElementById(keyboard?'condition':'name');
+          field.focus();field.scrollIntoView({block:'nearest'});
+          const b=body.getBoundingClientRect(),h=document.getElementById('header').getBoundingClientRect(),f=field.getBoundingClientRect();
+          states.push({keyboard,bodyHeight:b.height,bottomPadding:getComputedStyle(overlay).paddingBottom,
+            fieldVisible:f.top>=b.top&&f.bottom<=b.bottom,
+            headerVisible:h.top>=96&&h.bottom<=overlay.getBoundingClientRect().bottom,
+            fieldHit:document.elementFromPoint(f.left+f.width/2,f.top+f.height/2)===field});
+        }
+        probe.states=JSON.stringify(states);`,
+      measure: [],
+    });
+    const states = JSON.parse(result["__probe"]!["states"]!) as Array<{ keyboard: number; bodyHeight: number; bottomPadding: string; fieldVisible: boolean; headerVisible: boolean; fieldHit: boolean }>;
+    expect(states).toHaveLength(3);
+    for (const state of states) {
+      expect(state.bodyHeight).toBeGreaterThan(state.keyboard ? 250 : 500);
+      expect(state.bottomPadding).toBe(state.keyboard ? "0px" : "34px");
+      expect(state.fieldVisible).toBe(true);
+      expect(state.headerVisible).toBe(true);
+      expect(state.fieldHit).toBe(true);
+    }
+  });
   test("agenda body survives focusing a field then opening the keyboard in a resized window", () => {
     const bundle=execFileSync(process.execPath,[resolve(__dirname,"../../node_modules/esbuild/bin/esbuild"),"--bundle","--platform=browser","--format=iife","--log-level=error"],{cwd:resolve(__dirname,"../.."),input:'import {fitAgendaOverlay} from "./src/ui/views/Calendar/agenda/fitAgendaOverlay"; globalThis.fitAgenda=fitAgendaOverlay;',encoding:"utf8",windowsHide:true});
     const barCss=readFileSync(resolve(__dirname,"../../styles.css"),"utf8").match(/\.ppp-keyboard-bar\s*\{[^}]+\}/)![0];

@@ -1641,9 +1641,11 @@
      Children fill this content box; only the editor body scrolls. */
   @media (max-width: 37.5rem) {
     :global(.ppp-list-editor-overlay) {
+      /* On iOS Obsidian's bottom safe area becomes the keyboard height.
+         fitAgendaOverlay already excludes that keyboard from this box. */
       padding: max(env(safe-area-inset-top, 0rem), var(--safe-area-inset-top, 0rem), var(--view-top-spacing, 0rem))
         env(safe-area-inset-right, 0rem)
-        max(env(safe-area-inset-bottom, 0rem), var(--safe-area-inset-bottom, 0rem))
+        max(0rem, calc(max(env(safe-area-inset-bottom, 0rem), var(--safe-area-inset-bottom, 0rem)) - var(--keyboard-height, 0rem)))
         env(safe-area-inset-left, 0rem);
       align-items: stretch;
     }
