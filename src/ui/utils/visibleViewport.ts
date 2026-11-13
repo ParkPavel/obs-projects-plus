@@ -1,13 +1,10 @@
 /**
  * The unobscured, possibly panned part of a window (keyboard/zoom included).
  *
- * w4-input: Obsidian's mobile app does not shrink the web view for the
- * on-screen keyboard — on iOS the visual viewport keeps the full height and
- * the keyboard covers its lower part. The app writes the keyboard's height to
- * `--keyboard-height` on the root (app.css: 0px by default) and lays its own
- * UI out by it (`.app-container` max-height, the mobile toolbar's top). The
- * visible area is therefore the visual viewport cut at the keyboard's top,
- * whichever of the two reports it.
+ * The app reports keyboard height separately. Window/visual viewport sizes
+ * can already be smaller after focus: subtracting from innerHeight again
+ * collapses sheets. Intersect with the actual toolbar top, or the keyboard
+ * edge in layout-viewport coordinates when no toolbar is measurable.
  */
 export function visibleViewport(view: Window) {
   const viewport = view.visualViewport;
@@ -15,13 +12,11 @@ export function visibleViewport(view: Window) {
   const left = usable ? viewport.offsetLeft : 0;
   const top = usable ? viewport.offsetTop : 0;
   const width = usable ? viewport.width : view.innerWidth;
-  // The keyboard covers the screen's bottom, so it cuts the visible height
-  // (already cut, if the viewport did shrink), wherever iOS has panned it.
-  // The strip of the keyboard button over it is taken too, as Obsidian's
-  // toolbar is from a note (keyboardDismiss.ts).
-  const keyboard = keyboardHeight(view) + keyboardBarHeight(view);
+  const keyboard = keyboardHeight(view);
   const viewHeight = usable ? viewport.height : view.innerHeight;
-  const height = keyboard > 0 ? Math.max(0, Math.min(viewHeight, view.innerHeight - keyboard)) : viewHeight;
+  const layoutHeight = Math.max(view.innerHeight, view.document?.documentElement?.clientHeight || 0);
+  const keyboardTop = keyboard > 0 ? keyboardBarTop(view) ?? layoutHeight - keyboard : Infinity;
+  const height = Math.max(0, Math.min(top + viewHeight, keyboardTop) - top);
   return { left, top, width, height, right: left + width, bottom: top + height };
 }
 
@@ -34,10 +29,11 @@ export function keyboardHeight(view: Window): number {
   return Number.isFinite(px) && px > 0 ? px : 0;
 }
 
-/** The shown keyboard-button strip's height, in px; 0 when there is none. */
-function keyboardBarHeight(view: Window): number {
+/** The shown strip's actual top already accounts for the keyboard and its own height. */
+function keyboardBarTop(view: Window): number | undefined {
   const bar = view.document?.querySelector<HTMLElement>(`.${KEYBOARD_BAR_CLASS}:not([hidden])`);
-  return bar ? bar.getBoundingClientRect().height : 0;
+  const rect = bar?.getBoundingClientRect();
+  return rect && rect.height > 0 && Number.isFinite(rect.top) ? rect.top : undefined;
 }
 
 /** The strip keyboardDismiss.ts shows over the keyboard. */

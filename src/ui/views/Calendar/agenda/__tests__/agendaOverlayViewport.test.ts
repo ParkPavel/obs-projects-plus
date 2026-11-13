@@ -106,3 +106,34 @@ test("focusing a field outside the visible bounds requests local scrolling", asy
     expect(scroll).toHaveBeenCalledWith({ block: "nearest", behavior: "auto" });
   } finally { view.unmount(); }
 });
+
+test("focus then keyboard resize does not subtract the keyboard from an already smaller window", async () => {
+  const height = Object.getOwnPropertyDescriptor(window, "innerHeight");
+  document.body.classList.add("is-mobile");
+  Object.defineProperty(window,"innerHeight",{configurable:true,value:844});
+  viewport.height=844;viewport.offsetTop=0;
+  const view=await open();
+  try {
+    const overlay=document.querySelector<HTMLElement>(".ppp-list-editor-overlay")!;
+    expect(overlay.style.height).toBe("52.75rem");
+    const input=document.querySelector<HTMLInputElement>(".agenda-list-editor input")!;
+    input.focus();await settle();
+    const bar=document.querySelector<HTMLElement>(".ppp-keyboard-bar")!;
+    expect(bar).not.toBeNull();
+    jest.spyOn(bar,"getBoundingClientRect").mockReturnValue({top:436,bottom:484,left:0,right:390,width:390,height:48} as DOMRect);
+    Object.defineProperty(window,"innerHeight",{configurable:true,value:430});
+    viewport.height=430;
+    document.documentElement.style.setProperty("--keyboard-height","360px");
+    viewport.dispatchEvent(new Event("resize"));await settle();
+    expect(overlay.style.height).toBe("26.875rem");
+    expect(document.querySelector(".ppp-agenda-editor-body input")).toBe(input);
+    document.documentElement.style.removeProperty("--keyboard-height");
+    Object.defineProperty(window,"innerHeight",{configurable:true,value:844});
+    viewport.height=844;viewport.dispatchEvent(new Event("resize"));await settle();
+    expect(overlay.style.height).toBe("52.75rem");
+  } finally {
+    view.unmount();document.body.classList.remove("is-mobile");
+    document.documentElement.style.removeProperty("--keyboard-height");
+    if(height)Object.defineProperty(window,"innerHeight",height);
+  }
+});

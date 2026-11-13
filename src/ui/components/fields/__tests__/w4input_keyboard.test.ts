@@ -1,10 +1,9 @@
 /**
  * w4-input — fields, suggestions and the keyboard follow Obsidian's own model.
  *
- * Obsidian's mobile app does not shrink the web view for the on-screen
- * keyboard: it reports the keyboard as `--keyboard-height` on the root and lays
- * its UI out by that. These tests stand in for the iPhone: the visual viewport
- * keeps the window's full height while `--keyboard-height` says 300 px.
+ * Obsidian reports `--keyboard-height` independently of viewport resize.
+ * Exercise both overlay and resized-window models; these fixtures do not
+ * establish acceptance on a physical iPhone.
  *
  * - The visible area ends at the keyboard (sheets, lists, the field's scroll).
  * - The "hide keyboard" control is Obsidian's element (`keyboard-toggle` in
@@ -64,14 +63,14 @@ describe("the visible area ends at Obsidian's keyboard", () => {
     expect(area.height).toBe(500);
   });
 
-  test("a viewport panned by iOS keeps the keyboard's cut from its own top", () => {
+  test("a panned visual viewport intersects the keyboard edge in layout coordinates", () => {
     keyboard(300);
     const pan = { width: 400, height: 800, offsetTop: 120, offsetLeft: 0, addEventListener: jest.fn(), removeEventListener: jest.fn() };
     Object.defineProperty(window, "visualViewport", { configurable: true, value: pan });
     try {
       const area = visibleViewport(window);
       expect(area.top).toBe(120);
-      expect(area.bottom).toBe(620);
+      expect(area.bottom).toBe(500);
     } finally {
       delete (window as { visualViewport?: unknown }).visualViewport;
     }
@@ -84,6 +83,21 @@ describe("the visible area ends at Obsidian's keyboard", () => {
     expect(visibleViewport(window).bottom).toBe(452);
     bar.hidden = true;
     expect(visibleViewport(window).bottom).toBe(500);
+  });
+
+  test("the strip's measured top remains authoritative after innerHeight shrinks", () => {
+    keyboard(300);
+    const bar=document.body.createDiv({cls:"ppp-keyboard-bar"});
+    bar.getBoundingClientRect=()=>box(452,48) as DOMRect;
+    Object.defineProperty(window,"innerHeight",{configurable:true,value:500});
+    expect(visibleViewport(window).bottom).toBe(452);
+  });
+
+  test("without a strip the layout viewport prevents a second keyboard subtraction", () => {
+    keyboard(300);
+    jest.spyOn(document.documentElement,"clientHeight","get").mockReturnValue(800);
+    Object.defineProperty(window,"innerHeight",{configurable:true,value:500});
+    expect(visibleViewport(window).height).toBe(500);
   });
 
   test("a phone sheet stands on the keyboard, and moves when the keyboard comes", async () => {

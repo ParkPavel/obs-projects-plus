@@ -1,10 +1,41 @@
 /** Real component styles in Chrome; host chrome/insets are explicit fixtures, not iPhone acceptance. */
 import { describeWithChrome, renderProbe, svelteStyle, unscope } from "./support/renderProbe";
+import { execFileSync } from "child_process";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 
 const css = (...files: string[]) => files.map(file => unscope(svelteStyle(file)));
 const reset = "*{box-sizing:border-box}body{margin:0;font:16px sans-serif}*{animation:none!important;transition:none!important}";
 
 describeWithChrome("reported panel geometry", () => {
+  test("agenda body survives focusing a field then opening the keyboard in a resized window", () => {
+    const bundle=execFileSync(process.execPath,[resolve(__dirname,"../../node_modules/esbuild/bin/esbuild"),"--bundle","--platform=browser","--format=iife","--log-level=error"],{cwd:resolve(__dirname,"../.."),input:'import {fitAgendaOverlay} from "./src/ui/views/Calendar/agenda/fitAgendaOverlay"; globalThis.fitAgenda=fitAgendaOverlay;',encoding:"utf8",windowsHide:true});
+    const barCss=readFileSync(resolve(__dirname,"../../styles.css"),"utf8").match(/\.ppp-keyboard-bar\s*\{[^}]+\}/)![0];
+    const result=renderProbe({width:390,height:844,
+      css:[reset,...css("ui/views/Calendar/components/Timeline/AgendaSidebar.svelte","ui/views/Calendar/agenda/AgendaListEditor.svelte"),barCss,":root{--safe-area-inset-top:47px;--safe-area-inset-bottom:34px}"],
+      html:'<div id="overlay" class="ppp-list-editor-overlay"><div class="ppp-list-editor-modal"><div class="agenda-list-editor"><header id="header" class="editor-header"><button>Cancel</button><button>Save</button></header><div id="body" class="ppp-agenda-editor-body" data-ppp-popup-boundary><label>Name<input id="field"></label><div style="height:1200px;flex:none">Filters</div></div></div></div></div><div id="bar" class="ppp-keyboard-bar" hidden></div>',
+      evaluate:bundle+`
+        const layoutHeight=document.documentElement.clientHeight;
+        const vv=Object.assign(new EventTarget(),{width:390,height:layoutHeight,offsetTop:0,offsetLeft:0});
+        Object.defineProperty(window,'visualViewport',{configurable:true,value:vv});
+        const overlay=document.getElementById('overlay'),action=globalThis.fitAgenda(overlay,null);
+        document.getElementById('field').focus();
+        document.documentElement.style.setProperty('--keyboard-height',(layoutHeight-430-48)+'px');
+        document.getElementById('bar').hidden=false;
+        Object.defineProperty(window,'innerHeight',{configurable:true,value:430});
+        vv.height=430;vv.dispatchEvent(new Event('resize'));
+        const body=document.getElementById('body').getBoundingClientRect();
+        const header=document.getElementById('header').getBoundingClientRect();
+        const field=document.getElementById('field').getBoundingClientRect();
+        probe.fits=String(overlay.getBoundingClientRect().bottom<=430);
+        probe.bodyVisible=String(body.height>100&&field.top>=header.bottom&&field.bottom<=body.bottom);
+        probe.height=String(overlay.getBoundingClientRect().height);action.destroy();`,
+      measure:[{id:"body",props:["boxHeight","overflow-y"]}],
+    });
+    expect(result["__probe"]!["height"]).toBe("430");
+    expect(result["__probe"]!["fits"]).toBe("true");
+    expect(result["__probe"]!["bodyVisible"]).toBe("true");
+  });
   test("desktop widget settings can use their preferred width beyond the old 24rem cap", () => {
     const result = renderProbe({width:1200,height:800,
       css:[reset,...css("ui/components/FloatingPopup/FloatingPopup.svelte")],

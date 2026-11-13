@@ -19,5 +19,5 @@ it("the keyboard already covers the bottom safe-area; it is not deducted twice",
 it("uses the supplied window's panned coordinates with its keyboard and safe-area", () => {
   const bounds = fieldViewport(view(300, 120), insets);
   expect(bounds.top).toBe(164);
-  expect(bounds.bottom).toBe(620);
+  expect(bounds.bottom).toBe(500);
 });
