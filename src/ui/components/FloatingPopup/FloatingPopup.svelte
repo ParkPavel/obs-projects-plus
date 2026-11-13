@@ -195,6 +195,16 @@
     if (open && popupEl && triggerEl) void recompute();
   }
 
+  function measurePopup(node: HTMLElement) {
+    const previousMaxWidth = node.style.maxWidth;
+    try {
+      if (width) node.style.maxWidth = "";
+      return { rect: node.getBoundingClientRect(), cssMaxWidth: parseFloat(node.ownerDocument.defaultView!.getComputedStyle(node).maxWidth) };
+    } finally {
+      if (width) node.style.maxWidth = previousMaxWidth;
+    }
+  }
+
   // ── Positioning ────────────────────────────────────────────
   async function recompute(): Promise<void> {
     const version = ++placementVersion;
@@ -214,9 +224,8 @@
 
     // Re-measure a preferred width after resize rather than retaining our
     // previous viewport cap. Its CSS variable supplies the caller's limit.
-    if (width) popupEl.style.maxWidth = "";
     const tRect = triggerEl.getBoundingClientRect();
-    const pRect = popupEl.getBoundingClientRect();
+    const { rect: pRect, cssMaxWidth } = measurePopup(popupEl);
     // #192: measured against the window the popup is actually in. The main
     // window's viewport would clamp a popout's popup to coordinates from a
     // different screen area entirely.
@@ -295,7 +304,6 @@
     // take the MIN of the viewport-derived cap and the resolved CSS max-width.
     const viewportWidthCap = vw - clampedLeft - marginPx;
     // coercion-exempt: Class C - a computed CSS length read back from the DOM, not record data
-    const cssMaxWidth = parseFloat(view.getComputedStyle(popupEl).maxWidth);
     const widthCap =
       Number.isFinite(cssMaxWidth) && cssMaxWidth > 0
         ? Math.min(viewportWidthCap, cssMaxWidth)

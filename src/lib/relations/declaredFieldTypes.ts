@@ -43,10 +43,10 @@ export function applyDeclaredFieldTypes(
     const cfg = fieldConfig[field.name];
     if (!field.identifier && (cfg?.formula || cfg?.type === "formula")) {
       const current = field.typeConfig as Record<string, unknown> | undefined;
-      if (field.type === DataFieldType.Formula && field.derived && !field.repeated &&
+      if (field.derived && !field.repeated &&
         Object.entries(cfg).every(([key, value]) => Object.is(current?.[key], value))) return field;
       changed = true;
-      return { ...field, type: DataFieldType.Formula, derived: true, repeated: false, typeConfig: { ...cfg } };
+      return { ...field, derived: true, repeated: false, typeConfig: { ...cfg } };
     }
     if (!field.identifier && (cfg?.type === "autotime" || cfg?.type === "unique_id")) {
       const type = cfg.type === "autotime" ? DataFieldType.AutoTime : DataFieldType.UniqueId;

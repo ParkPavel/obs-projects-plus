@@ -62,6 +62,11 @@
   if (field.typeConfig?.rollup && field.type !== DataFieldType.Rollup) {
     field = { ...field, type: DataFieldType.Rollup };
   }
+  // Computed columns retain their result type for filters/charts; editing
+  // their definition must open the formula controls, as rollups do above.
+  if (field.typeConfig?.formula && field.type !== DataFieldType.Formula) {
+    field = { ...field, type: DataFieldType.Formula };
+  }
 
   $: fieldNameError = validateFieldName(field.name);
   let saving = false;

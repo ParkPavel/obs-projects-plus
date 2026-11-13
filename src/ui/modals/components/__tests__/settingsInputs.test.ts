@@ -41,7 +41,7 @@ test.each(demoFormulas.map(field => [field.name, field] as const))("demo formula
   const existingFields = [...new Set([...demoFormulas.map(f => f.name), "type", "status", "paid", "price", "amount", "kind"])]
     .filter(name => name !== field.name)
     .map(name => ({...base(DataFieldType.String),name}));
-  const m = mount(ConfigureField, { title: "Formula", field, existingFields, editable: true, onSave });
+  const m = mount(ConfigureField, { title: "Formula", field:{...field,type:DataFieldType.Number}, existingFields, editable: true, onSave });
   try {
     await settle();
     expect(m.target.querySelector("textarea")).toHaveValue(field.typeConfig!.formula);

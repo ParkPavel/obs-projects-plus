@@ -190,6 +190,20 @@ describe("FloatingPopup", () => {
     view.destroy();
   });
 
+  test("a preferred-width popup retains its cap when repeated positioning computes the same style", async () => {
+    const trigger = createTrigger({top:100,left:0,bottom:120,right:40,width:40,height:20});
+    const view = mount({open:true,triggerEl:trigger,width:"44rem"});
+    try {
+      await flush(10);
+      const popup = stubPopupRect(1200,200)!;
+      window.dispatchEvent(new Event("resize")); await flush(20);
+      const cap = popup.style.maxWidth;
+      expect(cap).not.toBe("");
+      window.dispatchEvent(new Event("resize")); await flush(20);
+      expect(popup.style.maxWidth).toBe(cap);
+    } finally {view.destroy();trigger.remove();}
+  });
+
   test("removes the resize listener on destroy (#098)", async () => {
     const removeSpy = jest.spyOn(window, "removeEventListener");
     const trigger = createTrigger({ top: 100, left: 50, bottom: 120, right: 150, width: 100, height: 20 });
