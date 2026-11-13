@@ -16,6 +16,14 @@ Use the three assets from **one published release**: `main.js`, `manifest.json` 
 2. Replace the three plugin assets in `.obsidian/plugins/obs-projects-plus/` with the matching release files. Keep your `data.json`.
 3. Enable the plugin again, or restart Obsidian. Reopen the project and confirm the installed version.
 
+## Synchronize devices
+
+Plugin files live in a hidden configuration folder, which your sync tool may exclude. Check that folder synchronization is enabled and that the receiving device downloads changes. Manual-only synchronization needs an explicit run on both devices. Restart Obsidian after receiving the three matching assets; synchronizing a ZIP does not install it. Keep `data.json` unless you intentionally want to reset the configuration.
+
+## Synchronize devices
+
+Plugin files live in a hidden configuration folder, which your sync tool may exclude. Check that folder synchronization is enabled and that the receiving device downloads changes. Manual-only synchronization needs an explicit run on both devices. Restart Obsidian after receiving the three matching assets; synchronizing a ZIP does not install it. Keep `data.json` unless you intentionally want to reset the configuration.
+
 ## Check your workflows
 
 | Workflow | What to check |
@@ -28,7 +36,7 @@ Use the three assets from **one published release**: `main.js`, `manifest.json` 
 | Board | Move a card and a column; cancel another drag. Check the saved order and that each column returns to its previous collapsed or expanded state. |
 | Phone and tablet | Repeat relevant checks with the keyboard open and closed, portrait and landscape, and your usual zoom. Check that the original field, confirmation action and suggestions stay reachable. |
 
-This candidate replaces the previous formula rules with one `unified-v1` engine. Existing definitions migrate automatically; expressions remain unchanged but results can change. Before publishing migrated settings, the plugin writes and verifies `formula-unified-*.data.json` and `.report.json` in its plugin folder. The report lists affected definitions and syntax errors; it does not claim to compare every record result. A failed backup blocks migration. Update every device together and check known examples after updating. Excessive computations may return an error or a pipeline warning; a stopped pipeline retains its last fully completed step.
+Version 3.7.2 replaces the previous formula rules with one `unified-v1` engine. Existing definitions migrate automatically; expressions remain unchanged but results can change. Before publishing migrated settings, the plugin writes and verifies `formula-unified-*.data.json` and `.report.json` in its plugin folder. The report lists affected definitions and syntax errors; it does not claim to compare every record result. A failed backup blocks migration. Update every device together and check known examples after updating. Excessive computations may return an error or a pipeline warning; a stopped pipeline retains its last fully completed step.
 
 Regular expression checks apply to existing formulas and filters as well as new ones. A pattern with excessive or unconfirmed complexity is rejected before execution. If an existing expression reports this error, simplify its pattern; changing the formula compatibility profile does not disable the check. Admitted patterns keep native matching and replacement behaviour.
 

@@ -8,9 +8,11 @@ Each record remains a Markdown file. Fields such as status, date, and assignee l
 
 Dashboard formulas add calculated columns to the data shown in a view. They are read-only and do not write formula results to the source notes.
 
-## Development status
+## Release 3.7.2
 
-The current source targets **3.7.2**; it is an unreleased candidate. Download a published build from [Releases](https://github.com/ParkPavel/obs-projects-plus/releases) and check its own release notes. Desktop automated checks and simulated phone layouts do not establish acceptance on an iPhone or Android device.
+**3.7.2** brings one strict formula engine with verified migration backups, editable checkboxes on board cards, and mobile forms that keep fields and actions reachable above the keyboard. Inline palettes and computed properties share their form's scrolling area.
+
+Download the matching assets from [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases/latest). Read the [3.7.2 release guide](docs/release-3.7.2.md), especially the formula migration notes, before updating an existing vault.
 
 See the [changelog](CHANGELOG.md) and the [updating and rollback guide](docs/upgrade.md) before updating an existing vault.
 

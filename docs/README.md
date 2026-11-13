@@ -12,6 +12,7 @@ views. Choose the guide that matches your task — each one exists in both langu
 
 | Задача / Task | Русский | English |
 |---|---|---|
+| Возможности и миграция 3.7.2 / Release and migration | [Выпуск 3.7.2](release-3.7.2-RU.md) | [Release 3.7.2](release-3.7.2.md) |
 | Установить и начать / Install and start | [Обзор](../README-RU.md) | [Overview](../README.md) |
 | Обновить и проверить / Update and verify | [Обновление и откат](upgrade-RU.md) | [Updating and rolling back](upgrade.md) |
 | Работать с проектами и заметками / Work with projects and notes | [Руководство](user-guide.md) | [User guide](user-guide-EN.md) |

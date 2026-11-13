@@ -9,7 +9,7 @@
 <body data-prefix="../" data-language="en"><a class="skip-link" href="#main">Skip to content</a>
 <header class="site-header"><a class="wordmark" href="../en.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
 <nav aria-label="Main navigation"><a href="../en.html#ideas">Garden of ideas</a><a href="../read/user-guide-en.html">Documentation</a><a class="language" href="../read/changelog-ru.html" hreflang="ru">Русский</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
-<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../en.html">← Explore the plugin</a><strong>On this page</strong><nav aria-label="On this page"><a href="#372-unreleased">3.7.2 — unreleased</a><a href="#370-2026-10-05">3.7.0 — 2026-10-05</a><a href="#363-2026-09-28">3.6.3 — 2026-09-28</a><a href="#362-2026-09-28">3.6.2 — 2026-09-28</a><a href="#361-2026-09-28">3.6.1 — 2026-09-28</a><a href="#360-2026-09-27">3.6.0 — 2026-09-27</a><a href="#360-alpha">3.6.0-alpha</a><a href="#earlier-versions">Earlier versions</a></nav></aside><article class="doc-article"><p class="doc-version">Documentation follows the source code; an installed release may differ.</p><h1 id="changelog">Changelog</h1>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../en.html">← Explore the plugin</a><strong>On this page</strong><nav aria-label="On this page"><a href="#372-2026-11-14">3.7.2 — 2026-11-14</a><a href="#370-2026-10-05">3.7.0 — 2026-10-05</a><a href="#363-2026-09-28">3.6.3 — 2026-09-28</a><a href="#362-2026-09-28">3.6.2 — 2026-09-28</a><a href="#361-2026-09-28">3.6.1 — 2026-09-28</a><a href="#360-2026-09-27">3.6.0 — 2026-09-27</a><a href="#360-alpha">3.6.0-alpha</a><a href="#earlier-versions">Earlier versions</a></nav></aside><article class="doc-article"><p class="doc-version">Documentation follows the source code; an installed release may differ.</p><h1 id="changelog">Changelog</h1>
 <blockquote>
 <p><a href="../read/changelog-ru.html">Русский</a> · English</p>
 </blockquote>
@@ -18,7 +18,7 @@ Downloadable versions and their publication dates are listed in
 <a href="https://github.com/ParkPavel/obs-projects-plus/releases">GitHub Releases</a>.
 The version in <a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/manifest.json">manifest.json</a> identifies this source tree; it does not
 mean that a new release has been published.</p>
-<h2 id="372-unreleased">3.7.2 — unreleased</h2>
+<h2 id="372-2026-11-14">3.7.2 — 2026-11-14</h2>
 <h3 id="unified-formulas">Unified formulas</h3>
 <ul>
 <li>One strict evaluator now serves formulas, transform columns and Agenda filters. Existing definitions migrate with a verified settings backup and a report; results can change. Unknown future versions fail closed. Rollback requires both the original settings and the previous plugin assets; see the <a href="../read/upgrade.html">upgrade guide</a>.</li>
@@ -30,7 +30,7 @@ mean that a new release has been published.</p>
 <li>The mobile agenda editor reserves the safe area once, fills the visible viewport and keeps its header actions outside the scrolling fields, including when the keyboard is shown.</li>
 <li>The note inspector lays out computed results in the same scroll area as ordinary properties after a property section is collapsed.</li>
 </ul>
-<p>These changes have automated interaction and browser layout checks. Real iPhone and Android acceptance remains pending.</p>
+<p>Release validation includes automated interaction and browser layout checks, plus maintainer acceptance on desktop and a physical iPhone. The iPhone Agenda fix accounts for Obsidian reporting the keyboard height as its bottom safe-area inset, so the form does not reserve that space twice. See the <a href="../read/release-3.7.2.html">release guide</a> for update and migration steps.</p>
 <h3 id="safety-and-stability">Safety and stability</h3>
 <ul>
 <li>Board column dragging closes a handler leak: a column dropped where it

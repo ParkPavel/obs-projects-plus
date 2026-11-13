@@ -41,6 +41,8 @@ The custom view lifecycle is connected in [useView.ts](https://github.com/ParkPa
 
 These directories describe responsibilities; dependencies do not all follow a strict layered boundary. Follow the imports and callers when changing a path shared by several views.
 
+The formula module supplies the single strict `unified-v1` evaluator used by formula previews, calculated transform columns and Agenda filters. The transformation pipeline remains an orchestration layer, not a separate formula evaluator. `settingsMigration.ts` prepares the versioned definitions; the plugin lifecycle verifies settings backups and migration reports before publishing them. See the [upgrade guide](upgrade.md) for compatibility and rollback requirements.
+
 ## Writes and persistence
 
 Record and field edits enter through [ViewApi](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/viewApi.ts) and [dataApi.ts](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/dataApi.ts). They coordinate filesystem writes and the displayed data frame. Properties are written through `processFrontMatter`, and read-modify-write goes through `Vault.process` on the file's current contents, so an edit made between the read and the write is not lost. Some updates are optimistic; a visible change alone does not prove that the note was written. Failure paths can restore the previous value and show a coded error.

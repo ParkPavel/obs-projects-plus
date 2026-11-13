@@ -21,6 +21,8 @@
     "docs/development-3.7.1.md",
     "docs/ERROR_CODES.md",
     "docs/README.md",
+    "docs/release-3.7.2-RU.md",
+    "docs/release-3.7.2.md",
     "docs/site-maintenance-RU.md",
     "docs/site-maintenance.md",
     "docs/upgrade-RU.md",
@@ -35,35 +37,35 @@
   "files": [
     {
       "name": "read/project-readme.html",
-      "sha256": "ebb76920aaa1b8793b40c57ea0b1ff880f2b11716e43f78cbb06efd0c75d6ced"
+      "sha256": "30efb74e83fc20d8d92fbd0c79f799a4bc73382e348c92912b882c2ef2502197"
     },
     {
       "name": "read/readme-ru.html",
-      "sha256": "fe374203fcfdc029807315b0970036727d286ddbe88c525de45081e7f92b7ad5"
+      "sha256": "651258d24c16c80271264b223736f16d0500bf1543a8f5845cdee7d71f28456d"
     },
     {
       "name": "read/changelog.html",
-      "sha256": "fe226b65085e2836adeef8497f190be323254fb88291258e91bea5c5f03488c5"
+      "sha256": "986ef3bcc3f2a7d861fe405c1e2ba11654f85bf5d3ffba0c1c1cd32b6e223e6c"
     },
     {
       "name": "read/changelog-ru.html",
-      "sha256": "537096a6da39e3849630bec9948895ed151718e20d90c1b4dc1c00114f53380e"
+      "sha256": "da1820c314950959842e79f7336bef2e66b3df87d99a30bbb1dd306c23624656"
     },
     {
       "name": "read/roadmap.html",
-      "sha256": "da6d8376feee40cde2e79b5deac00efb3050a9686845e1a8d3cc07f668b08759"
+      "sha256": "534d58afdbe534913a34214617d518cca5336620e5ef349ce1b0cd23084ce5ed"
     },
     {
       "name": "read/roadmap-ru.html",
-      "sha256": "8eff674f9dd7bb2a05651dd13b06fbb94300602fe7c863dc950211048cef1629"
+      "sha256": "df2c8ecaf0dfaa2f672f426b7063d0fc58f1fb5146eff44f347e3926245258b0"
     },
     {
       "name": "read/contributing.html",
-      "sha256": "2007073ac6e6f38736f6515478f168f6ee73fe78bcb9f0521fede538eaf687f6"
+      "sha256": "26da870ea98eeb5f4f2f7bc4b95a8a549c21b10f2ca1142f1617127fc352b7a6"
     },
     {
       "name": "read/contributing-ru.html",
-      "sha256": "75904d26c36ddede381b020f6d48fc3900b0d5a99694ffa2afc21fe5d6483a62"
+      "sha256": "a10cb55b8f04f896c18f54ddc682596dd935572f410c1e0f2db8090b4eb17f77"
     },
     {
       "name": "read/code_of_conduct.html",
@@ -83,11 +85,11 @@
     },
     {
       "name": "read/architecture-en.html",
-      "sha256": "bfae8ae8fd799b737ffa715b6507f8004feb46c7fac817917defe198a12403b2"
+      "sha256": "cbd2a515b60b88dc87f56b0fadd924931db5a3850b5666d7c95ae986995480bd"
     },
     {
       "name": "read/architecture.html",
-      "sha256": "dd7f389457d8824eb643ff36017e70d782fc4224cf9f39b60e6a123dcacba394"
+      "sha256": "7ccf788b1694b926147385324f04757f52beab8dd3037e5c3d00bda2e0603be6"
     },
     {
       "name": "read/development-3.7.1-ru.html",
@@ -103,7 +105,15 @@
     },
     {
       "name": "read/readme.html",
-      "sha256": "b3ff8500419f50bcb4b604e6dcb8988326df1f8c3e9dd948d428da484bc26393"
+      "sha256": "3d0e68641dc70b8fc3c20d1a06b762ac4357e73e63e630e2ad1ae44a56b38fab"
+    },
+    {
+      "name": "read/release-3.7.2-ru.html",
+      "sha256": "6171c2d238ca6fb2b68bc8b13a22fcfdfbbbfa1b7eb36e84b962d3b90a05dfa3"
+    },
+    {
+      "name": "read/release-3.7.2.html",
+      "sha256": "4976d397bc00aed2a5576e4674fd03112859660bc1341b2a26407bc629f62581"
     },
     {
       "name": "read/site-maintenance-ru.html",
@@ -115,19 +125,19 @@
     },
     {
       "name": "read/upgrade-ru.html",
-      "sha256": "64d458132857f507822dea74c078ce2e7f61791d6723a2df6ba33824c9ab4ab9"
+      "sha256": "311bf235daff11a33636d62a771d9a642ca4eb1c3e9526a6799ec3dd8c9b057b"
     },
     {
       "name": "read/upgrade.html",
-      "sha256": "0821ddb12a0ffc21d9c1a11dd916dbff41c3613a78f699112c713716994ff462"
+      "sha256": "b53e915cb9a17345b3fab81c98e0a5c2998007348b667011d282a3302ffa229e"
     },
     {
       "name": "read/user-guide-en.html",
-      "sha256": "2be5e32f7f0f36302f275fbae71e3024e74eab5220aa3ff678042e89ccf73d5f"
+      "sha256": "d8a6cf0af17f4a18c11bda2ee07982dfdebe96329b93b079f22e9abc7596e420"
     },
     {
       "name": "read/user-guide.html",
-      "sha256": "11741f290ca361bceade3c4be4edc9f38b19496c149b03ff56586631be15cffa"
+      "sha256": "4b86959314992a2284194862e6b3a621149a7a88ecc76a3f63cb3bdd06dbd966"
     },
     {
       "name": "read/templates-readme.html",
@@ -151,15 +161,15 @@
     },
     {
       "name": "index.html",
-      "sha256": "66a64a6b4bbf300bf699e56899ccf796137f08ddf34df786e3a4285538fca1bd"
+      "sha256": "3d3c24f15eac22a6c6c72f3b5bf80df65357c91b742b345edcb0ada47b5c1e6e"
     },
     {
       "name": "en.html",
-      "sha256": "233c678e16df4a2a0287fc214e65fc692aa8b099e9373895fe12831bdef707a8"
+      "sha256": "6d651f33cb2199d629e210e4ee33c17d6dc12327a42555dc17ffc06325f50958"
     },
     {
       "name": "search-index.json",
-      "sha256": "6d550fdff776bac0020d862180efc9b598f37e09677a999357151557140d06a5"
+      "sha256": "7e8625ce64d53f7f611407585217aaba30302f5107b8fa397026ad154aeaca4a"
     },
     {
       "name": ".nojekyll",

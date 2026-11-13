@@ -8,7 +8,7 @@ Downloadable versions and their publication dates are listed in
 The version in [manifest.json](https://github.com/ParkPavel/obs-projects-plus/blob/main/manifest.json) identifies this source tree; it does not
 mean that a new release has been published.
 
-## 3.7.2 — unreleased
+## 3.7.2 — 2026-11-14
 
 ### Unified formulas
 
@@ -21,7 +21,7 @@ mean that a new release has been published.
 - The mobile agenda editor reserves the safe area once, fills the visible viewport and keeps its header actions outside the scrolling fields, including when the keyboard is shown.
 - The note inspector lays out computed results in the same scroll area as ordinary properties after a property section is collapsed.
 
-These changes have automated interaction and browser layout checks. Real iPhone and Android acceptance remains pending.
+Release validation includes automated interaction and browser layout checks, plus maintainer acceptance on desktop and a physical iPhone. The iPhone Agenda fix accounts for Obsidian reporting the keyboard height as its bottom safe-area inset, so the form does not reserve that space twice. See the [release guide](docs/release-3.7.2.md) for update and migration steps.
 
 ### Safety and stability
 

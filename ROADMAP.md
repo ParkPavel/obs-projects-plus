@@ -2,17 +2,17 @@
 
 [Русский](ROADMAP-RU.md) · [README](README.md) · [Changelog](CHANGELOG.md)
 
-This is the plan of record for Projects Plus after 3.6.3. It changes when priorities change; what has
+This is the plan of record for Projects Plus after 3.7.2. It changes when priorities change; what has
 shipped is in the [changelog](CHANGELOG.md). Items are listed in priority order within each track; no
 dates are promised.
 
-## Current priority — stabilize 3.7.1
+## Current priority — build on 3.7.2
 
-Before new roadmap functionality, finish the existing workflows reported by the tester.
-The [3.7.1 completion baseline](docs/development-3.7.1.md) consolidates all 19 cases, their
-implementation boundaries and device acceptance. The October 5 stabilization cycle takes
-precedence over the track order below. A green check on the narrower release contract does
-not mean that the whole matrix has been accepted. This is a candidate, not a released version.
+The 3.7.2 stabilization workflows passed the release's automated checks and maintainer acceptance,
+including the final Agenda keyboard scenario on iPhone. See the [release guide](docs/release-3.7.2.md)
+for its scope and migration requirements. The [3.7.1 completion baseline](docs/development-3.7.1.md)
+is a historical specification. The tracks below describe future work, not additional features
+promised by 3.7.2.
 
 ## Principles that do not change
 
@@ -29,10 +29,10 @@ not mean that the whole matrix has been accepted. This is a candidate, not a rel
 
 One calculation model, closer to a spreadsheet, for everything you see in tables, cards and charts.
 
-1. **One calculation engine.** The separate transformation pipeline is retired. Its operations move into
-   the database itself: filters and formulas inside tables, chart calls and cross-project summaries built
-   on a computed data model that you configure — similar to a spreadsheet's data model or pivot table.
-   Dashboards you already have are migrated.
+1. **A shared calculated data model.** The strict formula evaluator is already unified in 3.7.2.
+   Next, integrate the existing transformation pipeline's operations into a configurable data model
+   shared by tables, chart calls and cross-project summaries, with migration of saved Dashboards.
+   The current pipeline remains supported until that model is implemented.
 2. **Correct calculations.** Formulas defined on a project field are evaluated. Rollups get their own
    filters, so one relation can feed several differently filtered totals. Rollups can chain across
    projects. `SUMIF`, `COUNTIF` and `AVERAGEIF` behave as they do in spreadsheets. Anything unsupported

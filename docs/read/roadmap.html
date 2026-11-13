@@ -9,17 +9,17 @@
 <body data-prefix="../" data-language="en"><a class="skip-link" href="#main">Skip to content</a>
 <header class="site-header"><a class="wordmark" href="../en.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
 <nav aria-label="Main navigation"><a href="../en.html#ideas">Garden of ideas</a><a href="../read/user-guide-en.html">Documentation</a><a class="language" href="../read/roadmap-ru.html" hreflang="ru">Русский</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
-<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../en.html">← Explore the plugin</a><strong>On this page</strong><nav aria-label="On this page"><a href="#current-priority-stabilize-371">Current priority — stabilize 3.7.1</a><a href="#principles-that-do-not-change">Principles that do not change</a><a href="#track-1-calculations-and-data-after-stabilization">Track 1 — Calculations and data (after stabilization)</a><a href="#track-2-behaviour-design-and-fixes">Track 2 — Behaviour, design and fixes</a><a href="#track-3-connections-to-the-outside">Track 3 — Connections to the outside</a><a href="#exploring-every-note-is-a-database">Exploring: every note is a database</a><a href="#how-releases-are-accepted">How releases are accepted</a></nav></aside><article class="doc-article"><p class="doc-version">Documentation follows the source code; an installed release may differ.</p><h1 id="roadmap">Roadmap</h1>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../en.html">← Explore the plugin</a><strong>On this page</strong><nav aria-label="On this page"><a href="#current-priority-build-on-372">Current priority — build on 3.7.2</a><a href="#principles-that-do-not-change">Principles that do not change</a><a href="#track-1-calculations-and-data-after-stabilization">Track 1 — Calculations and data (after stabilization)</a><a href="#track-2-behaviour-design-and-fixes">Track 2 — Behaviour, design and fixes</a><a href="#track-3-connections-to-the-outside">Track 3 — Connections to the outside</a><a href="#exploring-every-note-is-a-database">Exploring: every note is a database</a><a href="#how-releases-are-accepted">How releases are accepted</a></nav></aside><article class="doc-article"><p class="doc-version">Documentation follows the source code; an installed release may differ.</p><h1 id="roadmap">Roadmap</h1>
 <p><a href="../read/roadmap-ru.html">Русский</a> · <a href="../read/project-readme.html">README</a> · <a href="../read/changelog.html">Changelog</a></p>
-<p>This is the plan of record for Projects Plus after 3.6.3. It changes when priorities change; what has
+<p>This is the plan of record for Projects Plus after 3.7.2. It changes when priorities change; what has
 shipped is in the <a href="../read/changelog.html">changelog</a>. Items are listed in priority order within each track; no
 dates are promised.</p>
-<h2 id="current-priority-stabilize-371">Current priority — stabilize 3.7.1</h2>
-<p>Before new roadmap functionality, finish the existing workflows reported by the tester.
-The <a href="../read/development-3.7.1.html">3.7.1 completion baseline</a> consolidates all 19 cases, their
-implementation boundaries and device acceptance. The October 5 stabilization cycle takes
-precedence over the track order below. A green check on the narrower release contract does
-not mean that the whole matrix has been accepted. This is a candidate, not a released version.</p>
+<h2 id="current-priority-build-on-372">Current priority — build on 3.7.2</h2>
+<p>The 3.7.2 stabilization workflows passed the release&#39;s automated checks and maintainer acceptance,
+including the final Agenda keyboard scenario on iPhone. See the <a href="../read/release-3.7.2.html">release guide</a>
+for its scope and migration requirements. The <a href="../read/development-3.7.1.html">3.7.1 completion baseline</a>
+is a historical specification. The tracks below describe future work, not additional features
+promised by 3.7.2.</p>
 <h2 id="principles-that-do-not-change">Principles that do not change</h2>
 <ul>
 <li><strong>Your data stays in your notes.</strong> Frontmatter and Markdown are the database. Nothing is moved into a
@@ -34,10 +34,10 @@ on a small phone.</li>
 <h2 id="track-1-calculations-and-data-after-stabilization">Track 1 — Calculations and data (after stabilization)</h2>
 <p>One calculation model, closer to a spreadsheet, for everything you see in tables, cards and charts.</p>
 <ol>
-<li><strong>One calculation engine.</strong> The separate transformation pipeline is retired. Its operations move into
-the database itself: filters and formulas inside tables, chart calls and cross-project summaries built
-on a computed data model that you configure — similar to a spreadsheet&#39;s data model or pivot table.
-Dashboards you already have are migrated.</li>
+<li><strong>A shared calculated data model.</strong> The strict formula evaluator is already unified in 3.7.2.
+Next, integrate the existing transformation pipeline&#39;s operations into a configurable data model
+shared by tables, chart calls and cross-project summaries, with migration of saved Dashboards.
+The current pipeline remains supported until that model is implemented.</li>
 <li><strong>Correct calculations.</strong> Formulas defined on a project field are evaluated. Rollups get their own
 filters, so one relation can feed several differently filtered totals. Rollups can chain across
 projects. <code>SUMIF</code>, <code>COUNTIF</code> and <code>AVERAGEIF</code> behave as they do in spreadsheets. Anything unsupported
