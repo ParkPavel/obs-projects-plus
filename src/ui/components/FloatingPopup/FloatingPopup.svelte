@@ -62,6 +62,8 @@
   export let closeOnInnerClick: boolean = false;
   /** Pending writes retain the open draft until their result is known. */
   export let dismissible = true;
+  /** Containing forms can commit valid drafts or retain invalid/composing ones. */
+  export let beforeClose: (() => boolean) | undefined = undefined;
 
   /** ARIA role. */
   export let role: "menu" | "listbox" | "dialog" | "tooltip" | "presentation" = "dialog";
@@ -420,7 +422,7 @@
   }
 
   function requestClose(): void {
-    if (!dismissible) return;
+    if (!dismissible || beforeClose?.() === false) return;
     open = false;
     dispatch("close");
   }

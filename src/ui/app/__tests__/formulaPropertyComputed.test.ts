@@ -28,7 +28,7 @@ it("a demo formula overriding an inferred column retains its editable definition
   const config = {total:{formula:"price * 2",formulaVersion:"unified-v1"}};
   const computed = applyComputedColumns(applyDeclaredFieldTypes(frame,config), config, "p", new Map());
   const fields = computed.fields.filter(f=>f.name === "total");
-  expect(computed.records[0]!.values.total).toBe(6);
+  expect(computed.records[0]!.values["total"]).toBe(6);
   expect(fields[0]).toMatchObject({name:"total",type:DataFieldType.Number,derived:true,typeConfig:{formula:"price * 2",formulaVersion:"unified-v1"}});
   expect(getOperatorsForField(fields[0]!.type)).toContain("eq");
   expect(suggestChart(fields).yAxis.property).toBe("total");

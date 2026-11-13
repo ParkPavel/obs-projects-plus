@@ -2,6 +2,8 @@
   import { createEventDispatcher } from "svelte";
   import { isMobile } from "src/lib/stores/ui";
   import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
+  import { provideFormFields } from "src/ui/components/fields/formFields";
+  const fields = provideFormFields();
   export let label: string;
   let anchor: HTMLSpanElement;
   $: trigger = anchor?.closest(".ppp-widget-host")?.querySelector<HTMLElement>('button[aria-haspopup="menu"]') ?? anchor;
@@ -12,7 +14,7 @@
 {#if $isMobile}
   <slot />
 {:else}
-  <FloatingPopup open triggerEl={trigger} placement="bottom-end" width="44rem" ariaLabel={label} on:close={() => dispatch("close")}>
+  <FloatingPopup open triggerEl={trigger} placement="bottom-end" width="44rem" ariaLabel={label} beforeClose={() => fields.syncForSubmit()} on:close={() => dispatch("close")}>
     <slot />
   </FloatingPopup>
 {/if}
