@@ -6,7 +6,7 @@ import { readRepoFile } from './site/paths.mjs';
 import { languages } from './site/content.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const docs=path.join(root,'docs');
-const security=spawnSync(process.execPath,['--test',path.join(root,'scripts/site/paths.test.mjs')],{cwd:root,encoding:'utf8'});
+const security=spawnSync(process.execPath,['--test',path.join(root,'scripts/site/paths.test.mjs'),path.join(root,'scripts/site/determinism.test.mjs')],{cwd:root,encoding:'utf8'});
 if(security.status!==0){process.stderr.write(security.stderr||security.stdout||'Site path security checks failed.');process.exit(1);}
 const generated=spawnSync(process.execPath,[path.join(root,'scripts/build-docs-site.mjs'),'--check'],{cwd:root,encoding:'utf8'});
 if(generated.status!==0){process.stderr.write(generated.stderr||generated.stdout);process.exit(1);}

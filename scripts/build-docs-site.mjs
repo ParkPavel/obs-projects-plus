@@ -13,7 +13,7 @@ const check = process.argv.includes('--check');
 const e = escapeHtml;
 const sources = [
   ...['README','README-RU','CHANGELOG','CHANGELOG-RU','ROADMAP','ROADMAP-RU','CONTRIBUTING','CONTRIBUTING-RU','CODE_OF_CONDUCT','CODE_OF_CONDUCT-RU'].map(name => `${name}.md`),
-  ...(await fs.readdir(path.join(root,'docs'))).filter(name => name.endsWith('.md')).map(name => `docs/${name}`),
+  ...(await fs.readdir(path.join(root,'docs'))).filter(name => name.endsWith('.md')).sort().map(name => `docs/${name}`),
   'templates/README.md','demo-vault/README.md','obsidian-projects-types/README.md','obsidian-projects-types/README-RU.md',
 ];
 const slug = text => text.toLowerCase().replace(/<[^>]*>/g,'').replace(/[^\p{L}\p{N}\s-]/gu,'').trim().replace(/\s+/g,'-');

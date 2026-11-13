@@ -13,14 +13,14 @@
     "CONTRIBUTING-RU.md",
     "CODE_OF_CONDUCT.md",
     "CODE_OF_CONDUCT-RU.md",
+    "docs/ERROR_CODES.md",
+    "docs/README.md",
     "docs/api-RU.md",
     "docs/api.md",
     "docs/architecture-EN.md",
     "docs/architecture.md",
     "docs/development-3.7.1-RU.md",
     "docs/development-3.7.1.md",
-    "docs/ERROR_CODES.md",
-    "docs/README.md",
     "docs/release-3.7.2-RU.md",
     "docs/release-3.7.2.md",
     "docs/site-maintenance-RU.md",
@@ -76,6 +76,14 @@
       "sha256": "43809fd675a444995de44015ad75a56d94b025341551b9c8b1d06dc74a021b58"
     },
     {
+      "name": "read/error_codes.html",
+      "sha256": "6422bc6fe4673262a286e8d96a7cda5444bdad54b31f5c85fe647bc3a1c55d2e"
+    },
+    {
+      "name": "read/readme.html",
+      "sha256": "3d0e68641dc70b8fc3c20d1a06b762ac4357e73e63e630e2ad1ae44a56b38fab"
+    },
+    {
       "name": "read/api-ru.html",
       "sha256": "50c13197f81ef4bb2eaafe97d30e89c954c58015c3446e7242c0efadd8bb8a09"
     },
@@ -98,14 +106,6 @@
     {
       "name": "read/development-3.7.1.html",
       "sha256": "e3056d6b3ba1fc64ee601b540aabf742bf50323c6191d39845718fc8650240b9"
-    },
-    {
-      "name": "read/error_codes.html",
-      "sha256": "6422bc6fe4673262a286e8d96a7cda5444bdad54b31f5c85fe647bc3a1c55d2e"
-    },
-    {
-      "name": "read/readme.html",
-      "sha256": "3d0e68641dc70b8fc3c20d1a06b762ac4357e73e63e630e2ad1ae44a56b38fab"
     },
     {
       "name": "read/release-3.7.2-ru.html",
@@ -169,7 +169,7 @@
     },
     {
       "name": "search-index.json",
-      "sha256": "7e8625ce64d53f7f611407585217aaba30302f5107b8fa397026ad154aeaca4a"
+      "sha256": "a47981588465303bc747111b7a019749dbf5f1727402c67b9168257c60a0709b"
     },
     {
       "name": ".nojekyll",
