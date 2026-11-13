@@ -20,6 +20,8 @@
   import ComboField from "src/ui/components/fields/ComboField.svelte";
   import type { ComboOption } from "src/ui/components/fields/comboOptions";
   import ColorPicker from "src/ui/components/ColorPicker/ColorPicker.svelte";
+  import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
+  import { isMobile } from "src/lib/stores/ui";
   import DateField from "src/ui/components/fields/DateField.svelte";
   import { isImeKey, recordImeCompositionEnd } from "src/ui/components/fields/draftController";
   import { conflictingDraftFields, draftNeedsSeparateEnd, hasComputedDraftTime, draftFileName, type CalendarDraft, type CalendarDraftController } from "./calendarDraft";
@@ -47,7 +49,8 @@
   let typedName = "";
   let typedIcon = "";
   let typedStatus = "";
-  let colorOpen = true;
+  let colorOpen = $isMobile;
+  let colorTrigger: HTMLButtonElement;
   let sheetSize: number | null = null;
   let resizePointer: { id: number; startY: number; startSize: number; parentHeight: number } | null = null;
   let seeded = -1;
@@ -59,7 +62,7 @@
     if (!d || d.session === seeded) return;
     seeded = d.session;
     composing = false;
-    colorOpen = true;
+    colorOpen = $isMobile;
     typedName = d.name;
     typedIcon = d.icon;
     typedStatus = d.status;
@@ -386,6 +389,7 @@
           <span class="ppp-draft-sheet__caption">{$i18n.t("views.calendar.draft.color")}</span>
           <span class="ppp-draft-sheet__color">
             <button type="button" class="ppp-draft-sheet__button ppp-draft-sheet__color-button"
+              bind:this={colorTrigger}
               aria-label={$i18n.t("views.calendar.draft.color")}
               aria-expanded={colorOpen}
               disabled={state.saving}
@@ -406,10 +410,15 @@
               </button>
           </span>
         </div>
-        {#if colorOpen && !state.saving}
+        {#if colorOpen && !state.saving && $isMobile}
           <div class="ppp-draft-sheet__palette">
             <ColorPicker scrollable={false} value={draft.color || "#808080"} on:change={(e) => controller.edit({ color: e.detail })} />
           </div>
+        {/if}
+        {#if colorOpen && !state.saving && !$isMobile}
+          <FloatingPopup open triggerEl={colorTrigger} ariaLabel={$i18n.t("views.calendar.draft.color")} width="24rem" on:close={() => (colorOpen = false)}>
+            <ColorPicker scrollable={false} value={draft.color || "#808080"} on:change={(e) => controller.edit({ color: e.detail })} />
+          </FloatingPopup>
         {/if}
       {/if}
     </div>

@@ -190,7 +190,7 @@
   </header>
   
   <!-- Content -->
-  <div class="editor-content">
+  <div class="ppp-agenda-editor-body" data-ppp-popup-boundary>
     <!-- Name Field -->
     <div class="field-group">
       <label class="field-label" for="list-name">{t('name-label')}</label>
@@ -479,7 +479,7 @@
   }
   
   /* === Content === */
-  .editor-content {
+  .ppp-agenda-editor-body {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
@@ -802,7 +802,8 @@
   @media (max-width: 37.5rem) {
     .agenda-list-editor {
       max-height: none;
-      height: 100%;
+      height: auto;
+      flex: 1 1 auto;
       border-radius: 0;
       overflow: hidden;
     }
@@ -817,7 +818,7 @@
       font-size: var(--ppp-font-size-md, 1rem);
     }
     
-    .editor-content {
+    .ppp-agenda-editor-body {
       padding: var(--ppp-spacing-md, 0.75rem);
       gap: var(--ppp-spacing-md, 0.75rem);
       flex: 1;

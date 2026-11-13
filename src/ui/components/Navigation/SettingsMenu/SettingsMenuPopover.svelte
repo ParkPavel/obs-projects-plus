@@ -13,7 +13,8 @@
   import type { DataSource as StoredDataSource } from "src/settings/v3/settings";
   import { sourceNameTaken } from "src/lib/datasources/namedSource";
   import { dataFrame } from "../../../../lib/stores/dataframe";
-  import { applyRollupColumns } from "src/lib/relations/rollupColumns";
+  import { applyComputedColumns } from "src/lib/relations/computedColumns";
+  import { applyDeclaredFieldTypes } from "src/lib/relations/declaredFieldTypes";
   import SettingsMenuTabs, { type SettingsTabId } from "./SettingsMenuTabs.svelte";
   import ProjectTab from "./tabs/ProjectTab.svelte";
   import ViewsTab from "./tabs/ViewsTab.svelte";
@@ -49,7 +50,7 @@
   $: activeProject = projects.find((p) => p.id === projectId);
   $: storeFields = $dataFrame?.fields ?? [];
   $: frameFields = activeProject?.fieldConfig
-    ? applyRollupColumns({ fields: storeFields, records: [] }, activeProject.fieldConfig, activeProject.id, new Map()).fields
+    ? applyComputedColumns(applyDeclaredFieldTypes({ fields: storeFields, records: [] }, activeProject.fieldConfig), activeProject.fieldConfig, activeProject.id, new Map()).fields
     : storeFields;
   $: resolvedFields = fields.length > 0 ? fields : frameFields.map(f => ({ name: f.name, type: f.type, derived: f.derived }));
   

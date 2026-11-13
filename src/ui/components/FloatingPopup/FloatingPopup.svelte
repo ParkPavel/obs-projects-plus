@@ -69,6 +69,8 @@
   /** Accessible label for the popup container. */
   export let ariaLabel: string = "";
   export let id: string | undefined = undefined;
+  /** Optional preferred desktop width, still capped to the visible viewport. */
+  export let width: string | undefined = undefined;
 
   /**
    * Auto-focus the first interactive element when the popup opens.
@@ -457,6 +459,7 @@
       use:portal={{ to: "document-body" }}
       use:followFieldAnchor={placement === "above-field" ? { anchor: triggerEl, changed: handleReposition } : null}
       class="ppp-popup ppp-popup--floating"
+      style:width
       class:ppp-popup--field-suggestions={placement === "above-field"}
       style={placement === "above-field" && placementHidden ? "visibility: hidden;" : style}
       aria-hidden={placement === "above-field" && placementHidden ? "true" : undefined}

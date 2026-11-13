@@ -112,9 +112,9 @@ export function financeFieldConfig(ids: DemoIds): { [field: string]: FieldConfig
     category: { relation: { targetProjectId: ids.financeId } },
     // w4-p01b: an operation's income, expense and signed balance follow its
     // amount and kind — formulas, not numbers written into the note.
-    income: { formula: 'IF(AND(type = "op", kind = "Доход"), amount)' },
-    expense: { formula: 'IF(AND(type = "op", kind = "Расход"), amount)' },
-    balance: { formula: 'IF(type = "op", IF(kind = "Доход", amount, 0 - amount))' },
+    income: { type: "formula", formulaVersion: "unified-v1", formula: 'IF(AND(type = "op", kind = "Доход"), amount)' },
+    expense: { type: "formula", formulaVersion: "unified-v1", formula: 'IF(AND(type = "op", kind = "Расход"), amount)' },
+    balance: { type: "formula", formulaVersion: "unified-v1", formula: 'IF(type = "op", IF(kind = "Доход", amount, 0 - amount))' },
     [R.total]: back("amount", "sum"),
     [R.count]: back("amount", "count_values"),
     [R.last]: back("date", "last_value", { orderBy: "date" }),

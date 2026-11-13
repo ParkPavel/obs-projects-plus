@@ -92,7 +92,7 @@ test("the already-fitted editor does not add a second keyboard-sized blank scrol
   const view = await open();
   try {
     viewport.dispatchEvent(new Event("resize")); await settle();
-    expect(document.querySelector<HTMLElement>(".editor-content")!.style.paddingBottom).toBe("");
+    expect(document.querySelector<HTMLElement>(".ppp-agenda-editor-body")!.style.paddingBottom).toBe("");
   } finally { view.unmount(); }
 });
 

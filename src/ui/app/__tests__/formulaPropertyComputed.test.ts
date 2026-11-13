@@ -16,4 +16,11 @@ it("a declared formula property gets a value on every record, its name matched w
   const out = applyFormulaFields(applyDeclaredFieldTypes(frame, fc), formulaPropertiesOf(fc));
   expect(out.records.map((r) => r.values["Итого"])).toEqual([6, 3]);
   expect(out.fields.find((f) => f.name === "Итого")).toMatchObject({ type: DataFieldType.Formula, derived: true });
+  expect(out.fields.find((f) => f.name === "Итого")?.typeConfig?.formula).toBe("Paid + 1");
+});
+
+it("a demo formula overriding an inferred column retains its editable definition", () => {
+  const frame: DataFrame = { fields: [{name: "total",type:DataFieldType.Number,derived:false,identifier:false,repeated:false}], records: [] };
+  const fields = applyDeclaredFieldTypes(frame, {total:{formula:"price * 2",formulaVersion:"unified-v1"}}).fields;
+  expect(fields[0]).toMatchObject({name:"total",type:DataFieldType.Formula,derived:true,typeConfig:{formula:"price * 2",formulaVersion:"unified-v1"}});
 });

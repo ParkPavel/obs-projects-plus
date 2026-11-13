@@ -3,6 +3,9 @@ import { enter, optionRows, settle, tap, typeInto, press } from "src/ui/componen
 import { DataFieldType } from "src/lib/dataframe/dataframe";
 import { get } from "svelte/store";
 import { i18n } from "src/lib/stores/i18n";
+import { applyDeclaredFieldTypes } from "src/lib/relations/declaredFieldTypes";
+import { cabinetFieldConfig } from "src/ui/app/onboarding/demoCabinet";
+import { financeFieldConfig } from "src/ui/app/onboarding/demoFinance";
 type DataField = import("src/lib/dataframe/dataframe").DataField;
 jest.mock("dayjs", () => ({ __esModule: true, default: jest.requireActual("dayjs") }));
 
@@ -28,6 +31,24 @@ function mount(Component: typeof CreateField, props: Record<string, unknown>) {
   return { target, component, destroy() { component.$destroy(); target.remove(); } };
 }
 afterEach(() => { document.body.innerHTML = ""; });
+
+const demoIds = { cabinetId: "cabinet", trackerId: "tracker", financeId: "finance" };
+const demoFormulas = [cabinetFieldConfig(demoIds), financeFieldConfig(demoIds)]
+  .flatMap(config => applyDeclaredFieldTypes({fields:[],records:[]}, config).fields)
+  .filter(field => field.type === DataFieldType.Formula);
+test.each(demoFormulas.map(field => [field.name, field] as const))("demo formula %s opens with its saved expression", async (_name, field) => {
+  const onSave = jest.fn().mockResolvedValue(true);
+  const existingFields = [...new Set([...demoFormulas.map(f => f.name), "type", "status", "paid", "price", "amount", "kind"])]
+    .filter(name => name !== field.name)
+    .map(name => ({...base(DataFieldType.String),name}));
+  const m = mount(ConfigureField, { title: "Formula", field, existingFields, editable: true, onSave });
+  try {
+    await settle();
+    expect(m.target.querySelector("textarea")).toHaveValue(field.typeConfig!.formula);
+    m.target.querySelector<HTMLButtonElement>("[data-variant='primary']")!.click(); await settle();
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({typeConfig:expect.objectContaining({formula:field.typeConfig!.formula,formulaVersion:"unified-v1"})}));
+  } finally { m.destroy(); }
+});
 
 test("field settings choose a translated type in the original row and save its type code", async () => {
   const onSave = jest.fn();

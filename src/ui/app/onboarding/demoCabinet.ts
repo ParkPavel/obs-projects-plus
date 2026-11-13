@@ -239,10 +239,10 @@ export function cabinetFieldConfig(ids: DemoIds): { [field: string]: FieldConfig
     // w4-p01b: a visit's money, from its own status, payment and price — the
     // same formulas a user would write; empty (not 0) where they do not apply,
     // so an average or an «is not empty» filter sees only real payments.
-    sessions: { formula: 'IF(AND(type = "visit", status = "проведён"), 1)' },
-    paidAmount: { formula: 'IF(AND(type = "visit", status = "проведён", paid), price)' },
-    debt: { formula: 'IF(AND(type = "visit", status = "проведён", NOT(paid)), price)' },
-    net: { formula: 'IF(type = "expense", 0 - amount, paidAmount)' },
+    sessions: { type: "formula", formulaVersion: "unified-v1", formula: 'IF(AND(type = "visit", status = "проведён"), 1)' },
+    paidAmount: { type: "formula", formulaVersion: "unified-v1", formula: 'IF(AND(type = "visit", status = "проведён", paid), price)' },
+    debt: { type: "formula", formulaVersion: "unified-v1", formula: 'IF(AND(type = "visit", status = "проведён", NOT(paid)), price)' },
+    net: { type: "formula", formulaVersion: "unified-v1", formula: 'IF(type = "expense", 0 - amount, paidAmount)' },
     // A client's card, from its visits in this project…
     [R.sessions]: back(ids.cabinetId, "client", "sessions", "sum"),
     [R.paid]: back(ids.cabinetId, "client", "paidAmount", "sum"),

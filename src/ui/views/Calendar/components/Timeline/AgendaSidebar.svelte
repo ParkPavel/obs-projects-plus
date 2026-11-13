@@ -1652,7 +1652,8 @@
       min-height: 0;
       max-width: 100%;
       max-height: none;
-      height: 100%;
+      height: auto;
+      align-self: stretch;
       border-radius: 0;
     }
   }

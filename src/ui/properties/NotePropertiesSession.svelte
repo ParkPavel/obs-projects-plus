@@ -996,13 +996,14 @@
                   {/each}
                 {:else if isColorValue(entry.value)}
                   {#if canEdit}
-                    <div class="ppp-note-props__palette-inline">
+                    <details class="ppp-note-props__palette-inline">
+                      <summary><span class="ppp-note-props__swatch" style:background={normalizeColor(entry.value) ?? ""} aria-hidden="true"></span> {String(entry.value)}</summary>
                       <ColorPicker
                         scrollable={false}
                         value={normalizeColor(entry.value) ?? DEFAULT_COLOR}
                         on:change={(e) => commitColor(entry, e.detail)}
                       />
-                    </div>
+                    </details>
                   {:else}
                     <span class="ppp-note-props__swatch" style:background={normalizeColor(entry.value) ?? ""} aria-hidden="true"></span>
                     {String(entry.value)}

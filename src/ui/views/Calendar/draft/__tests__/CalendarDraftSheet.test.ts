@@ -9,6 +9,10 @@ import { fireEvent, render } from "@testing-library/svelte";
 import dayjs from "dayjs";
 import { tick } from "svelte";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
+import { isMobile as mobileStore } from "src/lib/stores/ui";
+import type { Writable } from "svelte/store";
+const isMobile = mobileStore as Writable<boolean>;
+jest.mock("src/lib/stores/ui", () => ({isMobile:require("svelte/store").writable(false)}));
 // The Svelte CJS test compiler reads .default; the browser build imports dayjs normally.
 jest.mock("dayjs", () => { const actual = jest.requireActual("dayjs"); return Object.assign(actual, { default: actual }); });
 
@@ -115,6 +119,7 @@ describe("CalendarDraftSheet — there at once, and not in the way", () => {
   });
 
   it("starts with an expanded inline palette and can collapse and reopen it", async () => {
+    isMobile.set(true);
     const m = mount();
     begin(m.ctl);
     await tick();
@@ -128,6 +133,17 @@ describe("CalendarDraftSheet — there at once, and not in the way", () => {
     await tick();
     expect(m.container.querySelector(".color-picker")).not.toBeNull();
     expect(m.container.querySelectorAll(".color-picker .palette-label").length).toBe(3);
+    m.unmount(); isMobile.set(false);
+  });
+
+  it("desktop opens its palette in a floating dialog outside the draft's scroller", async () => {
+    isMobile.set(false);
+    const m=mount();begin(m.ctl);await tick();
+    expect(m.container.querySelector(".color-picker")).toBeNull();
+    await fireEvent.click(m.container.querySelector<HTMLButtonElement>(".ppp-draft-sheet__color > button")!);await tick();await tick();
+    const popup=document.querySelector('.ppp-popup--floating[role="dialog"]');
+    expect(popup?.querySelector('.color-picker')).not.toBeNull();
+    expect(m.container.contains(popup)).toBe(false);
   });
 
   it("a new draft starts from its own name, not from text left in the last one", async () => {

@@ -37,13 +37,16 @@ describeWithChrome("reported panel geometry", () => {
   test.each([[390,844,0,844],[390,844,80,240],[320,568,40,210],[568,320,0,320]])("agenda actions fit the safe visible viewport %sx%s top %s height %s", (width,height,top,visibleHeight) => {
     const result=renderProbe({width,height,
       css:[reset,...css("ui/views/Calendar/components/Timeline/AgendaSidebar.svelte","ui/views/Calendar/agenda/AgendaListEditor.svelte"),":root{--safe-area-inset-top:47px;--safe-area-inset-bottom:34px}"],
-      html:`<div id="overlay" class="ppp-list-editor-overlay" style="top:${top}px;left:0;width:${width}px;height:${visibleHeight}px"><div id="modal" class="ppp-list-editor-modal"><div id="editor" class="agenda-list-editor"><header id="header" class="editor-header"><button class="header-cancel">Cancel</button><h3 class="editor-title">Edit list</h3><div class="header-actions"><button class="header-save">Save</button></div></header><div id="content" class="editor-content"><div style="height:1200px;flex:none">Fields</div></div></div></div></div>`,
-      evaluate:`const overlay=document.getElementById('overlay').getBoundingClientRect(),header=document.getElementById('header').getBoundingClientRect(),modal=document.getElementById('modal').getBoundingClientRect();probe.safe=String(header.top>=${top+47}-1);probe.headerFits=String(header.bottom<=${top+visibleHeight-34}+1);probe.modalFits=String(modal.bottom<=overlay.bottom-34+1);`,
+      html:`<div id="overlay" class="ppp-list-editor-overlay" style="top:${top}px;left:0;width:${width}px;height:${visibleHeight}px"><div id="modal" class="ppp-list-editor-modal"><div id="editor" class="agenda-list-editor"><header id="header" class="editor-header"><button class="header-cancel">Cancel</button><h3 class="editor-title">Edit list</h3><div class="header-actions"><button class="header-save">Save</button></div></header><div id="content" class="ppp-agenda-editor-body"><div style="height:1200px;flex:none">Fields</div></div></div></div></div>`,
+      evaluate:`const overlay=document.getElementById('overlay').getBoundingClientRect(),header=document.getElementById('header').getBoundingClientRect(),modal=document.getElementById('modal').getBoundingClientRect(),content=document.getElementById('content'),body=content.getBoundingClientRect();probe.safe=String(header.top>=${top+47}-1);probe.headerFits=String(header.bottom<=${top+visibleHeight-34}+1);probe.modalFits=String(modal.bottom<=overlay.bottom-34+1);probe.bodyStartsBelowHeader=String(body.top>=header.bottom-1);probe.bodyFillsModal=String(body.bottom>=modal.bottom-2);content.scrollTop=content.scrollHeight;probe.bodyScrollable=String(content.scrollTop>0&&content.firstElementChild.getBoundingClientRect().bottom<=body.bottom+1);`,
       measure:[{id:"content",props:["boxHeight","overflow-y"]}],
     });
     expect(result["__probe"]!["safe"]).toBe("true");
     expect(result["__probe"]!["headerFits"]).toBe("true");
     expect(result["__probe"]!["modalFits"]).toBe("true");
+    expect(result["__probe"]!["bodyStartsBelowHeader"]).toBe("true");
+    expect(result["__probe"]!["bodyFillsModal"]).toBe("true");
+    expect(result["__probe"]!["bodyScrollable"]).toBe("true");
     expect(Number(result["content"]!["boxHeight"])).toBeGreaterThan(20);
   });
 });

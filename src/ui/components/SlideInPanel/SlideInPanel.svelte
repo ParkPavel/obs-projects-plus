@@ -131,9 +131,7 @@
     display: flex;
     flex-direction: column;
     z-index: var(--ppp-z-raised);
-    /* Respect safe area insets on mobile (notches, home indicator, Obsidian header) */
-    padding-top: env(safe-area-inset-top, 0);
-    padding-bottom: env(safe-area-inset-bottom, 0);
+    /* The leaf overlay already starts below the app/header safe area. */
   }
 
   .ppp-slide-in-panel--open {
@@ -188,6 +186,12 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: 1rem;
+  }
+
+  .ppp-slide-in-body::after {
+    content: "";
+    display: block;
+    block-size: max(env(safe-area-inset-bottom, 0px), var(--view-bottom-spacing, 0px));
   }
 
   @media (prefers-reduced-motion: reduce) {

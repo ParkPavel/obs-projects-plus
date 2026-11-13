@@ -1,6 +1,7 @@
 import { rootFontPx, remAt } from "src/ui/utils/cssLength";
 import { fieldViewport } from "./fieldViewport";
 import { aboveFieldPlacement, makeRoomAbove } from "./aboveFieldPlacement";
+import { fieldPopupBounds } from "./fieldPopupBounds";
 
 /** One geometry policy for original-input suggestions, including formula textareas. */
 export function placeAboveField(field: HTMLElement, popup: HTMLElement, insets: HTMLElement | null, roomAttempt: string) {
@@ -9,7 +10,7 @@ export function placeAboveField(field: HTMLElement, popup: HTMLElement, insets: 
   const base = rootFontPx(doc);
   let anchor = field.getBoundingClientRect();
   const box = popup.getBoundingClientRect();
-  const bounds = fieldViewport(view, insets ? view.getComputedStyle(insets) : undefined);
+  const bounds = fieldPopupBounds(field, fieldViewport(view, insets ? view.getComputedStyle(insets) : undefined));
   const natural = Math.min(Math.max(popup.scrollHeight, box.height), 12 * base);
   const width = Math.min(box.width, 24 * base);
   let placement = aboveFieldPlacement(anchor, natural, width, bounds, base);

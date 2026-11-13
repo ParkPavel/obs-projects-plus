@@ -41,6 +41,13 @@ export function applyDeclaredFieldTypes(
   let changed = storedFields !== frame.fields;
   const fields = storedFields.map((field) => {
     const cfg = fieldConfig[field.name];
+    if (!field.identifier && (cfg?.formula || cfg?.type === "formula")) {
+      const current = field.typeConfig as Record<string, unknown> | undefined;
+      if (field.type === DataFieldType.Formula && field.derived && !field.repeated &&
+        Object.entries(cfg).every(([key, value]) => Object.is(current?.[key], value))) return field;
+      changed = true;
+      return { ...field, type: DataFieldType.Formula, derived: true, repeated: false, typeConfig: { ...cfg } };
+    }
     if (!field.identifier && (cfg?.type === "autotime" || cfg?.type === "unique_id")) {
       const type = cfg.type === "autotime" ? DataFieldType.AutoTime : DataFieldType.UniqueId;
       const current = field.typeConfig as Record<string, unknown> | undefined;
@@ -124,7 +131,7 @@ function declaredField(
     return { ...base, type: DataFieldType.Relation, repeated: true };
   }
   if (cfg.formula || cfg.type === "formula") {
-    return { ...base, type: DataFieldType.Formula, derived: true };
+    return { ...base, type: DataFieldType.Formula, derived: true, typeConfig: { ...cfg } };
   }
   const stored = cfg.type ? STORED_TYPES[cfg.type] : undefined;
   if (!stored) return undefined;

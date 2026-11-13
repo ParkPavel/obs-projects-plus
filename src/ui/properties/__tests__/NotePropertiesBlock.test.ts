@@ -842,6 +842,11 @@ describe("i3-final NotePropertiesBlock", () => {
     await tick();
     const picker = row("tint").querySelector(".color-picker--inline");
     expect(picker).not.toBeNull();
+    const disclosure = row("tint").querySelector<HTMLDetailsElement>("details")!;
+    expect(disclosure.open).toBe(false);
+    disclosure.querySelector<HTMLElement>("summary")!.click();
+    await flush();
+    expect(disclosure.open).toBe(true);
     row("tint").querySelector<HTMLElement>(".sat-light-picker")!.click();
     await flush();
     expect(row("tint").querySelector(".color-picker--inline")).toBe(picker);

@@ -1,13 +1,5 @@
 <script lang="ts">
-  /**
-   * WidgetHost — #067 F1 (UT2026-F): thin router.
-   *
-   * Assembles a reactive WidgetRenderContext, looks the widget type up in
-   * widgetComponentRegistry, and mounts the result inside WidgetShell.
-   * Frame math (enrichment, axis A, pipeline, per-widget source) is computed
-   * by hostFrames.ts and only wired here; markup/chrome lives in WidgetShell /
-   * WidgetHeaderActions; type-specific knowledge lives in the registry.
-   */
+  /** Registry router; hostFrames owns data and WidgetShell owns widget chrome. */
   import type { DataFrame, DataRecord, DataField } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
   import type { WidgetDefinition, WidgetSourceConfig, LinkedSelectionConfig, DataTableConfig, FieldPreset } from "../types";
@@ -34,6 +26,7 @@
   import DataScopePanel from "./DataScopePanel.svelte";
   import PipelineEditor from "./PipelineEditor.svelte";
   import DatabaseCallSettings from "./DatabaseCall/DatabaseCallSettings.svelte";
+  import WidgetSettingsPopup from "./WidgetSettingsPopup.svelte";
   import { provideBlockHeaderControlsHost } from "./DatabaseCall/tableControlsHost";
   const headerControlsHost = provideBlockHeaderControlsHost();
   export let widget: WidgetDefinition;
@@ -158,6 +151,8 @@
   </svelte:fragment>
 
   <svelte:fragment slot="panels">
+    {#if showConfig || showPipeline}
+    <WidgetSettingsPopup label={widget.title} on:close={() => { showConfig = false; showPipeline = false; }}>
     <!-- #194. Its own `{#if}`, before the type chain and excluding
          `database-call`, whose own panel already carries the same field. -->
     {#if showConfig && widget.type !== "database-call" && hasDataScope(widget.type)}
@@ -204,6 +199,8 @@
         on:apply={(e) => patchWidget({ transform: e.detail })}
         on:save={handlePipelineSave}
       />
+    {/if}
+    </WidgetSettingsPopup>
     {/if}
   </svelte:fragment>
 

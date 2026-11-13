@@ -8,6 +8,7 @@
 
 import { DataFieldType, type DataFrame, type DataValue } from "src/lib/dataframe/dataframe";
 import { applyComputedColumns } from "src/lib/relations/computedColumns";
+import { applyDeclaredFieldTypes } from "src/lib/relations/declaredFieldTypes";
 import { CABINET_FOLDER, DEMO_NAMES, FINANCE_FOLDER, TRACKER_FOLDER, type DemoFile } from "../demoShared";
 import { CABINET_CLIENTS, CABINET_ROLLUPS, CABINET_SERVICES, buildCabinetCovers, buildCabinetNotes, cabinetFieldConfig } from "../demoCabinet";
 import { TRACKER_PEOPLE, buildTrackerNotes } from "../demoTracker";
@@ -45,7 +46,7 @@ const financeRaw = frameOf(financeNotes, FINANCE_FOLDER, ["category"]);
 // w4-p01b: computed as the plugin computes a project — formulas and rollups in
 // dependency order — and checked against values derived here from the notes'
 // own fields (status, paid, price, kind, amount), not from computed copies.
-const cabinetConfig = cabinetFieldConfig(ids) as never;
+const cabinetConfig = cabinetFieldConfig(ids);
 const cabinet = applyComputedColumns(cabinetRaw, cabinetConfig, ids.cabinetId, new Map([[ids.trackerId, trackerRaw]]));
 const finance = applyComputedColumns(financeRaw, financeFieldConfig(ids) as never, ids.financeId, new Map());
 
@@ -56,6 +57,26 @@ const held = (v: { values: Record<string, unknown> }) => v.values["status"] === 
 const paidOf = (v: { values: Record<string, unknown> }) => (held(v) && v.values["paid"] === true ? num(v.values["price"]) : 0);
 const debtOf = (v: { values: Record<string, unknown> }) => (held(v) && v.values["paid"] !== true ? num(v.values["price"]) : 0);
 const linking = (frame: DataFrame, field: string, name: string) => frame.records.filter((r) => r.values[field] === `[[${name}]]`);
+
+test("all seven demo formulas retain editable definitions through the actual project pipeline", () => {
+  let count = 0;
+  for (const [raw, config, id] of [
+    [cabinetRaw, cabinetConfig, ids.cabinetId],
+    [financeRaw, financeFieldConfig(ids), ids.financeId],
+  ] as const) {
+    const frame = applyComputedColumns(applyDeclaredFieldTypes(raw, config), config, id, new Map([[ids.trackerId, trackerRaw]]));
+    for (const [name, definition] of Object.entries(config)) {
+      if (!definition.formula) continue;
+      count++;
+      const field = frame.fields.find(f => f.name === name)!;
+      expect(field.type).toBe(DataFieldType.Formula);
+      expect(field.derived).toBe(true);
+      expect(field.typeConfig?.formula).toEqual(definition.formula);
+      expect(field.typeConfig?.formulaVersion).toBe("unified-v1");
+    }
+  }
+  expect(count).toBe(7);
+});
 
 describe("scale: each project at least the size of the old demo", () => {
   test("notes per project", () => {
