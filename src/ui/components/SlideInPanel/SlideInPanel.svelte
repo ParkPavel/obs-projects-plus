@@ -191,7 +191,7 @@
   .ppp-slide-in-body::after {
     content: "";
     display: block;
-    block-size: max(env(safe-area-inset-bottom, 0px), var(--view-bottom-spacing, 0px));
+    block-size: max(env(safe-area-inset-bottom, 0rem), var(--view-bottom-spacing, 0rem));
   }
 
   @media (prefers-reduced-motion: reduce) {

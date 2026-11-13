@@ -5,6 +5,7 @@
   import { provideFormFields } from "src/ui/components/fields/formFields";
   const fields = provideFormFields();
   export let label: string;
+  export let beforeClose: (() => boolean) | undefined = undefined;
   let anchor: HTMLSpanElement;
   $: trigger = anchor?.closest(".ppp-widget-host")?.querySelector<HTMLElement>('button[aria-haspopup="menu"]') ?? anchor;
   const dispatch = createEventDispatcher<{ close: void }>();
@@ -14,7 +15,7 @@
 {#if $isMobile}
   <slot />
 {:else}
-  <FloatingPopup open triggerEl={trigger} placement="bottom-end" width="44rem" ariaLabel={label} beforeClose={() => fields.syncForSubmit()} on:close={() => dispatch("close")}>
+  <FloatingPopup open triggerEl={trigger} placement="bottom-end" width="44em" ariaLabel={label} beforeClose={() => fields.syncForSubmit() && (beforeClose?.() ?? true)} on:close={() => dispatch("close")}>
     <slot />
   </FloatingPopup>
 {/if}

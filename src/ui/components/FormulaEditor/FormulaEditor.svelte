@@ -36,7 +36,7 @@
   let adopted: string = expression;
   let rootEl: HTMLElement | null = null;
   let constructor: FormulaConstructor;
-  export function commitCurrent(): void { constructor?.commitCurrent(); }
+  export function commitCurrent(): boolean { return constructor?.commitCurrent() ?? false; }
 
   /**
    * Adopt `expression` from the parent only when it really changed and the

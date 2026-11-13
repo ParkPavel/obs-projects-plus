@@ -9,6 +9,7 @@ interface FormFields {
   syncForSubmit(): boolean;
 }
 const FORM_FIELDS = Symbol("form-fields");
+export function currentFormFields(): FormFields | undefined { return getContext<FormFields | undefined>(FORM_FIELDS); }
 
 /** Optional form boundary: delegates to original controls, never reads or parses DOM text. */
 export function provideFormFields(): FormFields {

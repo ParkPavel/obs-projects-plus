@@ -251,11 +251,13 @@
   }
 
   /** Buttons and keyboard shortcuts commit the same currently visible native draft. */
-  export function commitCurrent(): void {
-    if (!alive || disabled || composing) return;
+  export function commitCurrent(): boolean {
+    if (!alive || disabled || composing) return false;
     readNativeDraft();
     validateNow();
-    if (errors.length === 0 && value.trim()) dispatch("commit");
+    if (errors.length || !value.trim()) return false;
+    dispatch("commit");
+    return true;
   }
 
   const suggestCache = suggestIndexCache();

@@ -16,6 +16,7 @@
   let errors: string[] = [];
   let hasContent = !!expression.trim();
   let editor: FormulaEditor;
+  export function commitCurrent(): boolean { return disabled || !semantics || (!expression.trim() && !hasContent) || (editor?.commitCurrent() ?? false); }
   const dispatch = createEventDispatcher<{ change: string; commit: string; modechange: import("src/lib/formula/version").VersionedFormula }>();
   const CURRENT = "unified-v1";
   $: semantics = formulaEditorSemantics(version);

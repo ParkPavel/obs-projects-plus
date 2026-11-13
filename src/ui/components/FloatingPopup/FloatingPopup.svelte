@@ -422,7 +422,9 @@
   }
 
   function requestClose(): void {
-    if (!dismissible || beforeClose?.() === false) return;
+    if (!dismissible || composing || beforeClose?.() === false) return;
+    const active = popupEl?.ownerDocument.activeElement as HTMLElement | null;
+    if (active && popupEl?.contains(active)) active.blur();
     open = false;
     dispatch("close");
   }

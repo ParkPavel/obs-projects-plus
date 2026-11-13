@@ -20,6 +20,10 @@
   import { Icon } from "obsidian-svelte";
   import VersionedFormulaEditor from "src/ui/components/FormulaEditor/VersionedFormulaEditor.svelte";
   import ComboField from "src/ui/components/fields/ComboField.svelte";
+  import TextField from "src/ui/components/fields/TextField.svelte";
+  import { currentFormFields } from "src/ui/components/fields/formFields";
+  const formFields = currentFormFields();
+  let computeEditors: Record<string, VersionedFormulaEditor | undefined> = {};
   import { namesToOptions } from "src/ui/components/fields/comboOptions";
   import { getOperatorsForField, getOperatorLabel } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
   import { operatorNeedsValue } from "src/settings/base/settings";
@@ -125,7 +129,7 @@
       names.length !== stepInputFields[i]?.length || names.some((name, j) => name !== stepInputFields[i]?.[j]))) stepInputFields = schemas;
     return out;
   }
-  onDestroy(() => { if (countsTimer) clearTimeout(countsTimer); });
+  onDestroy(() => { clearTimeout(applyTimer); if (countsTimer) clearTimeout(countsTimer); });
 
   // Detect array-valued fields in the source data to suggest Unnest. Powers a
   // discoverability banner pointing users at the Unnest transform when their
@@ -373,10 +377,10 @@
     });
   }
 
-  function updateComputeColumn(stepIndex: number, colIndex: number, name: string, expression: string) {
+  function updateComputeColumn(stepIndex: number, colIndex: number, name: string | undefined, expression: string | undefined) {
     const step = steps[stepIndex] as ComputeStep;
     const cols = [...step.columns];
-    cols[colIndex] = { ...cols[colIndex], name, expression };
+    cols[colIndex] = { ...cols[colIndex]!, ...(name !== undefined ? {name} : {}), ...(expression !== undefined ? {expression} : {}) };
     updateStep(stepIndex, { ...step, columns: cols });
   }
 
@@ -421,10 +425,10 @@
     });
   }
 
-  function updateUnpivotGroup(stepIndex: number, gIndex: number, pattern: string, outputName: string) {
+  function updateUnpivotGroup(stepIndex: number, gIndex: number, pattern: string | undefined, outputName: string | undefined) {
     const step = steps[stepIndex] as UnpivotStep;
     const groups = [...step.fieldGroups];
-    groups[gIndex] = { pattern, outputName };
+    groups[gIndex] = { ...groups[gIndex]!, ...(pattern !== undefined ? {pattern} : {}), ...(outputName !== undefined ? {outputName} : {}) };
     updateStep(stepIndex, { ...step, fieldGroups: groups });
   }
 
@@ -474,10 +478,6 @@
     return (e.target as HTMLSelectElement).value;
   }
 
-  function inputVal(e: Event): string {
-    return (e.target as HTMLInputElement).value;
-  }
-
   function checkVal(e: Event): boolean {
     return (e.currentTarget as HTMLInputElement).checked;
   }
@@ -492,8 +492,17 @@
   $: sampleAfter = i18nList($i18n, "views.dashboard.pipeline.empty.sampleAfter");
 
   function handleDone() {
+    if (formFields && !formFields.syncForSubmit()) return;
+    if (!flushPending(false)) return;
     clearTimeout(applyTimer);
     dispatch("save", { steps });
+  }
+  /** Synchronize definitions before the containing popup removes its controls. */
+  export function flushPending(apply = true): boolean {
+    if (!Object.values(computeEditors).every(editor => !editor || editor.commitCurrent())) return false;
+    clearTimeout(applyTimer);
+    if (apply) dispatch("apply", { steps });
+    return true;
   }
 
   // #075 (Decision 1C): one-click clear of the steps only — source untouched,
@@ -701,12 +710,12 @@
                     {/each}
                   </select>
                   {#if operatorNeedsValue(cond.operator)}
-                    <input
-                      class="ppp-filter-value-input"
-                      type="text"
+                    <TextField
+                      inputClass="ppp-filter-value-input"
                       value={cond.value ?? ""}
                       placeholder={$i18n.t("common.value-placeholder")}
-                      on:input={(e) => updateFilterValue(i, ci, inputVal(e))}
+                      on:input={(e) => updateFilterValue(i, ci, e.detail)}
+                      on:commit={(e) => updateFilterValue(i, ci, e.detail.value)}
                     />
                   {/if}
                   <button class="ppp-step-btn ppp-step-btn--danger" on:click={() => removeFilterCondition(i, ci)}>?</button>
@@ -763,15 +772,15 @@
             {:else if step.type === "compute"}
               {#each step.columns as col, ci}
                 <div class="ppp-compute-row">
-                  <input
-                    class="ppp-compute-name"
-                    type="text"
+                  <TextField
+                    inputClass="ppp-compute-name"
                     placeholder={$i18n.t("views.dashboard.pipeline.column-name", { defaultValue: "Column name" })}
                     value={col.name}
-                    on:change={(e) => updateComputeColumn(i, ci, e.currentTarget.value, col.expression)}
+                    on:commit={(e) => updateComputeColumn(i, ci, e.detail.value, undefined)}
                   />
                   <div class="ppp-compute-expr">
                     <VersionedFormulaEditor
+                      bind:this={computeEditors[`${i}:${ci}`]}
                       expression={col.expression}
                       version={col.formulaVersion}
                       fields={computeFieldNames(steps, fieldNames, stepInputFields, i, ci)}
@@ -780,7 +789,7 @@
                       placeholder={$i18n.t("views.dashboard.pipeline.formula-placeholder")}
                       ariaLabel={$i18n.t("views.dashboard.pipeline.formula-placeholder")}
                       on:modechange={(event) => updateComputeMode(i, ci, event.detail.formulaVersion)}
-                      on:commit={(event) => updateComputeColumn(i, ci, col.name, event.detail)}
+                      on:commit={(event) => updateComputeColumn(i, ci, undefined, event.detail)}
                     />
                   </div>
                   <button class="ppp-step-btn ppp-step-btn--danger" on:click={() => removeComputeColumn(i, ci)}>?</button>
@@ -844,17 +853,15 @@
                 <span class="ppp-section-label">{$i18n.t("views.dashboard.pipeline.field-groups", { defaultValue: "Field groups (columns to unpivot)" })}</span>
                 {#each step.fieldGroups as group, gi}
                   <div class="ppp-unpivot-row">
-                    <input
-                      type="text"
+                    <TextField
                       placeholder={$i18n.t("views.dashboard.pipeline.pattern", { defaultValue: "Pattern (regex)" })}
                       value={group.pattern}
-                      on:change={(e) => updateUnpivotGroup(i, gi, e.currentTarget.value, group.outputName)}
+                      on:commit={(e) => updateUnpivotGroup(i, gi, e.detail.value, undefined)}
                     />
-                    <input
-                      type="text"
+                    <TextField
                       placeholder={$i18n.t("views.dashboard.pipeline.output-name", { defaultValue: "Output name" })}
                       value={group.outputName}
-                      on:change={(e) => updateUnpivotGroup(i, gi, group.pattern, e.currentTarget.value)}
+                      on:commit={(e) => updateUnpivotGroup(i, gi, undefined, e.detail.value)}
                     />
                     <button class="ppp-step-btn ppp-step-btn--danger" on:click={() => removeUnpivotGroup(i, gi)}>?</button>
                   </div>
@@ -877,15 +884,15 @@
                   on:commit={(e) => updateStep(i, { ...step, field: e.detail.value })}
                 />
               </label>
-              <label class="ppp-step-field">
+              <div class="ppp-step-field">
                 <span>{$i18n.t("views.dashboard.pipeline.prefix", { defaultValue: "Prefix for extracted fields" })}</span>
-                <input
-                  type="text"
+                <TextField
+                  ariaLabel={$i18n.t("views.dashboard.pipeline.prefix", { defaultValue: "Prefix for extracted fields" })}
                   placeholder={$i18n.t("views.dashboard.pipeline.optional", { defaultValue: "Optional" })}
                   value={step.prefix ?? ""}
-                  on:change={(e) => { const v = inputVal(e); updateStep(i, v ? { ...step, prefix: v } : { ...step }); }}
+                  on:commit={(e) => { const { prefix: _old, ...rest } = step; updateStep(i, e.detail.value ? { ...step, prefix: e.detail.value } : rest); }}
                 />
-              </label>
+              </div>
               <label class="ppp-step-field ppp-step-field--row">
                 <input
                   type="checkbox"
@@ -929,15 +936,16 @@
                   {/each}
                 </select>
               </label>
-              <label class="ppp-step-field">
+              <div class="ppp-step-field">
                 <span>{$i18n.t("views.dashboard.pipeline.join-right-key", { defaultValue: "Right key" })}</span>
-                <input
-                  type="text"
+                <TextField
+                  ariaLabel={$i18n.t("views.dashboard.pipeline.join-right-key", { defaultValue: "Right key" })}
                   value={step.on.rightKey}
                   placeholder={$i18n.t("views.dashboard.pipeline.join-right-key-placeholder", { defaultValue: "field name in right source" })}
-                  on:input={(e) => updateJoinStep(i, { on: { leftKey: step.on.leftKey, rightKey: inputVal(e) } })}
+                  on:input={(e) => updateJoinStep(i, { on: { leftKey: step.on.leftKey, rightKey: e.detail } })}
+                  on:commit={(e) => updateJoinStep(i, { on: { leftKey: step.on.leftKey, rightKey: e.detail.value } })}
                 />
-              </label>
+              </div>
               <label class="ppp-step-field">
                 <span>{$i18n.t("views.dashboard.pipeline.join-how", { defaultValue: "Join type" })}</span>
                 <select
@@ -1416,7 +1424,7 @@
     color: var(--text-normal);
   }
 
-  .ppp-filter-value-input {
+  :global(.ppp-filter-value-input) {
     flex: 1;
     min-width: 5rem;
     padding: 0.25rem 0.375rem;
@@ -1461,7 +1469,7 @@
     gap: 0.25rem;
   }
 
-  .ppp-compute-name {
+  :global(.ppp-compute-name) {
     width: 8rem;
     padding: 0.25rem 0.375rem;
     font-size: var(--font-ui-smaller);
@@ -1478,7 +1486,7 @@
 
   @media (max-width: 40rem) {
     .ppp-compute-row { flex-wrap: wrap; }
-    .ppp-compute-name { flex: 1; min-width: 0; }
+    :global(.ppp-compute-name) { flex: 1; min-width: 0; }
     .ppp-compute-expr { order: 1; flex-basis: 100%; }
   }
 
@@ -1528,7 +1536,7 @@
     gap: 0.25rem;
   }
 
-  .ppp-unpivot-row input {
+  .ppp-unpivot-row :global(input) {
     flex: 1;
     padding: 0.25rem 0.375rem;
     font-size: var(--font-ui-smaller);

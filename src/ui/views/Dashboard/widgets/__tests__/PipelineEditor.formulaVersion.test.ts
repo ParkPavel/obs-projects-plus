@@ -65,7 +65,8 @@ describe("PipelineEditor preserves saved formula rules", () => {
       await Promise.resolve();
       const name = target.querySelector(".ppp-compute-name") as HTMLInputElement;
       name.value = "renamed";
-      name.dispatchEvent(new Event("change", { bubbles: true }));
+      name.dispatchEvent(new Event("input", { bubbles: true }));
+      name.dispatchEvent(new FocusEvent("blur"));
       await Promise.resolve();
       jest.advanceTimersByTime(400);
       expect((applied.at(-1)!.steps[0] as ComputeStep).columns[0]).toEqual({ ...column, name: "renamed" });

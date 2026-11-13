@@ -57,6 +57,7 @@
 
   let showConfig = false, showPipeline = false, renameSignal = 0, primaryActionSignal = 0;
   let pipelineIntent: PipelineIntent | null = null;
+  let pipelineEditor: PipelineEditor | undefined;
 
   $: collapsed = widget.collapsed ?? false;
   $: currentPipeline = widget.transform ?? ({ steps: [] } as TransformPipeline);
@@ -152,7 +153,7 @@
 
   <svelte:fragment slot="panels">
     {#if showConfig || showPipeline}
-    <WidgetSettingsPopup label={widget.title} on:close={() => { showConfig = false; showPipeline = false; }}>
+    <WidgetSettingsPopup label={widget.title} beforeClose={() => pipelineEditor?.flushPending() ?? true} on:close={() => { showConfig = false; showPipeline = false; }}>
     <!-- #194. Its own `{#if}`, before the type chain and excluding
          `database-call`, whose own panel already carries the same field. -->
     {#if showConfig && widget.type !== "database-call" && hasDataScope(widget.type)}
@@ -189,6 +190,7 @@
     {/if}
     {#if showPipeline}
       <PipelineEditor
+        bind:this={pipelineEditor}
         pipeline={currentPipeline}
         fields={pipelineSource.fields}
         source={pipelineSource}

@@ -416,7 +416,7 @@
           </div>
         {/if}
         {#if colorOpen && !state.saving && !$isMobile}
-          <FloatingPopup open triggerEl={colorTrigger} ariaLabel={$i18n.t("views.calendar.draft.color")} width="24rem" on:close={() => (colorOpen = false)}>
+          <FloatingPopup open triggerEl={colorTrigger} ariaLabel={$i18n.t("views.calendar.draft.color")} width="24em" on:close={() => (colorOpen = false)}>
             <ColorPicker scrollable={false} value={draft.color || "#808080"} on:change={(e) => controller.edit({ color: e.detail })} />
           </FloatingPopup>
         {/if}

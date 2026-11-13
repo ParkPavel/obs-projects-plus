@@ -204,6 +204,28 @@ describe("FloatingPopup", () => {
     } finally {view.destroy();trigger.remove();}
   });
 
+  test("outside dismissal blurs its native input before notifying the containing form", async () => {
+    const view=mount({open:true}); await flush(10);
+    const popup=document.querySelector(".ppp-popup--floating")!;
+    const input=document.createElement("input"),order:string[]=[];
+    popup.append(input);input.focus();input.addEventListener("blur",()=>order.push("blur"));
+    view.component.$on("close",()=>order.push("close"));
+    document.body.dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));await flush();
+    expect(order).toEqual(["blur","close"]);view.destroy();
+  });
+
+  test("an unfinished native composition prevents outside dismissal", async () => {
+    const view=mount({open:true});await flush(10);
+    const popup=document.querySelector(".ppp-popup--floating")!,input=document.createElement("input");
+    popup.append(input);input.focus();
+    input.dispatchEvent(new CompositionEvent("compositionstart",{bubbles:true}));
+    document.body.dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));await flush();
+    expect(document.querySelector(".ppp-popup--floating")).toBe(popup);
+    input.dispatchEvent(new CompositionEvent("compositionend",{bubbles:true}));
+    document.body.dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));await flush();
+    expect(document.querySelector(".ppp-popup--floating")).toBeNull();view.destroy();
+  });
+
   test("removes the resize listener on destroy (#098)", async () => {
     const removeSpy = jest.spyOn(window, "removeEventListener");
     const trigger = createTrigger({ top: 100, left: 50, bottom: 120, right: 150, width: 100, height: 20 });

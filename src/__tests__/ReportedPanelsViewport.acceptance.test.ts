@@ -8,7 +8,7 @@ describeWithChrome("reported panel geometry", () => {
   test("desktop widget settings can use their preferred width beyond the old 24rem cap", () => {
     const result = renderProbe({width:1200,height:800,
       css:[reset,...css("ui/components/FloatingPopup/FloatingPopup.svelte")],
-      html:'<div id="popup" class="ppp-popup--floating" style="width:44rem;--ppp-popup-max-w:44rem"><input value="price * 2"></div>',
+      html:'<div id="popup" class="ppp-popup--floating" style="width:44em;--ppp-popup-max-w:44em"><input value="price * 2"></div>',
       measure:[{id:"popup",props:["boxWidth","max-width"]}],
     });
     expect(Number(result["popup"]!["boxWidth"])).toBe(704);
