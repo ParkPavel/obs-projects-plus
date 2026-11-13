@@ -5,6 +5,15 @@ const css = (...files: string[]) => files.map(file => unscope(svelteStyle(file))
 const reset = "*{box-sizing:border-box}body{margin:0;font:16px sans-serif}*{animation:none!important;transition:none!important}";
 
 describeWithChrome("reported panel geometry", () => {
+  test("desktop widget settings can use their preferred width beyond the old 24rem cap", () => {
+    const result = renderProbe({width:1200,height:800,
+      css:[reset,...css("ui/components/FloatingPopup/FloatingPopup.svelte")],
+      html:'<div id="popup" class="ppp-popup--floating" style="width:44rem;--ppp-popup-max-w:44rem"><input value="price * 2"></div>',
+      measure:[{id:"popup",props:["boxWidth","max-width"]}],
+    });
+    expect(Number(result["popup"]!["boxWidth"])).toBe(704);
+    expect(result["popup"]!["max-width"]).toBe("704px");
+  });
   test.each([[390, 844], [320, 568], [844, 390]])("computed results remain in the panel scroll flow at %sx%s", (width, height) => {
     const result = renderProbe({ width, height,
       css: [reset, ...css("ui/components/SlideInPanel/SlideInPanel.svelte", "ui/components/RecordCardView/RecordCardView.svelte"),

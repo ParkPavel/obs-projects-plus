@@ -212,6 +212,9 @@
     // window stays where it was instead of jumping there.
     if (!triggerEl.isConnected && style) return;
 
+    // Re-measure a preferred width after resize rather than retaining our
+    // previous viewport cap. Its CSS variable supplies the caller's limit.
+    if (width) popupEl.style.maxWidth = "";
     const tRect = triggerEl.getBoundingClientRect();
     const pRect = popupEl.getBoundingClientRect();
     // #192: measured against the window the popup is actually in. The main
@@ -460,6 +463,7 @@
       use:followFieldAnchor={placement === "above-field" ? { anchor: triggerEl, changed: handleReposition } : null}
       class="ppp-popup ppp-popup--floating"
       style:width
+      style:--ppp-popup-max-w={width}
       class:ppp-popup--field-suggestions={placement === "above-field"}
       style={placement === "above-field" && placementHidden ? "visibility: hidden;" : style}
       aria-hidden={placement === "above-field" && placementHidden ? "true" : undefined}

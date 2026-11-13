@@ -16,6 +16,7 @@ test("desktop settings escape widget clipping and close with Escape", async () =
   const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
   expect(dialog).toHaveAttribute("aria-label", "Formula settings");
   expect(dialog.style.width).toBe("44rem");
+  expect(dialog.style.getPropertyValue("--ppp-popup-max-w")).toBe("44rem");
   expect(view.container.contains(dialog)).toBe(false);
   expect(dialog.querySelector("input")).toHaveValue("price * 2");
   await fireEvent.keyDown(document, { key: "Escape" }); await settle();
