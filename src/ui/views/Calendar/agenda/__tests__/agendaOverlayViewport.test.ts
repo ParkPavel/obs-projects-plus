@@ -18,6 +18,7 @@ jest.mock("src/lib/stores/i18n", () => {
 jest.mock("../../gestures/GestureCoordinator", () => ({ pauseGestures: jest.fn(), resumeGestures: jest.fn() }));
 const Sidebar = require("../../components/Timeline/AgendaSidebar.svelte").default;
 const settle = async () => { await tick(); await tick(); };
+const reportKeyboardHeight = (height: number) => document.documentElement.style.setProperty("--keyboard-height", `${height}px`);
 const originalActive = Object.getOwnPropertyDescriptor(globalThis, "activeDocument");
 const originalViewport = Object.getOwnPropertyDescriptor(window, "visualViewport");
 let viewport: EventTarget & { width: number; height: number; offsetTop: number; offsetLeft: number };
@@ -123,7 +124,7 @@ test("focus then keyboard resize does not subtract the keyboard from an already 
     jest.spyOn(bar,"getBoundingClientRect").mockReturnValue({top:436,bottom:484,left:0,right:390,width:390,height:48} as DOMRect);
     Object.defineProperty(window,"innerHeight",{configurable:true,value:430});
     viewport.height=430;
-    document.documentElement.style.setProperty("--keyboard-height","360px");
+    reportKeyboardHeight(360);
     viewport.dispatchEvent(new Event("resize"));await settle();
     expect(overlay.style.height).toBe("26.875rem");
     expect(document.querySelector(".ppp-agenda-editor-body input")).toBe(input);
