@@ -43,13 +43,13 @@ Real app captures supplied by the maintainer on 14 November 2026. Select an imag
 
 | Dashboard | Gallery | Schedule |
 | --- | --- | --- |
-| [![Dashboard](images/pc/2026-11-14_11-00-55.png)](images/pc/2026-11-14_11-00-55.png) | [![Gallery](images/pc/2026-11-14_11-03-25.png)](images/pc/2026-11-14_11-03-25.png) | [![Schedule](images/pc/2026-11-14_11-02-44.png)](images/pc/2026-11-14_11-02-44.png) |
+| [![Dashboard](images/pc/2026-11-14_11-00-55.png)](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/pc/2026-11-14_11-00-55.png) | [![Gallery](images/pc/2026-11-14_11-03-25.png)](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/pc/2026-11-14_11-03-25.png) | [![Schedule](images/pc/2026-11-14_11-02-44.png)](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/pc/2026-11-14_11-02-44.png) |
 
 ### iPhone
 
 | Overview | Charts | Cards |
 | --- | --- | --- |
-| [![iPhone dashboard](images/mobile/photo_7_2026-11-14_11-10-08.jpg)](images/mobile/photo_7_2026-11-14_11-10-08.jpg) | [![iPhone chart](images/mobile/photo_3_2026-11-14_11-10-08.jpg)](images/mobile/photo_3_2026-11-14_11-10-08.jpg) | [![iPhone gallery](images/mobile/photo_4_2026-11-14_11-10-08.jpg)](images/mobile/photo_4_2026-11-14_11-10-08.jpg) |
+| [![iPhone dashboard](images/mobile/photo_7_2026-11-14_11-10-08.jpg)](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/mobile/photo_7_2026-11-14_11-10-08.jpg) | [![iPhone chart](images/mobile/photo_3_2026-11-14_11-10-08.jpg)](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/mobile/photo_3_2026-11-14_11-10-08.jpg) | [![iPhone gallery](images/mobile/photo_4_2026-11-14_11-10-08.jpg)](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/mobile/photo_4_2026-11-14_11-10-08.jpg) |
 
 [← Open the desktop and iPhone carousels →](https://parkpavel.github.io/obs-projects-plus/en.html#screenshots)
 
