@@ -152,6 +152,36 @@ test("missing named/derived source and selection targets remain blocking even if
 });
 
 test("diagnostic count is bounded instead of returning an unbounded invalid preview", () => {
-  const fields = Object.fromEntries(Array.from({ length: 4097 }, (_, i) => [String(i), { relation: { targetProjectId: "gone" } }]));
+  const fields = Object.fromEntries(Array.from({ length: 4097 }, (_, i) => [String(i), null]));
   expect(() => preview([project("a", { fieldConfig: fields })])).toThrow("too many reference issues");
+});
+
+test.each([0, false, null])("invalid activeTabId is diagnosed without viewTabs too: %j", activeTabId => {
+  const r = preview([project("a", { views: [view("v", [widget("w", "database-call", { activeTabId })])] })]);
+  expect(r.issues.map(issue => issue.code)).toEqual(["invalid-shape"]);
+});
+
+test("bounds successful references, not just errors, before expansion can grow without limit", () => {
+  const fields = Object.fromEntries(Array.from({ length: 4097 }, (_, i) => [String(i), { relation: { targetProjectId: "a" } }]));
+  expect(() => preview([project("a", { fieldConfig: fields })])).toThrow("too many mapped references");
+});
+
+test("enforces payload byte limit AFTER replacing short IDs with long ones", () => {
+  const fields = Object.fromEntries(Array.from({ length: 3000 }, (_, i) => [String(i), { relation: { targetProjectId: "a" } }]));
+  const input = project("a", { fieldConfig: fields, unknown: "x".repeat(1800000) });
+  const before = JSON.stringify(input);
+  expect(new TextEncoder().encode(JSON.stringify(input)).length).toBeLessThan(2 * 1024 * 1024);
+  expect(() => previewPackageReferences([input], { projects: [], archives: [] }, () => "n".repeat(128))).toThrow("reference preview too large");
+  expect(JSON.stringify(input)).toBe(before);
+});
+
+test("enforces total output byte limit when each expanded project still fits its own limit", () => {
+  const input = Array.from({ length: 9 }, (_, index) => {
+    const id = `p${index}`;
+    return project(id, { unknown: "x".repeat(1820000), fieldConfig: Object.fromEntries(Array.from({ length: 400 }, (_, i) => [String(i), { relation: { targetProjectId: id } }])) });
+  });
+  const incoming = input.reduce((sum, p) => sum + new TextEncoder().encode(JSON.stringify(p)).length, 0);
+  expect(incoming).toBeLessThan(16 * 1024 * 1024);
+  let i = 0;
+  expect(() => previewPackageReferences(input, { projects: [], archives: [] }, () => `n${++i}`.padEnd(128, "n"))).toThrow("reference preview too large");
 });

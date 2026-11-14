@@ -51,6 +51,7 @@ export function previewPackageReferences(
   const reference = (id: string) => plan.baseReference(id);
   const originalViews = new Map(projects.map(project => [project.id, new Map(project.views.map(view => [view.id, view.type]))]));
   const issues: PackageRemapIssue[] = [];
+  let referenceCount = 0, outputBytes = 0;
   const issue = (project: string, location: Location, code: PackageRemapIssue["code"]) => {
     if (issues.length >= PACKAGE_LIMITS.dependencies) throw projectFileError("too many reference issues");
     issues.push(Object.freeze({ projectId: project, location: Object.freeze([...location]), code }));
@@ -60,6 +61,7 @@ export function previewPackageReferences(
     if (value === undefined) return;
     if (typeof value !== "string" || (!allowEmpty && !value)) { issue(project, [...at, key], "invalid-shape"); return; }
     if (!value && allowEmpty) return;
+    if (++referenceCount > PACKAGE_LIMITS.dependencies) throw projectFileError("too many mapped references");
     try { object[key] = resolve(value); }
     catch { issue(project, [...at, key], "unresolved-reference"); }
   };
@@ -176,12 +178,10 @@ export function previewPackageReferences(
         // An inline source definition needs a separate path/source ownership contract.
         if (config['sourceConfig'] !== undefined) issue(id, [...ca, "sourceConfig"], "unsupported-config");
         const tabs = config['viewTabs'];
-        if (tabs === undefined) {
-          if (config['activeTabId']) issue(id, [...ca, "activeTabId"], "unresolved-reference");
-          return;
-        }
-        if (!Array.isArray(tabs)) { issue(id, [...ca, "viewTabs"], "invalid-shape"); return; }
+        // Validate a known reference even when no tab list exists (including 0/false/null).
         map(config, "activeTabId", id, ca, tid => plan.tabId(id, viewId, widgetId, tid), true);
+        if (tabs === undefined) return;
+        if (!Array.isArray(tabs)) { issue(id, [...ca, "viewTabs"], "invalid-shape"); return; }
         tabs.forEach((tab: ObjectValue, ti: number) => {
           const ta = [...ca, "viewTabs", ti], type = tab['viewType'];
           tab['id'] = plan.tabId(id, viewId, widgetId, tab['id'] as string);
@@ -202,6 +202,10 @@ export function previewPackageReferences(
       });
     });
     p['id'] = plan.projectId(id);
+    // Fresh IDs may be longer than originals; an input bound alone is insufficient.
+    const bytes = new TextEncoder().encode(JSON.stringify(project)).length;
+    outputBytes += bytes;
+    if (bytes > MAX_PROJECT_DOCUMENT_BYTES || outputBytes > PACKAGE_LIMITS.totalBytes) throw projectFileError("reference preview too large");
   }
   return { stage: "reference-preview", projects, plan, issues: Object.freeze(issues) };
 }
