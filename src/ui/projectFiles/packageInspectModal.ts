@@ -29,16 +29,25 @@ export class ProjectPackageInspectModal extends Modal {
     const controls = new Setting(this.contentEl);
     const status = this.contentEl.createEl("p", { attr: { role: "status", "aria-live": "polite" } });
     const details = this.contentEl.createDiv();
+    const pathControls = new Setting(this.contentEl).setName(t("destination"));
+    const pathDetails = this.contentEl.createDiv();
     let busy = false;
+    let destination = "";
     let target: { path: string; hash: string; root: string } | undefined;
     let stageButton: import("obsidian").ButtonComponent;
     let chooseButton: import("obsidian").ButtonComponent;
+    let pathButton: import("obsidian").ButtonComponent;
+    let destinationInput: import("obsidian").TextComponent;
+    const refresh = () => {
+      chooseButton.setDisabled(busy); stageButton.setDisabled(busy || !target);
+      pathButton.setDisabled(busy || !target || !destination); destinationInput.setDisabled(busy);
+    };
     controls.addButton(button => { chooseButton = button; button.setButtonText(t("choose")).onClick(() => {
       if (busy) return;
       this.picker?.close();
       this.picker = new PackageArchivePicker(this.app, async file => {
         if (!this.alive || busy) return;
-        busy = true; target = undefined; stageButton.setDisabled(true); button.setDisabled(true); details.empty(); status.textContent = t("checking");
+        busy = true; target = undefined; refresh(); details.empty(); pathDetails.empty(); status.textContent = t("checking");
         try {
           const result = await this.service.inspect(file.path);
           if (!this.alive) return;
@@ -64,7 +73,7 @@ export class ProjectPackageInspectModal extends Modal {
           if (!get(settings).preferences.projectFiles) details.createEl("p", { text: t("stage-binding") });
         } catch (error) {
           if (this.alive) { details.empty(); status.textContent = t(error instanceof PackageInspectionError ? error.code : "read-failed"); }
-        } finally { busy = false; if (this.alive) { button.setDisabled(false); stageButton.setDisabled(!target); } }
+        } finally { busy = false; if (this.alive) refresh(); }
       });
       this.picker.open();
     }); });
@@ -73,13 +82,44 @@ export class ProjectPackageInspectModal extends Modal {
       button.setButtonText(t("stage")).setDisabled(true).onClick(async () => {
         if (busy || !target) return;
         const selected = target;
-        busy = true; button.setDisabled(true); chooseButton.setDisabled(true); status.textContent = t("staging");
+        busy = true; refresh(); pathDetails.empty(); status.textContent = t("staging");
         try {
           const receipt = await this.service.stage(selected.path, selected.hash, selected.root);
           if (this.alive) status.textContent = get(i18n).t("package-inspect.staged", { path: receipt.folder, files: receipt.files });
         } catch {
           if (this.alive) { target = undefined; status.textContent = t("stage-failed"); }
-        } finally { busy = false; if (this.alive) { button.setDisabled(!target); chooseButton.setDisabled(false); } }
+        } finally { busy = false; if (this.alive) refresh(); }
+      });
+    });
+    pathControls.addText(input => {
+      destinationInput = input;
+      input.inputEl.setAttribute("aria-label", t("destination"));
+      input.setPlaceholder(t("destination-placeholder")).onChange(value => {
+        if (!this.alive || busy) return;
+        destination = value; pathDetails.empty(); refresh();
+      });
+    }).addButton(button => {
+      pathButton = button;
+      button.setButtonText(t("preview-files")).setDisabled(true).onClick(async () => {
+        if (busy || !target || !destination) return;
+        const selected = target, folder = destination;
+        busy = true; refresh(); pathDetails.empty(); status.textContent = t("checking-destination");
+        try {
+          const result = await this.service.previewFiles(selected.path, selected.hash, folder);
+          if (!this.alive) return;
+          status.textContent = t("destination-checked");
+          pathDetails.createEl("p", { text: get(i18n).t("package-inspect.destination-summary", { path: result.root, files: result.files.length, conflicts: result.conflicts.length }) });
+          const list = pathDetails.createEl("ul");
+          for (const file of result.files) list.createEl("li", { text: file.source + " → " + file.destination });
+          if (result.conflicts.length) {
+            pathDetails.createEl("p", { text: t("destination-conflicts") });
+            const conflicts = pathDetails.createEl("ul");
+            for (const conflict of result.conflicts) conflicts.createEl("li", { text: conflict.destination + " ↔ " + conflict.existing });
+          }
+          if (result.notesNeedInspection) pathDetails.createEl("p", { text: t("note-links-pending") });
+          pathDetails.createEl("p", { text: t("destination-scope") });
+        } catch { if (this.alive) status.textContent = t("destination-failed"); }
+        finally { busy = false; if (this.alive) refresh(); }
       });
     });
   }

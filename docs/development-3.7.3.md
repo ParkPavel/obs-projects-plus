@@ -80,3 +80,11 @@ The result is labelled reference-preview. Unresolved references, malformed known
 This module is not connected to import UI yet. Even an empty diagnostic list is not installation approval: full schema validation, unknown-config handling, file/link relocation, folder/tag scope choices, installation journaling and verified registration remain open. This increment changes no active projects or notes.
 
 Preview limits: up to100 projects, 2MiB per configuration and16MiB total both before and after ID replacement; up to4096 nonempty reference-mapping attempts and4096 diagnostics. Exceeding a limit refuses the preview. activeTabId is checked even when no tab list exists.
+
+## File destination preview
+
+The ZIP inspector now accepts a future import folder and a Check folder action. It rereads and verifies the archive against the displayed SHA-256. Preview shows chosen-folder/original-path destinations, preserving the selected notes/attachments' subtrees; service project definitions are not extracted there. It checks current loaded vault paths, occupied files/folders, parent files, and case/Unicode NFC aliases. An occupied file always conflicts; equal bytes never authorize overwriting.
+
+Obsidian configuration and service namespaces in current/previous copy roots are protected. Required folders include ancestors; this does not establish ownership of existing folders. Preview is bounded to100000 indexed vault paths including inferred ancestors,16M path characters both on input and in the index,128 copy roots and4096 conflicts; ZIP schema and portable path limits still apply. Oversized plans are refused.
+
+Preview does not save settings, create folders, move files or install projects. Changing the folder, checking a new ZIP or staging clears the previous path list. Note links are not inspected or rewritten yet. No conflicts does not mean ready to import: config/source-scope validation, link relocation and fresh destination checks during installation are still required.

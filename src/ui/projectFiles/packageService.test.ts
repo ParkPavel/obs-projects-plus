@@ -48,6 +48,7 @@ beforeEach(() => {
   const host = { manifest: { dir: "AppConfig/plugins/projects" }, app: { vault: {
     configDir: "AppConfig", adapter: { read: async () => { if (primaryMissing) throw Error("ENOENT: no data.json yet"); return JSON.stringify(disk); } },
     getAbstractFileByPath: (path: string) => files.get(path) ?? folders.get(path),
+    getAllLoadedFiles: () => [...files.values(), ...folders.values()],
     readBinary: read, createBinary: create, createFolder: mkdir,
     read: async (file: { bytes: Uint8Array }) => new TextDecoder().decode(file.bytes),
     create: async (path: string, text: string) => create(path, new TextEncoder().encode(text).buffer),
@@ -70,6 +71,27 @@ test("preview performs no writes; save creates one visible ZIP and verifies actu
   expect(disk).toEqual(get(settings));
   await expect(service.save(prepared)).resolves.toEqual(saved);
   expect(create).toHaveBeenCalledTimes(1);
+});
+
+test("file placement preview checks a fresh archive and current inventory without flush or writes", async () => {
+  const saved = await service.save(await service.prepare("p", ["Note.md"]));
+  const occupied = new TFile("Imported/Note.md", { size: 3, mtime: 1 }); files.set(occupied.path, occupied);
+  const before = JSON.stringify(disk); create.mockClear(); mkdir.mockClear(); flush.mockClear();
+  confirmed = null; // Read-only planning does not acquire primary-write authority.
+  const result = await service.previewFiles(saved.path, saved.sha256, "Imported");
+  expect(result.files[0]?.destination).toBe("Imported/Note.md");
+  expect(result.conflicts).toContainEqual({ code: "file-exists", destination: "Imported/Note.md", existing: "Imported/Note.md" });
+  expect(JSON.stringify(disk)).toBe(before); expect(create).not.toHaveBeenCalled(); expect(mkdir).not.toHaveBeenCalled(); expect(flush).not.toHaveBeenCalled();
+  files.delete(occupied.path);
+  expect((await service.previewFiles(saved.path, saved.sha256, "Imported")).conflicts).toEqual([]);
+});
+
+test("file preview rejects stale hash and protected destination without changing settings", async () => {
+  const saved = await service.save(await service.prepare("p", ["Note.md"]));
+  create.mockClear(); mkdir.mockClear(); flush.mockClear();
+  await expect(service.previewFiles(saved.path, "0".repeat(64), "Imported")).rejects.toThrow("stale");
+  await expect(service.previewFiles(saved.path, saved.sha256, "Copies/Incoming")).rejects.toThrow("reserved");
+  expect(create).not.toHaveBeenCalled(); expect(mkdir).not.toHaveBeenCalled(); expect(flush).not.toHaveBeenCalled();
 });
 
 test("unconfirmed primary state and stale previews cannot write packages", async () => {

@@ -1,6 +1,16 @@
 ﻿{
     "translation": {
         "package-inspect": {
+            "destination": "将来的导入文件夹",
+            "destination-placeholder": "Projects/Imported",
+            "preview-files": "检查文件夹",
+            "checking-destination": "正在检查路径和已占用的名称…",
+            "destination-checked": "文件夹预览检查完成",
+            "destination-summary": "文件夹：{{path}}。文件：{{files}}。冲突：{{conflicts}}。",
+            "destination-conflicts": "这些路径已被占用，或仅大小写/Unicode 写法不同。请选择其他文件夹；不会提供覆盖操作。",
+            "note-links-pending": "移动前仍需单独检查笔记中的链接。",
+            "destination-scope": "这只是预览：不会移动文件、创建文件夹或安装项目。导入前必须再次检查路径。",
+            "destination-failed": "无法检查文件夹。请检查路径、限制和当前 ZIP。不能使用保留的副本目录或 Obsidian 配置目录。",
             "title": "检查项目 ZIP",
             "description": "选择库中收到的 ZIP，在导入前检查结构、内容和校验和。",
             "choose": "选择 ZIP",

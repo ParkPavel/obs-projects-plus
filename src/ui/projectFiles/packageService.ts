@@ -1,4 +1,4 @@
-import { TFile, type Plugin } from "obsidian";
+import { TFile, TFolder, type Plugin } from "obsidian";
 import { get } from "svelte/store";
 import { settings } from "src/lib/stores/settings";
 import { settingsFilePath } from "src/lib/settings/brokenBackup";
@@ -14,6 +14,7 @@ import { inspectProjectPackage, type InspectedProjectPackage } from "src/lib/pro
 import { PackageInspectionError } from "src/lib/projectFiles/packagePolicy";
 import { stageProjectPackage, type StageReceipt } from "src/lib/projectFiles/packageStage";
 import { stageVaultStorage } from "src/lib/projectFiles/stageVaultStorage";
+import { planPackageFiles, type PackageFilePlan, type VaultPathEntry } from "src/lib/projectFiles/packageFilePlan";
 
 export class ProjectPackageService {
   private busy = false;
@@ -45,6 +46,26 @@ export class ProjectPackageService {
     if (this.busy) throw projectFileError("package operation busy");
     this.busy = true;
     try { return await this.readPackage(path); } finally { this.busy = false; }
+  }
+
+  /** Fresh integrity check and placement preview only: never flushes settings or creates folders. */
+  async previewFiles(path: string, expectedHash: string, destination: string): Promise<PackageFilePlan> {
+    if (this.busy) throw projectFileError("package operation busy");
+    this.busy = true;
+    try {
+      const inspected = await this.readPackage(path);
+      if (inspected.archiveHash !== expectedHash) throw projectFileError("archive preview is stale");
+      this.check();
+      const loaded = this.host.app.vault.getAllLoadedFiles();
+      if (loaded.length > 100000) throw projectFileError("file preview inventory too large");
+      const inventory: VaultPathEntry[] = loaded.map(file => {
+        if (!(file instanceof TFile) && !(file instanceof TFolder)) throw projectFileError("unknown vault entry");
+        return { path: file.path, kind: file instanceof TFile ? "file" : "folder" };
+      });
+      const roots = configuredCopyRoots(get(settings).preferences.projectFiles);
+      const result = planPackageFiles(inspected.manifest, destination, inventory, this.host.app.vault.configDir, roots);
+      this.check(); return result;
+    } finally { this.busy = false; }
   }
 
   private async readPackage(path: string): Promise<InspectedProjectPackage> {
