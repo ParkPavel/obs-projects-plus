@@ -5,7 +5,7 @@ type CopyPreferences = ProjectsPluginPreferences["projectFiles"];
 
 /** Old roots remain reserved: changing the destination must not turn copies into records. */
 export function configuredCopyRoots(config: CopyPreferences): readonly string[] {
-  const candidates: unknown[] = [config?.root, ...(Array.isArray(config?.previousRoots) ? config.previousRoots : [])];
+  const candidates: unknown[] = [config?.root, ...(Array.isArray(config?.previousRoots) ? config.previousRoots as unknown[] : [])];
   return [...new Set(candidates.filter((value): value is string => typeof value === "string" && value.length > 0))];
 }
 

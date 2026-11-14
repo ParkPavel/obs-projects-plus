@@ -13,6 +13,8 @@
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
   import { settings } from "src/lib/stores/settings";
+  import { configuredCopyRoots } from "src/lib/projectFiles/paths";
+  import { get } from "svelte/store";
   import type { ProjectDefinition } from "src/settings/settings";
   import type { DataSource as DataSourceType } from "src/settings/v3/settings";
   import { mergeDataFrames } from "src/lib/datasources/mergeFrames";
@@ -25,7 +27,9 @@
 
   // Strings are different though. Even if you reassign a string value, it won't
   // trigger an update if it's the same string.
-  $: projectAsText = JSON.stringify(disassembedProject);
+  // Explicit reactive dependency: an open source must immediately reserve new
+  // copy roots. Keep serialization stable for unrelated preference/view edits.
+  $: projectAsText = JSON.stringify([disassembedProject, configuredCopyRoots($settings.preferences.projectFiles)]);
 
   // This only runs if the JSON representation of a project (without views) has
   // changed.
@@ -57,7 +61,7 @@
 
   function reassemble(text: string): ProjectDefinition {
     try {
-      const res: Omit<ProjectDefinition, "views" | "agenda"> = JSON.parse(text);
+      const [res]: [Omit<ProjectDefinition, "views" | "agenda">, string[]] = JSON.parse(text);
       return { ...res, views: [] };
     } catch {
       // Fallback: return last known good project to avoid crashing the plugin
@@ -71,8 +75,10 @@
     // Perform a full refresh of the data frame whenever the data source changes.
     // Live updates are handled by registerFileEvents in main.ts
     querying = (async () => {
-      if ($dataSource) {
-        const primaryFrame = await $dataSource.queryAll();
+      const source = $dataSource;
+      if (source) {
+        const primaryFrame = await source.queryAll();
+        if (get(dataSource) !== source) return;
 
         // Multi-source merge: if additionalSources configured, query and merge
         const extraSources = reassembledProject.additionalSources;
@@ -88,6 +94,7 @@
             .map((src) => ({ src, ds: resolveDataSourceFromConfig(src, reassembledProject) }))
             .filter((p): p is { src: typeof extraSources[number]; ds: DataSource } => p.ds !== null);
           const extraFrames = await Promise.all(pairs.map(({ ds }) => ds.queryAll()));
+          if (get(dataSource) !== source) return;
           // #170 step 1: the merge stays the project's frame, and provenance is
           // kept beside it. A block that names one source looks the frame up
           // here rather than querying again — acquisition happens once, and a
