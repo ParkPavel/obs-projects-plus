@@ -247,6 +247,22 @@ test("a writer refusing a newly replaced fresh base still blocks staging and pre
   expect(disk).toBe(foreign); expect(create).not.toHaveBeenCalled(); expect(mkdir).not.toHaveBeenCalled();
 });
 
+test("a known settings file resolved with additional defaults can initialize its first staging root", async () => {
+  const saved = await service.save(await service.prepare("p", []));
+  disk = { version: 4 } as State; confirmed = canonical(disk); settings.set({ ...DEFAULT_SETTINGS, projects: [] });
+  flush.mockImplementation(async () => { if (get(settings).preferences.projectFiles) persist(get(settings)); });
+  await expect(service.stage(saved.path, saved.sha256, "Projects Plus")).resolves.toMatchObject({ resumed: false });
+  expect(disk.projects).toEqual([]); expect(disk.preferences.projectFiles?.root).toBe("Projects Plus");
+});
+
+test("an unknown primary base cannot queue automatic first-root initialization", async () => {
+  const saved = await service.save(await service.prepare("p", []));
+  persist({ ...DEFAULT_SETTINGS, projects: [] }); confirmed = null;
+  create.mockClear(); mkdir.mockClear();
+  await expect(service.stage(saved.path, saved.sha256, "Projects Plus")).rejects.toThrow("not confirmed");
+  expect(settings.updatePreferences).not.toHaveBeenCalled(); expect(create).not.toHaveBeenCalled(); expect(mkdir).not.toHaveBeenCalled();
+});
+
 test("a different valid ZIP at the selected path requires a fresh preview before any staging writes", async () => {
   const saved = await service.save(await service.prepare("p", ["Note.md"]));
   const replacement = await service.save(await service.prepare("p", []));
