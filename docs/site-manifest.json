@@ -37,11 +37,11 @@
   "files": [
     {
       "name": "read/project-readme.html",
-      "sha256": "ae5030e2b3e4e70c2b0a5e7143226ab4eaafc7d0d5fa4e03b0107ce94cac8b78"
+      "sha256": "208338ed2896831ccb0da819750adf7d60c6eeb0ec0fee96bb6e2aa80efc5d54"
     },
     {
       "name": "read/readme-ru.html",
-      "sha256": "9480c9661a36c0fd3226d27151fb941ee6bd90a7f943b1b2a187cd910053ccf0"
+      "sha256": "f8e14ef15cb53507c4a851c664950a0b274d72487ce7ead0710dd516fdfda99a"
     },
     {
       "name": "read/changelog.html",
@@ -221,7 +221,7 @@
     },
     {
       "name": "search-index.json",
-      "sha256": "d82e7f7ce7766ba98258fd7a9121a6adc39840cd613234e74b12bd8fa7b9b437"
+      "sha256": "7bfaab0d42c9e69517e97d9e3ab4a7f5d47393bb404397e7d09f0d0ce10cc6cf"
     },
     {
       "name": ".nojekyll",

@@ -37,19 +37,19 @@ See the [changelog](CHANGELOG.md) and the [updating and rollback guide](docs/upg
 
 ## See it in action
 
-Real app captures supplied by the maintainer on 14 November 2026. Select an image to open the original, or browse all 14 in the website carousels.
+Real app captures supplied by the maintainer on 14 November 2026. Use the heading links to open originals, or browse all 14 in the website carousels.
 
 ### Desktop
 
-| Dashboard | Gallery | Schedule |
+| [Dashboard ↗](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/pc/2026-11-14_11-00-55.png) | [Gallery ↗](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/pc/2026-11-14_11-03-25.png) | [Schedule ↗](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/pc/2026-11-14_11-02-44.png) |
 | --- | --- | --- |
-| [![Dashboard](images/pc/2026-11-14_11-00-55.png)](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/pc/2026-11-14_11-00-55.png) | [![Gallery](images/pc/2026-11-14_11-03-25.png)](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/pc/2026-11-14_11-03-25.png) | [![Schedule](images/pc/2026-11-14_11-02-44.png)](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/pc/2026-11-14_11-02-44.png) |
+| ![Dashboard](images/pc/2026-11-14_11-00-55.png) | ![Gallery](images/pc/2026-11-14_11-03-25.png) | ![Schedule](images/pc/2026-11-14_11-02-44.png) |
 
 ### iPhone
 
-| Overview | Charts | Cards |
+| [Overview ↗](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/mobile/photo_7_2026-11-14_11-10-08.jpg) | [Charts ↗](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/mobile/photo_3_2026-11-14_11-10-08.jpg) | [Cards ↗](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/mobile/photo_4_2026-11-14_11-10-08.jpg) |
 | --- | --- | --- |
-| [![iPhone dashboard](images/mobile/photo_7_2026-11-14_11-10-08.jpg)](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/mobile/photo_7_2026-11-14_11-10-08.jpg) | [![iPhone chart](images/mobile/photo_3_2026-11-14_11-10-08.jpg)](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/mobile/photo_3_2026-11-14_11-10-08.jpg) | [![iPhone gallery](images/mobile/photo_4_2026-11-14_11-10-08.jpg)](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/mobile/photo_4_2026-11-14_11-10-08.jpg) |
+| ![iPhone dashboard](images/mobile/photo_7_2026-11-14_11-10-08.jpg) | ![iPhone chart](images/mobile/photo_3_2026-11-14_11-10-08.jpg) | ![iPhone gallery](images/mobile/photo_4_2026-11-14_11-10-08.jpg) |
 
 [← Open the desktop and iPhone carousels →](https://parkpavel.github.io/obs-projects-plus/en.html#screenshots)
 

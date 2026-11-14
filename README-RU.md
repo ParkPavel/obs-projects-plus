@@ -38,19 +38,19 @@ Projects Plus помогает работать с заметками Obsidian �
 
 ## Посмотрите, как это работает
 
-Реальные снимки приложения, предоставленные автором 14.11.2026. Нажмите на фото, чтобы открыть оригинал; все 14 снимков можно пролистать в каруселях на сайте.
+Реальные снимки приложения, предоставленные автором 14.11.2026. Оригиналы открываются по ссылкам в заголовках; все 14 снимков можно пролистать в каруселях на сайте.
 
 ### На компьютере
 
-| Дашборд | Галерея | Расписание |
+| [Дашборд ↗](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/pc/2026-11-14_11-00-55.png) | [Галерея ↗](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/pc/2026-11-14_11-03-25.png) | [Расписание ↗](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/pc/2026-11-14_11-02-44.png) |
 | --- | --- | --- |
-| [![Dashboard](images/pc/2026-11-14_11-00-55.png)](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/pc/2026-11-14_11-00-55.png) | [![Gallery](images/pc/2026-11-14_11-03-25.png)](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/pc/2026-11-14_11-03-25.png) | [![Schedule](images/pc/2026-11-14_11-02-44.png)](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/pc/2026-11-14_11-02-44.png) |
+| ![Dashboard](images/pc/2026-11-14_11-00-55.png) | ![Gallery](images/pc/2026-11-14_11-03-25.png) | ![Schedule](images/pc/2026-11-14_11-02-44.png) |
 
 ### iPhone
 
-| Обзор | Диаграммы | Карточки |
+| [Обзор ↗](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/mobile/photo_7_2026-11-14_11-10-08.jpg) | [Диаграммы ↗](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/mobile/photo_3_2026-11-14_11-10-08.jpg) | [Карточки ↗](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/mobile/photo_4_2026-11-14_11-10-08.jpg) |
 | --- | --- | --- |
-| [![iPhone dashboard](images/mobile/photo_7_2026-11-14_11-10-08.jpg)](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/mobile/photo_7_2026-11-14_11-10-08.jpg) | [![iPhone chart](images/mobile/photo_3_2026-11-14_11-10-08.jpg)](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/mobile/photo_3_2026-11-14_11-10-08.jpg) | [![iPhone gallery](images/mobile/photo_4_2026-11-14_11-10-08.jpg)](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/mobile/photo_4_2026-11-14_11-10-08.jpg) |
+| ![iPhone dashboard](images/mobile/photo_7_2026-11-14_11-10-08.jpg) | ![iPhone chart](images/mobile/photo_3_2026-11-14_11-10-08.jpg) | ![iPhone gallery](images/mobile/photo_4_2026-11-14_11-10-08.jpg) |
 
 [← Открыть карусели: ПК и iPhone →](https://parkpavel.github.io/obs-projects-plus/#screenshots)
 
