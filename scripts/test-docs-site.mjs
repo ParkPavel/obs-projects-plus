@@ -15,8 +15,26 @@ for(const [language,filename] of [['ru','index.html'],['en','en.html']]){
   const dom=new JSDOM(html,{url:`https://example.test/obs-projects-plus/${filename}`,runScripts:'outside-only'});
   const {window}=dom,{document}=window;
   window.HTMLElement.prototype.scrollIntoView=()=>undefined;
+  window.HTMLElement.prototype.scrollTo=function({left}){this.scrollLeft=left;};
   window.fetch=async()=>({ok:true,json:async()=>index});
   new vm.Script(script).runInContext(dom.getInternalVMContext());
+  const carousels=[...document.querySelectorAll('[data-carousel]')];
+  assert.equal(carousels.length,2);
+  for(const carousel of carousels){
+    const track=carousel.querySelector('.screenshot-track');
+    Object.defineProperty(track,'clientWidth',{value:400});
+    assert.equal(track.children.length,7);
+    const count=carousel.querySelector('[data-count]');
+    carousel.querySelector('[data-next]').click();
+    assert.equal(track.scrollLeft,400);
+    assert.equal(count.textContent,'2 / 7');
+    track.dispatchEvent(new window.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));
+    assert.equal(count.textContent,'3 / 7');
+    track.scrollLeft=0;track.dispatchEvent(new window.Event('scroll'));
+    assert.equal(count.textContent,'1 / 7');
+    assert.equal(carousel.querySelector('[data-previous]').disabled,true);
+  }
+  assert.ok(document.querySelectorAll('a[href="https://web.tribute.tg/d/Sh6"]').length>=3);
   const select=document.querySelector('select[data-note="0"]');
   select.value='2';select.dispatchEvent(new window.Event('change',{bubbles:true}));
   assert.match(document.getElementById('demo-markdown').textContent,/status: done/);

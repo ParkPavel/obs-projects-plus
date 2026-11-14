@@ -22,6 +22,8 @@ Place local images in the public `images/`, `docs/assets/` or `docs/media/` fold
 
 Markdown sources must be declared public guides. Hidden Markdown files and guide links pointing to undeclared private files are refused before their content is read.
 
+The desktop and iPhone carousel list and bilingual captions live in `scripts/site/showcase.mjs`. Originals and provenance are in `images/pc/`, `images/mobile/` and `images/README.md`. The generator copies every listed image into `docs/media/`; keep original links working when replacing images. Carousels use manual scrolling, accessible arrow buttons and a native image dialog, with no autoplay. GitHub READMEs use linked galleries pointing to the full carousels. The shared support destination is Tribute: `https://web.tribute.tg/d/Sh6`.
+
 Commit the regenerated HTML and search index with their source changes. The check command refuses stale output, missing files, broken local anchors and images without alternative text. CI and the release workflow run these checks before publication. The DOM tests cover interactions; they are not a substitute for visual checks in desktop and mobile browsers.
 
 ## Preview and screenshots

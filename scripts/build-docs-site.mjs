@@ -5,6 +5,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { Marked } from 'marked';
 import { languages } from './site/content.mjs';
+import { screenshots, screenshotPath } from './site/showcase.mjs';
 import { page, homepage, escapeHtml, repoUrl } from './site/layout.mjs';
 import { safeHref, resolveRepoReference, readRepoFile, readPublicMedia, readDocumentationSource, writeRepoFile, documentationRoutes } from './site/paths.mjs';
 
@@ -72,6 +73,7 @@ for (const source of sources) {
   // The two deliberately bilingual indexes are useful to searches in either language.
   if(['docs/README.md','docs/ERROR_CODES.md','templates/README.md','demo-vault/README.md'].includes(source)) index.push({title,lang:lang==='ru'?'en':'ru',url,text});
 }
+for (const [device, shots] of Object.entries(screenshots)) for (const [file] of shots) media.set(screenshotPath(device,file),`images/${device}/${file}`);
 for (const [target,source] of media) outputs.set(target,await readPublicMedia(root,source));
 for(const [lang,t] of Object.entries(languages))outputs.set(t.home,page({lang,t,title:t.title,description:t.description,body:homepage(lang,t),canonical:t.home}));
 outputs.set('search-index.json',JSON.stringify(index)+'\n');

@@ -1,5 +1,11 @@
 # Projects Plus
 
+**Your notes. A working system.** Boards, calendars, galleries and dashboards — inside Obsidian, built from ordinary Markdown files.
+
+[![Release](https://img.shields.io/github/v/release/ParkPavel/obs-projects-plus?label=release&color=6550a5)](https://github.com/ParkPavel/obs-projects-plus/releases/latest) [![Obsidian 1.8.7+](https://img.shields.io/badge/Obsidian-1.8.7%2B-6550a5)](https://obsidian.md/) [![Downloads](https://img.shields.io/github/downloads/ParkPavel/obs-projects-plus/total?color=376c48)](https://github.com/ParkPavel/obs-projects-plus/releases) [![Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-376c48)](LICENSE)
+
+[![Support the project via Tribute](https://img.shields.io/badge/%E2%99%A1%20Support%20the%20project-Tribute-6550a5?style=for-the-badge)](https://web.tribute.tg/d/Sh6)
+
 [Русский](README-RU.md) · [Website & ideas](https://parkpavel.github.io/obs-projects-plus/en.html) · [User guide](docs/user-guide-EN.md) · [Documentation](docs/README.md) · [Roadmap](ROADMAP.md)
 
 Projects Plus helps you work with Obsidian notes as a project: compare records in a table, arrange them on a board, plan events in a calendar, and build an overview on a Dashboard.
@@ -29,9 +35,25 @@ See the [changelog](CHANGELOG.md) and the [updating and rollback guide](docs/upg
 | Compare figures across projects | Charts with several series, another project's data and a second axis |
 | Select the notes to include | Folder, tag, built-in filtered query, or Dataview |
 
-![Example Projects Plus calendar](images/2026-01-27_12-24-17.png)
+## See it in action
 
-This illustration shows one interface configuration; your installed version may look different.
+Real app captures supplied by the maintainer on 14 November 2026. Select an image to open the original, or browse all 14 in the website carousels.
+
+### Desktop
+
+| Dashboard | Gallery | Schedule |
+| --- | --- | --- |
+| [![Dashboard](images/pc/2026-11-14_11-00-55.png)](images/pc/2026-11-14_11-00-55.png) | [![Gallery](images/pc/2026-11-14_11-03-25.png)](images/pc/2026-11-14_11-03-25.png) | [![Schedule](images/pc/2026-11-14_11-02-44.png)](images/pc/2026-11-14_11-02-44.png) |
+
+### iPhone
+
+| Overview | Charts | Cards |
+| --- | --- | --- |
+| [![iPhone dashboard](images/mobile/photo_7_2026-11-14_11-10-08.jpg)](images/mobile/photo_7_2026-11-14_11-10-08.jpg) | [![iPhone chart](images/mobile/photo_3_2026-11-14_11-10-08.jpg)](images/mobile/photo_3_2026-11-14_11-10-08.jpg) | [![iPhone gallery](images/mobile/photo_4_2026-11-14_11-10-08.jpg)](images/mobile/photo_4_2026-11-14_11-10-08.jpg) |
+
+[← Open the desktop and iPhone carousels →](https://parkpavel.github.io/obs-projects-plus/en.html#screenshots)
+
+Swipe, arrows and image zoom are available on the website. GitHub README uses compatible image galleries. Appearance depends on your Obsidian theme and settings.
 
 ## Installation
 
@@ -87,6 +109,11 @@ Projects Plus works with your vault through the Obsidian API. It has no separate
 
 See [Contributing](CONTRIBUTING.md) to report a reproducible issue, improve the documentation or contribute code. Release notes describe the behaviour and limits of each published version.
 
-If Projects Plus helps you, you can [support its development](https://web.tribute.tg/d/Sh6).
+
+## Support Projects Plus
+
+If the plugin helps you organize your work, support Park Pavel’s open-source project: new features, fixes and documentation.
+
+[♡ Support via Tribute →](https://web.tribute.tg/d/Sh6) · [Suggest an improvement](https://github.com/ParkPavel/obs-projects-plus/issues/new) · [Contribute](CONTRIBUTING.md)
 
 Projects Plus is based on Marcus Olsson's [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects). The current maintainer is Park Pavel. Licensed under [Apache 2.0](https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE); see [NOTICE](https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE) for attribution.
