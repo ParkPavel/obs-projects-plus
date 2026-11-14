@@ -39,6 +39,6 @@ export function isProjectCopyPath(path: string, root: string | readonly string[]
   return roots.some(candidate => {
     if (typeof candidate !== "string" || !candidate) return false;
     const prefix = candidate.toLowerCase() + "/";
-    return lower.startsWith(prefix) && /^(?:projects\/[a-f0-9]{64}\/project\.md|backups\/[a-f0-9]{64}\/[a-f0-9]{64}\.md)$/.test(lower.slice(prefix.length));
+    return lower.startsWith(prefix) && /^(?:projects\/[a-f0-9]{64}\/project\.md|backups\/[a-f0-9]{64}\/[a-f0-9]{64}\.md|incoming\/[a-f0-9]{64}(?:\.json|\/.+))$/.test(lower.slice(prefix.length));
   });
 }

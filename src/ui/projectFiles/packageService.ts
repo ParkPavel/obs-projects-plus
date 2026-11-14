@@ -5,13 +5,15 @@ import { settingsFilePath } from "src/lib/settings/brokenBackup";
 import { canonical } from "src/lib/settings/settingsVerify";
 import { textDigest, projectFileError } from "src/lib/projectFiles/document";
 import { binaryDigest, packageFilePath, PACKAGE_LIMITS, prepareProjectPackage, type PreparedProjectPackage } from "src/lib/projectFiles/package";
-import { configuredCopyRoots, isProjectCopyPath, projectFilesRoot } from "src/lib/projectFiles/paths";
+import { configuredCopyRoots, isProjectCopyPath, nextCopyPreferences, projectFilesRoot } from "src/lib/projectFiles/paths";
 import { createProjectZip } from "src/lib/projectFiles/packageZip";
 import { projectVaultStorage } from "src/lib/projectFiles/vaultStorage";
 import { ensureProjectFolders } from "src/lib/projectFiles/storage";
 import type { LatestProjectsPluginSettings } from "src/settings/settings";
 import { inspectProjectPackage, type InspectedProjectPackage } from "src/lib/projectFiles/packageInspect";
 import { PackageInspectionError } from "src/lib/projectFiles/packagePolicy";
+import { stageProjectPackage, type StageReceipt } from "src/lib/projectFiles/packageStage";
+import { stageVaultStorage } from "src/lib/projectFiles/stageVaultStorage";
 
 export class ProjectPackageService {
   private busy = false;
@@ -42,16 +44,48 @@ export class ProjectPackageService {
   async inspect(path: string): Promise<InspectedProjectPackage> {
     if (this.busy) throw projectFileError("package operation busy");
     this.busy = true;
+    try { return await this.readPackage(path); } finally { this.busy = false; }
+  }
+
+  private async readPackage(path: string): Promise<InspectedProjectPackage> {
+    this.check(); packageFilePath(path, this.host.app.vault.configDir);
+    const file = this.host.app.vault.getAbstractFileByPath(path);
+    if (!(file instanceof TFile)) throw projectFileError("archive missing");
+    if (file.stat.size > PACKAGE_LIMITS.archiveBytes) throw new PackageInspectionError("size-limit");
+    const before = { ...file.stat };
+    const bytes = new Uint8Array(await this.host.app.vault.readBinary(file));
+    this.check();
+    if (this.host.app.vault.getAbstractFileByPath(path) !== file || before.size !== file.stat.size || before.mtime !== file.stat.mtime || bytes.length !== before.size) throw projectFileError("archive changed during capture");
+    return inspectProjectPackage(bytes, this.host.app.vault.configDir, this.check);
+  }
+
+  async stage(path: string, expectedHash: string, expectedRoot: string): Promise<StageReceipt> {
+    if (this.busy) throw projectFileError("package operation busy");
+    this.busy = true;
     try {
-      this.check(); packageFilePath(path, this.host.app.vault.configDir);
-      const file = this.host.app.vault.getAbstractFileByPath(path);
-      if (!(file instanceof TFile)) throw projectFileError("archive missing");
-      if (file.stat.size > PACKAGE_LIMITS.archiveBytes) throw new PackageInspectionError("size-limit");
-      const before = { ...file.stat };
-      const bytes = new Uint8Array(await this.host.app.vault.readBinary(file));
-      this.check();
-      if (this.host.app.vault.getAbstractFileByPath(path) !== file || before.size !== file.stat.size || before.mtime !== file.stat.mtime || bytes.length !== before.size) throw projectFileError("archive changed during capture");
-      return await inspectProjectPackage(bytes, this.host.app.vault.configDir, this.check);
+      // Re-read the original ZIP: displayed mutable objects are not write authority.
+      const inspected = await this.readPackage(path);
+      if (inspected.archiveHash !== expectedHash) throw projectFileError("archive preview is stale");
+      const root = projectFilesRoot(expectedRoot, this.host.app.vault.configDir);
+      let value = await this.snapshot();
+      if ((value.preferences.projectFiles?.root ?? "Projects Plus") !== root) throw projectFileError("staging destination changed");
+      if (!value.preferences.projectFiles) {
+        const expected = canonical(value);
+        this.check();
+        if (canonical(get(settings)) !== expected || this.confirmed() !== expected) throw projectFileError("settings changed before staging");
+        // The explicit first staging action binds its visible namespace so live
+        // data sources exclude reserved entries before Vault events arrive.
+        settings.updatePreferences({ ...value.preferences, projectFiles: nextCopyPreferences(undefined, root, false, this.host.app.vault.configDir) });
+        value = await this.snapshot();
+      }
+      if (value.preferences.projectFiles?.root !== root) throw projectFileError("staging destination changed");
+      const expected = canonical(value);
+      const check = () => {
+        this.check();
+        if (canonical(get(settings)) !== expected || this.confirmed() !== expected) throw projectFileError("settings changed during staging");
+      };
+      const receipt = await stageProjectPackage(stageVaultStorage(this.host.app.vault, check), root, inspected, this.host.app.vault.configDir, check);
+      check(); return receipt;
     } finally { this.busy = false; }
   }
 

@@ -8,14 +8,20 @@
             "verified": "Package structure and checksums verified",
             "files": "Included files",
             "missing": "Unresolved known references:",
-            "scope": "Preview ready. Files remain inside the archive; active projects are unchanged. Authorship is not verified. Import will be available in a later stage.",
+            "scope": "Inspection does not install projects. Preparation creates a separate temporary copy with a recovery journal. Active notes and projects stay unchanged; sender authorship is not verified.",
             "invalid-zip": "The ZIP is damaged or contains inconsistent records.",
             "unsupported-zip": "This ZIP variant is not supported yet. Use a Projects Plus package stored without compression.",
             "unsafe-path": "The archive has unsafe, conflicting or unsupported file paths.",
             "size-limit": "The archive exceeds the entry or size limits.",
             "invalid-manifest": "The package manifest or project definitions are invalid, inconsistent or use an unsupported version.",
             "checksum": "The contents do not match their checksums.",
-            "read-failed": "The archive could not be read consistently. Check that the file exists and has finished synchronizing."
+            "read-failed": "The archive could not be read consistently. Check that the file exists and has finished synchronizing.",
+            "stage": "Prepare or resume",
+            "staging": "Preparing verified copies…",
+            "staged": "Prepared {{files}} files: {{path}}",
+            "stage-destination": "Temporary preparation folder: {{path}}",
+            "stage-binding": "The first preparation will use Projects Plus for copies and packages. Automatic copying stays off.",
+            "stage-failed": "Preparation stopped. The original ZIP and any written files are retained. Check this ZIP again to retry; changed temporary files or journals are preserved and block overwriting."
         },
         "project-package": {
             "title": "Package a project (ZIP)",

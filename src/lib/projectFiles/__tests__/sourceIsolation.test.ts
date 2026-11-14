@@ -49,3 +49,14 @@ test("switching the configured root retains isolation of old copies across reloa
   expect(source.includes(copy)).toBe(false);expect(source.includes(backup)).toBe(false);
   expect((await source.queryAll()).records.map(record => record.id)).toEqual([note]);
 });
+
+test("incoming staging is reserved before limits and event matching, while ordinary imported notes stay records", async () => {
+  const fs = await files(), staged = `Copies/Incoming/${key}/Files/Unexpected.md`;
+  await fs.create(staged, "#task\n");
+  const sources = [new FolderDataSource(fs, definition({ kind: "folder", config: { path: "", recursive: true } }), preferences),
+    new TagDataSource(fs, definition({ kind: "tag", config: { tag: "task", hierarchy: false } }), preferences)];
+  for (const source of sources) {
+    expect(source.includes(staged)).toBe(false); expect(source.includes(note)).toBe(true);
+    expect((await source.queryAll()).records.map(record => record.id)).toEqual([note]);
+  }
+});

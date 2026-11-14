@@ -7,7 +7,10 @@ import { canonical } from "src/lib/settings/settingsVerify";
 type Plugin = import("obsidian").Plugin;
 type State = import("src/settings/settings").LatestProjectsPluginSettings;
 
-jest.mock("src/lib/stores/settings", () => ({ settings: require("svelte/store").writable(require("src/settings/settings").DEFAULT_SETTINGS) }));
+jest.mock("src/lib/stores/settings", () => {
+  const store = require("svelte/store").writable(require("src/settings/settings").DEFAULT_SETTINGS);
+  return { settings: Object.assign(store, { updatePreferences: jest.fn((preferences: unknown) => store.update((value: object) => ({ ...value, preferences }))) }) };
+});
 jest.mock("obsidian", () => ({
   TFile: class { path: string; stat: { size: number; mtime: number }; constructor(path: string, stat: { size: number; mtime: number }) { this.path = path; this.stat = stat; } },
   TFolder: class { path: string; constructor(path: string) { this.path = path; } },
@@ -30,6 +33,7 @@ let files: Map<string, { path: string; stat: { size: number; mtime: number }; by
 let folders: Map<string, unknown>, create: jest.Mock, read: jest.Mock, flush: jest.Mock, mkdir: jest.Mock;
 function persist(state: State) { disk = state; confirmed = canonical(state); settings.set(state); }
 beforeEach(() => {
+  jest.mocked(settings.updatePreferences).mockClear();
   persist({ ...DEFAULT_SETTINGS, projects: [{ ...DEFAULT_PROJECT, id: "p", name: "Project" }],
     preferences: { ...DEFAULT_SETTINGS.preferences, projectFiles: { root: "Copies", autoSync: false } } });
   files = new Map(); folders = new Map(); flush = jest.fn(async () => undefined);
@@ -44,6 +48,12 @@ beforeEach(() => {
     configDir: "AppConfig", adapter: { read: async () => JSON.stringify(disk) },
     getAbstractFileByPath: (path: string) => files.get(path) ?? folders.get(path),
     readBinary: read, createBinary: create, createFolder: mkdir,
+    read: async (file: { bytes: Uint8Array }) => new TextDecoder().decode(file.bytes),
+    create: async (path: string, text: string) => create(path, new TextEncoder().encode(text).buffer),
+    process: async (file: { bytes: Uint8Array; stat: { size: number; mtime: number } }, transform: (text: string) => string) => {
+      file.bytes = new TextEncoder().encode(transform(new TextDecoder().decode(file.bytes)));
+      file.stat.size = file.bytes.length; file.stat.mtime++;
+    },
   } } } as unknown as Plugin;
   service = new ProjectPackageService(host, flush, () => confirmed, () => true);
 });
@@ -184,4 +194,70 @@ test("closing an incoming inspection during a read retires it", async () => {
   service.dispose(); finish(new Uint8Array(files.get(saved.path)!.bytes).buffer);
   await expect(pending).rejects.toThrow("retired");
   expect(flush).not.toHaveBeenCalled(); expect(create).not.toHaveBeenCalled();
+});
+
+test("explicit staging writes only reserved blobs and journal, retaining archive and active projects", async () => {
+  const saved = await service.save(await service.prepare("p", ["Note.md"]));
+  const archive = new Uint8Array(files.get(saved.path)!.bytes), note = new Uint8Array(files.get("Note.md")!.bytes), before = JSON.stringify(disk);
+  create.mockClear();
+  const receipt = await service.stage(saved.path, saved.sha256, "Copies");
+  expect(receipt.folder).toBe(`Copies/Incoming/${saved.sha256}`);
+  expect(JSON.parse(new TextDecoder().decode(files.get(receipt.journal)!.bytes)).state).toBe("ready");
+  expect(create.mock.calls.every(([path]) => path.startsWith("Copies/Incoming/") && /\.(json|bin)$/.test(path))).toBe(true);
+  expect(files.get(saved.path)?.bytes).toEqual(archive); expect(files.get("Note.md")?.bytes).toEqual(note);
+  expect(JSON.stringify(disk)).toBe(before); expect(settings.updatePreferences).not.toHaveBeenCalled();
+  create.mockClear(); await expect(service.stage(saved.path, saved.sha256, "Copies")).resolves.toMatchObject({ resumed: true, created: 0 });
+  expect(create).not.toHaveBeenCalled();
+});
+
+test("first staging in an empty vault binds the default reserved root through the primary writer", async () => {
+  const saved = await service.save(await service.prepare("p", []));
+  persist({ ...DEFAULT_SETTINGS, projects: [] });
+  flush.mockImplementation(async () => { persist(get(settings)); });
+  await expect(service.stage(saved.path, saved.sha256, "Projects Plus")).resolves.toMatchObject({ resumed: false });
+  expect(disk.projects).toEqual([]);
+  expect(disk.preferences.projectFiles).toEqual({ root: "Projects Plus", autoSync: false });
+  expect(settings.updatePreferences).toHaveBeenCalledTimes(1);
+});
+
+test("a different valid ZIP at the selected path requires a fresh preview before any staging writes", async () => {
+  const saved = await service.save(await service.prepare("p", ["Note.md"]));
+  const replacement = await service.save(await service.prepare("p", []));
+  const target = files.get(saved.path)!; target.bytes = new Uint8Array(files.get(replacement.path)!.bytes); target.stat.size = target.bytes.length; target.stat.mtime++;
+  create.mockClear(); mkdir.mockClear(); flush.mockClear();
+  await expect(service.stage(saved.path, saved.sha256, "Copies")).rejects.toThrow("preview is stale");
+  expect(create).not.toHaveBeenCalled(); expect(mkdir).not.toHaveBeenCalled(); expect(flush).not.toHaveBeenCalled();
+});
+
+test("changed destination and unconfirmed settings block preparation", async () => {
+  const saved = await service.save(await service.prepare("p", []));
+  create.mockClear(); mkdir.mockClear();
+  persist({ ...disk, preferences: { ...disk.preferences, projectFiles: { root: "Other", autoSync: false, previousRoots: ["Copies"] } } });
+  await expect(service.stage(saved.path, saved.sha256, "Copies")).rejects.toThrow("destination changed");
+  confirmed = null;
+  await expect(service.stage(saved.path, saved.sha256, "Other")).rejects.toThrow("not confirmed");
+  expect(create).not.toHaveBeenCalled(); expect(mkdir).not.toHaveBeenCalled();
+});
+
+test("a partial Vault preparation resumes from the same original ZIP", async () => {
+  const saved = await service.save(await service.prepare("p", ["Note.md"])), originalCreate = create.getMockImplementation()!;
+  let payloads = 0;
+  create.mockImplementation(async (path: string, buffer: ArrayBuffer) => {
+    if (path.endsWith(".bin") && ++payloads === 2) throw Error("storage interruption");
+    return originalCreate(path, buffer);
+  });
+  await expect(service.stage(saved.path, saved.sha256, "Copies")).rejects.toThrow("storage interruption");
+  create.mockImplementation(originalCreate);
+  await expect(service.stage(saved.path, saved.sha256, "Copies")).resolves.toMatchObject({ resumed: true, created: 2 });
+  expect(files.has(saved.path)).toBe(true); expect(disk.projects.map(project => project.id)).toEqual(["p"]);
+});
+
+test("a primary update during folder creation retires the staging write boundary", async () => {
+  const saved = await service.save(await service.prepare("p", [])); create.mockClear();
+  mkdir.mockImplementationOnce(async (path: string) => {
+    folders.set(path, new TFolder(path));
+    persist({ ...disk, projects: disk.projects.map(project => ({ ...project, name: "Updated elsewhere" })) });
+  });
+  await expect(service.stage(saved.path, saved.sha256, "Copies")).rejects.toThrow("settings changed during staging");
+  expect(create).not.toHaveBeenCalled();
 });
