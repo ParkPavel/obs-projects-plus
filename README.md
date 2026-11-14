@@ -16,7 +16,7 @@ Dashboard formulas add calculated columns to the data shown in a view. They are 
 
 ## Next: 3.7.3 and 3.7.4
 
-**3.7.3 — projects and portable templates in a visible vault folder.** Plan the internal architecture, settings preservation, Markdown-note sharing and a documented file interface for AI tools.
+**3.7.3 — settings synchronization, backups and ZIP project packages.** Keep data.json authoritative; use a visible folder for verified copies and AI editing, with optional notes and attachments in transfer packages.
 
 **3.7.4 — mobile widgets and reminders.** Explore compact project elements, native OS integration and notification delivery on selected devices.
 

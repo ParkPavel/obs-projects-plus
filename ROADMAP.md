@@ -18,7 +18,7 @@ promised by 3.7.2.
 
 | Version | Priority | Status |
 | --- | --- | --- |
-| 3.7.3 | Visible project/template files, safe migration, .md exchange and an AI file interface | [Draft specification](docs/plan-3.7.3.md) |
+| 3.7.3 | Keep data.json; visible-folder synchronization, backups, ZIP settings/notes and validated AI edits | [Draft specification](docs/plan-3.7.3.md) |
 | 3.7.4 | Mobile widget catalogue and reminders, starting with platform feasibility | [Research plan](docs/plan-3.7.4.md) |
 
 [Cycle announcement](docs/next-versions.md). Documents and a pushed GitHub branch come before implementation. Existing tracks below remain a general backlog, not extra 3.7.3 scope.

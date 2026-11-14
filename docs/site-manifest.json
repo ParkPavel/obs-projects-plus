@@ -43,11 +43,11 @@
   "files": [
     {
       "name": "read/project-readme.html",
-      "sha256": "f0e4f006f8530bc1a11d37b40011806e90053feb51812945d4a15830afa98500"
+      "sha256": "57134c368ac7922d5779e3175c96fa7e44adb20f5d38c0f1b44e2ab5ecee09df"
     },
     {
       "name": "read/readme-ru.html",
-      "sha256": "025c1a0c28fbdd37f96c55851011d296e04f8f24115087d172dd555b49f88c89"
+      "sha256": "ceeb692cce137dd914314772f6e158477a2fa7210453367d3f6a9d2c6234eed3"
     },
     {
       "name": "read/changelog.html",
@@ -59,11 +59,11 @@
     },
     {
       "name": "read/roadmap.html",
-      "sha256": "a955f427acc412fa4ad2a6d0d183c1e7020bdbc7952c37212cde2755ca146813"
+      "sha256": "99f14e09bd71cd99678e1ffd4dac860bee86aa6fc40bffc4275334be8e477bb4"
     },
     {
       "name": "read/roadmap-ru.html",
-      "sha256": "a9e926e5b87a429349d1286c52252f9a65034116926ea98fbe25c3b21f3abe79"
+      "sha256": "a343d6c687cb8c99b2f3b874c6bbfc922103d1b62645b2c15f0baf2cc7e55c98"
     },
     {
       "name": "read/contributing.html",
@@ -115,19 +115,19 @@
     },
     {
       "name": "read/next-versions-ru.html",
-      "sha256": "99090cf97c3b43b99e22f80cfaa9153309540d703e4b5a3578692c6514d7814b"
+      "sha256": "f2b60525f0325302b034da8d25416a90ddd6f5b99587e9556f94d9d3ae85aebc"
     },
     {
       "name": "read/next-versions.html",
-      "sha256": "11b94f50c557e1a84c765fe77d8ccea4113a9b1a6d00f83f0b5c79a15c028992"
+      "sha256": "963dea67536cf8e73457474515f5862474b454eebc3fb960777b93b9cf77eb9f"
     },
     {
       "name": "read/plan-3.7.3-ru.html",
-      "sha256": "42a1375ad05026ddfe35577b9d7a6d6b0916d882119b56320133e2a52c469e9b"
+      "sha256": "a20e207ab119f111f827fff7d645cb3dda1932a343b97f0f564eb33371030994"
     },
     {
       "name": "read/plan-3.7.3.html",
-      "sha256": "f6bc0e8ea9f1d09047027bd9c799da51e0eef89330040e73832658a5ad9ffded"
+      "sha256": "9dcf163d9f0b1307811ef731ba146c7f9a3bc8632d84f5e0db4662e9e958f184"
     },
     {
       "name": "read/plan-3.7.4-ru.html",
@@ -251,7 +251,7 @@
     },
     {
       "name": "search-index.json",
-      "sha256": "b69403ff10116cb6a3509e854a62478c585aa3c03eace863e2e62cd9941b43c0"
+      "sha256": "2ebbc14eb85b23742a8f3345e48db0eaea354891d765781100df77dc63946ab2"
     },
     {
       "name": ".nojekyll",

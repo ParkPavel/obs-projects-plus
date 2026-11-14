@@ -4,13 +4,13 @@
 
 **3.7.2 is released. The next cycle starts with architecture and documentation, followed by implementation.** These are plans, not features in your installed version. No dates are committed.
 
-## 3.7.3: your projects in your vault
+## 3.7.3: synchronization, backups and project exchange
 
-First, prepare the internals for storing, creating and sharing project templates without losing existing configuration. A visible folder of project/template documents should replace the need to access hidden settings for these workflows.
+**data.json remains the authoritative settings store**, with normal operation using the in-memory model. Add verified synchronization into a visible folder for filesystem copying, recovery and AI editing. Inbound edits pass validation and conflict checks before application.
 
-The goal is to share a template as an ordinary Obsidian note, then map destination folders and install working views, relations and formulas. AI tools with permitted vault access can use that same documented file interface.
+Share a ZIP containing configuration and selected notes/attachments. Recipients choose a destination; import verifies/extracts the package, remaps references and registers the project. Tag-based selection is retained with destination-tag collision checks. After success, users can keep the source archive or delete it through available trash.
 
-Preservation, verified migration, recoverable conflicts and rollback come first. Records and private settings must not leak into templates. The initial prototype will validate the format and whether native Share can be invoked directly.
+A mirror and versioned backup serve different purposes. Settings-only copies cannot restore records; same-disk copies cannot protect against loss of the whole vault. Real-device prototypes will establish supported ZIP-sharing paths.
 
 [3.7.3 architecture, stages and acceptance](plan-3.7.3.md).
 

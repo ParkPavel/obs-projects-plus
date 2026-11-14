@@ -1,88 +1,87 @@
-# 3.7.3 plan: vault-native projects and templates
+# 3.7.3 plan: synchronization, backups and project packages
 
-[Русский](plan-3.7.3-RU.md) · [Roadmap](../ROADMAP.md) · [Next versions](next-versions.md)
+[Русский](plan-3.7.3-RU.md) · [Roadmap](../ROADMAP.md) · [Announcement](next-versions.md)
 
-Status: **draft implementation specification**, not an available feature. Research baseline: released 3.7.2 and main a2f322d7 on 14 November 2026. No delivery date or final file schema is committed. This stage changes documentation only.
+Status: **revised draft specification**, following the maintainer's decisions on 14 November 2026. Not shipped functionality. Baseline: 3.7.2 / main a2f322d7. Documentation only at this stage.
 
-## User outcome
+## Agreed direction
 
-Find and edit project definitions in a visible vault folder, save a reusable template and send it as an ordinary Markdown note. An AI tool with permitted vault access can use the same documented file interface without editing hidden data.json. A recipient reviews the package, maps local folders and installs it with working dependencies.
+**data.json remains the authoritative persistent store for active configuration.** The in-memory model serves normal operations. A visible folder holds verified copies for backup, sharing and external tools. No mandatory migration of all live projects into separate authoritative notes is needed.
 
-Visible documents address inconvenient access to hidden configuration on iPhone/iPad. The [Vault API](https://docs.obsidian.md/Plugins/Vault) handles visible vault files; hidden folders require the Adapter API. User records remain ordinary notes.
+Use ZIP packages containing configuration and selected notes/attachments. Import produces an understandable folder with configuration and project materials. Configuration-only packages remain supported. AI tools edit visible copies; changes enter through validation and the existing settings writer, without directly editing hidden settings.
 
-## Inspected baseline
+The inspected baseline remains src/settings/settings.ts and v4/settings.ts; lib/stores/settings.ts; lib/settings/settingsWriter.ts and settingsCheckedSave.ts; main.ts loadSettings; relations/baseRef.ts and blockRefs.ts; templates/interpolate.ts and export/exportService.ts. These reveal existing settings recovery, project/archive/preferences state, ID counters and references across projects/views/blocks. Note-text templates and row export are not project-package formats. Inventory of every writer/custom-view payload is still P0 work.
 
-| Source area | Architectural consequence |
+## Ownership and visible layout
+
+| Layer | Role |
 | --- | --- |
-| src/settings/settings.ts and src/settings/v4/settings.ts | Settings v4 include projects, archives, preferences, sources, fields, views, Agenda, template paths and ID counters. A portable document needs an independent schema version. |
-| src/lib/stores/settings.ts | Project mutations currently update a shared store. Introduce one command boundary, not another independent writer. |
-| src/lib/settings/settingsWriter.ts, settingsCheckedSave.ts and main.ts loadSettings | Keep queued writes, base comparisons, read-back, conflict refusal and verified recovery copies. |
-| src/lib/relations/baseRef.ts and blockRefs.ts | Dependencies include projects, named sources and projectId::block:viewId:widgetId addresses; remapping must understand the graph. |
-| src/lib/templates/interpolate.ts and src/lib/export/exportService.ts | Note-text interpolation and record export already exist; neither is a portable project-definition format. |
+| In-memory model | Fast reads and edits through existing commands/store. |
+| data.json | Authoritative persisted projects, archives and preferences, retaining current checked writes and recovery. |
+| Visible mirror | Verified copy of a saved project revision, with timestamp/status; never a second independent authority. |
+| Versioned backup | Immutable snapshot with scope, revision, checksums and restore rules. A mutable mirror alone has no history. |
+| Transfer package | ZIP containing chosen configuration, notes, attachments and dependencies. |
 
-This is an inspection of these areas, not a completed audit of every writer or custom-view setting. Completing that inventory is the first implementation task.
+Proposed configurable root: Projects Plus/, containing Projects/<project-id>/ with a readable Project.md, Backups/<snapshot-id>/, Packages/ and Incoming/. Imported materials can sit beside the configuration in Notes/ and Attachments/, with destination names chosen by the import wizard. The [Vault API](https://docs.obsidian.md/Plugins/Vault) accesses visible files, giving iPhone/iPad users readable copies outside hidden settings.
 
-## Proposed document interface
+Markdown with one identified JSON block is the prototype configuration format; exact markers/schema remain open. The archive can carry a manifest.json. Do not introduce competing canonical encodings.
 
-Default visible root: **Projects Plus/**, configurable to another vault-relative folder. Proposed subfolders: Projects for active .md definitions, Templates for portable .md packages, Recovery for verified snapshots/journals, and README.md for human/AI instructions. These paths are proposed, not implemented.
+## Outbound synchronization
 
-Prototype one Markdown document with descriptive text and one identified JSON configuration block. Small frontmatter holds document kind, stable ID and envelope version. Compare this against full YAML using real editor and iPhone Share trials before freezing field names, markers and JSON Schema. Do not introduce two competing canonical formats.
+Default flow: **successfully persisted settings → verified visible copy**. Unsaved in-memory edits cannot become a claimed verified backup. Expose saved revision, timestamp and read-back status.
 
-| Object | Authority after explicit file-mode activation |
-| --- | --- |
-| Active project | Its visible definition note; memory/index can be rebuilt. |
-| Template | An inactive document, never automatically installed merely because it arrived. |
-| Records and field values | Original user notes, untouched by configuration migration. |
-| Device/UI preferences and sync state | Local settings, not automatically exported. |
-| Recovery data | Separate private snapshots/journal, excluded from a shared template. |
+Offer manual mirror refresh, optional coalesced refresh after saves and explicit versioned backups. Do not ZIP/copy all records or rescan the vault on each keystroke/UI change. Use a separate bounded export queue; set debounce/resource budgets from measurements. Do not promise JS execution after Obsidian closes: pending work resumes or is offered on next launch.
 
-Unmigrated projects retain their current settings authority. A migration state explicitly selects the active owner. No unconditional dual writing or two independent sources of truth. data.json may hold a rebuildable index, never the only copy of a file-backed project.
+Mirror failure does not undo a successful data.json save: display saved-settings/stale-copy status, retain the last good mirror and offer retry. Primary-save failure cannot report a backup of new settings as successful. Moving/deleting the destination requires explicit rebinding rather than silent recreation elsewhere.
 
-Documents are declarative data, not executable scripts or instructions granting permissions. Importing a file must not execute JavaScript, OS commands, downloads or network requests.
+## External edits and AI
 
-## Preservation and migration
+External mirror changes are **proposed changes**, not unconditional permission to overwrite data.json. Validate schema/IDs/base revision, show differences/dependencies and apply through the shared commands and checked writer; read back and refresh the mirror.
 
-1. Save and read back original settings bytes and required recovery data. Copy failure blocks migration.
-2. Inventory and preserve projects/archives, ordering, fields, sources, formulas and semantics, relations/rollups, views/blocks, Agenda, palettes, exclusions, note-template paths and live ID counters. Include third-party view configurations in the inventory.
-3. Write staged documents, read back, validate schema/references and compare semantic configuration equality. Do not silently replace unknown values with defaults.
-4. Journal the transition and switch authority only after verification. Multiple synced files are not one transaction; interrupted migration must resume or recover an unambiguous consistent state.
-5. Keep the old copy through a verified restart. Rollback requires matching previous plugin assets and settings; retain edits made after migration separately.
+If UI changed the project meanwhile, retain both versions and require reconciliation. Outbound refresh must also preserve externally edited copies, comparing against the last confirmed mirror. Suppress feedback loops with revision/hash identity, not only a timer. Default inbound application is explicit. A trusted automatic mode is a separate future decision; foreign archives are never installed merely on arrival.
 
-Unknown future versions or unsupported settings remain readable as original data and must not be overwritten. Preserve unknown fields losslessly or refuse the write; never silently discard them. Distinguish planned, written, verified, applied and restored states.
+Publish the schema, allowed fields and AI examples. Imported text cannot execute code, OS commands or network actions. Exclude control notes from normal plugin record queries. Preserve unknown fields/versions or refuse application; never silently substitute defaults. Mirror deletion cannot delete active projects or records.
 
-## UI, external edits and AI
+## Packaging
 
-UI and file edits use common validation and a single per-project write queue. Vault events trigger fresh reads with bounded/coalesced work rather than full-vault rescans on every edit. Compare revision/content hash inside the available read-modify-write operation, then read back. This is not a distributed lock across devices or unrelated processes.
+Offer settings-only, settings with selected records and settings with the chosen project dataset. Show contents, size, attachments, dependencies and private details before confirmation. Never automatically export secrets, device/UI preferences or runtime caches.
 
-Conflicts retain both versions and require explicit reconciliation instead of last-write-wins. Invalid JSON leaves the last accepted in-memory definition available and the invalid source untouched, with a visible unapplied state. Rename keeps identity; duplicate IDs are conflicts. File deletion neither deletes source records nor silently recreates the file. Exclude control documents from normal plugin data queries. Recovery notes can contain private settings and follow vault access/sync policies.
+Include format/compatibility metadata, root project, explicitly included dependent definitions, file/checksum manifest, configuration and selected notes/attachments/text templates. Do not download external links automatically or silently include the entire linked vault. Show missing dependencies and the chosen traversal boundary.
 
-Publish a schema, field catalogue and minimal AI examples for creating a project, adding a field/view, connecting projects and changing templates. No specific model, built-in chat, API key or cloud service is required. Editing a definition does not authorize bulk changes to its records.
+Tag-based projects export an explicit selected record list, separately retaining their tag/filter rules. A folder alone does not describe their membership. If files change while copying, retry/refuse or mark the operation incomplete; manifest hashes must match actual copied bytes. Do not claim a global filesystem transaction.
 
-## Portable templates and sharing
+Verify actual public ways to share a ZIP on Obsidian/iOS/Android/desktop. [Mobile note Share](https://obsidian.md/help/more-options-menu) does not establish a plugin-callable ZIP-sharing API. Prototype direct sharing and a clear save/open-archive fallback. Never disguise ZIP as .md; PDFs/text-only note shares are not package transfer.
 
-Include field schema, views, filters, formulas, Agenda and required textual note templates. Exclude actual records, archives, tokens, UI history, runtime caches and live sequence counters. Even paths and expressions can reveal private context; provide a package/content review before sharing.
+## Unpacking and registration
 
-Support one root project plus explicitly included dependent project definitions in one .md package. Import assigns new project/view/block IDs and remaps typed references, not arbitrary string substrings in user text. Missing dependencies require a mapping or refusal. Repeated import cannot overwrite an existing working project. Reconcile counters with destination records when creating live projects; never reset existing live counters.
+1. Validate format/compatibility, file count, sizes and expanded-data limits. Refuse absolute/traversal paths, outward links, duplicate destinations and hidden-configuration writes. Execute no content.
+2. Show contents/dependencies and choose a destination. For tag-based projects, that folder places records while tag selection remains. Detect collisions with existing destination-vault tags and offer remapping/scope clarification with a membership preview.
+3. Extract to staging and verify the manifest first. Resolve file-name collisions before final writes; never silently overwrite existing files or unrelated notes while fixing references.
+4. Assign new project/view/block IDs for a new import. Remap typed references and note/attachment paths, preserving link kinds, aliases and anchors. Global JSON/Markdown string replacement is insufficient; report unresolved references.
+5. Register through the authoritative writer. Multiple file writes plus data.json are not atomic: journal progress, defer success until verification and resume/roll back partial installation without losing pre-existing data.
+6. After success, offer keeping the source archive or deleting it through available trash. Preserve it on failure and never destroy the only verified recovery copy.
 
-Recipients map folder/source bindings explicitly; an empty path must not silently select their whole vault. Binary attachments and actual records are outside the base single-note package and listed as dependencies. Embedded text templates use safe relative names. Refuse traversal, absolute destinations and writes into hidden configuration or outside the chosen folder.
+New import and restore are distinct operations. Restore retains the necessary IDs/counters and checks conflicts; cloning assigns new IDs and reconciles counters with destination records. Repeated imports do not overwrite a project by name.
 
-Target action: **Share template**, preparing a portable note and invoking native Share where a supported integration exists. [Obsidian documents mobile note sharing](https://obsidian.md/help/more-options-menu), but that does not establish a public plugin invocation API or prove preservation of a configuration block. First test both. Until then, one-tap dispatch is a goal: opening the prepared note and using its native Share is the fallback; desktop can save/open the file. PDF, images and Obsidian URLs are not substitutes for the .md package.
+## Backup and restore
 
-## Implementation order and acceptance
+Configuration-only copies cannot restore record contents. Record the backup scope in its manifest. Versioned snapshots are not overwritten like mirrors; retention is explicit and cannot silently remove the last verified version.
+
+Before restore, verify a backup of current state, compatibility, files and references, then read back the result. Handle moved/deleted records and archives explicitly. Same-vault backups do not protect against losing the entire vault/disk: users can copy/sync the folder externally through filesystem tools. The plugin cannot claim to have verified that external delivery.
+
+## Stages and acceptance
 
 | Stage | Completion evidence |
 | --- | --- |
-| P0: inventory/contracts | All fields/writers/references mapped; JSON/YAML and real-device Share trials recorded. |
-| P1: pure model/codec | Independent schema, parse/validate/serialize, dependency graph and lossless supported round-trip. |
-| P2: file repository | Reads, writes, revisions, rename/delete, events and conflicts preserve the last accepted state. |
-| P3: migration/recovery | Verified backups, journal, interruption at every transition, restart and rollback without rewriting records. |
-| P4: package/import | Content review, dependency remapping, path safety, repeated import and no implicit external actions. |
-| P5: integration/devices | UI/AI share the contract; two-vault and actual desktop/iPhone exchange tests pass. |
+| P0: inventory | All fields/writers/references/custom views; prototype copy/package format and real ZIP-transfer channels. |
+| P1: codec/graph | Versioned schema, lossless settings round-trip, file inventory and typed dependency remapping. |
+| P2: mirror/backups | Confirmed-revision exports, queue/read-back, conflicts, retry, restore and no feedback loop. |
+| P3: ZIP export | Explicit scope/privacy, consistent manifest and concurrent-file-change handling. |
+| P4: import/AI | Staging, folder/tag wizard, IDs/links, checked registration, interruption journal and external-edit diff/application. |
+| P5: devices/regressions | Desktop and physical iPhone transfer/restart, two-device conflicts, archive/trash choice and restore. |
 
-Acceptance includes complex 3.7.2 projects with matching settings/results/counters after restart and byte-identical original notes; linked practice templates imported into a clean vault with different IDs/paths; simultaneous UI/AI/two-device edits; invalid/newer documents, duplicate IDs, rename/delete and denied writes; interruption/recovery; and real .md transfer on iPhone. Sharing with another user and syncing one's own devices are separate scenarios.
+Test preserved existing project behaviour, formulas/order/counters, unchanged notes without a user request, independent settings/mirror disk failures, concurrent UI/AI/sync edits, corrupt/oversized/newer archives, unknown fields, name/tag collisions, attachments/dependencies, interruption at every transition, repeated import and separate restore. Verify actual recovery, not only a copy-success message.
 
-Measure startup/edit latency, memory, file IO and event counts against the same 3.7.2 dataset. Set numeric regression budgets from that measured baseline before refactoring; no performance pass is assumed in advance.
+Compare startup/editing latency, memory, IO and background load to the same 3.7.2 dataset; establish numeric budgets from measured baseline. Keep full export off the UI critical path.
 
-## Boundaries and decisions
-
-No new formula engine, automatic record transfer, marketplace, executable AI instructions or OS widgets in this scope. Keep 3.7.2 calculation and editing behaviour. Before implementation, settle document markers/schema, supported custom-view payloads, dependency-package boundaries, native Share invocation and conflict-resolution UX using recorded reproducible examples.
+No new calculation engine, mandatory replacement of data.json, marketplace, executable archive instructions or OS widgets in this scope. Markers/manifest, extraction limits, dependency boundaries, retention and ZIP Share capability remain prototype decisions. This maintainer decision supersedes the earlier proposal for authoritative visible project notes.
