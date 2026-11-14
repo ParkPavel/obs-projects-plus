@@ -21,6 +21,14 @@ views. Choose the guide that matches your task — each one exists in both langu
 | Взять шаблоны заметок / Use note templates | [Шаблоны](../templates/README.md) | [Templates](../templates/README.md) |
 | Узнать, что изменилось / See what changed | [Изменения](../CHANGELOG-RU.md) | [Changelog](../CHANGELOG.md) |
 
+## Следующий цикл / Next cycle
+
+| Задача / Task | Русский | English |
+| --- | --- | --- |
+| Анонс планов / Announcement | [Следующие версии](next-versions-RU.md) | [Next versions](next-versions.md) |
+| Файловые проекты и шаблоны / File-backed projects and templates | [План 3.7.3](plan-3.7.3-RU.md) | [3.7.3 plan](plan-3.7.3.md) |
+| Виджеты и уведомления / Widgets and notifications | [План 3.7.4](plan-3.7.4-RU.md) | [3.7.4 plan](plan-3.7.4.md) |
+
 ## Для разработчика / For developers
 
 | Задача / Task | Русский | English |

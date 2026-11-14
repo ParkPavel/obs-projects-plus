@@ -14,6 +14,15 @@ for its scope and migration requirements. The [3.7.1 completion baseline](docs/d
 is a historical specification. The tracks below describe future work, not additional features
 promised by 3.7.2.
 
+## Next versions
+
+| Version | Priority | Status |
+| --- | --- | --- |
+| 3.7.3 | Keep data.json; visible-folder synchronization, backups, ZIP settings/notes and validated AI edits | [Draft specification](docs/plan-3.7.3.md) |
+| 3.7.4 | Mobile widget catalogue and reminders, starting with platform feasibility | [Research plan](docs/plan-3.7.4.md) |
+
+[Cycle announcement](docs/next-versions.md). Documents and a pushed GitHub branch come before implementation. Existing tracks below remain a general backlog, not extra 3.7.3 scope.
+
 ## Principles that do not change
 
 - **Your data stays in your notes.** Frontmatter and Markdown are the database. Nothing is moved into a
@@ -77,7 +86,7 @@ here without rework.
 
 ## How releases are accepted
 
-Every release passes the Obsidian community directory's automated review. Reports from users are
+Releases pass the project's automated checks and recorded acceptance. Reports from users are
 reviewed and turned into items in Track 2. Changes that affect saved data are checked by changing a
 value, reloading, and reading it back in a test vault before release.
 

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="3.7.4 plan: mobile widgets and reminders"><meta name="color-scheme" content="light dark">
+<meta name="referrer" content="strict-origin-when-cross-origin"><title>3.7.4 plan: mobile widgets and reminders · Projects Plus</title>
+<meta property="og:type" content="website"><meta property="og:title" content="3.7.4 plan: mobile widgets and reminders"><meta property="og:description" content="3.7.4 plan: mobile widgets and reminders"><meta property="og:url" content="https://parkpavel.github.io/obs-projects-plus/read/plan-3.7.4.html"><meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://parkpavel.github.io/obs-projects-plus/read/plan-3.7.4.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/site.css">
+<script type="module" src="../assets/site.js"></script></head>
+<body data-prefix="../" data-language="en"><a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header"><a class="wordmark" href="../en.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
+<nav aria-label="Main navigation"><a href="../en.html#ideas">Garden of ideas</a><a href="../read/user-guide-en.html">Documentation</a><a href="../en.html#screenshots">Screenshots</a><a class="nav-support" href="https://web.tribute.tg/d/Sh6">♡ Support</a><a class="language" href="../read/plan-3.7.4-ru.html" hreflang="ru">Русский</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../en.html">← Explore the plugin</a><strong>On this page</strong><nav aria-label="On this page"><a href="#goal-and-scope">Goal and scope</a><a href="#data-and-actions">Data and actions</a><a href="#reminder-delivery">Reminder delivery</a><a href="#milestones">Milestones</a></nav></aside><article class="doc-article"><p class="doc-version">Documentation follows the source code; an installed release may differ.</p><h1 id="374-plan-mobile-widgets-and-reminders">3.7.4 plan: mobile widgets and reminders</h1>
+<p><a href="../read/plan-3.7.4-ru.html">Русский</a> · <a href="../read/roadmap.html">Roadmap</a> · <a href="../read/plan-3.7.3.html">3.7.3 foundation</a></p>
+<p>Status: <strong>research direction after 3.7.3</strong>, not shipped functionality or guaranteed support for every operating system. No dates are committed. No native application implementation is authorized by this documentation stage.</p>
+<h2 id="goal-and-scope">Goal and scope</h2>
+<p>Expose Projects Plus elements conveniently on mobile: today&#39;s overview, next appointment, tasks, metrics and project views, with configurable event reminders on selected devices. “Every element as a widget” means a complete capability catalogue with explicit platform support: compact content, limited actions, opening the full view or a documented limitation. It does not promise a full Svelte interface on an OS home screen.</p>
+<p>Separate compact blocks <strong>inside Obsidian</strong> from <strong>system widgets</strong>. Apple requires a <a href="https://developer.apple.com/documentation/widgetkit/creating-a-widget-extension">WidgetKit application extension</a>; Android has <a href="https://developer.android.com/develop/ui/views/appwidgets/overview">its own app-widget system</a>. A JavaScript plugin alone cannot add an extension target to the host application. First investigate public Obsidian capabilities, a supported native bridge, a companion application or an explicitly limited alternative. Access to Obsidian source code/private APIs or approval to ship a companion is not assumed.</p>
+<h2 id="data-and-actions">Data and actions</h2>
+<p>Build on 3.7.3 definitions with a limited read projection: project/element ID, schema version, revision, updated-at time, small payload, stale status and permitted actions. The widget is not another configuration owner. Actions check current revisions; a stale card cannot overwrite newer state.</p>
+<p>Create an iOS/Android matrix for every element: size, content, actions, update behaviour, lock-screen privacy and operation without an open Obsidian session. Initial prototypes: next appointment, daily Agenda, a metric and a project shortcut. Other elements remain in the catalogue with an explicit supported/limited/unavailable state.</p>
+<p>A companion does not automatically gain access to Obsidian&#39;s sandbox or iCloud files. Verify permissions, the exchange channel, offline behaviour and absence of default network disclosure. Snapshot displays must show when their data became stale.</p>
+<h2 id="reminder-delivery">Reminder delivery</h2>
+<p>Define stable event/reminder identity, schedule/rule, time zone, recurrence, selected devices, event revision and cancellation. Distinguish all-day dates from instants and specify DST/time-zone changes.</p>
+<p>Keep three modes separate: in-app reminders, locally scheduled system notifications and remote push. A JS timer or Obsidian Notice is not delivery after app closure. <a href="https://developer.apple.com/documentation/usernotifications/scheduling-a-notification-locally-from-your-app">Apple&#39;s local-notification API</a> needs a native integration; <a href="https://developer.android.com/develop/ui/compose/notifications/notification-permission">Android 13+ notification permission</a> is a separate platform constraint. Neither capability automatically becomes available to a community plugin.</p>
+<p>Track created/scheduled/updated/cancelled/rejected/unknown states. OS acceptance is not proof that a person saw an alert. Test permissions, Focus, battery/background limits, restart and reboot. Moving/deleting events cancels outdated schedules; resync is idempotent. Explicitly choose “all selected devices” or “one primary”; do not promise global exactly-once delivery without coordination.</p>
+<p>If remote push needs a service, separately decide consent, cost, device-address retention and data minimization. Real tokens stay out of shared notes/templates. Public wording remains “investigating delivery on selected devices” until a platform prototype supports stronger claims.</p>
+<h2 id="milestones">Milestones</h2>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Observable exit condition</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>W0: platform feasibility</td>
+<td>Public API/constraint matrix and a viable bridge/companion route, or documented absence of one, for each OS.</td>
+</tr>
+<tr>
+<td>W1: projection</td>
+<td>Small versioned snapshots and deep links independent of UI components.</td>
+</tr>
+<tr>
+<td>W2: one OS widget</td>
+<td>Real iPhone/Android trials with closed app, stale state, lock screen and return to the correct project.</td>
+</tr>
+<tr>
+<td>N0: event model</td>
+<td>Time zones, recurrence, move/delete, identity and conflicting schedules verified independently of transport.</td>
+</tr>
+<tr>
+<td>N1: one notification channel</td>
+<td>Real-device permission/refusal, schedule/cancel, restart and changed-event trials with recorded limits.</td>
+</tr>
+<tr>
+<td>N2: multiple devices</td>
+<td>Device selection, offline/resync, duplicates, missed events and primary-device changes.</td>
+</tr>
+<tr>
+<td>W3: catalogue expansion</td>
+<td>Every element has a support level and acceptance scenario, not a misleading empty widget.</td>
+</tr>
+</tbody></table>
+<p>Choose the actual 3.7.4 contents after W0/N1 and 3.7.3 results. Native integration requiring a separate product or unsupported API is an explicit decision, not a hidden release dependency.</p>
+<p class="doc-source"><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/docs/plan-3.7.4.md">Page source ↗</a></p></article></main>
+<footer class="site-footer"><a class="wordmark" href="../en.html">Projects Plus</a><p>An open-source project by Park Pavel. Based on Obsidian Projects by Marcus Olsson.</p><div><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache-2.0</a><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE">Attribution</a><a href="https://web.tribute.tg/d/Sh6">♡ Support the project</a><a href="https://github.com/ParkPavel/obs-projects-plus/issues">Feedback</a></div></footer>
+<aside class="search-panel" aria-label="Search documentation"><label for="doc-search">Search documentation</label><div class="search-input-wrap"><input id="doc-search" type="search" placeholder="Search…" autocomplete="off" aria-controls="search-results"><kbd>/</kbd></div><ul id="search-results" hidden></ul><p id="search-status" role="status" aria-live="polite" data-empty="No matches. Try “calendar”, “formula” or “source”."></p></aside>
+</body></html>

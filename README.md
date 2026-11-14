@@ -14,6 +14,14 @@ Each record remains a Markdown file. Fields such as status, date, and assignee l
 
 Dashboard formulas add calculated columns to the data shown in a view. They are read-only and do not write formula results to the source notes.
 
+## Next: 3.7.3 and 3.7.4
+
+**3.7.3 — settings synchronization, backups and ZIP project packages.** Keep data.json authoritative; use a visible folder for verified copies and AI editing, with optional notes and attachments in transfer packages.
+
+**3.7.4 — mobile widgets and reminders.** Explore compact project elements, native OS integration and notification delivery on selected devices.
+
+These are plans, not features in installed 3.7.2; no dates are committed. [Announcement and stages](docs/next-versions.md) · [3.7.3 specification](docs/plan-3.7.3.md) · [3.7.4 research](docs/plan-3.7.4.md).
+
 ## Release 3.7.2
 
 **3.7.2** brings one strict formula engine with verified migration backups, editable checkboxes on board cards, and mobile forms that keep fields and actions reachable above the keyboard. Inline palettes and computed properties share their form's scrolling area.
