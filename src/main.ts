@@ -73,6 +73,7 @@ import {
   type Preservation,
 } from "src/lib/settings/settingsEpisode";
 import { canonical, classifyDisk } from "src/lib/settings/settingsVerify";
+import { ProjectFilesController } from "src/ui/projectFiles/controller";
 import type {
   EpisodeEntry,
   WriteOutcome,
@@ -147,6 +148,7 @@ export default class ProjectsPlusPlugin extends Plugin {
   private fileSystemWatcher?: ObsidianFileSystemWatcher;
   /** #185: the only thing in the plugin that writes `data.json`. */
   private settingsWriter?: SettingsWriter<LatestProjectsPluginSettings>;
+  projectFiles?: ProjectFilesController;
   /**
    * #185: the exact object `loadSettings` put into the store. The writer is
    * primed with THIS reference, so the echo firing is recognised by identity
@@ -486,6 +488,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       onStatus: (status) => saveStatus.set(status),
     });
     this.settingsWriter = writer;
+    this.projectFiles = new ProjectFilesController(this, () => writer.flush(), () => this.confirmedOnDisk);
     setSaveRetryHandler(() => writer.retry());
 
     // The chip lives in `CompactNavBar`, which exists only inside the Projects
@@ -1174,6 +1177,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       if (verdict === "confirmed") {
         this.confirmedOnDisk = canonical(value);
         this.confirmedRawOnDisk = null;
+        this.projectFiles?.onConfirmed(value);
         return "confirmed";
       }
       if (verdict === "superseded") {

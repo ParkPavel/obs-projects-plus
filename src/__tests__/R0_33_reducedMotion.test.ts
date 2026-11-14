@@ -416,6 +416,9 @@ describe("R0.33 — the tree", () => {
       "ui/modals/createProjectModal.ts",
       "ui/modals/relationSetupModal.ts",
       "ui/modals/schemaModal.ts",
+      "ui/projectFiles/modal.ts",
+      "ui/projectFiles/packageInspectModal.ts",
+      "ui/projectFiles/packageModal.ts",
       "ui/views/VisualizerPane/RelationPickerModal.ts",
     ]);
     const bare = modals.filter(({ classes, roots }) => roots < classes).map(({ file }) => file);
