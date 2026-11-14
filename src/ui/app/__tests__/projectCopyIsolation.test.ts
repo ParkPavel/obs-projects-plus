@@ -15,6 +15,47 @@ const Provider = require("../DataFrameProvider.svelte").default as new (options:
 
 async function settle() { for (let i = 0; i < 8; i++) { await tick(); await Promise.resolve(); } }
 
+test.each(["create", "rename"] as const)("a delayed %s from the previous source cannot republish a reserved document", async event => {
+  settings.set(JSON.parse(JSON.stringify(DEFAULT_SETTINGS)));
+  const fs = new InMemFileSystem({});
+  await fs.create("Task.md", "---\nstatus: todo\n---\n");
+  (fileSystem as unknown as { set(value: IFileSystem): void }).set(fs);
+  const project = { ...DEFAULT_PROJECT, id: "p", name: "Project", dataSource: { kind: "folder" as const, config: { path: "", recursive: true } } };
+  const target = document.createElement("div");
+  const mounted = new Provider({ target, props: { project } });
+  let created!: (file: IFile) => Promise<void>;
+  let renamed!: (file: IFile, oldPath: string) => Promise<void>;
+  registerFileEvents({ onCreate: callback => { created = callback; }, onRename: callback => { renamed = callback; }, onChange: () => {}, onDelete: () => {} });
+  let release: (() => void) | undefined;
+  try {
+    await settle();
+    const file = await fs.create(`Copies/Projects/${"a".repeat(64)}/Project.md`, "# configuration");
+    const original = file.read.bind(file);
+    let started!: () => void;
+    const reading = new Promise<void>(resolve => { started = resolve; });
+    jest.spyOn(file, "read").mockImplementationOnce(() => new Promise<string>(resolve => {
+      release = () => { void original().then(resolve); };
+      started();
+    }));
+    const pending = event === "create" ? created(file) : renamed(file, "Previous.md");
+    await reading;
+    settings.updatePreferences({ ...get(settings).preferences, projectFiles: { root: "Copies", autoSync: false } });
+    await settle();
+    expect(get(dataSource)?.includes(file.path)).toBe(false);
+    expect(get(dataFrame).records.map(record => record.id)).toEqual(["Task.md"]);
+    release!();
+    release = undefined;
+    await pending;
+    expect(get(dataFrame).records.map(record => record.id)).toEqual(["Task.md"]);
+  } finally {
+    release?.();
+    mounted.$destroy();
+    target.remove();
+    dataSource.set(undefined);
+    settings.set(JSON.parse(JSON.stringify(DEFAULT_SETTINGS)));
+  }
+});
+
 test("an already open provider excludes first and changed copy roots from file events", async () => {
   settings.set(JSON.parse(JSON.stringify(DEFAULT_SETTINGS)));
   const fs = new InMemFileSystem({});
