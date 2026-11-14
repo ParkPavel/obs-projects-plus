@@ -68,6 +68,12 @@ export class ProjectFilesModal extends Modal {
       });
     });
     this.contentEl.createEl("p", { text: t("scope") });
+    new Setting(this.contentEl).addButton(button => button.setButtonText(get(i18n).t("project-package.title")).onClick(async () => {
+      if (!this.field?.syncForSubmit() || !valid(root)) return;
+      const preferences = get(settings).preferences;
+      if (!preferences.projectFiles) settings.updatePreferences({ ...preferences, projectFiles: nextCopyPreferences(undefined, root, false, this.app.vault.configDir) });
+      await this.controller.openPackages();
+    }));
   }
 
   onClose(): void {

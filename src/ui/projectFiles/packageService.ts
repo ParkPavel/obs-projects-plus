@@ -1,0 +1,91 @@
+import { TFile, type Plugin } from "obsidian";
+import { get } from "svelte/store";
+import { settings } from "src/lib/stores/settings";
+import { settingsFilePath } from "src/lib/settings/brokenBackup";
+import { canonical } from "src/lib/settings/settingsVerify";
+import { textDigest, projectFileError } from "src/lib/projectFiles/document";
+import { binaryDigest, packageFilePath, PACKAGE_LIMITS, prepareProjectPackage, type PreparedProjectPackage } from "src/lib/projectFiles/package";
+import { configuredCopyRoots, isProjectCopyPath, projectFilesRoot } from "src/lib/projectFiles/paths";
+import { createProjectZip } from "src/lib/projectFiles/packageZip";
+import { projectVaultStorage } from "src/lib/projectFiles/vaultStorage";
+import { ensureProjectFolders } from "src/lib/projectFiles/storage";
+import type { LatestProjectsPluginSettings } from "src/settings/settings";
+
+export class ProjectPackageService {
+  private busy = false;
+  private retired = false;
+  constructor(private readonly host: Plugin, private readonly flush: () => Promise<void>, private readonly confirmed: () => string | null,
+    private readonly alive: () => boolean) {}
+
+  dispose(): void { this.retired = true; }
+  private check = () => { if (this.retired || !this.alive()) throw projectFileError("operation retired"); };
+
+  private async snapshot(): Promise<LatestProjectsPluginSettings> {
+    this.check(); await this.flush(); this.check();
+    const path = settingsFilePath(this.host.manifest.dir);
+    if (!path) throw projectFileError("settings unavailable");
+    const raw: unknown = JSON.parse(await this.host.app.vault.adapter.read(path));
+    this.check();
+    if (canonical(raw) !== this.confirmed() || canonical(raw) !== canonical(get(settings))) throw projectFileError("settings not confirmed on disk");
+    return JSON.parse(JSON.stringify(raw)) as LatestProjectsPluginSettings;
+  }
+
+  eligible(path: string): boolean {
+    try { packageFilePath(path, this.host.app.vault.configDir); }
+    catch { return false; }
+    return !isProjectCopyPath(path, configuredCopyRoots(get(settings).preferences.projectFiles)) && !/\.zip$/i.test(path);
+  }
+
+  async prepare(projectId: string, paths: readonly string[]): Promise<PreparedProjectPackage> {
+    if (this.busy) throw projectFileError("package operation busy");
+    this.busy = true;
+    try {
+      const value = await this.snapshot();
+      const result = await prepareProjectPackage(value, projectId, paths, async path => {
+        this.check();
+        if (!this.eligible(path)) throw projectFileError("file excluded from package");
+        const file = this.host.app.vault.getAbstractFileByPath(path);
+        if (!(file instanceof TFile) || file.stat.size > PACKAGE_LIMITS.fileBytes) throw projectFileError("file missing or too large");
+        const before = { ...file.stat };
+        const bytes = new Uint8Array(await this.host.app.vault.readBinary(file));
+        this.check();
+        if (this.host.app.vault.getAbstractFileByPath(path) !== file || before.size !== file.stat.size || before.mtime !== file.stat.mtime || bytes.length !== before.size) throw projectFileError("file changed during capture");
+        return bytes;
+      }, this.host.app.vault.configDir);
+      const current = await this.snapshot();
+      if (await textDigest(JSON.stringify(current)) !== result.settingsRevision) throw projectFileError("settings changed during package preview");
+      return result;
+    } finally { this.busy = false; }
+  }
+
+  async save(prepared: PreparedProjectPackage): Promise<{ path: string; bytes: number; sha256: string }> {
+    if (this.busy) throw projectFileError("package operation busy");
+    this.busy = true;
+    try {
+      const value = await this.snapshot();
+      if (await textDigest(JSON.stringify(value)) !== prepared.settingsRevision) throw projectFileError("package preview is stale");
+      const input = value.preferences.projectFiles?.root;
+      if (!input) throw projectFileError("destination not configured");
+      const root = projectFilesRoot(input, this.host.app.vault.configDir);
+      const zip = await createProjectZip(prepared, this.check);
+      const hash = await binaryDigest(zip);
+      // Reconfirm after encoding; a changed configuration requires a new preview.
+      if (await textDigest(JSON.stringify(await this.snapshot())) !== prepared.settingsRevision) throw projectFileError("package preview is stale");
+      const folder = root + "/Packages";
+      await ensureProjectFolders(projectVaultStorage(this.host.app.vault, () => !this.retired && this.alive()), folder);
+      this.check();
+      const path = `${folder}/${await textDigest(prepared.manifest.rootProjectId)}-${hash}.zip`;
+      let file = this.host.app.vault.getAbstractFileByPath(path);
+      if (!file) {
+        this.check();
+        file = await this.host.app.vault.createBinary(path, new Uint8Array(zip).buffer);
+      }
+      if (!(file instanceof TFile) || file.stat.size !== zip.length) throw projectFileError("package destination conflict");
+      const before = { ...file.stat };
+      const saved = new Uint8Array(await this.host.app.vault.readBinary(file));
+      this.check();
+      if (await binaryDigest(saved) !== hash || this.host.app.vault.getAbstractFileByPath(path) !== file || before.size !== file.stat.size || before.mtime !== file.stat.mtime) throw projectFileError("package read-back failed");
+      return { path, bytes: zip.length, sha256: hash };
+    } finally { this.busy = false; }
+  }
+}

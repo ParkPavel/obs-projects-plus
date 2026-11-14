@@ -1,5 +1,21 @@
 ﻿{
     "translation": {
+        "project-package": {
+            "title": "Package a project (ZIP)",
+            "description": "Select a project and optionally add individual vault files. Preview the captured contents before saving a ZIP in the copies folder. Nothing is installed or shared automatically.",
+            "empty": "No projects to package.",
+            "project": "Project",
+            "remove": "Remove",
+            "add-file": "Add a vault file",
+            "preview": "Preview contents",
+            "summary": "Projects: {{projects}} · Selected files: {{files}} · Bytes: {{bytes}}",
+            "missing": "Some known dependencies are missing or invalid. This package is incomplete:",
+            "scope": "Only the listed configurations and explicitly selected files are included. Template files, linked notes and attachments are not added automatically. Custom view dependencies may need manual review. Imported paths and IDs are not remapped yet.",
+            "save": "Save verified ZIP",
+            "saved": "ZIP saved and verified: {{path}}",
+            "failed": "Package not saved. Check the folder, file sizes and confirmed settings; create a new preview and retry.",
+            "limits": "Development: up to 256 entries, 4 MiB per file and 16 MiB total. Stored ZIP, without compression. Import, restore and native Share are not implemented in this stage."
+        },
         "project-files": {
             "title": "Project copies and backups",
             "description": "Keep data.json as the active configuration. Create readable, verified project copies in a visible vault folder.",

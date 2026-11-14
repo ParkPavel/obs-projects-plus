@@ -1,4 +1,4 @@
-# 3.7.3 development: first project-copy increment
+# 3.7.3 development: copies and project packages
 
 [Русский](development-3.7.3-RU.md) · [Specification](plan-3.7.3.md)
 
@@ -18,7 +18,7 @@ Preserve configuration key order: a change creates a separate conservative revis
 
 ## Current boundaries
 
-- ZIP transfer/import, note/attachment packaging, tag/folder mapping and restore UI are not yet implemented.
+- ZIP export with explicitly selected files is available in the second increment below. Import, tag/folder mapping and restore UI are not yet implemented.
 - External/AI edits are not yet applied to settings. They remain in the file and block overwrite; a copy is a proposed change, not another settings authority.
 - Configuration snapshots cannot restore records, the entire vault or global preferences. Same-vault snapshots need an independent copy for protection against losing that vault.
 - Reserved copy documents are excluded from ordinary Projects Plus source records. Dataview runs DQL before output filtering: vault-wide DQL aggregates must explicitly exclude the copy folder. Existing Dataview sources trigger a notice in the management window before the action.
@@ -31,4 +31,16 @@ Preserve configuration key order: a change creates a separate conservative revis
 
 Automated scenarios cover round-trip preservation, external/concurrent edits, failed read-back, archives/removal, interrupted index updates, source isolation, queue/lifecycle and the real shared TextField with IME. They do not establish acceptance on a physical iPhone.
 
-Next: package/dependency contracts, bounded ZIP codec/manifest, selected records and attachments, staged import/remapping, validated inbound application and restore. Full checks, independent review and manual acceptance are required before installation into a working vault.
+Next: complete dependency contracts, staged import/remapping, validated inbound application and restore. Full checks, independent review and manual acceptance are required before installation into a working vault.
+
+## Second increment: explicit ZIP export
+
+Open Package a project (ZIP) from copy management, or its command after configuring the visible destination. Select a project and add individual vault notes, template files or attachments. Nothing is selected automatically. Preview captures their bytes and shows included project names, file count, size and unresolved known references. Changing the project or selection invalidates the preview. Saving writes under Packages in the configured copies folder and verifies actual read-back bytes with SHA-256. Different existing contents are never overwritten.
+
+The archive contains manifest.json, Projects/ID-hash/Project.md and explicitly selected files under Files/original-vault-path. Experimental package schema1 lists root/active/archived projects, revisions, known runtime dependencies, file roles, original paths, sizes and SHA-256. Global preferences and hidden settings are excluded. Note links and binary attachments are copied exactly; export does not remap paths or IDs.
+
+Known references include relation/rollup/backlink targets and stored Dashboard widget sources, chart series/correlations and joins, including source/block-qualified references. Available dependent definitions are included transitively with cycle bounds. Arbitrary custom-view and nested extension dependencies require manual review. Missing references are labelled; this is a selected subset, not a complete vault backup. Templates, linked notes and attachments are not added automatically.
+
+Bounds: 256 ZIP entries including manifest, 4MiB per file, 16MiB total data and 20MiB archive. Stored ZIP without compression uses pinned fflate0.8.3, yielding between files without background workers. Per-file metadata checks do not constitute an atomic vault snapshot. Later note edits do not mutate captured bytes; changed active settings require a new preview. Closing retires pending work; an already started host write can leave a retained file.
+
+The self-check decodes only our just-generated ZIP before writing, not untrusted incoming archives. Bounded import/staging/journal, remapping, native Share and physical-iPhone acceptance are still open. The visible ZIP can be copied using the filesystem; no automatic transmission is claimed.

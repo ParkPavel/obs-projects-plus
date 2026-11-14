@@ -25,12 +25,14 @@ export class ProjectFilesController {
   private pending = false;
   private running: Promise<MirrorReceipt> | undefined;
   private modal?: ProjectFilesModal;
+  private packageModal?: { open(): void; close(): void };
   private failureReported = false;
   private observedCopyPreferences: LatestProjectsPluginSettings["preferences"]["projectFiles"];
   private initializeRoot: string | undefined;
 
   constructor(private readonly host: Plugin, private readonly flush: () => Promise<void>, private readonly confirmed: () => string | null) {
     host.addCommand({ id: "project-files", name: get(i18n).t("project-files.title"), callback: () => this.open() });
+    host.addCommand({ id: "project-package", name: get(i18n).t("project-package.title"), callback: () => { void this.openPackages(); } });
     host.register(() => this.dispose());
     this.observedCopyPreferences = get(settings).preferences.projectFiles;
     this.onConfirmed(get(settings));
@@ -38,9 +40,20 @@ export class ProjectFilesController {
 
   open(): void {
     if (!this.alive) return;
+    this.packageModal?.close();
     this.modal?.close();
     this.modal = new ProjectFilesModal(this.host.app, this);
     this.modal.open();
+  }
+
+  async openPackages(): Promise<void> {
+    if (!get(settings).preferences.projectFiles) { this.open(); return; }
+    const [{ ProjectPackageModal }, { ProjectPackageService }] = await Promise.all([import("./packageModal"), import("./packageService")]);
+    if (!this.alive) return;
+    this.modal?.close();
+    this.packageModal?.close();
+    this.packageModal = new ProjectPackageModal(this.host.app, new ProjectPackageService(this.host, this.flush, this.confirmed, () => this.alive));
+    this.packageModal.open();
   }
 
   onConfirmed(value: LatestProjectsPluginSettings): void {
@@ -130,5 +143,6 @@ export class ProjectFilesController {
     this.pending = false;
     window.clearTimeout(this.timer);
     this.modal?.close();
+    this.packageModal?.close();
   }
 }
