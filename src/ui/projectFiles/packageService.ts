@@ -67,6 +67,17 @@ export class ProjectPackageService {
       const inspected = await this.readPackage(path);
       if (inspected.archiveHash !== expectedHash) throw projectFileError("archive preview is stale");
       const root = projectFilesRoot(expectedRoot, this.host.app.vault.configDir);
+      if (this.confirmed() === canonical(null)) {
+        // The main loader distinguishes a known fresh base (JSON null) from an
+        // unknown/corrupt base (null). Its primed writer has nothing to flush
+        // until a real change is queued. Bind through that ordinary checked
+        // writer before asking for an existing data.json snapshot.
+        const current = get(settings);
+        if ((current.preferences.projectFiles?.root ?? "Projects Plus") !== root) throw projectFileError("staging destination changed");
+        this.check();
+        settings.updatePreferences({ ...current.preferences, projectFiles: nextCopyPreferences(current.preferences.projectFiles, root,
+          current.preferences.projectFiles?.autoSync ?? false, this.host.app.vault.configDir) });
+      }
       let value = await this.snapshot();
       if ((value.preferences.projectFiles?.root ?? "Projects Plus") !== root) throw projectFileError("staging destination changed");
       if (!value.preferences.projectFiles) {

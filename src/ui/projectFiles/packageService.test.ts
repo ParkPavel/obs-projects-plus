@@ -30,10 +30,11 @@ afterAll(() => {
 });
 let disk: State, confirmed: string | null, service: import("./packageService").ProjectPackageService;
 let files: Map<string, { path: string; stat: { size: number; mtime: number }; bytes: Uint8Array }>;
-let folders: Map<string, unknown>, create: jest.Mock, read: jest.Mock, flush: jest.Mock, mkdir: jest.Mock;
+let folders: Map<string, unknown>, create: jest.Mock, read: jest.Mock, flush: jest.Mock, mkdir: jest.Mock, primaryMissing: boolean;
 function persist(state: State) { disk = state; confirmed = canonical(state); settings.set(state); }
 beforeEach(() => {
   jest.mocked(settings.updatePreferences).mockClear();
+  primaryMissing = false;
   persist({ ...DEFAULT_SETTINGS, projects: [{ ...DEFAULT_PROJECT, id: "p", name: "Project" }],
     preferences: { ...DEFAULT_SETTINGS.preferences, projectFiles: { root: "Copies", autoSync: false } } });
   files = new Map(); folders = new Map(); flush = jest.fn(async () => undefined);
@@ -45,7 +46,7 @@ beforeEach(() => {
   });
   mkdir = jest.fn(async (path: string) => { folders.set(path, new TFolder(path)); });
   const host = { manifest: { dir: "AppConfig/plugins/projects" }, app: { vault: {
-    configDir: "AppConfig", adapter: { read: async () => JSON.stringify(disk) },
+    configDir: "AppConfig", adapter: { read: async () => { if (primaryMissing) throw Error("ENOENT: no data.json yet"); return JSON.stringify(disk); } },
     getAbstractFileByPath: (path: string) => files.get(path) ?? folders.get(path),
     readBinary: read, createBinary: create, createFolder: mkdir,
     read: async (file: { bytes: Uint8Array }) => new TextDecoder().decode(file.bytes),
@@ -218,6 +219,32 @@ test("first staging in an empty vault binds the default reserved root through th
   expect(disk.projects).toEqual([]);
   expect(disk.preferences.projectFiles).toEqual({ root: "Projects Plus", autoSync: false });
   expect(settings.updatePreferences).toHaveBeenCalledTimes(1);
+});
+
+test("a genuinely fresh vault with no data.json performs its first checked preference save before staging", async () => {
+  const saved = await service.save(await service.prepare("p", []));
+  persist({ ...DEFAULT_SETTINGS, projects: [] }); primaryMissing = true; confirmed = canonical(null);
+  create.mockClear(); mkdir.mockClear();
+  // Model the primed writer: no dirty settings means no write. A real preference
+  // update queues the ordinary first save and establishes its confirmed base.
+  flush.mockImplementation(async () => {
+    if (get(settings).preferences.projectFiles) { primaryMissing = false; persist(get(settings)); }
+  });
+  await expect(service.stage(saved.path, saved.sha256, "Projects Plus")).resolves.toMatchObject({ resumed: false });
+  expect(primaryMissing).toBe(false); expect(disk.projects).toEqual([]);
+  expect(disk.preferences.projectFiles).toEqual({ root: "Projects Plus", autoSync: false });
+  expect(settings.updatePreferences).toHaveBeenCalledTimes(1);
+});
+
+test("a writer refusing a newly replaced fresh base still blocks staging and preserves the disk version", async () => {
+  const saved = await service.save(await service.prepare("p", []));
+  const foreign = { ...DEFAULT_SETTINGS, projects: [{ ...DEFAULT_PROJECT, id: "foreign", name: "Other device" }] };
+  persist(foreign); settings.set({ ...DEFAULT_SETTINGS, projects: [] }); confirmed = canonical(null);
+  create.mockClear(); mkdir.mockClear();
+  // The existing checked writer refuses the competing first write; flush does
+  // not establish confirmation. No direct adapter write is available here.
+  await expect(service.stage(saved.path, saved.sha256, "Projects Plus")).rejects.toThrow("not confirmed");
+  expect(disk).toBe(foreign); expect(create).not.toHaveBeenCalled(); expect(mkdir).not.toHaveBeenCalled();
 });
 
 test("a different valid ZIP at the selected path requires a fresh preview before any staging writes", async () => {
