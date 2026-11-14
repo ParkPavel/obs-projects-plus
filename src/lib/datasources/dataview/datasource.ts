@@ -95,7 +95,7 @@ export class DataviewDataSource extends DataSource {
     } else {
       throw new Error(`Unsupported Dataview query type: ${value.type}`);
     }
-    const standardizedRecords = this.standardizeRecords(rows);
+    const standardizedRecords = this.standardizeRecords(rows).filter(record => !this.isProjectCopy(record.id));
 
     let fields = this.sortFields(
       detectSchema(standardizedRecords),
@@ -158,7 +158,7 @@ export class DataviewDataSource extends DataSource {
   }
 
   includes(path: string): boolean {
-    return !this.project.excludedNotes?.includes(path);
+    return !this.project.excludedNotes?.includes(path) && !this.isProjectCopy(path);
   }
 
   readonly(): boolean {

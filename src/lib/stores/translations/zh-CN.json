@@ -1,5 +1,23 @@
 ﻿{
     "translation": {
+        "project-files": {
+            "title": "项目副本与备份",
+            "description": "data.json 仍是活动配置的存储。将经过验证的可读项目副本保存到库内的可见文件夹。",
+            "open": "管理副本",
+            "folder": "副本文件夹",
+            "folder-description": "库内的可见文件夹。外部修改不会被覆盖。",
+            "automatic": "保存后更新副本",
+            "automatic-description": "成功保存设置后更新已验证的副本。不会自动应用其他工具的修改。",
+            "sync": "更新副本与快照",
+            "idle": "本次会话尚未更新副本。",
+            "pending": "副本更新已加入队列。",
+            "copying": "正在验证设置并写入项目副本…",
+            "saved": "已复制项目：{{total}}。文件夹：{{path}}",
+            "failed": "无法验证副本。请检查剩余空间、文件夹权限和外部修改。活动设置未回滚。解决冲突后请重试。",
+            "scope": "第一阶段仅复制活动及已归档项目的配置，不含笔记与附件。备份位于同一库内；请将其复制到库外，以防整个库丢失。ZIP 交换和外部修改的应用将另行开发。",
+            "archived": "已归档",
+            "dataview-warning": "Dataview 在 Projects Plus 过滤结果之前执行 DQL。如果查询覆盖整个库，请在查询中排除副本文件夹，以免服务笔记影响汇总结果。"
+        },
         "formula-migration": {
             "completed": "Projects+：公式已迁移到统一规则。已验证的备份和报告：{{path}}"
         },

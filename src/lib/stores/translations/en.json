@@ -1,5 +1,23 @@
 ﻿{
     "translation": {
+        "project-files": {
+            "title": "Project copies and backups",
+            "description": "Keep data.json as the active configuration. Create readable, verified project copies in a visible vault folder.",
+            "open": "Manage copies",
+            "folder": "Copy folder",
+            "folder-description": "A visible folder inside this vault. Existing externally edited copies are preserved.",
+            "automatic": "Refresh copies after saving",
+            "automatic-description": "Opt in to update verified copies after successful settings saves. Changes made by other tools are never applied automatically.",
+            "sync": "Update copies and snapshots",
+            "idle": "Copies have not been updated in this session.",
+            "pending": "A copy update is queued.",
+            "copying": "Verifying saved settings and writing project copies…",
+            "saved": "Projects copied: {{total}}. Folder: {{path}}",
+            "failed": "The copy could not be verified. Check available space, folder access and external edits. Active settings were not rolled back. Retry after resolving the conflict.",
+            "scope": "This first stage copies active and archived project configurations. Notes and attachments are not included. Backups stay in this vault; copy them elsewhere to protect against losing the vault. ZIP exchange and applying external edits are being developed separately.",
+            "archived": "archived",
+            "dataview-warning": "Dataview evaluates DQL before Projects Plus filters the resulting records. If a DQL query covers the entire vault, exclude the copy folder there so its notes do not affect aggregates."
+        },
         "formula-migration": {
             "completed": "Projects+: formula rules migrated. Verified backup and report: {{path}}"
         },

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="3.7.3 development: first project-copy increment"><meta name="color-scheme" content="light dark">
+<meta name="referrer" content="strict-origin-when-cross-origin"><title>3.7.3 development: first project-copy increment · Projects Plus</title>
+<meta property="og:type" content="website"><meta property="og:title" content="3.7.3 development: first project-copy increment"><meta property="og:description" content="3.7.3 development: first project-copy increment"><meta property="og:url" content="https://parkpavel.github.io/obs-projects-plus/read/development-3.7.3.html"><meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://parkpavel.github.io/obs-projects-plus/read/development-3.7.3.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/site.css">
+<script type="module" src="../assets/site.js"></script></head>
+<body data-prefix="../" data-language="en"><a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header"><a class="wordmark" href="../en.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
+<nav aria-label="Main navigation"><a href="../en.html#ideas">Garden of ideas</a><a href="../read/user-guide-en.html">Documentation</a><a href="../en.html#screenshots">Screenshots</a><a class="nav-support" href="https://web.tribute.tg/d/Sh6">♡ Support</a><a class="language" href="../read/development-3.7.3-ru.html" hreflang="ru">Русский</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../en.html">← Explore the plugin</a><strong>On this page</strong><nav aria-label="On this page"><a href="#development-build-workflow">Development-build workflow</a><a href="#current-boundaries">Current boundaries</a><a href="#verification-and-next-stages">Verification and next stages</a></nav></aside><article class="doc-article"><p class="doc-version">Documentation follows the source code; an installed release may differ.</p><h1 id="373-development-first-project-copy-increment">3.7.3 development: first project-copy increment</h1>
+<p><a href="../read/development-3.7.3-ru.html">Русский</a> · <a href="../read/plan-3.7.3.html">Specification</a></p>
+<p>Status: <strong>development, not a published release</strong>. This increment implements outbound configuration copies and versioned snapshots, not the complete 3.7.3 scope. The published plugin version remains 3.7.2.</p>
+<h2 id="development-build-workflow">Development-build workflow</h2>
+<p>The Project copies and backups command and settings button open copy management. Choose a visible vault folder and update copies/snapshots manually. Automatic refresh is opt-in and disabled by default.</p>
+<p>Export first flushes the primary settings queue and checks that memory matches confirmed data.json. It copies active and archived project definitions, including custom-view configuration and counters. Global preferences, actual records and attachments are outside this increment.</p>
+<p>Each project has a readable Project.md and an immutable configuration snapshot in Backups. Internal folder names use a stable project-ID hash; the management window lists ordinary project names and links. sync-index.json records confirmed hashes and active/archived/removed state. Removing a project never deletes retained copies.</p>
+<p>Repeating the same configuration does not duplicate snapshots. Externally edited, corrupted or unexpectedly missing copies block automatic overwrite and expose failure. A mirror failure never rolls back successfully saved settings. Read-back detects a host that falsely reports write success.</p>
+<h2 id="current-boundaries">Current boundaries</h2>
+<ul>
+<li>ZIP transfer/import, note/attachment packaging, tag/folder mapping and restore UI are not yet implemented.</li>
+<li>External/AI edits are not yet applied to settings. They remain in the file and block overwrite; a copy is a proposed change, not another settings authority.</li>
+<li>Configuration snapshots cannot restore records, the entire vault or global preferences. Same-vault snapshots need an independent copy for protection against losing that vault.</li>
+<li>Reserved copy documents are excluded from ordinary Projects Plus source records. Dataview runs DQL before output filtering: vault-wide DQL aggregates must explicitly exclude the copy folder. Existing Dataview sources trigger a notice in the management window before the action.</li>
+<li>Vault.process checks and read-back do not form a distributed transaction. An interruption can leave partial files; repeating the same revision verifies/resumes it without overwriting external versions.</li>
+<li>The outbound queue coalesces save events separately from the primary writer. JavaScript execution after closing Obsidian is not promised. Enabled automatic mode checks again on next launch.</li>
+<li>The marked configuration block and index use experimental schema version1; this is not a published stable external API.</li>
+</ul>
+<h2 id="verification-and-next-stages">Verification and next stages</h2>
+<p>Automated scenarios cover round-trip preservation, external/concurrent edits, failed read-back, archives/removal, interrupted index updates, source isolation, queue/lifecycle and the real shared TextField with IME. They do not establish acceptance on a physical iPhone.</p>
+<p>Next: package/dependency contracts, bounded ZIP codec/manifest, selected records and attachments, staged import/remapping, validated inbound application and restore. Full checks, independent review and manual acceptance are required before installation into a working vault.</p>
+<p class="doc-source"><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/docs/development-3.7.3.md">Page source ↗</a></p></article></main>
+<footer class="site-footer"><a class="wordmark" href="../en.html">Projects Plus</a><p>An open-source project by Park Pavel. Based on Obsidian Projects by Marcus Olsson.</p><div><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache-2.0</a><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE">Attribution</a><a href="https://web.tribute.tg/d/Sh6">♡ Support the project</a><a href="https://github.com/ParkPavel/obs-projects-plus/issues">Feedback</a></div></footer>
+<aside class="search-panel" aria-label="Search documentation"><label for="doc-search">Search documentation</label><div class="search-input-wrap"><input id="doc-search" type="search" placeholder="Search…" autocomplete="off" aria-controls="search-results"><kbd>/</kbd></div><ul id="search-results" hidden></ul><p id="search-status" role="status" aria-live="polite" data-empty="No matches. Try “calendar”, “formula” or “source”."></p></aside>
+</body></html>
