@@ -1,5 +1,4 @@
 import type { ProjectDefinition } from "src/settings/settings";
-import { stableStringify } from "src/lib/settings/settingsVerify";
 
 export const PROJECT_DOCUMENT_FORMAT = "obs-projects-plus/project-copy";
 export const MAX_PROJECT_DOCUMENT_BYTES = 2 * 1024 * 1024;
@@ -22,7 +21,7 @@ export function jsonObject(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
-/** Hash persisted JSON, not the formatting or an in-memory object identity. */
+/** Digest exact UTF-8 bytes; callers choose payload revision or full document bytes. */
 export async function textDigest(text: string): Promise<string> {
   if (!window.crypto?.subtle) throw projectFileError("secure digest unavailable");
   const bytes = new TextEncoder().encode(text);
@@ -52,8 +51,10 @@ export async function createProjectDocument(project: ProjectDefinition): Promise
   if (new TextEncoder().encode(serialized).length > MAX_PROJECT_DOCUMENT_BYTES) throw projectFileError("project too large");
   const copy: unknown = JSON.parse(serialized);
   checkProject(copy);
+  // Preserve insertion order too: custom configurations can use object key order.
+  // A reordered payload is a separate conservative revision, not a lost setting.
   return { format: PROJECT_DOCUMENT_FORMAT, schemaVersion: 1, settingsVersion: 4,
-    baseRevision: await textDigest(stableStringify(copy)), project: copy };
+    baseRevision: await textDigest(serialized), project: copy };
 }
 
 export function printProjectDocument(document: ProjectDocument): string {

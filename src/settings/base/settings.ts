@@ -395,7 +395,7 @@ export interface ColorFavorite { readonly color: string; readonly name: string; 
 
 export type ProjectsPluginPreferences = {
   /** Opt-in verified project copies. Active configuration remains in data.json. */
-  readonly projectFiles?: { readonly root: string; readonly autoSync: boolean };
+  readonly projectFiles?: { readonly root: string; readonly autoSync: boolean; readonly previousRoots?: readonly string[] };
   /** Shared fallback palette, synced by the ordinary settings writer. */
   readonly colorFavorites?: ColorFavorite[];
   readonly projectSizeLimit: number;

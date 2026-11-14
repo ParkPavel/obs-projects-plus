@@ -73,7 +73,7 @@ export async function syncProjectCopies(storage: ProjectFilesStorage, input: str
       }
     }
     const backupFolder = root + "/Backups/" + item.key;
-    const snapshot = backupFolder + "/" + item.doc.baseRevision + ".md";
+    const snapshot = backupFolder + "/" + item.hash + ".md";
     await ensureProjectFolders(storage, backupFolder);
     await writeProjectSnapshot(storage, snapshot, item.text);
     await ensureProjectFolders(storage, folder);

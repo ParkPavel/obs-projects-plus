@@ -16,7 +16,8 @@
             "failed": "The copy could not be verified. Check available space, folder access and external edits. Active settings were not rolled back. Retry after resolving the conflict.",
             "scope": "This first stage copies active and archived project configurations. Notes and attachments are not included. Backups stay in this vault; copy them elsewhere to protect against losing the vault. ZIP exchange and applying external edits are being developed separately.",
             "archived": "archived",
-            "dataview-warning": "Dataview evaluates DQL before Projects Plus filters the resulting records. If a DQL query covers the entire vault, exclude the copy folder there so its notes do not affect aggregates."
+            "dataview-warning": "Dataview evaluates DQL before Projects Plus filters the resulting records. If a DQL query covers the entire vault, exclude the copy folder there so its notes do not affect aggregates.",
+            "waiting": "Waiting for the primary settings to be saved and confirmed. Retry after resolving any settings save issue."
         },
         "formula-migration": {
             "completed": "Projects+: formula rules migrated. Verified backup and report: {{path}}"

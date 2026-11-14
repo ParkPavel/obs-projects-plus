@@ -9,7 +9,7 @@ type LatestProjectsPluginSettings = import("src/settings/settings").LatestProjec
 type MirrorReceipt = import("src/lib/projectFiles/mirror").MirrorReceipt;
 
 jest.mock("./modal", () => ({ ProjectFilesModal: class { open() {} close() {} } }));
-jest.mock("src/lib/projectFiles/vaultStorage", () => ({ projectVaultStorage: jest.fn(() => ({})) }));
+jest.mock("src/lib/projectFiles/vaultStorage", () => ({ projectVaultStorage: jest.fn(() => ({ read: (path: string) => mockIndexRead(path) })) }));
 jest.mock("src/lib/projectFiles/mirror", () => ({ syncProjectCopies: jest.fn() }));
 jest.mock("src/lib/stores/i18n", () => ({ i18n: { subscribe(fn: (value: unknown) => void) { fn({ t: (key: string) => key }); return () => undefined; } } }));
 jest.mock("src/lib/stores/settings", () => ({ settings: require("svelte/store").writable(require("src/settings/settings").DEFAULT_SETTINGS) }));
@@ -18,11 +18,13 @@ jest.mock("obsidian", () => ({ Notice: jest.fn() }));
 const { ProjectFilesController } = require("./controller") as typeof import("./controller");
 
 const runCopy = jest.mocked(syncProjectCopies);
+const mockIndexRead = jest.fn(async (_path: string): Promise<string | null> => "existing-index");
 const receipt: MirrorReceipt = { root: "Project copies", projects: 0, copies: [], snapshots: [], documents: [] };
 let disk: LatestProjectsPluginSettings;
 let confirmed: string | null;
 let controller: import("./controller").ProjectFilesController;
 let flush: jest.Mock;
+let host: Plugin;
 
 function state(autoSync = false): LatestProjectsPluginSettings {
   return { ...DEFAULT_SETTINGS, preferences: { ...DEFAULT_SETTINGS.preferences, projectFiles: { root: "Project copies", autoSync } } };
@@ -33,7 +35,8 @@ function persist(value: LatestProjectsPluginSettings): void {
 beforeEach(() => {
   jest.useFakeTimers();jest.clearAllMocks();persist(state());
   flush = jest.fn(async () => undefined);
-  const host = { manifest: { dir: "AppConfig/plugins/Projects" },
+  mockIndexRead.mockResolvedValue("existing-index");
+  host = { manifest: { dir: "AppConfig/plugins/Projects" },
     app: { vault: { configDir: "AppConfig", adapter: { read: async () => JSON.stringify(disk) } } },
     addCommand: jest.fn(), register: jest.fn() } as unknown as Plugin;
   runCopy.mockResolvedValue(receipt);
@@ -51,6 +54,8 @@ test("unconfirmed memory and unknown persisted bases cannot export", async () =>
   settings.set({ ...disk, projects: [{ id: "pending" }] } as LatestProjectsPluginSettings);
   await expect(controller.sync()).rejects.toThrow("confirmed");
   expect(runCopy).not.toHaveBeenCalled();
+  expect(get(controller.status).kind).toBe("waiting");
+  expect(Notice).not.toHaveBeenCalled();
   settings.set(disk);confirmed = null;
   await expect(controller.sync()).rejects.toThrow("confirmed");
   expect(runCopy).not.toHaveBeenCalled();
@@ -99,4 +104,25 @@ test("secondary failures preserve primary state and are reported once per failur
   runCopy.mockResolvedValue(receipt);await controller.sync();
   runCopy.mockRejectedValue(Error("full"));await expect(controller.sync()).rejects.toThrow();
   expect(Notice).toHaveBeenCalledTimes(2);
+});
+
+test("startup automatic refresh does not recreate a missing or moved copy folder", async () => {
+  controller.dispose();persist(state(true));mockIndexRead.mockResolvedValue(null);
+  controller = new ProjectFilesController(host, flush, () => confirmed);
+  await jest.advanceTimersByTimeAsync(900);
+  expect(runCopy).not.toHaveBeenCalled();expect(get(controller.status).kind).toBe("failed");
+  await controller.sync();expect(runCopy).toHaveBeenCalledTimes(1);
+});
+test("after explicit first-time opt-in, a disappeared index cannot be recreated automatically", async () => {
+  persist(state(true));controller.onConfirmed(disk);await jest.advanceTimersByTimeAsync(900);
+  expect(runCopy).toHaveBeenCalledTimes(1);
+  mockIndexRead.mockResolvedValue(null);controller.onConfirmed(disk);await jest.advanceTimersByTimeAsync(900);
+  expect(runCopy).toHaveBeenCalledTimes(1);expect(get(controller.status).kind).toBe("failed");
+});
+
+test("a confirmation delivered by the primary flush grants initialization only to that copy", async () => {
+  flush.mockImplementationOnce(async () => { persist(state(true));controller.onConfirmed(disk); });
+  await controller.sync();expect(runCopy).toHaveBeenCalledTimes(1);
+  mockIndexRead.mockResolvedValue(null);controller.onConfirmed(disk);await jest.advanceTimersByTimeAsync(900);
+  expect(runCopy).toHaveBeenCalledTimes(1);
 });

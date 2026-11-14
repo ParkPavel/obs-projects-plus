@@ -3,7 +3,7 @@ import { get } from "svelte/store";
 import { i18n } from "src/lib/stores/i18n";
 import { settings } from "src/lib/stores/settings";
 import TextField from "src/ui/components/fields/TextField.svelte";
-import { projectFilesRoot } from "src/lib/projectFiles/paths";
+import { nextCopyPreferences, projectFilesRoot } from "src/lib/projectFiles/paths";
 import type { ProjectFilesController } from "./controller";
 
 /** Reuses native modal scrolling and the shared IME-aware field kit. */
@@ -32,13 +32,13 @@ export class ProjectFilesModal extends Modal {
       root = event.detail.value;
       this.field?.$set({ value: root });
       const preferences = get(settings).preferences;
-      settings.updatePreferences({ ...preferences, projectFiles: { root, autoSync: preferences.projectFiles?.autoSync ?? false } });
+      settings.updatePreferences({ ...preferences, projectFiles: nextCopyPreferences(preferences.projectFiles, root, preferences.projectFiles?.autoSync ?? false, this.app.vault.configDir) });
     });
     const toggle = new Setting(this.contentEl).setName(t("automatic")).setDesc(t("automatic-description"));
     toggle.addToggle(control => control.setValue(current?.autoSync ?? false).onChange(autoSync => {
       if (!this.field?.syncForSubmit() || !valid(root)) { control.setValue(get(settings).preferences.projectFiles?.autoSync ?? false); return; }
       const preferences = get(settings).preferences;
-      settings.updatePreferences({ ...preferences, projectFiles: { root, autoSync } });
+      settings.updatePreferences({ ...preferences, projectFiles: nextCopyPreferences(preferences.projectFiles, root, autoSync, this.app.vault.configDir) });
     }));
     const status = this.contentEl.createEl("p", { attr: { role: "status", "aria-live": "polite" } });
     const documents = this.contentEl.createEl("ul");
@@ -47,7 +47,7 @@ export class ProjectFilesModal extends Modal {
       button.setButtonText(t("sync")).setCta().onClick(async () => {
         if (!this.field?.syncForSubmit() || !valid(root)) return;
         const preferences = get(settings).preferences;
-        if (!preferences.projectFiles) settings.updatePreferences({ ...preferences, projectFiles: { root, autoSync: false } });
+        if (!preferences.projectFiles) settings.updatePreferences({ ...preferences, projectFiles: nextCopyPreferences(undefined, root, false, this.app.vault.configDir) });
         await this.controller.runWithNotice();
       });
       this.off = this.controller.status.subscribe(value => {

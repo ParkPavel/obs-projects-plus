@@ -41,3 +41,11 @@ test("Dataview file-linked output excludes reserved records without changing the
   expect((await source.queryAll()).records.map(record => record.id)).toEqual([note]);
   expect(seenQuery).toBe(query);
 });
+
+test("switching the configured root retains isolation of old copies across reloads", async () => {
+  const fs = await files();
+  const persisted = JSON.parse(JSON.stringify({ ...preferences, projectFiles: { root: "New copies", autoSync: true, previousRoots: ["Copies"] } }));
+  const source = new FolderDataSource(fs, definition({ kind: "folder", config: { path: "", recursive: true } }), persisted);
+  expect(source.includes(copy)).toBe(false);expect(source.includes(backup)).toBe(false);
+  expect((await source.queryAll()).records.map(record => record.id)).toEqual([note]);
+});

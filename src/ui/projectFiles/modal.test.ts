@@ -80,3 +80,11 @@ test("copying disables repeated actions, and closing retires the status subscrip
   button().click();await settle();expect(run).not.toHaveBeenCalled();
   modal.close();status.set({ kind: "failed" });expect(modal.contentEl.childElementCount).toBe(0);
 });
+
+test("changing a destination remembers current and older roots for record isolation", async () => {
+  settings.set({ ...DEFAULT_SETTINGS, preferences: { ...DEFAULT_SETTINGS.preferences,
+    projectFiles: { root: "Old copies", autoSync: false, previousRoots: ["Older copies"] } } });
+  const field = input();field.focus();field.value = "New copies";field.dispatchEvent(new Event("input", { bubbles: true }));await settle();
+  button().click();await settle();
+  expect(get(settings).preferences.projectFiles).toEqual({ root: "New copies", autoSync: false, previousRoots: ["Old copies", "Older copies"] });
+});

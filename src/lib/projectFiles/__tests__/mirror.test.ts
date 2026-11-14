@@ -137,3 +137,16 @@ test("a host that resolves a truncated write cannot report a verified snapshot",
   expect(JSON.stringify(value())).toBe(before);
   expect(storage.files.has("Copies/sync-index.json")).toBe(false);
 });
+
+test("key-order changes preserve their order and create consistent distinct snapshots", async () => {
+  const storage = new MemoryStorage();
+  const firstProject = { ...project(), fieldConfig: { a: {}, b: {} } };
+  const reordered = { ...project(), fieldConfig: { b: {}, a: {} } };
+  const first = await syncProjectCopies(storage, "Copies", value([firstProject]), "Application config");
+  const next = await syncProjectCopies(storage, "Copies", value([reordered]), "Application config");
+  expect(first.snapshots[0]).not.toBe(next.snapshots[0]);
+  const text = storage.files.get(next.snapshots[0]!)!;
+  expect(next.snapshots[0]).toContain(await textDigest(text));
+  expect(Object.keys(parseProjectDocument(text).project.fieldConfig)).toEqual(["b", "a"]);
+  expect(Object.keys(parseProjectDocument(storage.files.get(first.snapshots[0]!)!).project.fieldConfig)).toEqual(["a", "b"]);
+});

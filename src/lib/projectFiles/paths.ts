@@ -1,4 +1,19 @@
 import { projectFileError } from "./document";
+import type { ProjectsPluginPreferences } from "src/settings/settings";
+
+type CopyPreferences = ProjectsPluginPreferences["projectFiles"];
+
+/** Old roots remain reserved: changing the destination must not turn copies into records. */
+export function configuredCopyRoots(config: CopyPreferences): readonly string[] {
+  const candidates: unknown[] = [config?.root, ...(Array.isArray(config?.previousRoots) ? config.previousRoots : [])];
+  return [...new Set(candidates.filter((value): value is string => typeof value === "string" && value.length > 0))];
+}
+
+export function nextCopyPreferences(previous: CopyPreferences, input: string, autoSync: boolean, configDir: string): NonNullable<CopyPreferences> {
+  const root = projectFilesRoot(input, configDir);
+  const previousRoots = configuredCopyRoots(previous).filter(old => old.toLowerCase() !== root.toLowerCase());
+  return { root, autoSync, ...(previousRoots.length ? { previousRoots } : {}) };
+}
 
 /** Portable vault-relative destinations; no normalization that changes ownership. */
 export function projectFilesRoot(input: string, configDir: string): string {
@@ -18,9 +33,12 @@ export function projectFilesRoot(input: string, configDir: string): string {
 }
 
 /** Only this feature's reserved documents, not imported user notes beside them. */
-export function isProjectCopyPath(path: string, root: string | undefined): boolean {
-  if (!root) return false;
-  const prefix = root.toLowerCase() + "/", lower = path.toLowerCase();
-  if (!lower.startsWith(prefix)) return false;
-  return /^(?:projects\/[a-f0-9]{64}\/project\.md|backups\/[a-f0-9]{64}\/[a-f0-9]{64}\.md)$/.test(lower.slice(prefix.length));
+export function isProjectCopyPath(path: string, root: string | readonly string[] | undefined): boolean {
+  const roots: readonly unknown[] = typeof root === "string" ? [root] : Array.isArray(root) ? root : [];
+  const lower = path.toLowerCase();
+  return roots.some(candidate => {
+    if (typeof candidate !== "string" || !candidate) return false;
+    const prefix = candidate.toLowerCase() + "/";
+    return lower.startsWith(prefix) && /^(?:projects\/[a-f0-9]{64}\/project\.md|backups\/[a-f0-9]{64}\/[a-f0-9]{64}\.md)$/.test(lower.slice(prefix.length));
+  });
 }

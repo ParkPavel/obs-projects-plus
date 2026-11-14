@@ -14,6 +14,8 @@ Each project has a readable Project.md and an immutable configuration snapshot i
 
 Repeating the same configuration does not duplicate snapshots. Externally edited, corrupted or unexpectedly missing copies block automatic overwrite and expose failure. A mirror failure never rolls back successfully saved settings. Read-back detects a host that falsely reports write success.
 
+Preserve configuration key order: a change creates a separate conservative revision. Snapshot filenames hash exact document bytes. Previous copy roots stay in the exclusion history after changing destinations. Unconfirmed primary settings show a waiting state rather than a false backup-failure notification.
+
 ## Current boundaries
 
 - ZIP transfer/import, note/attachment packaging, tag/folder mapping and restore UI are not yet implemented.
@@ -22,6 +24,7 @@ Repeating the same configuration does not duplicate snapshots. Externally edited
 - Reserved copy documents are excluded from ordinary Projects Plus source records. Dataview runs DQL before output filtering: vault-wide DQL aggregates must explicitly exclude the copy folder. Existing Dataview sources trigger a notice in the management window before the action.
 - Vault.process checks and read-back do not form a distributed transaction. An interruption can leave partial files; repeating the same revision verifies/resumes it without overwriting external versions.
 - The outbound queue coalesces save events separately from the primary writer. JavaScript execution after closing Obsidian is not promised. Enabled automatic mode checks again on next launch.
+- Startup automatic refresh cannot recreate a missing binding/index. Manual creation or an explicit destination/enable action can initialize a new folder. Filesystem folder renames do not yet have an automatic relocation wizard: disable automatic mode and select the actual destination in management.
 - The marked configuration block and index use experimental schema version1; this is not a published stable external API.
 
 ## Verification and next stages
