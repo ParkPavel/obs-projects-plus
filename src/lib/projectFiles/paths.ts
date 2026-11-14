@@ -25,7 +25,7 @@ export function projectFilesRoot(input: string, configDir: string): string {
       /[. ]$/.test(s) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(s))) {
     throw projectFileError("unsafe destination folder");
   }
-  const lower = input.toLocaleLowerCase("en-US"), config = configDir.toLocaleLowerCase("en-US");
+  const lower = input.normalize("NFC").toLocaleLowerCase("en-US"), config = configDir.normalize("NFC").toLocaleLowerCase("en-US");
   if (lower === config || lower.startsWith(config + "/") || config.startsWith(lower + "/")) {
     throw projectFileError("destination overlaps application configuration");
   }

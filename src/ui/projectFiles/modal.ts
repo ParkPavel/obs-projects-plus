@@ -74,6 +74,9 @@ export class ProjectFilesModal extends Modal {
       if (!preferences.projectFiles) settings.updatePreferences({ ...preferences, projectFiles: nextCopyPreferences(undefined, root, false, this.app.vault.configDir) });
       await this.controller.openPackages();
     }));
+    new Setting(this.contentEl).addButton(button => button.setButtonText(get(i18n).t("package-inspect.title")).onClick(() => {
+      void this.controller.openInspector();
+    }));
   }
 
   onClose(): void {

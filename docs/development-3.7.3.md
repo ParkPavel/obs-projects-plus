@@ -43,4 +43,14 @@ Known references include relation/rollup/backlink targets and stored Dashboard w
 
 Bounds: 256 ZIP entries including manifest, 4MiB per file, 16MiB total data and 20MiB archive. Stored ZIP without compression uses pinned fflate0.8.3, yielding between files without background workers. Per-file metadata checks do not constitute an atomic vault snapshot. Later note edits do not mutate captured bytes; changed active settings require a new preview. Closing retires pending work; an already started host write can leave a retained file.
 
-The self-check decodes only our just-generated ZIP before writing, not untrusted incoming archives. Bounded import/staging/journal, remapping, native Share and physical-iPhone acceptance are still open. The visible ZIP can be copied using the filesystem; no automatic transmission is claimed.
+The export self-check decodes only our just-generated ZIP before writing. Received archives use the separate inspector below. Import/staging/journal, remapping, native Share and physical-iPhone acceptance are still open. The visible ZIP can be copied using the filesystem; no automatic transmission is claimed.
+
+## Third increment: inspect a received package
+
+Use Inspect a project ZIP, or the matching button in copy management. No local project or configured copy destination is required. Select a ZIP already present in the vault. The inspector reads a stable capture, shows project names, included file paths, unresolved known references and the archive SHA-256. Errors distinguish unsupported ZIP variants, unsafe paths, size limits, inconsistent metadata and checksum failures. The command does not flush or save active settings, create folders, extract files, evaluate formulas or install projects. Closing the window retires pending reads/checks.
+
+The current input profile supports stored ZIP without compression, single disk, ASCII/UTF-8 names, regular file entries and signed data descriptors when present. Encrypted/compressed/ZIP64 archives, extra fields, directory/symlink entries, prepended stubs, overlaps, hidden local records and inconsistent local/central metadata are rejected. No general unzip or inflate routine receives incoming bytes. Other ZIP profiles require a later bounded decoder.
+
+Limits apply to actual byte ranges: 20MiB input, 16MiB total stored data, 4MiB per entry, 256 entries, 512KiB manifest, 100 project definitions and 4096 known references. Export uses the same manifest policy. Names are checked for traversal, hidden/configuration paths, case/NFC duplicates and file/parent collisions. The inspector verifies CRC32, manifest SHA-256 and exact file coverage, project identity/path/revision, supported schema and recomputed known-reference status. Unknown manifest fields/versions block inspection; opaque project config is preserved and only envelope-checked. Integrity verification does not authenticate the sender or establish that imported formulas/configurations are safe to apply.
+
+This is a read-only preview, not completed import. Destination selection, ID/link remapping, staging, interrupted-import recovery and applying external edits remain subsequent work.

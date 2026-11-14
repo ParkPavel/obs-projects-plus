@@ -33,6 +33,7 @@ export class ProjectFilesController {
   constructor(private readonly host: Plugin, private readonly flush: () => Promise<void>, private readonly confirmed: () => string | null) {
     host.addCommand({ id: "project-files", name: get(i18n).t("project-files.title"), callback: () => this.open() });
     host.addCommand({ id: "project-package", name: get(i18n).t("project-package.title"), callback: () => { void this.openPackages(); } });
+    host.addCommand({ id: "project-package-inspect", name: get(i18n).t("package-inspect.title"), callback: () => { void this.openInspector(); } });
     host.register(() => this.dispose());
     this.observedCopyPreferences = get(settings).preferences.projectFiles;
     this.onConfirmed(get(settings));
@@ -53,6 +54,14 @@ export class ProjectFilesController {
     this.modal?.close();
     this.packageModal?.close();
     this.packageModal = new ProjectPackageModal(this.host.app, new ProjectPackageService(this.host, this.flush, this.confirmed, () => this.alive));
+    this.packageModal.open();
+  }
+
+  async openInspector(): Promise<void> {
+    const [{ ProjectPackageInspectModal }, { ProjectPackageService }] = await Promise.all([import("./packageInspectModal"), import("./packageService")]);
+    if (!this.alive) return;
+    this.modal?.close(); this.packageModal?.close();
+    this.packageModal = new ProjectPackageInspectModal(this.host.app, new ProjectPackageService(this.host, this.flush, this.confirmed, () => this.alive));
     this.packageModal.open();
   }
 

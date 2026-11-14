@@ -417,6 +417,7 @@ describe("R0.33 — the tree", () => {
       "ui/modals/relationSetupModal.ts",
       "ui/modals/schemaModal.ts",
       "ui/projectFiles/modal.ts",
+      "ui/projectFiles/packageInspectModal.ts",
       "ui/projectFiles/packageModal.ts",
       "ui/views/VisualizerPane/RelationPickerModal.ts",
     ]);

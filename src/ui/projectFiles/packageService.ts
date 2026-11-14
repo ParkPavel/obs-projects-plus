@@ -10,6 +10,8 @@ import { createProjectZip } from "src/lib/projectFiles/packageZip";
 import { projectVaultStorage } from "src/lib/projectFiles/vaultStorage";
 import { ensureProjectFolders } from "src/lib/projectFiles/storage";
 import type { LatestProjectsPluginSettings } from "src/settings/settings";
+import { inspectProjectPackage, type InspectedProjectPackage } from "src/lib/projectFiles/packageInspect";
+import { PackageInspectionError } from "src/lib/projectFiles/packagePolicy";
 
 export class ProjectPackageService {
   private busy = false;
@@ -34,6 +36,23 @@ export class ProjectPackageService {
     try { packageFilePath(path, this.host.app.vault.configDir); }
     catch { return false; }
     return !isProjectCopyPath(path, configuredCopyRoots(get(settings).preferences.projectFiles)) && !/\.zip$/i.test(path);
+  }
+
+  /** Read-only entry point: no primary flush/save, folders, extraction or config application. */
+  async inspect(path: string): Promise<InspectedProjectPackage> {
+    if (this.busy) throw projectFileError("package operation busy");
+    this.busy = true;
+    try {
+      this.check(); packageFilePath(path, this.host.app.vault.configDir);
+      const file = this.host.app.vault.getAbstractFileByPath(path);
+      if (!(file instanceof TFile)) throw projectFileError("archive missing");
+      if (file.stat.size > PACKAGE_LIMITS.archiveBytes) throw new PackageInspectionError("size-limit");
+      const before = { ...file.stat };
+      const bytes = new Uint8Array(await this.host.app.vault.readBinary(file));
+      this.check();
+      if (this.host.app.vault.getAbstractFileByPath(path) !== file || before.size !== file.stat.size || before.mtime !== file.stat.mtime || bytes.length !== before.size) throw projectFileError("archive changed during capture");
+      return await inspectProjectPackage(bytes, this.host.app.vault.configDir, this.check);
+    } finally { this.busy = false; }
   }
 
   async prepare(projectId: string, paths: readonly string[]): Promise<PreparedProjectPackage> {

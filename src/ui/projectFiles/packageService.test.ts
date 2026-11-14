@@ -1,5 +1,5 @@
 import { webcrypto } from "node:crypto";
-import { TextEncoder } from "node:util";
+import { TextEncoder, TextDecoder } from "node:util";
 import { get } from "svelte/store";
 import { DEFAULT_PROJECT, DEFAULT_SETTINGS } from "src/settings/settings";
 import { settings } from "src/lib/stores/settings";
@@ -14,14 +14,16 @@ jest.mock("obsidian", () => ({
 }));
 const { TFile, TFolder } = require("obsidian");
 const { ProjectPackageService } = require("./packageService") as typeof import("./packageService");
-const beforeCrypto = window.crypto, beforeEncoder = window.TextEncoder;
+const beforeCrypto = window.crypto, beforeEncoder = window.TextEncoder, beforeDecoder = window.TextDecoder;
 beforeAll(() => {
   Object.defineProperty(window, "crypto", { value: webcrypto, configurable: true });
   Object.defineProperty(window, "TextEncoder", { value: TextEncoder, configurable: true });
+  Object.defineProperty(window, "TextDecoder", { value: TextDecoder, configurable: true });
 });
 afterAll(() => {
   Object.defineProperty(window, "crypto", { value: beforeCrypto, configurable: true });
   Object.defineProperty(window, "TextEncoder", { value: beforeEncoder, configurable: true });
+  Object.defineProperty(window, "TextDecoder", { value: beforeDecoder, configurable: true });
 });
 let disk: State, confirmed: string | null, service: import("./packageService").ProjectPackageService;
 let files: Map<string, { path: string; stat: { size: number; mtime: number }; bytes: Uint8Array }>;
@@ -148,4 +150,38 @@ test("picker excludes hidden configuration, generated copies and ZIP files", () 
   expect(service.eligible(`Copies/Projects/${"a".repeat(64)}/Project.md`)).toBe(false);
   expect(service.eligible("Copies/Packages/template.zip")).toBe(false);
   expect(service.eligible("Files/Note.md")).toBe(true);
+});
+
+test("inspection works without local projects or confirmed settings and never flushes or writes", async () => {
+  const saved = await service.save(await service.prepare("p", ["Note.md"]));
+  create.mockClear(); mkdir.mockClear(); flush.mockClear();
+  persist({ ...DEFAULT_SETTINGS, projects: [] }); confirmed = null;
+  const initial = get(settings), result = await service.inspect(saved.path);
+  expect(result.manifest.rootProjectId).toBe("p");
+  expect(get(settings)).toBe(initial);
+  expect(create).not.toHaveBeenCalled(); expect(mkdir).not.toHaveBeenCalled(); expect(flush).not.toHaveBeenCalled();
+});
+
+test("oversized incoming archive is rejected before reading", async () => {
+  const huge = new TFile("Incoming/Huge.zip", { size: 20 * 1024 * 1024 + 1, mtime: 1 }); files.set(huge.path, huge);
+  await expect(service.inspect(huge.path)).rejects.toThrow("size-limit");
+  expect(read).not.toHaveBeenCalled(); expect(flush).not.toHaveBeenCalled(); expect(create).not.toHaveBeenCalled();
+});
+
+test("an archive changed while reading cannot be inspected as current", async () => {
+  const saved = await service.save(await service.prepare("p", [])); create.mockClear(); mkdir.mockClear(); flush.mockClear();
+  read.mockImplementationOnce(async file => { file.stat.mtime++; return new Uint8Array(file.bytes as Uint8Array).buffer; });
+  await expect(service.inspect(saved.path)).rejects.toThrow("changed during capture");
+  expect(flush).not.toHaveBeenCalled(); expect(create).not.toHaveBeenCalled(); expect(mkdir).not.toHaveBeenCalled();
+});
+
+test("closing an incoming inspection during a read retires it", async () => {
+  const saved = await service.save(await service.prepare("p", [])); create.mockClear(); flush.mockClear();
+  let finish!: (value: ArrayBuffer) => void;
+  read.mockImplementationOnce(() => new Promise<ArrayBuffer>(resolve => { finish = resolve; }));
+  const pending = service.inspect(saved.path);
+  await expect(service.prepare("p", [])).rejects.toThrow("busy");
+  service.dispose(); finish(new Uint8Array(files.get(saved.path)!.bytes).buffer);
+  await expect(pending).rejects.toThrow("retired");
+  expect(flush).not.toHaveBeenCalled(); expect(create).not.toHaveBeenCalled();
 });

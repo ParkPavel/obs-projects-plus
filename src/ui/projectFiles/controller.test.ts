@@ -50,6 +50,15 @@ test("manual copy waits for the primary writer and passes only matching persiste
   expect(runCopy).toHaveBeenCalledWith(expect.anything(), "Project copies", disk, "AppConfig");
   expect(get(controller.status).kind).toBe("saved");
 });
+
+test("inspection command remains available with no local projects or destination", async () => {
+  persist(DEFAULT_SETTINGS);
+  const open = jest.spyOn(controller, "openInspector").mockResolvedValue();
+  const command = (host.addCommand as jest.Mock).mock.calls.map(call => call[0]).find(command => command.id === "project-package-inspect");
+  expect(command).toBeDefined(); command.callback();
+  expect(open).toHaveBeenCalledTimes(1);
+  expect(flush).not.toHaveBeenCalled(); expect(runCopy).not.toHaveBeenCalled();
+});
 test("unconfirmed memory and unknown persisted bases cannot export", async () => {
   settings.set({ ...disk, projects: [{ id: "pending" }] } as LatestProjectsPluginSettings);
   await expect(controller.sync()).rejects.toThrow("confirmed");

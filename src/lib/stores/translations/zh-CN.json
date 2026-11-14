@@ -1,5 +1,22 @@
 ﻿{
     "translation": {
+        "package-inspect": {
+            "title": "检查项目 ZIP",
+            "description": "选择库中收到的 ZIP，在导入前检查结构、内容和校验和。",
+            "choose": "选择 ZIP",
+            "checking": "正在检查包…",
+            "verified": "包结构和校验和已验证",
+            "files": "包内文件",
+            "missing": "未解析的已知引用：",
+            "scope": "预览已就绪。文件仍在归档中，活动项目未更改。尚未验证作者身份。导入将在后续阶段提供。",
+            "invalid-zip": "ZIP 已损坏或记录不一致。",
+            "unsupported-zip": "暂不支持此 ZIP 变体。请使用不压缩的 Projects Plus 包。",
+            "unsafe-path": "归档中存在不安全、冲突或不支持的文件路径。",
+            "size-limit": "归档超出条目数量或大小限制。",
+            "invalid-manifest": "清单或项目定义无效、不一致，或使用了不支持的版本。",
+            "checksum": "内容与校验和不匹配。",
+            "read-failed": "无法读取稳定的归档。请检查文件是否存在，以及同步是否完成。"
+        },
         "project-package": {
             "title": "打包项目（ZIP）",
             "description": "选择项目，并按需添加库中的单个文件。保存到副本文件夹前，请预览归档内容。不会自动安装或分享。",

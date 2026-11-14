@@ -1,5 +1,22 @@
 ﻿{
     "translation": {
+        "package-inspect": {
+            "title": "Inspect a project ZIP",
+            "description": "Choose a received ZIP from the vault to check its structure, contents and checksums before import.",
+            "choose": "Choose ZIP",
+            "checking": "Checking package…",
+            "verified": "Package structure and checksums verified",
+            "files": "Included files",
+            "missing": "Unresolved known references:",
+            "scope": "Preview ready. Files remain inside the archive; active projects are unchanged. Authorship is not verified. Import will be available in a later stage.",
+            "invalid-zip": "The ZIP is damaged or contains inconsistent records.",
+            "unsupported-zip": "This ZIP variant is not supported yet. Use a Projects Plus package stored without compression.",
+            "unsafe-path": "The archive has unsafe, conflicting or unsupported file paths.",
+            "size-limit": "The archive exceeds the entry or size limits.",
+            "invalid-manifest": "The package manifest or project definitions are invalid, inconsistent or use an unsupported version.",
+            "checksum": "The contents do not match their checksums.",
+            "read-failed": "The archive could not be read consistently. Check that the file exists and has finished synchronizing."
+        },
         "project-package": {
             "title": "Package a project (ZIP)",
             "description": "Select a project and optionally add individual vault files. Preview the captured contents before saving a ZIP in the copies folder. Nothing is installed or shared automatically.",

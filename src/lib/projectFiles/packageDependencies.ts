@@ -3,6 +3,7 @@ import { extractRelationTargetIds } from "src/lib/relations/relationTargets";
 import { blockAt, dashboardsOf, parseBlockRef, refsReadBy } from "src/lib/relations/blockRefs";
 import { parseBaseRef } from "src/lib/relations/baseRef";
 import { checkProject, projectFileError } from "./document";
+import { PACKAGE_LIMITS } from "./packagePolicy";
 
 export interface PackageDependency { from: string; reference: string; target: string; resolved: boolean }
 export interface PackageProject { project: ProjectDefinition; archived: boolean }
@@ -24,7 +25,7 @@ export function packageDependencies(settings: LatestProjectsPluginSettings, root
     visited.add(id);
     const item = byId.get(id)!;
     projects.push(item);
-    if (projects.length > 100) throw projectFileError("too many package dependencies");
+    if (projects.length > PACKAGE_LIMITS.projects) throw projectFileError("too many package dependencies");
     const references = new Set(extractRelationTargetIds(id, item.project.fieldConfig));
     for (const dashboard of dashboardsOf(item.project)) for (const widget of dashboard.widgets) {
       for (const reference of refsReadBy(widget)) references.add(reference);
@@ -35,6 +36,7 @@ export function packageDependencies(settings: LatestProjectsPluginSettings, root
       const resolved = !!target && (block ? !!blockAt(all.map(item => item.project), block)
         : !ref.sourceId || (target.project.dataSource as { id?: string }).id === ref.sourceId || target.project.additionalSources?.some(source => (source as { id?: string }).id === ref.sourceId) === true);
       dependencies.push({ from: id, reference, target: ref.projectId, resolved });
+      if (dependencies.length > PACKAGE_LIMITS.dependencies) throw projectFileError("too many package references");
       if (target && !visited.has(ref.projectId)) pending.push(ref.projectId);
     }
   }

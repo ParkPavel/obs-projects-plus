@@ -2,8 +2,10 @@ import type { LatestProjectsPluginSettings } from "src/settings/settings";
 import { createProjectDocument, printProjectDocument, projectFileError, textDigest } from "./document";
 import { packageDependencies, type PackageDependency } from "./packageDependencies";
 import { projectFilesRoot } from "./paths";
+import { PACKAGE_LIMITS } from "./packagePolicy";
+import { validatePackageManifest } from "./packageManifest";
 
-export const PACKAGE_LIMITS = { files: 256, fileBytes: 4 * 1024 * 1024, totalBytes: 16 * 1024 * 1024, archiveBytes: 20 * 1024 * 1024 } as const;
+export { PACKAGE_LIMITS } from "./packagePolicy";
 export type PackageFileRole = "project" | "note" | "attachment";
 export interface PackageFile { path: string; role: PackageFileRole; sourcePath?: string; bytes: number; sha256: string }
 export interface PackageManifest {
@@ -64,7 +66,8 @@ export async function prepareProjectPackage(settings: LatestProjectsPluginSettin
   const manifest: PackageManifest = { format: "obs-projects-plus/package", schemaVersion: 1, settingsVersion: 4, rootProjectId: rootId,
     createdAt, projects, dependencies: graph.dependencies, files, selection: "configuration-and-explicit-files", dependencyCoverage: "known-runtime-references" };
   const manifestBytes = new TextEncoder().encode(JSON.stringify(manifest, null, 2) + "\n");
-  if (total + manifestBytes.length > PACKAGE_LIMITS.totalBytes) throw projectFileError("package size limit");
+  if (total + manifestBytes.length > PACKAGE_LIMITS.totalBytes || manifestBytes.length > PACKAGE_LIMITS.manifestBytes) throw projectFileError("package size limit");
+  validatePackageManifest(manifest, configDir);
   entries.set("manifest.json", manifestBytes);
   return { manifest, entries, settingsRevision: await textDigest(JSON.stringify(copy)) };
 }
