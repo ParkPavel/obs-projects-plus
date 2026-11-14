@@ -21,6 +21,12 @@
     "docs/architecture.md",
     "docs/development-3.7.1-RU.md",
     "docs/development-3.7.1.md",
+    "docs/next-versions-RU.md",
+    "docs/next-versions.md",
+    "docs/plan-3.7.3-RU.md",
+    "docs/plan-3.7.3.md",
+    "docs/plan-3.7.4-RU.md",
+    "docs/plan-3.7.4.md",
     "docs/release-3.7.2-RU.md",
     "docs/release-3.7.2.md",
     "docs/site-maintenance-RU.md",
@@ -37,11 +43,11 @@
   "files": [
     {
       "name": "read/project-readme.html",
-      "sha256": "208338ed2896831ccb0da819750adf7d60c6eeb0ec0fee96bb6e2aa80efc5d54"
+      "sha256": "f0e4f006f8530bc1a11d37b40011806e90053feb51812945d4a15830afa98500"
     },
     {
       "name": "read/readme-ru.html",
-      "sha256": "f8e14ef15cb53507c4a851c664950a0b274d72487ce7ead0710dd516fdfda99a"
+      "sha256": "025c1a0c28fbdd37f96c55851011d296e04f8f24115087d172dd555b49f88c89"
     },
     {
       "name": "read/changelog.html",
@@ -53,11 +59,11 @@
     },
     {
       "name": "read/roadmap.html",
-      "sha256": "d3fc1336599404c272a0457d348a799476b295c680f368d777053f236bbb0297"
+      "sha256": "a955f427acc412fa4ad2a6d0d183c1e7020bdbc7952c37212cde2755ca146813"
     },
     {
       "name": "read/roadmap-ru.html",
-      "sha256": "ecd30a84e9ae75a51797997d12a1a1ca89dbf30865ed0f782111c126e52bd5a1"
+      "sha256": "a9e926e5b87a429349d1286c52252f9a65034116926ea98fbe25c3b21f3abe79"
     },
     {
       "name": "read/contributing.html",
@@ -81,7 +87,7 @@
     },
     {
       "name": "read/readme.html",
-      "sha256": "5451fb3445afc4137a8bcde88a324c638f1d9853a79b1ce1daaa98d547452b1a"
+      "sha256": "72b333b7dd4483f517ade1a61b5dc8ae68a1a5878e1f625c50d11900ec422589"
     },
     {
       "name": "read/api-ru.html",
@@ -106,6 +112,30 @@
     {
       "name": "read/development-3.7.1.html",
       "sha256": "257cb239086d6846810e6a24c609c3cbf10e35cb05953a66d7acbc1a6f4c2713"
+    },
+    {
+      "name": "read/next-versions-ru.html",
+      "sha256": "99090cf97c3b43b99e22f80cfaa9153309540d703e4b5a3578692c6514d7814b"
+    },
+    {
+      "name": "read/next-versions.html",
+      "sha256": "11b94f50c557e1a84c765fe77d8ccea4113a9b1a6d00f83f0b5c79a15c028992"
+    },
+    {
+      "name": "read/plan-3.7.3-ru.html",
+      "sha256": "42a1375ad05026ddfe35577b9d7a6d6b0916d882119b56320133e2a52c469e9b"
+    },
+    {
+      "name": "read/plan-3.7.3.html",
+      "sha256": "f6bc0e8ea9f1d09047027bd9c799da51e0eef89330040e73832658a5ad9ffded"
+    },
+    {
+      "name": "read/plan-3.7.4-ru.html",
+      "sha256": "722d67be388bc393421002d43721647977da0d968d8ae86e6ef8fcec7e2dfd6f"
+    },
+    {
+      "name": "read/plan-3.7.4.html",
+      "sha256": "4fe239ec4d68047a3db17eaa8986d9f24ab12f5de9b1ca8619502135bc3d3576"
     },
     {
       "name": "read/release-3.7.2-ru.html",
@@ -213,15 +243,15 @@
     },
     {
       "name": "index.html",
-      "sha256": "d9df79a74411e99620061c26aebe6cdef4ea2aad04f6b3ba7bb41f54318f6b86"
+      "sha256": "b06bb256d3d3f23fd5a71e61774b2125703522e51417682cdb2865d69eb1153f"
     },
     {
       "name": "en.html",
-      "sha256": "cfc1441beb4a4f8162ae4e5f1cc50fed8601f107cef33eeca98b9cf199fddfae"
+      "sha256": "28537d3b70bdf8dc8692a30b30ec4f5dd0251785e26302e37065d6b0e22aad71"
     },
     {
       "name": "search-index.json",
-      "sha256": "7bfaab0d42c9e69517e97d9e3ab4a7f5d47393bb404397e7d09f0d0ce10cc6cf"
+      "sha256": "b69403ff10116cb6a3509e854a62478c585aa3c03eace863e2e62cd9941b43c0"
     },
     {
       "name": ".nojekyll",
