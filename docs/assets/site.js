@@ -113,3 +113,54 @@ document.addEventListener('keydown', event => {
   if (event.key === '/' && !editing && !event.ctrlKey && !event.metaKey && !event.altKey) { event.preventDefault(); search?.focus(); search?.scrollIntoView({ block: 'center' }); }
   if (event.key === 'Escape' && event.target === search) { search.value = ''; searchGeneration++; results.replaceChildren(); results.hidden = true; searchStatus.textContent = ''; }
 });
+// Manual carousels retain native scrolling when JavaScript is unavailable.
+document.querySelectorAll('[data-carousel]').forEach(carousel => {
+  const track = carousel.querySelector('.screenshot-track');
+  const slides = [...track.children];
+  const controls = carousel.querySelector('.carousel-controls');
+  const previous = controls.querySelector('[data-previous]');
+  const next = controls.querySelector('[data-next]');
+  const count = controls.querySelector('[data-count]');
+  let active = 0;
+  const update = index => {
+    active = Math.max(0, Math.min(slides.length - 1, index));
+    count.textContent = `${active + 1} / ${slides.length}`;
+    previous.disabled = active === 0;
+    next.disabled = active === slides.length - 1;
+  };
+  const move = delta => {
+    update(active + delta);
+    track.scrollTo({left: active * track.clientWidth, behavior: 'auto'});
+  };
+  controls.hidden = false;
+  update(0);
+  previous.addEventListener('click', () => move(-1));
+  next.addEventListener('click', () => move(1));
+  track.addEventListener('scroll', () => {
+    if (track.clientWidth) update(Math.round(track.scrollLeft / track.clientWidth));
+  }, {passive: true});
+  track.addEventListener('keydown', event => {
+    if (event.target !== track || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+    event.preventDefault();
+    move(event.key === 'ArrowRight' ? 1 : -1);
+  });
+});
+const screenshotDialog = document.querySelector('.screenshot-dialog');
+if (screenshotDialog && typeof screenshotDialog.showModal === 'function') {
+  const image = screenshotDialog.querySelector('img');
+  document.querySelectorAll('[data-expand]').forEach(link => link.addEventListener('click', event => {
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    event.preventDefault();
+    const thumbnail = link.querySelector('img');
+    image.src = link.href;
+    image.alt = thumbnail.alt;
+    screenshotDialog.querySelector('p').textContent = thumbnail.alt;
+    screenshotDialog.showModal();
+  }));
+  screenshotDialog.querySelector('[data-close-image]').addEventListener('click', () => screenshotDialog.close());
+  screenshotDialog.addEventListener('click', event => {
+    if (event.target !== screenshotDialog) return;
+    const bounds = screenshotDialog.getBoundingClientRect();
+    if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) screenshotDialog.close();
+  });
+}

@@ -1,5 +1,11 @@
 # Projects Plus
 
+**Ваши заметки. Рабочая система.** Доски, календари, галереи и дашборды — прямо в Obsidian, с данными в обычных Markdown-файлах.
+
+[![Релиз](https://img.shields.io/github/v/release/ParkPavel/obs-projects-plus?label=release&color=6550a5)](https://github.com/ParkPavel/obs-projects-plus/releases/latest) [![Obsidian 1.8.7+](https://img.shields.io/badge/Obsidian-1.8.7%2B-6550a5)](https://obsidian.md/) [![Загрузки](https://img.shields.io/github/downloads/ParkPavel/obs-projects-plus/total?color=376c48)](https://github.com/ParkPavel/obs-projects-plus/releases) [![Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-376c48)](LICENSE)
+
+[![Поддержать проект через Tribute](https://img.shields.io/badge/%E2%99%A1%20Поддержать%20проект-Tribute-6550a5?style=for-the-badge)](https://web.tribute.tg/d/Sh6)
+
 [English](README.md) · [Сайт и идеи](https://parkpavel.github.io/obs-projects-plus/) · [Руководство пользователя](docs/user-guide.md) · [Документация](docs/README.md) · [План развития](ROADMAP-RU.md)
 
 Projects Plus помогает работать с заметками Obsidian как с проектом: просматривать записи в таблице, распределять их по колонкам, планировать события в календаре и собирать обзор на Dashboard.
@@ -16,7 +22,6 @@ Projects Plus помогает работать с заметками Obsidian �
 
 Изменения описаны в [журнале](CHANGELOG-RU.md). Перед обновлением рабочего хранилища прочитайте [руководство по обновлению и откату](docs/upgrade-RU.md).
 
-Если Projects Plus вам полезен, можно [поддержать разработку](https://web.tribute.tg/d/Sh6).
 
 ## Что можно сделать
 
@@ -31,9 +36,25 @@ Projects Plus помогает работать с заметками Obsidian �
 | Сравнить показатели разных проектов | Графики с несколькими сериями, данными другого проекта и второй осью |
 | Выбрать нужные заметки | Папка, тег, встроенный запрос с фильтром или Dataview |
 
-![Пример календаря Projects Plus](images/2026-01-27_12-24-17.png)
+## Посмотрите, как это работает
 
-Иллюстрация показывает один из вариантов интерфейса; оформление установленной версии может отличаться.
+Реальные снимки приложения, предоставленные автором 14.11.2026. Оригиналы открываются по ссылкам в заголовках; все 14 снимков можно пролистать в каруселях на сайте.
+
+### На компьютере
+
+| [Дашборд ↗](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/pc/2026-11-14_11-00-55.png) | [Галерея ↗](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/pc/2026-11-14_11-03-25.png) | [Расписание ↗](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/pc/2026-11-14_11-02-44.png) |
+| --- | --- | --- |
+| ![Dashboard](images/pc/2026-11-14_11-00-55.png) | ![Gallery](images/pc/2026-11-14_11-03-25.png) | ![Schedule](images/pc/2026-11-14_11-02-44.png) |
+
+### iPhone
+
+| [Обзор ↗](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/mobile/photo_7_2026-11-14_11-10-08.jpg) | [Диаграммы ↗](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/mobile/photo_3_2026-11-14_11-10-08.jpg) | [Карточки ↗](https://github.com/ParkPavel/obs-projects-plus/blob/main/images/mobile/photo_4_2026-11-14_11-10-08.jpg) |
+| --- | --- | --- |
+| ![iPhone dashboard](images/mobile/photo_7_2026-11-14_11-10-08.jpg) | ![iPhone chart](images/mobile/photo_3_2026-11-14_11-10-08.jpg) | ![iPhone gallery](images/mobile/photo_4_2026-11-14_11-10-08.jpg) |
+
+[← Открыть карусели: ПК и iPhone →](https://parkpavel.github.io/obs-projects-plus/#screenshots)
+
+Свайп, стрелки и увеличение доступны на сайте. В GitHub README показаны совместимые фотогалереи. Интерфейс зависит от темы и настроек Obsidian.
 
 ## Установка
 
@@ -88,5 +109,11 @@ Projects Plus работает с вашим хранилищем через API
 - [Участие в разработке](CONTRIBUTING.md) и [API пользовательских представлений](docs/api.md).
 
 В [правилах участия](CONTRIBUTING-RU.md) описано, как сообщить о воспроизводимой ошибке, улучшить документацию или предложить код. Возможности и ограничения опубликованных версий перечислены в истории изменений.
+
+## Поддержите развитие Projects Plus
+
+Если плагин помогает вам организовать работу, поддержите открытый проект Park Pavel. Это помощь в разработке новых возможностей, исправлениях и документации.
+
+[♡ Поддержать через Tribute →](https://web.tribute.tg/d/Sh6) · [Предложить улучшение](https://github.com/ParkPavel/obs-projects-plus/issues/new) · [Участвовать в разработке](CONTRIBUTING-RU.md)
 
 Projects Plus основан на [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects) Маркуса Олссона. Текущий сопровождающий — Park Pavel. Лицензия: [Apache 2.0](https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE); сведения об авторстве — [NOTICE](https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE).
