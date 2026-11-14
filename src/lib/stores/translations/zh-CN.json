@@ -7,7 +7,7 @@
             "checking-destination": "正在检查路径和已占用的名称…",
             "destination-checked": "文件夹预览检查完成",
             "destination-summary": "文件夹：{{path}}。文件：{{files}}。冲突：{{conflicts}}。",
-            "destination-conflicts": "这些路径已被占用，或仅大小写/Unicode 写法不同。请选择其他文件夹；不会提供覆盖操作。",
+            "destination-conflicts": "部分路径已被占用，或仅大小写/Unicode 写法不同。请选择其他目标文件夹，或修正源名称冲突后重新打包。不会提供覆盖操作。",
             "note-links-pending": "移动前仍需单独检查笔记中的链接。",
             "destination-scope": "这只是预览：不会移动文件、创建文件夹或安装项目。导入前必须再次检查路径。",
             "destination-failed": "无法检查文件夹。请检查路径、限制和当前 ZIP。不能使用保留的副本目录或 Obsidian 配置目录。",

@@ -88,3 +88,5 @@ The ZIP inspector now accepts a future import folder and a Check folder action. 
 Obsidian configuration and service namespaces in current/previous copy roots are protected. Required folders include ancestors; this does not establish ownership of existing folders. Preview is bounded to100000 indexed vault paths including inferred ancestors,16M path characters both on input and in the index,128 copy roots and4096 conflicts; ZIP schema and portable path limits still apply. Oversized plans are refused.
 
 Preview does not save settings, create folders, move files or install projects. Changing the folder, checking a new ZIP or staging clears the previous path list. Note links are not inspected or rewritten yet. No conflicts does not mean ready to import: config/source-scope validation, link relocation and fresh destination checks during installation are still required.
+
+Different spellings of inferred parent folders inside the package also conflict: Work/a.md and work/b.md are not silently merged into one folder. Correct the original names and recreate the package; changing the common destination alone does not resolve this conflict.

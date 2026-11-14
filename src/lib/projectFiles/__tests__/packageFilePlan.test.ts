@@ -106,3 +106,8 @@ test("root folder entry, duplicates and unrelated legacy names do not invent con
   const r = plan([{ path: "", kind: "folder" }, { path: "Import", kind: "folder" }, { path: "Import", kind: "folder" }, { path: ".private/legacy.md", kind: "file" }]);
   expect(r.conflicts).toEqual([]);
 });
+
+test.each([["Work", "work"], ["Cafe\u0301", "Café"]])("planned folders %s and %s cannot silently merge even with distinct filenames", (first, second) => {
+  const r = plan([], [`${first}/a.md`, `${second}/b.md`]);
+  expect(r.conflicts).toContainEqual({ code: "planned-path-alias", destination: `Import/Client/${second}`, existing: `Import/Client/${first}` });
+});

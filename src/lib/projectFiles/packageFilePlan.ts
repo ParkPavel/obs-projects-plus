@@ -14,8 +14,9 @@ export interface PlannedPackageFile {
   readonly sha256: string;
 }
 export interface PackagePathConflict {
-  readonly code: "file-exists" | "folder-exists" | "parent-file" | "path-alias";
+  readonly code: "file-exists" | "folder-exists" | "parent-file" | "path-alias" | "planned-path-alias";
   readonly destination: string;
+  /** Conflicting host path, or another planned spelling for planned-path-alias. */
   readonly existing: string;
 }
 export interface PackageFilePlan {
@@ -124,6 +125,14 @@ export function planPackageFiles(
     }
   };
   const folders = [...needed].sort((a, b) => a.split("/").length - b.split("/").length || (a < b ? -1 : a > b ? 1 : 0));
+  // Distinct files can still imply incompatible parent spellings (Work/a vs work/b).
+  // Keep one representative per key, avoiding quadratic pairwise alias reporting.
+  const planned = new Map<string, string>();
+  for (const path of [...folders, ...files.map(file => file.destination)]) {
+    const key = packageNameKey(path), prior = planned.get(key);
+    if (prior !== undefined && prior !== path) conflict("planned-path-alias", path, prior);
+    else planned.set(key, path);
+  }
   for (const folder of folders) inspect(folder, "folder");
   for (const file of files) inspect(file.destination, "file");
   const lookup = (map: ReadonlyMap<string, string>, path: string) => {

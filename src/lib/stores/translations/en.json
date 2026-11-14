@@ -7,7 +7,7 @@
             "checking-destination": "Checking paths and occupied names…",
             "destination-checked": "Folder preview checked",
             "destination-summary": "Folder: {{path}}. Files: {{files}}. Conflicts: {{conflicts}}.",
-            "destination-conflicts": "These paths are occupied or differ only in case/Unicode spelling. Choose another folder; overwriting is not offered.",
+            "destination-conflicts": "Some paths are occupied or differ only in case/Unicode spelling. Choose another destination, or correct conflicting source names and recreate the package. Overwriting is not offered.",
             "note-links-pending": "Links inside notes still need separate checking before relocation.",
             "destination-scope": "This is a preview: files are not moved, folders are not created and projects are not installed. Paths must be checked again before importing.",
             "destination-failed": "Could not check the folder. Check the path, limits and current ZIP. Reserved copy folders and Obsidian configuration cannot be used.",
