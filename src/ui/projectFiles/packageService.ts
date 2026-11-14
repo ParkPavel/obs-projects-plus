@@ -75,9 +75,20 @@ export class ProjectPackageService {
       await ensureProjectFolders(projectVaultStorage(this.host.app.vault, () => !this.retired && this.alive()), folder);
       this.check();
       const path = `${folder}/${await textDigest(prepared.manifest.rootProjectId)}-${hash}.zip`;
+      const latest = await this.snapshot();
+      if (await textDigest(JSON.stringify(latest)) !== prepared.settingsRevision) throw projectFileError("package preview is stale");
+      // The final asynchronous preparation is complete. Keep this synchronous
+      // guard adjacent to the host write; a UI/confirmed update during mkdir or
+      // digest must not authorize writing into the previous destination.
+      const expected = canonical(value);
+      const checkCurrent = () => {
+        this.check();
+        if (canonical(get(settings)) !== expected || this.confirmed() !== expected) throw projectFileError("package preview is stale");
+      };
+      checkCurrent();
       let file = this.host.app.vault.getAbstractFileByPath(path);
       if (!file) {
-        this.check();
+        checkCurrent();
         file = await this.host.app.vault.createBinary(path, new Uint8Array(zip).buffer);
       }
       if (!(file instanceof TFile) || file.stat.size !== zip.length) throw projectFileError("package destination conflict");
@@ -85,6 +96,7 @@ export class ProjectPackageService {
       const saved = new Uint8Array(await this.host.app.vault.readBinary(file));
       this.check();
       if (await binaryDigest(saved) !== hash || this.host.app.vault.getAbstractFileByPath(path) !== file || before.size !== file.stat.size || before.mtime !== file.stat.mtime) throw projectFileError("package read-back failed");
+      checkCurrent();
       return { path, bytes: zip.length, sha256: hash };
     } finally { this.busy = false; }
   }

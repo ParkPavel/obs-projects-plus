@@ -25,7 +25,7 @@ afterAll(() => {
 });
 let disk: State, confirmed: string | null, service: import("./packageService").ProjectPackageService;
 let files: Map<string, { path: string; stat: { size: number; mtime: number }; bytes: Uint8Array }>;
-let folders: Map<string, unknown>, create: jest.Mock, read: jest.Mock, flush: jest.Mock;
+let folders: Map<string, unknown>, create: jest.Mock, read: jest.Mock, flush: jest.Mock, mkdir: jest.Mock;
 function persist(state: State) { disk = state; confirmed = canonical(state); settings.set(state); }
 beforeEach(() => {
   persist({ ...DEFAULT_SETTINGS, projects: [{ ...DEFAULT_PROJECT, id: "p", name: "Project" }],
@@ -37,10 +37,11 @@ beforeEach(() => {
     if (files.has(path)) throw Error("exists");
     const file = new TFile(path, { size: buffer.byteLength, mtime: 1 }); file.bytes = new Uint8Array(buffer); files.set(path, file); return file;
   });
+  mkdir = jest.fn(async (path: string) => { folders.set(path, new TFolder(path)); });
   const host = { manifest: { dir: "AppConfig/plugins/projects" }, app: { vault: {
     configDir: "AppConfig", adapter: { read: async () => JSON.stringify(disk) },
     getAbstractFileByPath: (path: string) => files.get(path) ?? folders.get(path),
-    readBinary: read, createBinary: create, createFolder: async (path: string) => { folders.set(path, new TFolder(path)); },
+    readBinary: read, createBinary: create, createFolder: mkdir,
   } } } as unknown as Plugin;
   service = new ProjectPackageService(host, flush, () => confirmed, () => true);
 });
@@ -67,6 +68,34 @@ test("unconfirmed primary state and stale previews cannot write packages", async
   persist({ ...disk, projects: disk.projects.map(project => ({ ...project, name: "Changed" })) });
   await expect(service.save(prepared)).rejects.toThrow("stale");
   expect(create).not.toHaveBeenCalled();
+});
+
+test.each(["project", "destination"])("a %s change during folder creation blocks the stale host write", async change => {
+  const prepared = await service.prepare("p", []);
+  let finish!: () => void, started!: () => void;
+  const creating = new Promise<void>(resolve => { started = resolve; });
+  mkdir.mockImplementationOnce((path: string) => new Promise<void>(resolve => {
+    finish = () => { folders.set(path, new TFolder(path)); resolve(); }; started();
+  }));
+  const pending = service.save(prepared);
+  await creating;
+  if (change === "project") persist({ ...disk, projects: disk.projects.map(project => ({ ...project, name: "New project revision" })) });
+  else persist({ ...disk, preferences: { ...disk.preferences, projectFiles: { root: "Other destination", autoSync: false, previousRoots: ["Copies"] } } });
+  finish();
+  await expect(pending).rejects.toThrow("stale");
+  expect(create).not.toHaveBeenCalled();
+});
+
+test("a revision changed during an already started host write cannot report current success", async () => {
+  const prepared = await service.prepare("p", []), originalCreate = create.getMockImplementation()!;
+  create.mockImplementationOnce(async (...args: unknown[]) => {
+    const file = await originalCreate(...args);
+    persist({ ...disk, projects: disk.projects.map(project => ({ ...project, name: "Changed while saving" })) });
+    return file;
+  });
+  await expect(service.save(prepared)).rejects.toThrow("stale");
+  expect(create).toHaveBeenCalledTimes(1);
+  expect(files.size).toBe(2);
 });
 
 test("corrupt read-back is an error and never rewrites the archive or primary settings", async () => {
