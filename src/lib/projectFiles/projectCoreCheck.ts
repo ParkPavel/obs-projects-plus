@@ -140,7 +140,7 @@ export function checkProjectCoreJson(text: string): ProjectCoreCheck {
       else {
         issue([...at, "config"], "section-unchecked");
         const widgets = (config as ObjectValue)['widgets'];
-        if (Array.isArray(widgets)) widgets.forEach((widget: unknown, wi) => {
+        if ((view['type'] === "dashboard" || view['type'] === "database") && Array.isArray(widgets)) widgets.forEach((widget: unknown, wi) => {
           if (!widget || typeof widget !== "object" || Array.isArray(widget)) return;
           const data = widget as ObjectValue, cfg = data['config'];
           if (data['type'] === "database-call" && cfg && typeof cfg === "object" && !Array.isArray(cfg) && (cfg as ObjectValue)['sourceConfig'] !== undefined) source((cfg as ObjectValue)['sourceConfig'], [...at, "config", "widgets", wi, "config", "sourceConfig"], false);

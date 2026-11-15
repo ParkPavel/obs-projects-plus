@@ -78,6 +78,12 @@ test("view envelopes, colors, sorting and inline sources are checked while paylo
   invalidAt({ ...p, fieldConfig: { Done: null } }, ["fieldConfig", "Done"]);
 });
 
+test.each(["table", "custom"])("%s payload is opaque even when it contains widget-looking extension keys", type => {
+  const config = { widgets: [{ type: "database-call", config: { sourceConfig: { kind: "tag", config: { tag: "opaque", hierarchy: "extension-value" } } } }] };
+  const result = inspect({ ...project(), views: [{ ...DEFAULT_VIEW, id: "v", name: "V", type, config }] });
+  expect(result.issues).toEqual([...(type === "custom" ? [{ location: ["views", 0, "type"], code: "unknown-kind" }] : []), { location: ["views", 0, "config"], code: "section-unchecked" }]);
+});
+
 test("optional date and palette inheritance are preserved with strict present-value types", () => {
   expect(inspect({ ...project(), colorFavorites: [], dateFormat: { writeFormat: "", preset: "custom", includeTime: false } }).issues).toEqual([]);
   invalidAt({ ...project(), dateFormat: { writeFormat: "Y", preset: ["iso"] } }, ["dateFormat", "preset"]);
