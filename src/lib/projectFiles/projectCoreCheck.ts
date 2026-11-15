@@ -2,6 +2,8 @@ import { filterOperatorTypes } from "src/settings/base/settings";
 import { PROPERTY_TYPES } from "src/lib/visualizer/propertyTypes";
 import { ROLLUP_MODES } from "src/lib/database/rollupMode";
 import type { RollupFunction } from "src/lib/engine/aggregate";
+import { LEGACY_AGENDA_OPERATORS } from "src/lib/filters/agendaFilterModel";
+import { inspectStandaloneViewConfig } from "./projectViewCheck";
 import { MAX_PROJECT_DOCUMENT_BYTES, projectFileError } from "./document";
 
 type Location = readonly (string | number)[];
@@ -12,12 +14,13 @@ export interface ProjectCoreIssue {
 }
 export interface ProjectCoreCheck {
   readonly stage: "project-core-check";
-  readonly coverage: "root-fields-sources-and-view-envelope";
+  readonly coverage: "root-fields-agenda-sources-and-supported-view-configs";
   /** Never an application/schema-completeness token, including when issues is empty. */
   readonly complete: false;
   readonly issues: readonly ProjectCoreIssue[];
 }
 const operators = new Set(Object.keys(filterOperatorTypes));
+const agendaOperators = new Set([...operators, ...Object.keys(LEGACY_AGENDA_OPERATORS)]);
 const viewKinds = new Set(["dashboard", "database", "table", "board", "calendar", "gallery"]);
 const propertyKinds = new Set<string>([...PROPERTY_TYPES, "autotime", "unique_id"]);
 // Record keeps this vocabulary exhaustive when the aggregation kernel adds a function.
@@ -132,6 +135,53 @@ export function checkProjectCoreJson(text: string): ProjectCoreCheck {
       }
     }
   };
+  const agenda = (value: unknown, at: Location) => {
+    const cfg = object(value, at, ["mode", "standard", "custom"]); if (!cfg) return;
+    if (!Object.prototype.hasOwnProperty.call(cfg, "mode")) issue([...at, "mode"], "missing-field");
+    else enumeration(cfg['mode'], [...at, "mode"], new Set(["standard", "custom"]));
+    if (cfg['standard'] !== undefined) {
+      const sa = [...at, "standard"], standard = object(cfg['standard'], sa, ["inheritCalendarFilters"]);
+      if (standard) required(standard, "inheritCalendarFilters", sa, "boolean");
+    }
+    const condition = (value: unknown, at: Location, legacy = false) => {
+      const row = object(value, at, ["id", "field", "operator", "value", "enabled"]); if (!row) return;
+      if (legacy) optional(row, "id", at, "string", true); else required(row, "id", at, "string", true);
+      required(row, "field", at, "string"); optional(row, "enabled", at, "boolean");
+      enumeration(row['operator'], [...at, "operator"], agendaOperators);
+      const item = row['value'];
+      if (!Object.prototype.hasOwnProperty.call(row, "value")) { if (!legacy) issue([...at, "value"], "missing-field"); }
+      else if (Array.isArray(item)) stringList(item, [...at, "value"]);
+      else if (item !== null && typeof item !== "string" && typeof item !== "boolean" && typeof item !== "number") issue([...at, "value"], "invalid-type");
+    };
+    const group = (value: unknown, at: Location): void => {
+      const row = object(value, at, ["id", "conjunction", "filters", "groups"]); if (!row) return;
+      required(row, "id", at, "string", true); enumeration(row['conjunction'], [...at, "conjunction"], new Set(["AND", "OR"]));
+      list(row['filters'], [...at, "filters"])?.forEach((item, i) => condition(item, [...at, "filters", i]));
+      list(row['groups'], [...at, "groups"])?.forEach((item, i) => group(item, [...at, "groups", i]));
+    };
+    if (cfg['custom'] !== undefined) {
+      const ca = [...at, "custom"], custom = object(cfg['custom'], ca, ["lists"]); if (!custom) return;
+      const ids = new Set<string>();
+      list(custom['lists'], [...ca, "lists"])?.forEach((value, i) => {
+        const la = [...ca, "lists", i], row = object(value, la, ["id", "name", "icon", "filterMode", "filterGroup", "filterFormula", "formulaVersion", "order", "collapsed", "color", "filters"]); if (!row) return;
+        if (required(row, "id", la, "string", true)) { const id = row['id'] as string; if (ids.has(id)) issue([...la, "id"], "duplicate-id"); ids.add(id); }
+        required(row, "name", la, "string"); required(row, "order", la, "number"); optional(row, "collapsed", la, "boolean");
+        for (const key of ["color", "filterFormula"]) optional(row, key, la, "string");
+        if (row['formulaVersion'] !== undefined) enumeration(row['formulaVersion'], [...la, "formulaVersion"], new Set(["unified-v1"]));
+        const ia = [...la, "icon"], icon = object(row['icon'], ia, ["type", "value"]);
+        if (icon) { enumeration(icon['type'], [...ia, "type"], new Set(["lucide", "emoji", "obsidian-icon"])); required(icon, "value", ia, "string"); }
+        // The runtime still reads old flat lists with no filterMode; preserve their
+        // original shape and aliases instead of silently migrating them here.
+        if (row['filterMode'] !== undefined) enumeration(row['filterMode'], [...la, "filterMode"], new Set(["visual", "advanced"]));
+        else if (row['filters'] === undefined) issue([...la, "filterMode"], "missing-field");
+        if (row['filterGroup'] !== undefined) group(row['filterGroup'], [...la, "filterGroup"]);
+        if (row['filters'] !== undefined) list(row['filters'], [...la, "filters"])?.forEach((item, j) => condition(item, [...la, "filters", j], true));
+      });
+    }
+  };
+  const localAgenda = (value: unknown, at: Location) => {
+    if (value && typeof value === "object" && !Array.isArray(value) && Object.prototype.hasOwnProperty.call(value, "localAgenda")) agenda((value as ObjectValue)['localAgenda'], [...at, "localAgenda"]);
+  };
   const identities = new Map<string, Location>(), derived: { from: string; id?: string; at: Location }[] = [];
   const source = (value: unknown, at: Location, registered: boolean) => {
     const cfg = object(value, at, ["kind", "config", "id", "name"]); if (!cfg) return;
@@ -190,12 +240,21 @@ export function checkProjectCoreJson(text: string): ProjectCoreCheck {
       const config = view['config'];
       if (!config || typeof config !== "object" || Array.isArray(config)) issue([...at, "config"], "invalid-type");
       else {
-        issue([...at, "config"], "section-unchecked");
+        if (typeof view['type'] !== "string" || !inspectStandaloneViewConfig(view['type'], config, [...at, "config"], { issue, object, optional, scalar, list, enumeration })) issue([...at, "config"], "section-unchecked");
+        if (view['type'] === "calendar") localAgenda(config, [...at, "config"]);
         const widgets = (config as ObjectValue)['widgets'];
         if ((view['type'] === "dashboard" || view['type'] === "database") && Array.isArray(widgets)) widgets.forEach((widget: unknown, wi) => {
           if (!widget || typeof widget !== "object" || Array.isArray(widget)) return;
           const data = widget as ObjectValue, cfg = data['config'];
           if (data['type'] === "database-call" && cfg && typeof cfg === "object" && !Array.isArray(cfg) && (cfg as ObjectValue)['sourceConfig'] !== undefined) source((cfg as ObjectValue)['sourceConfig'], [...at, "config", "widgets", wi, "config", "sourceConfig"], false);
+          if (data['type'] === "database-call" && cfg && typeof cfg === "object" && !Array.isArray(cfg) && Array.isArray((cfg as ObjectValue)['viewTabs'])) {
+            ((cfg as ObjectValue)['viewTabs'] as unknown[]).forEach((tab, ti) => {
+              if (!tab || typeof tab !== "object" || Array.isArray(tab)) return;
+              const type = (tab as ObjectValue)['viewType'], config = (tab as ObjectValue)['config'], location = [...at, "config", "widgets", wi, "config", "viewTabs", ti, "config"];
+              if (typeof type === "string") inspectStandaloneViewConfig(type, config, location, { issue, object, optional, scalar, list, enumeration });
+              if (type === "calendar") localAgenda(config, location);
+            });
+          }
         });
       }
       filter(view['filter'], [...at, "filter"]);
@@ -221,9 +280,7 @@ export function checkProjectCoreJson(text: string): ProjectCoreCheck {
       const at = ["colorFavorites", i], color = object(value, at, ["color", "name"]); if (!color) return;
       required(color, "color", at, "string"); required(color, "name", at, "string");
     });
-    if (root['agenda'] !== undefined) {
-      if (!root['agenda'] || typeof root['agenda'] !== "object" || Array.isArray(root['agenda'])) issue(["agenda"], "invalid-type"); else issue(["agenda"], "section-unchecked");
-    }
+    if (root['agenda'] !== undefined) agenda(root['agenda'], ["agenda"]);
   }
   // Local source references only: external references and full graph validation are later checks.
   for (const entry of derived) if (entry.from !== "project" && (!identities.has(entry.from) || entry.from === entry.id)) issue(entry.at, "invalid-reference");
@@ -239,5 +296,5 @@ export function checkProjectCoreJson(text: string): ProjectCoreCheck {
     if (cycle !== undefined && path.length - cycle > 1) for (const id of path.slice(cycle)) issue(links.get(id)!.at, "invalid-reference");
     for (const id of path) completed.add(id);
   }
-  return Object.freeze({ stage: "project-core-check", coverage: "root-fields-sources-and-view-envelope", complete: false, issues: Object.freeze(issues) });
+  return Object.freeze({ stage: "project-core-check", coverage: "root-fields-agenda-sources-and-supported-view-configs", complete: false, issues: Object.freeze(issues) });
 }

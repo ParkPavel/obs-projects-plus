@@ -11,7 +11,7 @@ const invalidAt = (value: unknown, location: (string | number)[], code = "invali
 
 test("valid root/defaults are inspected without claiming complete validation or changing JSON", () => {
   const text = JSON.stringify(project()), result = checkProjectCoreJson(text);
-  expect(result).toEqual({ stage: "project-core-check", coverage: "root-fields-sources-and-view-envelope", complete: false, issues: [] });
+  expect(result).toEqual({ stage: "project-core-check", coverage: "root-fields-agenda-sources-and-supported-view-configs", complete: false, issues: [] });
   expect(text).toBe(JSON.stringify(project())); expect(Object.isFrozen(result.issues)).toBe(true);
 });
 

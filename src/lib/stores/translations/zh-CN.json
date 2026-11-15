@@ -2,7 +2,7 @@
     "translation": {
         "package-inspect": {
             "core-summary": "项目结构检查：{{projects}} 个项目，{{issues}} 条诊断",
-            "core-incomplete": "已检查项目和属性设置、来源及视图基本结构。组件内容、Agenda 和外部引用关系仍需验证。这并非安装许可。",
+            "core-incomplete": "已检查项目和属性设置、Agenda 及受支持的视图。组件内容和跨项目引用仍需验证，暂不支持安装项目。",
             "core-invalid-type": "字段类型或范围错误",
             "core-missing-field": "缺少必填字段",
             "core-unknown-field": "已保留未知字段供检查",
