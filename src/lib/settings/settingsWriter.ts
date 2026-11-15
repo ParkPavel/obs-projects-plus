@@ -332,6 +332,8 @@ export function createSettingsWriter<T>(
    */
   let queue: { value: T } | null = null;
   let inFlight: Promise<void> | null = null;
+  // Registered at API entry, including commits waiting for an earlier episode.
+  const pendingCommits = new Set<Promise<void>>();
   let debounceTimer: number | null = null;
   let ceilingTimer: number | null = null;
   let retryTimer: number | null = null;
@@ -461,14 +463,15 @@ export function createSettingsWriter<T>(
   }
 
   /**
-   * #212 step D — bumped by every `push`, and by nothing else.
+   * #212 step D — bumped by every `push`. Candidate commits also invalidate
+   * their publication on prime/pushNow; ordinary reconciliation is unchanged.
    *
    * It is the whole of I5: adopting the disk is legal only when the user queued
    * nothing while the decision was being made. Today that holds only because no
    * `await` separates the check from the adoption in `main.ts`; this makes it
    * hold by construction.
    *
-   * `pushNow` does not move it, and that distinction is load-bearing: our own
+   * Outside a candidate commit, `pushNow` does not move it: our own
    * carry and migration writes are not the user typing, and counting them made
    * a valid adoption look contested.
    */
@@ -767,6 +770,10 @@ export function createSettingsWriter<T>(
       if (abandoned()) return "closed";
       // No unverified candidate publication on hosts lacking read-back.
       if (!verify) return "refused";
+      let finishCall!: () => void;
+      const call = new Promise<void>(resolve => { finishCall = resolve; });
+      pendingCommits.add(call);
+      try {
       const result: { value: CandidateCommitResult } = { value: "failed" };
       const completion: { finish?: () => void } = {};
       const outcome = await writer.withExclusive(SETTINGS_DIVERGED, async entry => {
@@ -799,6 +806,9 @@ export function createSettingsWriter<T>(
         last = { value: candidate };
         queue = null;
         publish(candidate);
+        // pushNow deliberately does not move the user epoch. Its queued value
+        // and a prime performed by a synchronous subscriber must survive too.
+        if (epoch !== commitEpoch || last?.value !== candidate || queue !== null) { result.value = "stale"; return { kind: "release" }; }
         result.value = "confirmed";
         return { kind: "adopted", settings: candidate };
       });
@@ -809,8 +819,15 @@ export function createSettingsWriter<T>(
       }
       if (abandoned()) return "closed";
       return result.value === "confirmed" && outcome.kind !== "adopted" ? "stale" : result.value;
+      } finally {
+        pendingCommits.delete(call);
+        finishCall();
+      }
     },
     prime(value: T): void {
+      // A new confirmed base during candidate publication invalidates the
+      // candidate, including a microtask before the episode's final adoption.
+      if (permit.kind === "committing") epoch += 1;
       last = { value };
       queue = null;
       toOpen();
@@ -834,8 +851,12 @@ export function createSettingsWriter<T>(
       schedule();
     },
     pushNow(value: T): void {
+      // Forced writes made during a candidate commit must survive its final
+      // adoption. Reconciliation's ordinary counter carry keeps its old epoch
+      // semantics because its permit is fenced, not committing.
+      if (permit.kind === "committing") epoch += 1;
       if (status.kind === "failed") attempt = 0;
-      // Deliberately NOT an epoch bump. The epoch answers one question — did
+      // Outside a candidate commit, deliberately NOT an epoch bump. It asks — did
       // the USER change something while a decision was being made — and this is
       // our own write: the migration at load, or the counter carried forward
       // after an adoption. Counting it found the review a real defect: the
@@ -965,8 +986,8 @@ export function createSettingsWriter<T>(
         } else {
           startWrite(true);
         }
-        while (inFlight !== null) {
-          await inFlight;
+        while (inFlight !== null || pendingCommits.size > 0) {
+          await Promise.all([...pendingCommits, ...(inFlight === null ? [] : [inFlight])]);
         }
       } finally {
         flushing = false;

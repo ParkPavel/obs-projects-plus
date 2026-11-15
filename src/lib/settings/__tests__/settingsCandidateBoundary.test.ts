@@ -105,3 +105,40 @@ test("a reentrant user edit during publication survives the adoption epoch guard
   expect(result).toBe("stale"); expect(memory).toBe(newer);
   await writer.flush(); expect(disk).toBe(newer);
 });
+
+test.each([false, true])("immediate flush includes a called candidate, including a queued episode (queued=%s)", async queued => {
+  const base = { n: 0 }, candidate = { n: 1 }, entered = deferred<void>(), written = deferred<void>(), previousEntered = deferred<void>(), previousDone = deferred<void>();
+  let memory = base;
+  const writer = createSettingsWriter<Value>({ save: async () => { entered.resolve(); await written.promise; }, verify: async () => "confirmed" });
+  writers.push(writer); writer.prime(base);
+  const previous = queued ? writer.withExclusive("previous", async () => { previousEntered.resolve(); await previousDone.promise; return { kind: "release" }; }) : Promise.resolve();
+  if (queued) await previousEntered.promise;
+  const commit = writer.commitCandidate(base, candidate, () => true, value => { memory = value; writer.push(value); });
+  let flushed = false; const flush = writer.flush().then(() => { flushed = true; });
+  if (queued) { await Promise.resolve(); await Promise.resolve(); expect(flushed).toBe(false); previousDone.resolve(); }
+  await entered.promise; await Promise.resolve(); await Promise.resolve();
+  expect(flushed).toBe(false); expect(memory).toBe(base);
+  written.resolve(); await expect(commit).resolves.toBe("confirmed"); await previous; await flush;
+  expect(memory).toBe(candidate); expect(flushed).toBe(true);
+});
+
+test("a reentrant forced write is preserved during candidate publication", async () => {
+  const base = { n: 0 }, candidate = { n: 1 }, newer = { n: 2 }; let memory = base, disk = base;
+  const writer = createSettingsWriter<Value>({ save: async value => { disk = value; }, verify: async () => "confirmed" });
+  writers.push(writer); writer.prime(base);
+  const result = await writer.commitCandidate(base, candidate, () => true, value => { memory = value; memory = newer; writer.pushNow(newer); });
+  expect(result).toBe("stale"); await writer.flush();
+  expect(memory).toBe(newer); expect(disk).toBe(newer); expect(writer.hasPending()).toBe(false);
+});
+
+test.each(["pushNow", "prime"] as const)("a queued microtask %s cannot be lost between publication and final adoption", async action => {
+  const base = { n: 0 }, candidate = { n: 1 }, newer = { n: 2 }; let memory = base, disk = base;
+  const writer = createSettingsWriter<Value>({ save: async value => { disk = value; }, verify: async () => "confirmed" });
+  writers.push(writer); writer.prime(base);
+  const result = await writer.commitCandidate(base, candidate, () => true, value => {
+    memory = value;
+    void Promise.resolve().then(() => { memory = newer; if (action === "prime") { disk = newer; writer.prime(newer); } else writer.pushNow(newer); });
+  });
+  expect(result).toBe("stale"); await writer.flush();
+  expect(memory).toBe(newer); expect(disk).toBe(newer); expect(writer.hasPending()).toBe(false);
+});
