@@ -20,6 +20,7 @@ import { captureConfigPathChoices, type ConfigPathChoice } from "src/lib/project
 import { capturePackageScopeChoices, reviewPackageScopes, type PackageScopeChoice, type PackageScopeReview } from "src/lib/projectFiles/packageScopeChoices";
 import type { ProjectCoreCheck } from "src/lib/projectFiles/projectCoreCheck";
 import { checkPackageGraph } from "src/lib/projectFiles/packageGraphCheck";
+import { isPendingImportPath } from "src/lib/projectFiles/pendingImportIsolation";
 
 export interface PackageDestinationPreview extends PackageFilePlan { readonly configuration: PackageConfigPathPreview; readonly scopeReview: PackageScopeReview; readonly coreChecks: readonly { readonly projectId: string; readonly name: string; readonly check: ProjectCoreCheck }[] }
 
@@ -58,7 +59,7 @@ export class ProjectPackageService {
   eligible(path: string): boolean {
     try { packageFilePath(path, this.host.app.vault.configDir); }
     catch { return false; }
-    return !isProjectCopyPath(path, configuredCopyRoots(get(settings).preferences.projectFiles)) && !/\.zip$/i.test(path);
+    return !isPendingImportPath(path) && !isProjectCopyPath(path, configuredCopyRoots(get(settings).preferences.projectFiles)) && !/\.zip$/i.test(path);
   }
 
   /** Read-only entry point: no primary flush/save, folders, extraction or config application. */

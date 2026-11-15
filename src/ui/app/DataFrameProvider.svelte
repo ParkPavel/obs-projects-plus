@@ -14,6 +14,7 @@
   import { app } from "src/lib/stores/obsidian";
   import { settings } from "src/lib/stores/settings";
   import { configuredCopyRoots } from "src/lib/projectFiles/paths";
+  import { pendingImportRevision } from "src/lib/projectFiles/pendingImportIsolation";
   import { get } from "svelte/store";
   import type { ProjectDefinition } from "src/settings/settings";
   import type { DataSource as DataSourceType } from "src/settings/v3/settings";
@@ -29,7 +30,7 @@
   // trigger an update if it's the same string.
   // Explicit reactive dependency: an open source must immediately reserve new
   // copy roots. Keep serialization stable for unrelated preference/view edits.
-  $: projectAsText = JSON.stringify([disassembedProject, configuredCopyRoots($settings.preferences.projectFiles)]);
+  $: projectAsText = JSON.stringify([disassembedProject, configuredCopyRoots($settings.preferences.projectFiles), $pendingImportRevision]);
 
   // This only runs if the JSON representation of a project (without views) has
   // changed.
@@ -170,6 +171,12 @@
       <Typography variant="body">
         {$i18n.t("errors.missingDataview.message")}
       </Typography>
+    </Callout>
+  </div>
+{:else if unavailableReason === "pending-import"}
+  <div style="padding: var(--size-4-3)">
+    <Callout title={$i18n.t("project-files.import-paused-title")} icon="zap" variant="warning">
+      <Typography variant="body">{$i18n.t("project-files.import-paused")}</Typography>
     </Callout>
   </div>
 {:else}

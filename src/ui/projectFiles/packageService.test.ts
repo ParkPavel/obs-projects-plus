@@ -4,6 +4,7 @@ import { get } from "svelte/store";
 import { DEFAULT_PROJECT, DEFAULT_SETTINGS, DEFAULT_VIEW } from "src/settings/settings";
 import { settings } from "src/lib/stores/settings";
 import { canonical } from "src/lib/settings/settingsVerify";
+import { refreshPendingImportIsolation } from "src/lib/projectFiles/pendingImportIsolation";
 type Plugin = import("obsidian").Plugin;
 type State = import("src/settings/settings").LatestProjectsPluginSettings;
 
@@ -71,6 +72,16 @@ test("preview performs no writes; save creates one visible ZIP and verifies actu
   expect(disk).toEqual(get(settings));
   await expect(service.save(prepared)).resolves.toEqual(saved);
   expect(create).toHaveBeenCalledTimes(1);
+});
+
+test("pending payloads cannot be selected or exported even by a service created before quarantine", async () => {
+  const hash = "a".repeat(64), before = JSON.stringify(disk);
+  refreshPendingImportIsolation({ root: "Copies", autoSync: false, pendingImport: { format: "obs-projects-plus/pending-import", schemaVersion: 1, id: "attempt", archiveHash: hash, journal: `Copies/Incoming/${hash}/Installations/attempt.json`, paths: ["Note.md"] } }, "AppConfig");
+  try {
+    expect(service.eligible("Note.md")).toBe(false); expect(service.eligible("Other.md")).toBe(true);
+    await expect(service.prepare("p", ["Note.md"])).rejects.toThrow("excluded");
+    expect(create).not.toHaveBeenCalled(); expect(mkdir).not.toHaveBeenCalled(); expect(JSON.stringify(disk)).toBe(before);
+  } finally { refreshPendingImportIsolation(undefined, "AppConfig"); }
 });
 
 test("file placement preview checks a fresh archive and current inventory without flush or writes", async () => {

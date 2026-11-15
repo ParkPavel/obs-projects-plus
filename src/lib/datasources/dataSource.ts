@@ -5,6 +5,7 @@ import type {
 import type { DataField, DataFrame } from "../dataframe/dataframe";
 import type { IFile } from "../filesystem/filesystem";
 import { configuredCopyRoots, isProjectCopyPath } from "src/lib/projectFiles/paths";
+import { isPendingImportPath } from "src/lib/projectFiles/pendingImportIsolation";
 
 /**
  * DataSource reads data frames from a project.
@@ -16,7 +17,7 @@ export abstract class DataSource {
   ) {}
 
   protected isProjectCopy(path: string): boolean {
-    return isProjectCopyPath(path, configuredCopyRoots(this.preferences.projectFiles));
+    return isPendingImportPath(path) || isProjectCopyPath(path, configuredCopyRoots(this.preferences.projectFiles));
   }
 
   /**

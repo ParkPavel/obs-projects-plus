@@ -11,8 +11,9 @@ export function configuredCopyRoots(config: CopyPreferences): readonly string[] 
 
 export function nextCopyPreferences(previous: CopyPreferences, input: string, autoSync: boolean, configDir: string): NonNullable<CopyPreferences> {
   const root = projectFilesRoot(input, configDir);
+  if (previous?.pendingImport !== undefined && root !== previous.root) throw projectFileError("copy destination has a pending import");
   const previousRoots = configuredCopyRoots(previous).filter(old => old.toLowerCase() !== root.toLowerCase());
-  return { root, autoSync, ...(previousRoots.length ? { previousRoots } : {}) };
+  return { root, autoSync, ...(previousRoots.length ? { previousRoots } : {}), ...(previous?.pendingImport !== undefined ? { pendingImport: previous.pendingImport } : {}) };
 }
 
 /** Portable vault-relative destinations; no normalization that changes ownership. */

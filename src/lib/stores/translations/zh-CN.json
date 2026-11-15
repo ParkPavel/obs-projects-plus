@@ -119,6 +119,10 @@
         },
         "project-files": {
             "title": "项目副本与备份",
+            "pending-invalid": "无法验证未完成的导入。项目数据加载已暂停；您的笔记未被修改。",
+            "pending-recovery": "此库中有未完成的导入。其笔记暂时不会包含在项目数据中。",
+            "import-paused-title": "导入尚未完成",
+            "import-paused": "在导入完成或恢复之前，项目数据暂时不可用。",
             "description": "data.json 仍是活动配置的存储。将经过验证的可读项目副本保存到库内的可见文件夹。",
             "open": "管理副本",
             "folder": "副本文件夹",

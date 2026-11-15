@@ -8,12 +8,36 @@ import { InMemFileSystem } from "src/lib/filesystem/inmem/filesystem";
 type IFile = import("src/lib/filesystem/filesystem").IFile;
 type IFileSystem = import("src/lib/filesystem/filesystem").IFileSystem;
 import { registerFileEvents } from "src/events";
+import { refreshPendingImportIsolation } from "src/lib/projectFiles/pendingImportIsolation";
 
 jest.mock("src/lib/stores/fileSystem", () => ({ fileSystem: require("svelte/store").writable() }));
 jest.mock("src/lib/datasources/dataview/host", () => ({ getAPI: () => undefined, isPluginEnabled: () => false }));
 const Provider = require("../DataFrameProvider.svelte").default as new (options: { target: HTMLElement; props: { project: import("src/settings/settings").ProjectDefinition } }) => { $destroy(): void };
 
 async function settle() { for (let i = 0; i < 8; i++) { await tick(); await Promise.resolve(); } }
+
+test("pending import changes refresh an open provider and release kept notes without a file event", async () => {
+  settings.set(JSON.parse(JSON.stringify(DEFAULT_SETTINGS)));
+  const fs = new InMemFileSystem({});
+  await fs.create("Notes/Keep.md", "# existing"); await fs.create("Notes/Imported.md", "# imported");
+  (fileSystem as unknown as { set(value: IFileSystem): void }).set(fs);
+  const project = { ...DEFAULT_PROJECT, id: "p", name: "P", dataSource: { kind: "folder" as const, config: { path: "Notes", recursive: true } } };
+  const target = document.createElement("div"), mounted = new Provider({ target, props: { project } });
+  try {
+    await settle(); const old = get(dataSource);
+    expect(get(dataFrame).records).toHaveLength(2);
+    const hash = "a".repeat(64);
+    refreshPendingImportIsolation({ root: "Copies", autoSync: false, pendingImport: { format: "obs-projects-plus/pending-import", schemaVersion: 1, id: "attempt", archiveHash: hash, journal: `Copies/Incoming/${hash}/Installations/attempt.json`, paths: ["Notes/Imported.md"] } }, "AppConfig");
+    expect(old?.includes("Notes/Imported.md")).toBe(false);
+    await settle(); expect(get(dataSource)).not.toBe(old);
+    expect(get(dataFrame).records.map(record => record.id)).toEqual(["Notes/Keep.md"]);
+    refreshPendingImportIsolation(undefined, "AppConfig"); await settle();
+    expect(get(dataFrame).records.map(record => record.id).sort()).toEqual(["Notes/Imported.md", "Notes/Keep.md"]);
+  } finally {
+    mounted.$destroy(); target.remove(); dataSource.set(undefined);
+    refreshPendingImportIsolation(undefined, "AppConfig"); settings.set(JSON.parse(JSON.stringify(DEFAULT_SETTINGS)));
+  }
+});
 
 test.each(["create", "rename"] as const)("a delayed %s from the previous source cannot republish a reserved document", async event => {
   settings.set(JSON.parse(JSON.stringify(DEFAULT_SETTINGS)));

@@ -21,6 +21,7 @@ import { i18n, syncLocale } from "src/lib/stores/i18n";
 import { app, plugin } from "src/lib/stores/obsidian";
 import { watchViewport } from "src/lib/stores/ui";
 import { settings } from "src/lib/stores/settings";
+import { refreshPendingImportIsolation } from "src/lib/projectFiles/pendingImportIsolation";
 import { CreateNoteModal } from "src/ui/modals/createNoteModal";
 import { CreateProjectModal } from "src/ui/modals/createProjectModal";
 import { createDemoWithNotices } from "src/ui/app/onboarding/demoRun";
@@ -201,6 +202,18 @@ export default class ProjectsPlusPlugin extends Plugin {
 
     // Helper function for translation.
     const { t } = get(i18n);
+
+    // Existing views must not acquire incomplete imports during restoration.
+    let pendingImportReported = false;
+    let initialImportState = true;
+    this.register(settings.subscribe(value => {
+      const state = refreshPendingImportIsolation(value.preferences.projectFiles, this.app.vault.configDir);
+      const invalid = state === "invalid";
+      if (invalid && !pendingImportReported) new Notice(t("project-files.pending-invalid"), 15000);
+      else if (initialImportState && state === "pending") new Notice(t("project-files.pending-recovery"), 15000);
+      pendingImportReported = invalid;
+      initialImportState = false;
+    }));
 
     this.addSettingTab(new ProjectsSettingTab(this.app, this));
 
