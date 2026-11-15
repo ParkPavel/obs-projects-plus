@@ -4,6 +4,7 @@ import { checkProjectCoreJson, type ProjectCoreCheck } from "./projectCoreCheck"
 import { previewPackageReferences, type PackageRemapIssue } from "./packageRemap";
 import { MAX_PROJECT_DOCUMENT_BYTES, projectFileError } from "./document";
 import { PACKAGE_LIMITS } from "./packagePolicy";
+import { createPackageCheckAllocator } from "./packageIdentities";
 
 export interface PackageGraphCheck {
   readonly stage: "package-graph-check";
@@ -37,8 +38,7 @@ export function checkPackageGraph(input: readonly ProjectDefinition[]): PackageG
   // future structures just because an integrity-checked ZIP enclosed them.
   if (coreChecks.some(item => item.check.issues.length)) return Object.freeze({ stage: "package-graph-check", complete: false, coreChecks, referencesChecked: false, issues: Object.freeze([]) });
   const captured = projects.map(item => item.project);
-  let nextId = 0;
-  const preview = previewPackageReferences(captured, { projects: [], archives: [] }, () => `graph-${++nextId}`);
+  const preview = previewPackageReferences(captured, { projects: [], archives: [] }, createPackageCheckAllocator(captured));
   const issues: PackageGraphCheck['issues'][number][] = [...preview.issues];
   let reads = 0;
   for (const project of captured) for (const dashboard of dashboardsOf(project)) {

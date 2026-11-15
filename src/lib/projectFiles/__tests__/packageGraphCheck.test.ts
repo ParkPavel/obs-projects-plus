@@ -69,3 +69,11 @@ test("malformed and duplicate project identities cannot allocate a preview", () 
   expect(() => checkPackageGraph([])).toThrow("project count");
   expect(() => checkPackageGraph([project("a", { uniqueIdCounter: Infinity })])).toThrow("non-finite");
 });
+
+test("valid original identities cannot exhaust disposable graph allocation retries", () => {
+  const additionalSources = Array.from({ length: 64 }, (_, i) => ({ id: `graph-${i + 1}`, kind: "folder", config: { path: "", recursive: false } }));
+  const result = checkPackageGraph([project("p", { additionalSources })]);
+  expect(result.referencesChecked).toBe(true);
+  expect(result.coreChecks[0]!.check.issues).toEqual([]);
+  expect(result.issues).toEqual([]);
+});

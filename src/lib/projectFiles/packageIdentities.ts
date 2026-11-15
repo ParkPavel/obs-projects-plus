@@ -89,6 +89,18 @@ function inventory(projects: readonly ProjectDefinition[]): { identities: Identi
   return { identities, blocks };
 }
 
+/** Disposable check IDs only. Original names never consume the plan's retry budget. */
+export function createPackageCheckAllocator(projects: readonly ProjectDefinition[]): () => string {
+  const occupied = new Set(inventory(projects).identities.map(identity => identity.original));
+  let next = 0;
+  return () => {
+    let candidate: string;
+    do { candidate = `graph-${++next}`; } while (occupied.has(candidate));
+    occupied.add(candidate);
+    return candidate;
+  };
+}
+
 /**
  * Plan one future clone without touching projects, settings or files. The caller supplies a fresh-ID
  * allocator and the active/archived destination collections. A separate plan is required
