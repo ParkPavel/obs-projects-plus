@@ -184,10 +184,10 @@ export function checkProjectCoreJson(text: string): ProjectCoreCheck {
     if (value && typeof value === "object" && !Array.isArray(value) && Object.prototype.hasOwnProperty.call(value, "localAgenda")) agenda((value as ObjectValue)['localAgenda'], [...at, "localAgenda"]);
   };
   const identities = new Map<string, Location>(), derived: { from: string; id?: string; at: Location }[] = [];
-  const source = (value: unknown, at: Location, registered: boolean) => {
+  const source = (value: unknown, at: Location) => {
     const cfg = object(value, at, ["kind", "config", "id", "name"]); if (!cfg) return;
     const validId = optional(cfg, "id", at, "string", true); optional(cfg, "name", at, "string");
-    if (validId && registered) {
+    if (validId) {
       const id = cfg['id'] as string;
       if (id === "project") issue([...at, "id"], "invalid-reference");
       if (identities.has(id)) issue([...at, "id"], "duplicate-id"); else identities.set(id, [...at, "id"]);
@@ -219,7 +219,7 @@ export function checkProjectCoreJson(text: string): ProjectCoreCheck {
       optional(data, "limit", ca, "number");
     } else if (kind === "derived") {
       const data = object(cfg['config'], ca, ["from", "where"]); if (!data) return;
-      if (required(data, "from", ca, "string", true)) derived.push({ from: data['from'] as string, ...(validId && registered ? { id: cfg['id'] as string } : {}), at: [...ca, "from"] });
+      if (required(data, "from", ca, "string", true)) derived.push({ from: data['from'] as string, ...(validId ? { id: cfg['id'] as string } : {}), at: [...ca, "from"] });
       filter(data['where'], [...ca, "where"]);
     } else issue([...at, "kind"], "unknown-kind");
   };
@@ -228,14 +228,14 @@ export function checkProjectCoreJson(text: string): ProjectCoreCheck {
     if (handled && kind === "calendar") localAgenda(value, at);
     return handled;
   };
-  const dashboardView = createDashboardConfigInspector({ issue, object, optional, scalar, list, enumeration, filter, source: (value, at) => source(value, at, false), plainView });
+  const dashboardView = createDashboardConfigInspector({ issue, object, optional, scalar, list, enumeration, filter, plainView });
   const root = object(input, [], ["id", "name", "fieldConfig", "views", "defaultName", "templates", "excludedNotes", "isDefault", "dataSource", "additionalSources", "newNotesFolder", "dateFormat", "autosave", "agenda", "uniqueIdCounter", "colorFavorites"]);
   if (root) {
     required(root, "id", [], "string", true); required(root, "name", [], "string"); required(root, "defaultName", [], "string");
     required(root, "isDefault", [], "boolean"); required(root, "newNotesFolder", [], "string"); optional(root, "autosave", [], "boolean"); optional(root, "uniqueIdCounter", [], "integer");
     for (const key of ["templates", "excludedNotes"]) list(root[key], [key])?.forEach((value, i) => scalar(value, [key, i], "string"));
-    source(root['dataSource'], ["dataSource"], true);
-    if (root['additionalSources'] !== undefined) list(root['additionalSources'], ["additionalSources"])?.forEach((item, i) => source(item, ["additionalSources", i], true));
+    source(root['dataSource'], ["dataSource"]);
+    if (root['additionalSources'] !== undefined) list(root['additionalSources'], ["additionalSources"])?.forEach((item, i) => source(item, ["additionalSources", i]));
     const fields = root['fieldConfig'];
     if (!fields || typeof fields !== "object" || Array.isArray(fields)) issue(["fieldConfig"], "invalid-type");
     else for (const [key, value] of Object.entries(fields)) field(value, ["fieldConfig", key]);

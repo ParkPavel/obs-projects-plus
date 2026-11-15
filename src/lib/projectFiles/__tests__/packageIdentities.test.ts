@@ -61,6 +61,19 @@ test("a chart widget cannot masquerade as a database-call block", () => {
   expect(() => plan.baseReference("p::block:v:w")).toThrow("unresolved import block");
 });
 
+test.each(["extension", "board", "table"])("%s lookalike widgets do not create runtime block identities", type => {
+  const input = project("p", [{ ...view("v", [widget("w")]), type }]);
+  const plan = createPackageIdentityPlan([input], [], allocator());
+  expect(plan.identities.map(identity => identity.kind)).toEqual(["project", "view"]);
+  expect(() => plan.baseReference("p::block:v:w")).toThrow("unresolved import block");
+});
+
+test.each(["dashboard", "database", "table"])("%s registered dashboard format owns widget identities", type => {
+  const input = project("p", [{ ...view("v", [widget("w")]), type, config: { widgets: [widget("w")], layoutVersion: 1 } }]);
+  const plan = createPackageIdentityPlan([input], [], allocator());
+  expect(plan.baseReference("p::block:v:w")).toContain("::block:");
+});
+
 test("derived literal project is preserved, but named source is mapped and host must exist", () => {
   const plan = createPackageIdentityPlan([project("p", [], { dataSource: source("s") })], [], allocator());
   expect(plan.derivedFrom("p", "project")).toBe("project");

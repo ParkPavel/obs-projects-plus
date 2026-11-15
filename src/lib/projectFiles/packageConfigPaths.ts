@@ -211,7 +211,8 @@ export function previewPackageConfigPaths(
           if (typeof src !== "string") issue(id, [...wa, "config", "src"], "invalid-shape");
           else if (src && !/^https?:\/\//i.test(src)) bind(cfg, "src", id, [...wa, "config"], "file", "cover", typeof widget['title'] === "string" ? widget['title'] : "");
         } else if (widget['type'] === "sub-base-canvas" && cfg['inverseTargetId'] !== undefined && cfg['inverseTargetId'] !== "") bind(cfg, "inverseTargetId", id, [...wa, "config"], "file", "record", typeof widget['title'] === "string" ? widget['title'] : "");
-        else if (widget['type'] === "database-call" && cfg['sourceConfig'] !== undefined) source(cfg['sourceConfig'], id, [...wa, "config", "sourceConfig"], [view.name, widget['title']].filter((label): label is string => typeof label === "string").join(" · "));
+        // Database-call config.sourceConfig is historical, not acquired. Leave
+        // its JSON intact instead of rewriting dormant paths or asking scope.
       });
     });
     const bytes = new TextEncoder().encode(JSON.stringify(project)).length; outputBytes += bytes;

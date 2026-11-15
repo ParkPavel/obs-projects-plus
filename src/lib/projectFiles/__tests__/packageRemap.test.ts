@@ -1,6 +1,8 @@
 import { TextEncoder } from "node:util";
 import { DEFAULT_PROJECT, type ProjectDefinition } from "src/settings/settings";
 import { previewPackageReferences } from "../packageRemap";
+import { resolveWidgetInput } from "src/ui/views/Dashboard/widgets/widgetInput";
+import type { WidgetDefinition } from "src/ui/views/Dashboard/types";
 
 const encoderBefore = window.TextEncoder;
 beforeAll(() => Object.defineProperty(window, "TextEncoder", { value: TextEncoder, configurable: true }));
@@ -35,13 +37,13 @@ test("rewrites self/cross-project relations, rollups, backlinks and named/derive
 });
 
 test.each([false, true])("linked-view remap uses external source project regardless processing order (reverse=%s)", reverse => {
-  const a = project("a", { views: [view("same", [widget("block", "database-call", { viewTabs: [tab("t", "board", { linkedViewId: "same" })], activeTabId: "t" }, { sourceConfig: { projectId: "b", sourceId: "s" } })])] });
+  const a = project("a", { dataSource: { id: "s", kind: "folder", config: { path: "" } }, views: [view("same", [widget("block", "database-call", { viewTabs: [tab("t", "board", { linkedViewId: "same" })], activeTabId: "t" }, { sourceConfig: { projectId: "b", sourceId: "s" } })])] });
   const b = project("b", { views: [{ id: "same", type: "board", config: {}, name: "Other" }], additionalSources: [{ id: "s", kind: "folder", config: { path: "" } }] });
   const result = preview(reverse ? [b, a] : [a, b]), p = result.plan;
   expect(result.issues).toEqual([]);
   const block = cfg(result.projects.find(item => item.id === p.projectId("a"))!)[0]!;
   expect(block['id']).toBe(p.widgetId("a", "same", "block"));
-  expect(block['sourceConfig']).toEqual({ projectId: p.projectId("b"), sourceId: p.sourceId("b", "s") });
+  expect(block['sourceConfig']).toEqual({ projectId: p.projectId("b"), sourceId: p.sourceId("a", "s") });
   expect(block['config']).toMatchObject({ activeTabId: p.tabId("a", "same", "block", "t"), viewTabs: [{ id: p.tabId("a", "same", "block", "t"), linkedViewId: p.viewId("b", "same") }] });
 });
 
@@ -63,6 +65,31 @@ test("non-db sourceId stays in host context even when dormant projectId names an
   const r = preview([project("a", { dataSource: source, views: [view("v", [widget("chart", "chart", {}, { sourceConfig: { projectId: "b", sourceId: "s" } })])] }), project("b", { dataSource: source })]);
   expect(r.issues).toEqual([]);
   expect(cfg(r.projects[0]!)[0]!['sourceConfig']).toEqual({ projectId: r.plan.projectId("b"), sourceId: r.plan.sourceId("a", "s") });
+});
+
+test("a database-call named source stays in the host namespace as the real input resolver requires", () => {
+  const source = { id: "s", kind: "folder", config: { path: "", recursive: false } };
+  const result = preview([project("a", { dataSource: source, views: [view("v", [widget("w", "database-call", {}, { sourceConfig: { projectId: "b", sourceId: "s" } })])] }), project("b", { dataSource: source })]);
+  const p = result.plan, cloned = result.projects.find(item => item.id === p.projectId("a"))!, block = cfg(cloned)[0]! as unknown as WidgetDefinition;
+  const frame = { fields: [], records: [{ id: "a.md", values: {} }] };
+  const actual = resolveWidgetInput({ widget: block, frame, fields: [], parts: [{ id: p.sourceId("a", "s"), frame }], sources: [cloned.dataSource], sourceStates: new Map() });
+  expect(actual.namedSource.kind).toBe("ok");
+  expect(block.sourceConfig?.sourceId).toBe(p.sourceId("a", "s"));
+});
+
+test("historical inline source JSON survives cloning without acquiring records or allocating source identities", () => {
+  const inline = { id: "old", kind: "derived", config: { from: "missing", path: "Elsewhere", query: "not executed" } };
+  const input = project("a", { views: [view("v", [widget("w", "database-call", { sourceConfig: inline })])] });
+  const before = JSON.stringify(input), result = preview([input]);
+  expect(result.issues).toEqual([]);
+  expect(result.plan.identities.filter(identity => identity.kind === "source")).toEqual([]);
+  const block = cfg(result.projects[0]!)[0]! as unknown as WidgetDefinition;
+  expect(block.config['sourceConfig']).toEqual(inline);
+  const frame = { fields: [], records: [{ id: "host.md", values: {} }] };
+  const actual = resolveWidgetInput({ widget: block, frame, fields: [], parts: [], sources: [], sourceStates: new Map() });
+  expect(actual.enrichedFrame).toBe(frame);
+  expect(actual.otherProject).toBeNull();
+  expect(JSON.stringify(input)).toBe(before);
 });
 
 test("maps retained chart/stats tab config and linked selection in host canvas context", () => {
@@ -95,10 +122,11 @@ test("diagnoses unknown views/widgets/sources/steps while preserving their opaqu
   expect(cfg({ ...r.projects[0]!, views: [r.projects[0]!.views[1]!] })[0]!['config']).toEqual({ targetProjectId: "a" });
 });
 
-test("qualified source plus linkedView/sourceId is reported rather than guessing contextual ownership", () => {
-  const r = preview([project("a", { views: [view("v", [widget("block", "database-call", { viewTabs: [tab("t", "board", { linkedViewId: "v" })] }, { sourceConfig: { projectId: "b::s", sourceId: "s" } })])] }),
+test("qualified linked view stays unresolved while the named source has a proven host context", () => {
+  const r = preview([project("a", { dataSource: { id: "s", kind: "folder", config: { path: "" } }, views: [view("v", [widget("block", "database-call", { viewTabs: [tab("t", "board", { linkedViewId: "v" })] }, { sourceConfig: { projectId: "b::s", sourceId: "s" } })])] }),
     project("b", { dataSource: { id: "s", kind: "folder", config: { path: "" } }, views: [{ id: "v", type: "board", config: {} }] })]);
-  expect(r.issues.map(issue => issue.code)).toEqual(["unsupported-context", "unsupported-context"]);
+  expect(r.issues.map(issue => issue.code)).toEqual(["unsupported-context"]);
+  expect(cfg(r.projects[0]!)[0]!['sourceConfig']).toMatchObject({ sourceId: r.plan.sourceId("a", "s") });
 });
 
 test("linked view type mismatch or missing view cannot silently bind to host", () => {
@@ -113,7 +141,7 @@ test.each([
   expect(r.issues).toHaveLength(1); expect(r.issues[0]!.code).toBe("invalid-shape");
 });
 
-test.each([{ activeTabId: "missing" }, { viewTabs: [], activeTabId: "missing" }, { viewTabs: [tab("t", "future")] }, { sourceConfig: { kind: "folder", config: {} } }])("reports unsupported or unresolved db config: %j", config => {
+test.each([{ activeTabId: "missing" }, { viewTabs: [], activeTabId: "missing" }, { viewTabs: [tab("t", "future")] }])("reports unsupported or unresolved db config: %j", config => {
   expect(preview([project("a", { views: [view("v", [widget("w", "database-call", config)])] })]).issues).toHaveLength(1);
 });
 

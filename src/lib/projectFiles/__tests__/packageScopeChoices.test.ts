@@ -46,12 +46,12 @@ test.each(["basis", "project", "recursive", "archive"])("a changed %s invalidate
   expect(result.rows[0]!.status).toBe("invalid"); expect(result.issues.map(issue => issue.code)).toContain("invalid-scope-choice"); expect(result.issues.map(issue => issue.code)).toContain("scope-choice-required");
 });
 
-test("additional and inline sources are independent; acknowledging one cannot acknowledge another", async () => {
+test("active sources require independent confirmation; unused inline JSON adds no scope", async () => {
   const config = preview({ ...p, additionalSources: [{ kind: "tag", config: { tag: "extra", hierarchy: false } }], views: [{ id: "v", name: "Board", type: "dashboard", filter: { conditions: [], operator: "and" }, config: { widgets: [{ type: "database-call", title: "Inline", config: { sourceConfig: { kind: "tag", config: { tag: "inline", hierarchy: true } } } }] } }] } as unknown as ProjectDefinition);
   const first = await reviewPackageScopes(config, basis), result = await reviewPackageScopes(config, basis, [choiceFor(first.rows[0]!)]);
-  expect(result.rows.map(row => row.status)).toEqual(["confirmed", "pending", "pending"]);
-  expect(result.rows[2]!.context).toBe("Board · Inline");
-  expect(result.issues.filter(issue => issue.code === "scope-choice-required")).toHaveLength(2);
+  expect(result.rows.map(row => row.status)).toEqual(["confirmed", "pending"]);
+  expect(result.issues.filter(issue => issue.code === "scope-choice-required")).toHaveLength(1);
+  expect(config.projects[0]!.project.views[0]!.config['widgets']).toEqual([{ type: "database-call", title: "Inline", config: { sourceConfig: { kind: "tag", config: { tag: "inline", hierarchy: true } } } }]);
 });
 
 test("malformed and unbound sources remain blocked even with a matching revision", async () => {

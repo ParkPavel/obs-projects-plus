@@ -6,7 +6,6 @@ import { filterOperatorTypes } from "src/settings/base/settings";
 
 export interface DashboardInspectionTools extends ViewInspectionTools {
   readonly filter: (value: unknown, at: SchemaLocation) => void;
-  readonly source: (value: unknown, at: SchemaLocation) => void;
   readonly plainView: (kind: string, value: unknown, at: SchemaLocation) => boolean;
 }
 const columns: Record<ColumnAggregation, true> = {
@@ -69,7 +68,10 @@ export function createDashboardConfigInspector(tools: DashboardInspectionTools):
     if (tools.plainView(type, config, location)) return;
     if (Object.prototype.hasOwnProperty.call(tabPayloads, type)) tabPayloads[type]!.inspect(config, location);
   });
-  const dbCall = obj({ sourceConfig: s.rule(tools.source), subFilter: filter, viewTabs: a(tab, "id"), activeTabId: str, linkedSelection });
+  // Historical full inline definitions are not acquired by the current host.
+  // Keep this bounded JSON value unchanged; the active source contract lives
+  // on widget.sourceConfig, not inside widget.config (see widgetInput).
+  const dbCall = obj({ sourceConfig: s.rule(() => {}), subFilter: filter, viewTabs: a(tab, "id"), activeTabId: str, linkedSelection });
   const payloads: Record<WidgetType, ProjectShapeRule> = {
     "data-table": obj({ table, subFilter: filter }), chart: unconfigured(chart), stats: unconfigured(stats),
     checklist: obj({ field: str, labelField: str, sortField: str, sortOrder: asc, showMode: e(["all", "open", "done"]), limit: num }),

@@ -21,7 +21,7 @@ test("empty persisted pages and unconfigured widgets/tabs retain absence without
   for (const viewType of ["table", "board", "gallery", "calendar", "chart", "stats", "list", "timeline"]) expect(inspect({ widgets: [widget("database-call", { viewTabs: [tab(viewType)] })] }).issues).toEqual([]);
 });
 
-test("database-call supports both independent source forms and optional inline source as actually persisted by the factory", () => {
+test("database-call validates active source references and preserves historical inline JSON", () => {
   const w = { ...widget("database-call", { sourceConfig: { kind: "folder", config: { path: "", recursive: true } }, viewTabs: [tab("table")], activeTabId: "t" }), sourceConfig: { projectId: "", sourceId: "" } };
   expect(inspect({ widgets: [w] }).issues).toEqual([]);
   expect(inspect({ widgets: [widget("database-call", { viewTabs: [tab("table")] })] }).issues).toEqual([]);
@@ -70,12 +70,12 @@ test("chart series and persisted scatter extensions are checked without resolvin
   expect(inspect({ widgets: [widget("chart", config)] }).issues).toEqual([{ location: at("widgets", 0, "config", "series", 1, "id"), code: "duplicate-id" }]);
 });
 
-test("source reference is not confused with an inline definition", () => {
+test("inactive inline JSON does not substitute for the required active project reference", () => {
   const w = { ...widget("database-call", { sourceConfig: { projectId: "p" } }), sourceConfig: { kind: "folder" } };
-  expect(inspect({ widgets: [w] }).issues).toEqual(expect.arrayContaining([
+  expect(inspect({ widgets: [w] }).issues).toEqual([
+    { location: at("widgets", 0, "sourceConfig", "kind"), code: "unknown-field" },
     { location: at("widgets", 0, "sourceConfig", "projectId"), code: "missing-field" },
-    { location: at("widgets", 0, "config", "sourceConfig", "kind"), code: "invalid-type" },
-  ]));
+  ]);
 });
 
 test("table maps, presets and conditional formats use their own typed vocabularies", () => {

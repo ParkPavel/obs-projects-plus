@@ -60,18 +60,18 @@ test("source identity checks use IDs rather than display names and diagnose miss
   invalidAt({ ...p, dataSource: { ...p.dataSource, id: "project" } }, ["dataSource", "id"], "invalid-reference");
 });
 
-test("derived source cycles are diagnosed without rejecting an acyclic chain or inline source ID reuse", () => {
+test("derived source cycles are diagnosed without rejecting an acyclic chain", () => {
   const a = { id: "a", kind: "derived", config: { from: "b", where: { conditions: [] } } }, b = { id: "b", kind: "derived", config: { from: "a", where: { conditions: [] } } };
   const result = inspect({ ...project(), dataSource: a, additionalSources: [b] });
   expect(result.issues.filter(issue => issue.code === "invalid-reference")).toHaveLength(2);
   expect(inspect({ ...project(), dataSource: a, additionalSources: [{ ...b, config: { ...b.config, from: "project" } }] }).issues).toEqual([]);
 });
 
-test("view envelopes, colors, sorting and known inline source payloads are checked", () => {
-  const view = { ...DEFAULT_VIEW, id: "v", name: "V", type: "dashboard", config: { widgets: [{ type: "database-call", config: { sourceConfig: { kind: "tag", config: { tag: "work", hierarchy: "bad" } } } }] } };
+test("view envelopes, colors, sorting and active source references are checked", () => {
+  const view = { ...DEFAULT_VIEW, id: "v", name: "V", type: "dashboard", config: { widgets: [{ type: "database-call", sourceConfig: { projectId: 7 }, config: {} }] } };
   const p = { ...project(), views: [view], fieldConfig: { Done: {} }, agenda: {} };
   expect(inspect(p).issues).toContainEqual({ location: ["views", 0, "config", "widgets", 0, "id"], code: "missing-field" });
-  invalidAt(p, ["views", 0, "config", "widgets", 0, "config", "sourceConfig", "config", "hierarchy"]);
+  invalidAt(p, ["views", 0, "config", "widgets", 0, "sourceConfig", "projectId"]);
   invalidAt({ ...p, views: [view, view] }, ["views", 1, "id"], "duplicate-id");
   invalidAt({ ...p, views: [{ ...view, sort: { criteria: [{ field: "x", enabled: false, order: ["asc"] }] } }] }, ["views", 0, "sort", "criteria", 0, "order"]);
   invalidAt({ ...p, views: [{ ...view, colors: { conditions: [{ color: "red", condition: { field: "x", enabled: "yes", operator: "is" } }] } }] }, ["views", 0, "colors", "conditions", 0, "condition", "enabled"]);

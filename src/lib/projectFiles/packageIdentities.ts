@@ -63,6 +63,10 @@ function inventory(projects: readonly ProjectDefinition[]): { identities: Identi
       add("view", [project.id], view.id);
       const config: unknown = view.config;
       if (!jsonObject(config) || config['widgets'] === undefined) continue;
+      // Only registered dashboard formats own widget identities. Preserve an
+      // extension's lookalike keys and the flat historical table as opaque JSON.
+      if (view.type !== "dashboard" && view.type !== "database" &&
+          !(view.type === "table" && Array.isArray(config['widgets']) && typeof config['layoutVersion'] === "number")) continue;
       if (!Array.isArray(config['widgets'])) throw projectFileError("invalid widget identities");
       for (const widget of config['widgets'] as unknown[]) {
         if (!jsonObject(widget)) throw projectFileError("invalid widget identities");

@@ -75,7 +75,7 @@ This is an internal building block, not connected to installation or its UI yet.
 
 The rewriter captures separate configuration copies and applies the identity plan to known references: relation/rollup/backlink, derived/named sources, block/chart/series sources, correlations, joins, linkedSelection, tabs and activeTabId. A linked view resolves within the block's source project, with view-type checking. Reused widget IDs in different views remain distinct; disabled joins and retained tab configs are included. Clones receive isDefault=false so the existing default project is not changed.
 
-The result is labelled reference-preview. Unresolved references, malformed known reference shapes and unsupported view/widget/source/step types carry structured diagnostic locations. A qualified block source combined with another sourceId or linkedViewId needs a separate context decision and is diagnosed for now; inline block sources also require further handling. Unknown data is retained. Expressions are not executed and there is no global string replacement. Note paths/links, tags and query text remain unchanged.
+The result is labelled reference-preview. Unresolved references, malformed known reference shapes and unsupported view/widget/source/step types carry structured diagnostic locations. A named sourceId belongs to the containing project even when a database-call reads an external project. A linkedViewId combined with a qualified external source still needs a separate context decision and is diagnosed. Historical widget.config.sourceConfig JSON is not acquired by the current runtime: it is preserved without rebinding IDs or treating it as an active source. Unknown data is retained. Expressions are not executed and there is no global string replacement. Note paths/links, tags and query text remain unchanged.
 
 This module is not connected to import UI yet. Even an empty diagnostic list is not installation approval: full schema validation, unknown-config handling, file/link relocation, folder/tag scope choices, installation journaling and verified registration remain open. This increment changes no active projects or notes.
 
@@ -93,7 +93,7 @@ Different spellings of inferred parent folders inside the package also conflict:
 
 ## Configuration path proposals
 
-Checking a folder now proposes bindings for selected templates, excluded notes, primary/additional source folders, explicit new-note folders, local covers, inverse-selection record paths and inline block sources. Bindings use exact selected file paths or containing folders. Recipient files are never chosen by basename. Missing bindings and unsupported settings remain with diagnostics; the original project and manifest archive state are preserved.
+Checking a folder now proposes bindings for selected templates, excluded notes, primary/additional source folders, explicit new-note folders, local covers and inverse-selection record paths. Unused historical inline source JSON stays unchanged. Bindings use exact selected file paths or containing folders. Recipient files are never chosen by basename. Missing bindings and unsupported settings remain with diagnostics; the original project and manifest archive state are preserved.
 
 An empty new-note folder retains inheritance from a primary folder/native-folder source. With a tag/query/derived source it requires an explicit choice, so creation does not silently fall back to the vault root. Tags, query text, filters, expressions and external HTTP(S) cover URLs are not rewritten or executed. Unknown configurations are retained.
 
@@ -111,7 +111,7 @@ Only typed path fields consume choices; arbitrary configuration locations cannot
 
 ## Review source scopes
 
-After checking the import folder, Review source scopes lists primary, additional and inline folder/tag/query sources. Each native toggle starts off. Enabling it proposes keeping the displayed rule, which may include existing and future matching vault notes beyond the package selection. Folder recursion and nested-tag matching are shown separately. This is not an option to isolate a tag/query source to packaged notes. Existing Markdown candidates remain an upper bound before filters; queries and tags are not evaluated to obtain a count.
+After checking the import folder, Review source scopes lists active primary and additional folder/tag/query sources. Unused historical inline definitions add no scope questions. Each native toggle starts off. Enabling it proposes keeping the displayed rule, which may include existing and future matching vault notes beyond the package selection. Folder recursion and nested-tag matching are shown separately. This is not an option to isolate a tag/query source to packaged notes. Existing Markdown candidates remain an upper bound before filters; queries and tags are not evaluated to obtain a count.
 
 Recheck choices rereads the ZIP, validates path choices and checks the source decisions again. A revision binds the archive, import folder, path choices, copy/configuration policy, proposed project and current loaded file/folder metadata. Changed rules, bindings, inventory or file size/mtime require a new confirmation; inventory ordering alone does not. Metadata is checked again after hashing. These checks are a preview of observed state, not an atomic vault snapshot or installation authority.
 

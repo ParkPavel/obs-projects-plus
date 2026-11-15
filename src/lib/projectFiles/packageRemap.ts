@@ -154,10 +154,11 @@ export function previewPackageReferences(
             const parsed = parseBaseRef(ref);
             context = parsed.projectId; qualified = parsed.sourceId !== undefined;
           }
-          // Retained dormant refs are mapped too, but sourceId on non-db widgets uses the host.
+          // widgetInput resolves named sources against the host for every widget.
+          // External db-call frames are selected later; that does not change this
+          // persisted sourceId's namespace (including its notice/creation guard).
           map(scope, "projectId", id, [...wa, "sourceConfig"], reference, true);
-          if (qualified && scope['sourceId']) issue(id, [...wa, "sourceConfig", "sourceId"], "unsupported-context");
-          else map(scope, "sourceId", id, [...wa, "sourceConfig"], sid => plan.sourceId(context, sid), true);
+          map(scope, "sourceId", id, [...wa, "sourceConfig"], sid => plan.sourceId(id, sid), true);
         }
         if (widget['type'] === "chart") chart(config, id, viewId, ca);
         else { map(config, "dataProjectId", id, ca, reference, true); selection(config, id, viewId, ca); }
@@ -175,8 +176,8 @@ export function previewPackageReferences(
           });
         }
         if (widget['type'] !== "database-call") return;
-        // An inline source definition needs a separate path/source ownership contract.
-        if (config['sourceConfig'] !== undefined) issue(id, [...ca, "sourceConfig"], "unsupported-config");
+        // config.sourceConfig is retained historical JSON, not the active source
+        // reference. Current acquisition never reads it: do not rebind its IDs.
         const tabs = config['viewTabs'];
         // Validate a known reference even when no tab list exists (including 0/false/null).
         map(config, "activeTabId", id, ca, tid => plan.tabId(id, viewId, widgetId, tid), true);

@@ -81,7 +81,7 @@ test("configuration-only package needs explicit folder bindings and preserves ar
   expect(r.issues.filter(issue => issue.code === "unbound-folder")).toHaveLength(2);
 });
 
-test("maps owned cover/record/inline-source paths but retains external URLs and unrelated text", () => {
+test("maps active cover/record paths but retains unused inline sources, external URLs and unrelated text", () => {
   const p = project({ views: [{ id: "v", name: "V", type: "dashboard", config: { widgets: [
     { id: "cover", type: "cover-banner", config: { src: "Assets/cover.png", overlay: "Work/a.md" } },
     { id: "external", type: "cover-banner", config: { src: "https://example.com/cover.png" } },
@@ -92,7 +92,8 @@ test("maps owned cover/record/inline-source paths but retains external URLs and 
   expect(widgets[0]!.config).toEqual({ src: "Imported/Assets/cover.png", overlay: "Work/a.md" });
   expect(widgets[1]!.config['src']).toBe("https://example.com/cover.png");
   expect(widgets[2]!.config).toEqual({ inverseTargetId: "Imported/Work/a.md", fields: ["Work/a.md"] });
-  expect(widgets[3]!.config['sourceConfig']).toMatchObject({ config: { path: "Imported/Work" } });
+  expect(widgets[3]!.config['sourceConfig']).toEqual({ kind: "folder", config: { path: "Work", recursive: false } });
+  expect(r.scopes.map(scope => scope.location)).toEqual([["dataSource", "config"]]);
 });
 
 test("unknown config types and invalid known paths get diagnostics rather than string coercion", () => {
