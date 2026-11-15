@@ -67,10 +67,10 @@ test("derived source cycles are diagnosed without rejecting an acyclic chain or 
   expect(inspect({ ...project(), dataSource: a, additionalSources: [{ ...b, config: { ...b.config, from: "project" } }] }).issues).toEqual([]);
 });
 
-test("view envelopes, colors, sorting and inline sources are checked while payloads remain explicitly unchecked", () => {
+test("view envelopes, colors, sorting and known inline source payloads are checked", () => {
   const view = { ...DEFAULT_VIEW, id: "v", name: "V", type: "dashboard", config: { widgets: [{ type: "database-call", config: { sourceConfig: { kind: "tag", config: { tag: "work", hierarchy: "bad" } } } }] } };
   const p = { ...project(), views: [view], fieldConfig: { Done: {} }, agenda: {} };
-  expect(inspect(p).issues).toContainEqual({ location: ["views", 0, "config"], code: "section-unchecked" });
+  expect(inspect(p).issues).toContainEqual({ location: ["views", 0, "config", "widgets", 0, "id"], code: "missing-field" });
   invalidAt(p, ["views", 0, "config", "widgets", 0, "config", "sourceConfig", "config", "hierarchy"]);
   invalidAt({ ...p, views: [view, view] }, ["views", 1, "id"], "duplicate-id");
   invalidAt({ ...p, views: [{ ...view, sort: { criteria: [{ field: "x", enabled: false, order: ["asc"] }] } }] }, ["views", 0, "sort", "criteria", 0, "order"]);
@@ -78,10 +78,10 @@ test("view envelopes, colors, sorting and inline sources are checked while paylo
   invalidAt({ ...p, fieldConfig: { Done: null } }, ["fieldConfig", "Done"]);
 });
 
-test.each(["table", "custom"])("%s payload is opaque even when it contains widget-looking extension keys", type => {
+test.each(["table", "custom"])("%s payload does not acquire widget semantics from an extension key alone", type => {
   const config = { widgets: [{ type: "database-call", config: { sourceConfig: { kind: "tag", config: { tag: "opaque", hierarchy: "extension-value" } } } }] };
   const result = inspect({ ...project(), views: [{ ...DEFAULT_VIEW, id: "v", name: "V", type, config }] });
-  expect(result.issues).toEqual([...(type === "custom" ? [{ location: ["views", 0, "type"], code: "unknown-kind" }] : []), { location: ["views", 0, "config"], code: "section-unchecked" }]);
+  expect(result.issues).toEqual(type === "table" ? [{ location: ["views", 0, "config", "widgets"], code: "unknown-field" }] : [{ location: ["views", 0, "type"], code: "unknown-kind" }, { location: ["views", 0, "config"], code: "section-unchecked" }]);
 });
 
 test("optional date and palette inheritance are preserved with strict present-value types", () => {

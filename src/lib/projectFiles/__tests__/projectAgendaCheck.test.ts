@@ -88,14 +88,15 @@ test("list IDs are unique per Agenda while separate local calendars may reuse th
 
 test("local Agenda is inspected only in calendar views and typed database-call calendar tabs", () => {
   const localAgenda = { mode: false };
-  const widgets = [{ type: "database-call", config: { viewTabs: [{ viewType: "calendar", config: { localAgenda } }, { viewType: "table", config: { localAgenda } }] } }];
+  const widgets = [{ id: "w", title: "Calendar", layout: { x: 0, y: 0, w: 12, h: 8 }, type: "database-call", config: { viewTabs: [{ id: "c", label: "C", viewType: "calendar", config: { localAgenda } }, { id: "t", label: "T", viewType: "table", config: { localAgenda } }] } }];
   const view = (type: string, config: unknown) => ({ ...DEFAULT_VIEW, id: "v", name: "V", type, config });
   expect(inspect({ views: [view("calendar", { localAgenda })] }).issues).toContainEqual({ location: ["views", 0, "config", "localAgenda", "mode"], code: "invalid-type" });
   expect(inspect({ views: [view("dashboard", { widgets })] }).issues).toEqual([
-    { location: ["views", 0, "config"], code: "section-unchecked" },
     { location: ["views", 0, "config", "widgets", 0, "config", "viewTabs", 0, "config", "localAgenda", "mode"], code: "invalid-type" },
+    { location: ["views", 0, "config", "widgets", 0, "config", "viewTabs", 1, "config", "localAgenda"], code: "unknown-field" },
   ]);
-  for (const type of ["table", "custom"]) expect(inspect({ views: [view(type, { widgets, localAgenda })] }).issues.filter(issue => issue.location.includes("localAgenda"))).toEqual([]);
+  expect(inspect({ views: [view("custom", { widgets, localAgenda })] }).issues.filter(issue => issue.location.includes("localAgenda"))).toEqual([]);
+  expect(inspect({ views: [view("table", { widgets, localAgenda })] }).issues.filter(issue => issue.location.includes("mode"))).toEqual([]);
   expect(inspect({ views: [view("board", { localAgenda })] }).issues).toEqual([{ location: ["views", 0, "config", "localAgenda"], code: "unknown-field" }]);
 });
 

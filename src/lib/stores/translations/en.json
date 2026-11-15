@@ -2,7 +2,7 @@
     "translation": {
         "package-inspect": {
             "core-summary": "Project structure check: {{projects}} projects, {{issues}} diagnostics",
-            "core-incomplete": "Project and property settings, Agenda and supported views have been checked. Widget contents and cross-project references still need validation. Project installation is not available yet.",
+            "core-incomplete": "Project, view and block setting formats have been checked. Cross-project references and note links still need validation. Installation is not available yet.",
             "core-invalid-type": "Field has the wrong type or range",
             "core-missing-field": "Required field is missing",
             "core-unknown-field": "Unknown field retained for review",

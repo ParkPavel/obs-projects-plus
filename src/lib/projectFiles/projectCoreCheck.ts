@@ -4,6 +4,7 @@ import { ROLLUP_MODES } from "src/lib/database/rollupMode";
 import type { RollupFunction } from "src/lib/engine/aggregate";
 import { LEGACY_AGENDA_OPERATORS } from "src/lib/filters/agendaFilterModel";
 import { inspectStandaloneViewConfig } from "./projectViewCheck";
+import { createDashboardConfigInspector } from "./projectDashboardCheck";
 import { MAX_PROJECT_DOCUMENT_BYTES, projectFileError } from "./document";
 
 type Location = readonly (string | number)[];
@@ -222,6 +223,12 @@ export function checkProjectCoreJson(text: string): ProjectCoreCheck {
       filter(data['where'], [...ca, "where"]);
     } else issue([...at, "kind"], "unknown-kind");
   };
+  const plainView = (kind: string, value: unknown, at: Location) => {
+    const handled = inspectStandaloneViewConfig(kind, value, at, { issue, object, optional, scalar, list, enumeration });
+    if (handled && kind === "calendar") localAgenda(value, at);
+    return handled;
+  };
+  const dashboardView = createDashboardConfigInspector({ issue, object, optional, scalar, list, enumeration, filter, source: (value, at) => source(value, at, false), plainView });
   const root = object(input, [], ["id", "name", "fieldConfig", "views", "defaultName", "templates", "excludedNotes", "isDefault", "dataSource", "additionalSources", "newNotesFolder", "dateFormat", "autosave", "agenda", "uniqueIdCounter", "colorFavorites"]);
   if (root) {
     required(root, "id", [], "string", true); required(root, "name", [], "string"); required(root, "defaultName", [], "string");
@@ -240,22 +247,8 @@ export function checkProjectCoreJson(text: string): ProjectCoreCheck {
       const config = view['config'];
       if (!config || typeof config !== "object" || Array.isArray(config)) issue([...at, "config"], "invalid-type");
       else {
-        if (typeof view['type'] !== "string" || !inspectStandaloneViewConfig(view['type'], config, [...at, "config"], { issue, object, optional, scalar, list, enumeration })) issue([...at, "config"], "section-unchecked");
-        if (view['type'] === "calendar") localAgenda(config, [...at, "config"]);
-        const widgets = (config as ObjectValue)['widgets'];
-        if ((view['type'] === "dashboard" || view['type'] === "database") && Array.isArray(widgets)) widgets.forEach((widget: unknown, wi) => {
-          if (!widget || typeof widget !== "object" || Array.isArray(widget)) return;
-          const data = widget as ObjectValue, cfg = data['config'];
-          if (data['type'] === "database-call" && cfg && typeof cfg === "object" && !Array.isArray(cfg) && (cfg as ObjectValue)['sourceConfig'] !== undefined) source((cfg as ObjectValue)['sourceConfig'], [...at, "config", "widgets", wi, "config", "sourceConfig"], false);
-          if (data['type'] === "database-call" && cfg && typeof cfg === "object" && !Array.isArray(cfg) && Array.isArray((cfg as ObjectValue)['viewTabs'])) {
-            ((cfg as ObjectValue)['viewTabs'] as unknown[]).forEach((tab, ti) => {
-              if (!tab || typeof tab !== "object" || Array.isArray(tab)) return;
-              const type = (tab as ObjectValue)['viewType'], config = (tab as ObjectValue)['config'], location = [...at, "config", "widgets", wi, "config", "viewTabs", ti, "config"];
-              if (typeof type === "string") inspectStandaloneViewConfig(type, config, location, { issue, object, optional, scalar, list, enumeration });
-              if (type === "calendar") localAgenda(config, location);
-            });
-          }
-        });
+        const type = view['type'], location = [...at, "config"];
+        if (typeof type !== "string" || (!plainView(type, config, location) && !dashboardView(type, config, location))) issue(location, "section-unchecked");
       }
       filter(view['filter'], [...at, "filter"]);
       const colors = object(view['colors'], [...at, "colors"], ["conditions"]);

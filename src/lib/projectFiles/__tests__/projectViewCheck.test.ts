@@ -55,11 +55,10 @@ test("dynamic record/column keys are inspected safely even when they resemble pr
   expect(inspect("gallery", { cardFramesByRecord: JSON.parse('{"__proto__":{"heightRem":2}}') }).issues).toEqual([]);
 });
 
-test("unknown configs and legacy table payloads remain opaque rather than being normalized by a lookalike key", () => {
-  for (const type of ["custom", "table"]) {
-    const config = { cardFramesByRecord: false, localAgenda: null, columns: "opaque" };
-    expect(inspect(type, config).issues.filter(issue => issue.location[2] === "config")).toEqual([{ location: at(), code: "section-unchecked" }]);
-  }
+test("unknown view configs remain opaque, while legacy tables diagnose unknown keys without interpreting their contents", () => {
+  const config = { cardFramesByRecord: false, localAgenda: null, columns: "opaque" };
+  expect(inspect("custom", config).issues.filter(issue => issue.location[2] === "config")).toEqual([{ location: at(), code: "section-unchecked" }]);
+  expect(inspect("table", config).issues).toEqual(Object.keys(config).map(key => ({ location: at(key), code: "unknown-field" })));
 });
 
 test("malformed view discriminators cannot invoke a JSON object's toString member", () => {
@@ -68,10 +67,11 @@ test("malformed view discriminators cannot invoke a JSON object's toString membe
 });
 
 test("typed database-call tabs inspect their local views while custom widgets stay opaque", () => {
-  const tab = { viewType: "board", config: { columns: { Todo: { records: [4] } } } };
-  const config = { widgets: [{ type: "database-call", config: { viewTabs: [tab] } }, { type: "custom", config: { viewTabs: [tab] } }] };
+  const tab = { id: "t", label: "Tab", viewType: "board", config: { columns: { Todo: { records: [4] } } } };
+  const common = { title: "W", layout: { x: 0, y: 0, w: 12, h: 8 } };
+  const config = { widgets: [{ ...common, id: "w", type: "database-call", config: { viewTabs: [tab] } }, { ...common, id: "other", type: "custom", config: { viewTabs: [tab] } }] };
   expect(inspect("dashboard", config).issues).toEqual([
-    { location: at(), code: "section-unchecked" },
     { location: at("widgets", 0, "config", "viewTabs", 0, "config", "columns", "Todo", "records", 0), code: "invalid-type" },
+    { location: at("widgets", 1, "type"), code: "unknown-kind" },
   ]);
 });
