@@ -1,7 +1,7 @@
 import { webcrypto } from "node:crypto";
 import { TextEncoder, TextDecoder } from "node:util";
 import { get } from "svelte/store";
-import { DEFAULT_PROJECT, DEFAULT_SETTINGS } from "src/settings/settings";
+import { DEFAULT_PROJECT, DEFAULT_SETTINGS, DEFAULT_VIEW } from "src/settings/settings";
 import { settings } from "src/lib/stores/settings";
 import { canonical } from "src/lib/settings/settingsVerify";
 type Plugin = import("obsidian").Plugin;
@@ -161,6 +161,17 @@ test("core schema errors remain visible and block a malformed source's scope con
   const result = await service.previewFiles(saved.path, saved.sha256, "Imported", [], [{ projectId: row.projectId, location: row.location, revision: row.revision, mode: "keep-rule" }]);
   expect(result.configuration.issues.map(issue => issue.code)).toEqual(expect.arrayContaining(["schema-invalid", "scope-choice-required", "invalid-scope-choice"]));
   expect(create).not.toHaveBeenCalled(); expect(mkdir).not.toHaveBeenCalled(); expect(flush).not.toHaveBeenCalled();
+});
+
+test.each([false, true])("read-only ZIP preview diagnoses a dangling local source or a block loop (loop=%s)", async loop => {
+    const block = { id: "w", type: "database-call", title: "W", layout: { x: 0, y: 0, w: 12, h: 8 }, config: {}, sourceConfig: loop ? { projectId: "p::block:v:w" } : { projectId: "", sourceId: "missing" } };
+    persist({ ...disk, projects: [{ ...disk.projects[0]!, views: [{ ...DEFAULT_VIEW, id: "v", name: "V", type: "dashboard", config: { widgets: [block] } }] }] });
+    const saved = await service.save(await service.prepare("p", ["Note.md"]));
+    create.mockClear(); mkdir.mockClear(); flush.mockClear();
+    const result = await service.previewFiles(saved.path, saved.sha256, "Imported");
+    expect(result.coreChecks[0]!.check.issues).toEqual([]);
+    expect(result.configuration.issues).toContainEqual({ projectId: "p", location: loop ? ["views", 0, "config", "widgets", 0] : ["views", 0, "config", "widgets", 0, "sourceConfig", "sourceId"], code: "schema-invalid" });
+    expect(create).not.toHaveBeenCalled(); expect(mkdir).not.toHaveBeenCalled(); expect(flush).not.toHaveBeenCalled();
 });
 
 test("invalid Agenda is reported without waiving its validation or blocking unrelated source intent", async () => {

@@ -18,7 +18,8 @@ import type { PackageFilePlan, VaultPathEntry } from "src/lib/projectFiles/packa
 import { previewPackageConfigPaths, type PackageConfigPathPreview } from "src/lib/projectFiles/packageConfigPaths";
 import { captureConfigPathChoices, type ConfigPathChoice } from "src/lib/projectFiles/packagePathBindings";
 import { capturePackageScopeChoices, reviewPackageScopes, type PackageScopeChoice, type PackageScopeReview } from "src/lib/projectFiles/packageScopeChoices";
-import { checkProjectCoreJson, type ProjectCoreCheck } from "src/lib/projectFiles/projectCoreCheck";
+import type { ProjectCoreCheck } from "src/lib/projectFiles/projectCoreCheck";
+import { checkPackageGraph } from "src/lib/projectFiles/packageGraphCheck";
 
 export interface PackageDestinationPreview extends PackageFilePlan { readonly configuration: PackageConfigPathPreview; readonly scopeReview: PackageScopeReview; readonly coreChecks: readonly { readonly projectId: string; readonly name: string; readonly check: ProjectCoreCheck }[] }
 
@@ -84,21 +85,17 @@ export class ProjectPackageService {
         return { path: file.path, kind: file instanceof TFile ? "file" : "folder" };
       });
       const roots = configuredCopyRoots(get(settings).preferences.projectFiles);
-      let coreDiagnostics = 0;
-      const coreChecks = Object.freeze(inspected.documents.map(document => {
-        const check = checkProjectCoreJson(JSON.stringify(document.project, (_key, value: unknown) => {
-          if (typeof value === "number" && !Number.isFinite(value)) throw projectFileError("non-finite core schema value");
-          return value;
-        }));
-        coreDiagnostics += check.issues.length;
-        if (coreDiagnostics > PACKAGE_LIMITS.dependencies) throw projectFileError("too many core schema diagnostics");
-        return Object.freeze({ projectId: document.project.id, name: document.project.name, check });
-      }));
+      const graph = checkPackageGraph(inspected.documents.map(document => document.project));
+      const coreChecks = graph.coreChecks;
       const pathConfiguration = previewPackageConfigPaths(inspected.documents.map(document => document.project), inspected.manifest, destination, inventory, this.host.app.vault.configDir, roots, choices);
       const issues = [...pathConfiguration.issues];
       for (const item of coreChecks) for (const issue of item.check.issues) if (issue.code !== "section-unchecked") {
         if (issues.length >= PACKAGE_LIMITS.dependencies) throw projectFileError("too many configuration diagnostics");
         issues.push(Object.freeze({ projectId: item.projectId, location: issue.location, code: issue.code === "unknown-field" || issue.code === "unknown-kind" ? "schema-unsupported" : "schema-invalid" }));
+      }
+      for (const issue of graph.issues) {
+        if (issues.length >= PACKAGE_LIMITS.dependencies) throw projectFileError("too many configuration diagnostics");
+        issues.push(Object.freeze({ projectId: issue.projectId, location: issue.location, code: issue.code === "unsupported-config" || issue.code === "unsupported-context" ? "schema-unsupported" : "schema-invalid" }));
       }
       const configuration = Object.freeze({ ...pathConfiguration, issues: Object.freeze(issues) });
       const stamp = scopeInventoryStamp(loaded), policy = JSON.stringify([this.host.app.vault.configDir, roots]);
