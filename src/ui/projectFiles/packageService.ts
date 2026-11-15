@@ -18,8 +18,9 @@ import type { PackageFilePlan, VaultPathEntry } from "src/lib/projectFiles/packa
 import { previewPackageConfigPaths, type PackageConfigPathPreview } from "src/lib/projectFiles/packageConfigPaths";
 import { captureConfigPathChoices, type ConfigPathChoice } from "src/lib/projectFiles/packagePathBindings";
 import { capturePackageScopeChoices, reviewPackageScopes, type PackageScopeChoice, type PackageScopeReview } from "src/lib/projectFiles/packageScopeChoices";
+import { checkProjectCoreJson, type ProjectCoreCheck } from "src/lib/projectFiles/projectCoreCheck";
 
-export interface PackageDestinationPreview extends PackageFilePlan { readonly configuration: PackageConfigPathPreview; readonly scopeReview: PackageScopeReview }
+export interface PackageDestinationPreview extends PackageFilePlan { readonly configuration: PackageConfigPathPreview; readonly scopeReview: PackageScopeReview; readonly coreChecks: readonly { readonly projectId: string; readonly name: string; readonly check: ProjectCoreCheck }[] }
 
 /** Metadata only, never query results. Stable ordering avoids unnecessary reconfirmation. */
 function scopeInventoryStamp(loaded: readonly import("obsidian").TAbstractFile[]): string {
@@ -83,13 +84,29 @@ export class ProjectPackageService {
         return { path: file.path, kind: file instanceof TFile ? "file" : "folder" };
       });
       const roots = configuredCopyRoots(get(settings).preferences.projectFiles);
-      const configuration = previewPackageConfigPaths(inspected.documents.map(document => document.project), inspected.manifest, destination, inventory, this.host.app.vault.configDir, roots, choices);
+      let coreDiagnostics = 0;
+      const coreChecks = Object.freeze(inspected.documents.map(document => {
+        const check = checkProjectCoreJson(JSON.stringify(document.project, (_key, value: unknown) => {
+          if (typeof value === "number" && !Number.isFinite(value)) throw projectFileError("non-finite core schema value");
+          return value;
+        }));
+        coreDiagnostics += check.issues.length;
+        if (coreDiagnostics > PACKAGE_LIMITS.dependencies) throw projectFileError("too many core schema diagnostics");
+        return Object.freeze({ projectId: document.project.id, name: document.project.name, check });
+      }));
+      const pathConfiguration = previewPackageConfigPaths(inspected.documents.map(document => document.project), inspected.manifest, destination, inventory, this.host.app.vault.configDir, roots, choices);
+      const issues = [...pathConfiguration.issues];
+      for (const item of coreChecks) for (const issue of item.check.issues) if (issue.code !== "section-unchecked") {
+        if (issues.length >= PACKAGE_LIMITS.dependencies) throw projectFileError("too many configuration diagnostics");
+        issues.push(Object.freeze({ projectId: item.projectId, location: issue.location, code: issue.code === "unknown-field" || issue.code === "unknown-kind" ? "schema-unsupported" : "schema-invalid" }));
+      }
+      const configuration = Object.freeze({ ...pathConfiguration, issues: Object.freeze(issues) });
       const stamp = scopeInventoryStamp(loaded), policy = JSON.stringify([this.host.app.vault.configDir, roots]);
       const inventoryRevision = await textDigest(stamp); this.check();
       const basis = await textDigest(JSON.stringify({ archiveHash: inspected.archiveHash, destination, inventoryRevision, policy, choices })); this.check();
       const scopeReview = await reviewPackageScopes(configuration, basis, scopes, this.check);
       if (scopeInventoryStamp(this.host.app.vault.getAllLoadedFiles()) !== stamp || JSON.stringify([this.host.app.vault.configDir, configuredCopyRoots(get(settings).preferences.projectFiles)]) !== policy) throw projectFileError("source scope preview changed");
-      this.check(); return Object.freeze({ ...configuration.files, configuration: Object.freeze({ ...configuration, issues: scopeReview.issues }), scopeReview });
+      this.check(); return Object.freeze({ ...configuration.files, configuration: Object.freeze({ ...configuration, issues: scopeReview.issues }), scopeReview, coreChecks });
     } finally { this.busy = false; }
   }
 

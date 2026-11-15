@@ -1,6 +1,17 @@
 ﻿{
     "translation": {
         "package-inspect": {
+            "core-summary": "Project structure check: {{projects}} projects, {{issues}} diagnostics",
+            "core-incomplete": "This checks project fields, sources and view envelopes only. Property settings, widget payloads and Agenda still need validation. This is not permission to install.",
+            "core-invalid-type": "Field has the wrong type or range",
+            "core-missing-field": "Required field is missing",
+            "core-unknown-field": "Unknown field retained for review",
+            "core-unknown-kind": "Unsupported type or operator",
+            "core-duplicate-id": "Duplicate identifier",
+            "core-invalid-reference": "Missing, reserved or cyclic source reference",
+            "core-section-unchecked": "Section retained but not fully validated",
+            "config-schema-invalid": "Project structure has an invalid field",
+            "config-schema-unsupported": "Project structure contains unsupported settings",
             "scope-title": "Review source scopes",
             "scope-description": "Enable each rule you want to keep. It may include existing and future matching vault notes, beyond the packaged files. Recheck choices to verify the current preview. This does not install projects or run queries.",
             "scope-keep-rule": "Keep this source rule",

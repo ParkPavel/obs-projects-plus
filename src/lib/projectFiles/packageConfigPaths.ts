@@ -12,7 +12,7 @@ const KNOWN_WIDGETS = new Set(["data-table", "chart", "stats", "comparison", "ch
 export interface ConfigPathIssue {
   readonly projectId: string;
   readonly location: Location;
-  readonly code: "invalid-shape" | "unbound-file" | "unbound-folder" | "scope-choice-required" | "creation-folder-choice-required" | "unsupported-config" | "invalid-binding" | "stale-binding" | "invalid-scope-choice" | "stale-scope-choice";
+  readonly code: "invalid-shape" | "unbound-file" | "unbound-folder" | "scope-choice-required" | "creation-folder-choice-required" | "unsupported-config" | "invalid-binding" | "stale-binding" | "invalid-scope-choice" | "stale-scope-choice" | "schema-invalid" | "schema-unsupported";
   readonly source?: string;
 }
 export interface ConfigPathChange {

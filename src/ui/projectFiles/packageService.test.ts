@@ -151,6 +151,26 @@ test("scope choices are captured before reading, and changing metadata during ha
   try { await expect(service.previewFiles(saved.path, saved.sha256, "Imported")).rejects.toThrow("scope preview changed"); } finally { spy.mockRestore(); }
 });
 
+test("core schema errors remain visible and block a malformed source's scope confirmation without writes", async () => {
+  persist({ ...disk, projects: [{ ...disk.projects[0]!, dataSource: { kind: "dataview", config: { query: "not executed", filter: { conditions: [{ field: "done", operator: ["is"], enabled: false, value: "yes" }] } } } } as unknown as State['projects'][number]] });
+  const saved = await service.save(await service.prepare("p", ["Note.md"]));
+  create.mockClear(); mkdir.mockClear(); flush.mockClear();
+  const first = await service.previewFiles(saved.path, saved.sha256, "Imported"), row = first.scopeReview.rows[0]!;
+  expect(first.coreChecks[0]!.check).toMatchObject({ complete: false, issues: [expect.objectContaining({ code: "invalid-type", location: ["dataSource", "config", "filter", "conditions", 0, "operator"] })] });
+  expect(row.status).toBe("blocked");
+  const result = await service.previewFiles(saved.path, saved.sha256, "Imported", [], [{ projectId: row.projectId, location: row.location, revision: row.revision, mode: "keep-rule" }]);
+  expect(result.configuration.issues.map(issue => issue.code)).toEqual(expect.arrayContaining(["schema-invalid", "scope-choice-required", "invalid-scope-choice"]));
+  expect(create).not.toHaveBeenCalled(); expect(mkdir).not.toHaveBeenCalled(); expect(flush).not.toHaveBeenCalled();
+});
+
+test("unchecked sections are reported without waiving their pending validation or blocking unrelated source intent", async () => {
+  persist({ ...disk, projects: [{ ...disk.projects[0]!, fieldConfig: { Done: {} }, agenda: {} } as unknown as State['projects'][number]] });
+  const saved = await service.save(await service.prepare("p", ["Note.md"])), first = await service.previewFiles(saved.path, saved.sha256, "Imported"), row = first.scopeReview.rows[0]!;
+  expect(first.coreChecks[0]!.check.issues.map(issue => issue.code)).toEqual(["section-unchecked", "section-unchecked"]);
+  expect((await service.previewFiles(saved.path, saved.sha256, "Imported", [], [{ projectId: row.projectId, location: row.location, revision: row.revision, mode: "keep-rule" }])).scopeReview.rows[0]!.status).toBe("confirmed");
+  expect(first.coreChecks[0]!.check.complete).toBe(false);
+});
+
 test("unconfirmed primary state and stale previews cannot write packages", async () => {
   confirmed = null;
   await expect(service.prepare("p", ["Note.md"])).rejects.toThrow("not confirmed");

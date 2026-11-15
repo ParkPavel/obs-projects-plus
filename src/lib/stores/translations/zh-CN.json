@@ -1,6 +1,17 @@
 ﻿{
     "translation": {
         "package-inspect": {
+            "core-summary": "项目结构检查：{{projects}} 个项目，{{issues}} 条诊断",
+            "core-incomplete": "仅检查项目字段、来源和视图基本结构。属性设置、组件内容和 Agenda 仍需验证。这并非安装许可。",
+            "core-invalid-type": "字段类型或范围错误",
+            "core-missing-field": "缺少必填字段",
+            "core-unknown-field": "已保留未知字段供检查",
+            "core-unknown-kind": "不支持的类型或运算符",
+            "core-duplicate-id": "标识符重复",
+            "core-invalid-reference": "来源引用缺失、保留或循环",
+            "core-section-unchecked": "已保留该部分，但尚未完全验证",
+            "config-schema-invalid": "项目结构包含无效字段",
+            "config-schema-unsupported": "项目结构包含不支持的设置",
             "scope-title": "检查来源范围",
             "scope-description": "启用要保留的每条规则。除了包内文件，它还可能包含仓库中现有和未来匹配的笔记。重新检查会核对当前预览。本操作不会安装项目或执行查询。",
             "scope-keep-rule": "保留此来源规则",

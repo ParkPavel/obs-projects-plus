@@ -136,6 +136,20 @@ export class ProjectPackageInspectModal extends Modal {
           pathDetails.createEl("p", { text: get(i18n).t("package-inspect.config-summary", { changes: config.changes.length, issues: config.issues.length, scopes: config.scopes.length }) });
           const short = (value: string) => value.length > 160 ? value.slice(0, 160) + "…" : value;
           const names = new Map(config.projects.map(item => [item.project.id, short(item.project.name)]));
+          if (result.coreChecks?.length) {
+            const total = result.coreChecks.reduce((sum, item) => sum + item.check.issues.length, 0);
+            pathDetails.createEl("p", { text: get(i18n).t("package-inspect.core-summary", { projects: result.coreChecks.length, issues: total }) });
+            pathDetails.createEl("p", { text: t("core-incomplete") });
+            const diagnostics = pathDetails.createEl("ul"); let shown = 0;
+            for (const item of result.coreChecks) for (const issue of item.check.issues) if (shown++ < 32) {
+              const row = diagnostics.createEl("li"), points = Array.from(`${short(item.name)}: ${t("core-" + issue.code)} · ${short(issue.location.map(String).join(".")) || "/"}`);
+              for (let at = 0; at < points.length; at += 32) {
+                row.append(row.ownerDocument.createTextNode(points.slice(at, at + 32).join("")));
+                if (at + 32 < points.length) row.createEl("wbr");
+              }
+            }
+            if (total > 32) pathDetails.createEl("p", { text: t("config-more") });
+          }
           const changes = pathDetails.createEl("ul");
           for (const change of config.changes.slice(0, 32)) changes.createEl("li", { text: `${names.get(change.projectId) ?? ""}: ${short(change.source)} → ${short(change.destination)}` });
           const issues = pathDetails.createEl("ul");

@@ -225,3 +225,14 @@ test("a late input event while disabled invalidates the old folder result instea
   expect(modal.contentEl.textContent).toContain("package-inspect.binding-changed");
   expect(pathButton().disabled).toBe(false);
 });
+
+test("core diagnostics show bounded untrusted locations and explicit incomplete coverage", async () => {
+  const result = { ...await previewFiles(), coreChecks: [{ projectId: "p", name: "<img src=x onerror=alert(1)>", check: { complete: false, issues: Array.from({ length: 40 }, (_, i) => ({ location: ["field" + i, "<img>"], code: "unknown-field" })) } }] };
+  previewFiles.mockClear(); previewFiles.mockResolvedValueOnce(result);
+  button().click(); lastPicker().onChooseItem({ path: "Incoming/Package.zip" }); await settle(); destination("Imported");
+  pathButton().click(); await settle();
+  expect(modal.contentEl.textContent).toContain("package-inspect.core-incomplete");
+  expect(modal.contentEl.textContent).toContain("package-inspect.core-unknown-field");
+  expect(modal.contentEl.textContent).toContain("field31.<img>"); expect(modal.contentEl.textContent).not.toContain("field32.<img>");
+  expect(modal.contentEl.querySelector("img")).toBeNull(); expect(stage).not.toHaveBeenCalled();
+});
