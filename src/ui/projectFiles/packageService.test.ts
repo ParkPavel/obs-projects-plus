@@ -166,9 +166,23 @@ test("core schema errors remain visible and block a malformed source's scope con
 test("unchecked sections are reported without waiving their pending validation or blocking unrelated source intent", async () => {
   persist({ ...disk, projects: [{ ...disk.projects[0]!, fieldConfig: { Done: {} }, agenda: {} } as unknown as State['projects'][number]] });
   const saved = await service.save(await service.prepare("p", ["Note.md"])), first = await service.previewFiles(saved.path, saved.sha256, "Imported"), row = first.scopeReview.rows[0]!;
-  expect(first.coreChecks[0]!.check.issues.map(issue => issue.code)).toEqual(["section-unchecked", "section-unchecked"]);
+  expect(first.coreChecks[0]!.check.issues.map(issue => issue.code)).toEqual(["section-unchecked"]);
   expect((await service.previewFiles(saved.path, saved.sha256, "Imported", [], [{ projectId: row.projectId, location: row.location, revision: row.revision, mode: "keep-rule" }])).scopeReview.rows[0]!.status).toBe("confirmed");
   expect(first.coreChecks[0]!.check.complete).toBe(false);
+});
+
+test("property errors and unsupported formula versions remain blocking configuration diagnostics without writes", async () => {
+  persist({ ...disk, projects: [{ ...disk.projects[0]!, fieldConfig: { Invalid: { richText: "false" }, Future: { formulaVersion: "next" }, BadRollup: { rollup: { relationField: "R", targetField: "X", function: "avg", mode: "sum" } } } } as unknown as State['projects'][number]] });
+  const saved = await service.save(await service.prepare("p", ["Note.md"]));
+  create.mockClear(); mkdir.mockClear(); flush.mockClear();
+  const result = await service.previewFiles(saved.path, saved.sha256, "Imported");
+  expect(result.coreChecks[0]!.check).toMatchObject({ coverage: "root-fields-sources-and-view-envelope", complete: false });
+  expect(result.configuration.issues).toEqual(expect.arrayContaining([
+    expect.objectContaining({ location: ["fieldConfig", "Invalid", "richText"], code: "schema-invalid" }),
+    expect.objectContaining({ location: ["fieldConfig", "Future", "formulaVersion"], code: "schema-unsupported" }),
+    expect.objectContaining({ location: ["fieldConfig", "BadRollup", "rollup", "function"], code: "schema-invalid" }),
+  ]));
+  expect(create).not.toHaveBeenCalled(); expect(mkdir).not.toHaveBeenCalled(); expect(flush).not.toHaveBeenCalled();
 });
 
 test("unconfirmed primary state and stale previews cannot write packages", async () => {

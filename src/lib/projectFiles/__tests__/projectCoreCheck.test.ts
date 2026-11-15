@@ -11,7 +11,7 @@ const invalidAt = (value: unknown, location: (string | number)[], code = "invali
 
 test("valid root/defaults are inspected without claiming complete validation or changing JSON", () => {
   const text = JSON.stringify(project()), result = checkProjectCoreJson(text);
-  expect(result).toEqual({ stage: "project-core-check", coverage: "root-sources-and-view-envelope", complete: false, issues: [] });
+  expect(result).toEqual({ stage: "project-core-check", coverage: "root-fields-sources-and-view-envelope", complete: false, issues: [] });
   expect(text).toBe(JSON.stringify(project())); expect(Object.isFrozen(result.issues)).toBe(true);
 });
 
@@ -89,6 +89,84 @@ test("optional date and palette inheritance are preserved with strict present-va
   invalidAt({ ...project(), dateFormat: { writeFormat: "Y", preset: ["iso"] } }, ["dateFormat", "preset"]);
   invalidAt({ ...project(), colorFavorites: [{ name: "red", color: 4 }] }, ["colorFavorites", 0, "color"]);
   invalidAt({ ...project(), agenda: null }, ["agenda"]);
+});
+
+test("property settings preserve inheritance, empty values and inactive typed settings without executing formulas", () => {
+  const fieldConfig = {
+    Empty: {}, Text: { options: ["", "A"], richText: false, fileLinks: true, time: false },
+    State: { type: "status", statusGroups: { todo: [], inProgress: [""], complete: [] } },
+    Created: { type: "autotime", autoTime: "created" }, Modified: { type: "autotime", autoTime: "modified" },
+    ID: { type: "unique_id", uniqueIdPrefix: "" }, Formula: { type: "formula", formula: "[invalid syntax", formulaVersion: "unified-v1" },
+    Unversioned: { formula: "" }, Dormant: { type: "string", autoTime: "created", formula: "" },
+  };
+  const text = JSON.stringify({ ...project(), fieldConfig });
+  expect(checkProjectCoreJson(text).issues).toEqual([]);
+  expect(JSON.stringify({ ...project(), fieldConfig })).toBe(text);
+  expect(inspect({ ...project(), fieldConfig }).complete).toBe(false);
+});
+
+test.each([
+  ["richText", "false", []], ["fileLinks", null, []], ["time", 0, []],
+  ["uniqueIdPrefix", 1, []], ["formula", [], []], ["type", 1, []], ["autoTime", ["created"], []],
+  ["formulaVersion", {}, []], ["options", "A", []], ["options", ["A", false], [1]],
+  ["statusGroups", [], []], ["statusGroups", { todo: "A" }, ["todo"]], ["statusGroups", { complete: [null] }, ["complete", 0]],
+] as const)("strict present-value types for field %s", (key, value, suffix) => {
+  invalidAt({ ...project(), fieldConfig: { X: { [key]: value } } }, ["fieldConfig", "X", key, ...suffix]);
+});
+
+test.each(["extension", "__proto__", "constructor"])("unknown property type %s is diagnosed without conversion", type => {
+  invalidAt({ ...project(), fieldConfig: { X: { type } } }, ["fieldConfig", "X", "type"], "unknown-kind");
+});
+
+test("unknown versions, groups and future fields remain diagnostics without being rewritten", () => {
+  const text = JSON.stringify({ ...project(), fieldConfig: { X: { formulaVersion: "future-v2", autoTime: "future", statusGroups: { future: [] }, extension: { keep: 1 } } } });
+  expect(checkProjectCoreJson(text).issues).toEqual([
+    { location: ["fieldConfig", "X", "extension"], code: "unknown-field" },
+    { location: ["fieldConfig", "X", "autoTime"], code: "unknown-kind" },
+    { location: ["fieldConfig", "X", "formulaVersion"], code: "unknown-kind" },
+    { location: ["fieldConfig", "X", "statusGroups", "future"], code: "unknown-field" },
+  ]);
+  expect(JSON.parse(text).fieldConfig.X.extension).toEqual({ keep: 1 });
+});
+
+test("relation config validates nested filters and present values without external graph resolution", () => {
+  const relation = { targetProjectId: "missing-project", displayField: "", inverseFieldName: "", inverseDisplayField: "name", targetSubBaseFilter: { conditions: [], groups: [{ conditions: [] }] } };
+  expect(inspect({ ...project(), fieldConfig: { X: { relation } } }).issues).toEqual([]);
+  invalidAt({ ...project(), fieldConfig: { X: { relation: {} } } }, ["fieldConfig", "X", "relation", "targetProjectId"], "missing-field");
+  invalidAt({ ...project(), fieldConfig: { X: { relation: { ...relation, inverseFieldName: false } } } }, ["fieldConfig", "X", "relation", "inverseFieldName"]);
+  invalidAt({ ...project(), fieldConfig: { X: { relation: { ...relation, targetSubBaseFilter: { conditions: [{ field: "x", enabled: false, operator: "future" }] } } } } }, ["fieldConfig", "X", "relation", "targetSubBaseFilter", "conditions", 0, "operator"], "unknown-kind");
+});
+
+test.each(["count_total", "first_value", "last_value", "show_original", "show_unique", "avg"])("rollup %s retains native kernels and backlink shape", fn => {
+  const rollup = { relationField: "", targetField: "", function: fn, mode: "show_original", separator: "", orderBy: "", backlink: { projectId: "p", relationField: "Visits" } };
+  expect(inspect({ ...project(), fieldConfig: { X: { rollup } } }).issues).toEqual([]);
+});
+
+test.each([
+  [{}, ["relationField"], "missing-field"],
+  [{ relationField: "R" }, ["targetField"], "missing-field"],
+  [{ relationField: "R", targetField: "X" }, ["function"], "missing-field"],
+  [{ relationField: "R", targetField: "X", function: "average" }, ["function"], "unknown-kind"],
+  [{ relationField: "R", targetField: "X", function: "avg", mode: "avg" }, ["mode"], "unknown-kind"],
+  [{ relationField: "R", targetField: "X", function: "avg", mode: ["average"] }, ["mode"], "invalid-type"],
+  [{ relationField: "R", targetField: "X", function: "avg", targetProjectId: null }, ["targetProjectId"], "invalid-type"],
+  [{ relationField: "R", targetField: "X", function: "avg", mode: "sum" }, ["function"], "invalid-reference"],
+  [{ relationField: "", targetField: "X", function: "avg", backlink: { projectId: "p" } }, ["backlink", "relationField"], "missing-field"],
+] as const)("rollup diagnoses structure and distinguishes kernels from UI mode ids %#", (rollup, location, code) => {
+  invalidAt({ ...project(), fieldConfig: { X: { rollup } } }, ["fieldConfig", "X", "rollup", ...location], code);
+});
+
+test("equivalent rollup modes preserve their kernel and absence does not manufacture a mode", () => {
+  for (const rollup of [{ relationField: "R", targetField: "X", function: "avg", mode: "average" }, { relationField: "R", targetField: "X", function: "min", mode: "earliest" }, { relationField: "R", targetField: "X", function: "last_value" }]) {
+    expect(inspect({ ...project(), fieldConfig: { X: { rollup } } }).issues).toEqual([]);
+  }
+});
+
+test("typed property diagnostics share the global budget even under prototype-looking field names", () => {
+  const value = JSON.parse('{"__proto__":{"relation":null},"constructor":{"options":[1]}}');
+  invalidAt({ ...project(), fieldConfig: value }, ["fieldConfig", "__proto__", "relation"]);
+  invalidAt({ ...project(), fieldConfig: value }, ["fieldConfig", "constructor", "options", 0]);
+  expect(() => inspect({ ...project(), fieldConfig: Object.fromEntries(Array.from({ length: 2049 }, (_, i) => [String(i), { richText: 0, time: 1 }])) })).toThrow("too many");
 });
 
 test("input, depth, node and diagnostic budgets refuse oversized results", () => {

@@ -1,4 +1,7 @@
 import { filterOperatorTypes } from "src/settings/base/settings";
+import { PROPERTY_TYPES } from "src/lib/visualizer/propertyTypes";
+import { ROLLUP_MODES } from "src/lib/database/rollupMode";
+import type { RollupFunction } from "src/lib/engine/aggregate";
 import { MAX_PROJECT_DOCUMENT_BYTES, projectFileError } from "./document";
 
 type Location = readonly (string | number)[];
@@ -9,13 +12,24 @@ export interface ProjectCoreIssue {
 }
 export interface ProjectCoreCheck {
   readonly stage: "project-core-check";
-  readonly coverage: "root-sources-and-view-envelope";
+  readonly coverage: "root-fields-sources-and-view-envelope";
   /** Never an application/schema-completeness token, including when issues is empty. */
   readonly complete: false;
   readonly issues: readonly ProjectCoreIssue[];
 }
 const operators = new Set(Object.keys(filterOperatorTypes));
 const viewKinds = new Set(["dashboard", "database", "table", "board", "calendar", "gallery"]);
+const propertyKinds = new Set<string>([...PROPERTY_TYPES, "autotime", "unique_id"]);
+// Record keeps this vocabulary exhaustive when the aggregation kernel adds a function.
+const rollupVocabulary: Record<RollupFunction, true> = {
+  count: true, count_total: true, count_values: true, count_unique: true, count_empty: true,
+  percent_empty: true, percent_not_empty: true, sum: true, avg: true, min: true, max: true,
+  median: true, range: true, percent_true: true, concat: true, concat_unique: true,
+  show_original: true, show_unique: true, first_value: true, last_value: true,
+};
+const rollupFunctions = new Set(Object.keys(rollupVocabulary));
+const rollupModes = new Set<string>(ROLLUP_MODES.map(mode => mode.id));
+const rollupModeFunctions = new Map<string, RollupFunction | null>(ROLLUP_MODES.map(mode => [mode.id, mode.fn]));
 
 /** Strict, bounded JSON inspection. Does not migrate, mutate, resolve references externally or evaluate anything. */
 export function checkProjectCoreJson(text: string): ProjectCoreCheck {
@@ -77,6 +91,47 @@ export function checkProjectCoreJson(text: string): ProjectCoreCheck {
     list(cfg['conditions'], [...at, "conditions"])?.forEach((condition, i) => filterCondition(condition, [...at, "conditions", i]));
     if (cfg['groups'] !== undefined) list(cfg['groups'], [...at, "groups"])?.forEach((group, i) => filter(group, [...at, "groups", i]));
   };
+  const stringList = (value: unknown, at: Location) => list(value, at)?.forEach((entry, i) => scalar(entry, [...at, i], "string"));
+  const field = (value: unknown, at: Location) => {
+    const cfg = object(value, at, ["options", "richText", "fileLinks", "time", "relation", "rollup", "type", "statusGroups", "autoTime", "uniqueIdPrefix", "formulaVersion", "formula"]);
+    if (!cfg) return;
+    for (const key of ["richText", "fileLinks", "time"]) optional(cfg, key, at, "boolean");
+    for (const key of ["uniqueIdPrefix", "formula"]) optional(cfg, key, at, "string");
+    if (cfg['type'] !== undefined) enumeration(cfg['type'], [...at, "type"], propertyKinds);
+    if (cfg['autoTime'] !== undefined) enumeration(cfg['autoTime'], [...at, "autoTime"], new Set(["created", "modified"]));
+    if (cfg['formulaVersion'] !== undefined) enumeration(cfg['formulaVersion'], [...at, "formulaVersion"], new Set(["unified-v1"]));
+    if (cfg['options'] !== undefined) stringList(cfg['options'], [...at, "options"]);
+    if (cfg['statusGroups'] !== undefined) {
+      const sa = [...at, "statusGroups"], groups = object(cfg['statusGroups'], sa, ["todo", "inProgress", "complete"]);
+      if (groups) for (const key of ["todo", "inProgress", "complete"]) if (groups[key] !== undefined) stringList(groups[key], [...sa, key]);
+    }
+    if (cfg['relation'] !== undefined) {
+      const ra = [...at, "relation"], relation = object(cfg['relation'], ra, ["targetProjectId", "displayField", "targetSubBaseFilter", "inverseFieldName", "inverseDisplayField"]);
+      if (relation) {
+        required(relation, "targetProjectId", ra, "string");
+        for (const key of ["displayField", "inverseFieldName", "inverseDisplayField"]) optional(relation, key, ra, "string");
+        if (relation['targetSubBaseFilter'] !== undefined) filter(relation['targetSubBaseFilter'], [...ra, "targetSubBaseFilter"]);
+      }
+    }
+    if (cfg['rollup'] !== undefined) {
+      const ra = [...at, "rollup"], rollup = object(cfg['rollup'], ra, ["relationField", "targetProjectId", "targetField", "function", "separator", "mode", "backlink", "orderBy"]);
+      if (rollup) {
+        required(rollup, "relationField", ra, "string"); required(rollup, "targetField", ra, "string");
+        if (!Object.prototype.hasOwnProperty.call(rollup, "function")) issue([...ra, "function"], "missing-field");
+        else enumeration(rollup['function'], [...ra, "function"], rollupFunctions);
+        for (const key of ["targetProjectId", "separator", "orderBy"]) optional(rollup, key, ra, "string");
+        if (rollup['mode'] !== undefined) enumeration(rollup['mode'], [...ra, "mode"], rollupModes);
+        if (typeof rollup['mode'] === "string" && rollupModes.has(rollup['mode']) && typeof rollup['function'] === "string" && rollupFunctions.has(rollup['function'])) {
+          const expected = rollupModeFunctions.get(rollup['mode']);
+          if (expected !== null && expected !== rollup['function']) issue([...ra, "function"], "invalid-reference");
+        }
+        if (rollup['backlink'] !== undefined) {
+          const ba = [...ra, "backlink"], backlink = object(rollup['backlink'], ba, ["projectId", "relationField"]);
+          if (backlink) { required(backlink, "projectId", ba, "string"); required(backlink, "relationField", ba, "string"); }
+        }
+      }
+    }
+  };
   const identities = new Map<string, Location>(), derived: { from: string; id?: string; at: Location }[] = [];
   const source = (value: unknown, at: Location, registered: boolean) => {
     const cfg = object(value, at, ["kind", "config", "id", "name"]); if (!cfg) return;
@@ -126,10 +181,7 @@ export function checkProjectCoreJson(text: string): ProjectCoreCheck {
     if (root['additionalSources'] !== undefined) list(root['additionalSources'], ["additionalSources"])?.forEach((item, i) => source(item, ["additionalSources", i], true));
     const fields = root['fieldConfig'];
     if (!fields || typeof fields !== "object" || Array.isArray(fields)) issue(["fieldConfig"], "invalid-type");
-    else for (const [key, value] of Object.entries(fields)) {
-      if (!value || typeof value !== "object" || Array.isArray(value)) issue(["fieldConfig", key], "invalid-type");
-      else issue(["fieldConfig", key], "section-unchecked");
-    }
+    else for (const [key, value] of Object.entries(fields)) field(value, ["fieldConfig", key]);
     const ids = new Set<string>();
     list(root['views'], ["views"])?.forEach((value, index) => {
       const at = ["views", index], view = object(value, at, ["id", "name", "type", "config", "filter", "colors", "sort"]); if (!view) return;
@@ -187,5 +239,5 @@ export function checkProjectCoreJson(text: string): ProjectCoreCheck {
     if (cycle !== undefined && path.length - cycle > 1) for (const id of path.slice(cycle)) issue(links.get(id)!.at, "invalid-reference");
     for (const id of path) completed.add(id);
   }
-  return Object.freeze({ stage: "project-core-check", coverage: "root-sources-and-view-envelope", complete: false, issues: Object.freeze(issues) });
+  return Object.freeze({ stage: "project-core-check", coverage: "root-fields-sources-and-view-envelope", complete: false, issues: Object.freeze(issues) });
 }

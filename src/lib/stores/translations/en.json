@@ -2,7 +2,7 @@
     "translation": {
         "package-inspect": {
             "core-summary": "Project structure check: {{projects}} projects, {{issues}} diagnostics",
-            "core-incomplete": "This checks project fields, sources and view envelopes only. Property settings, widget payloads and Agenda still need validation. This is not permission to install.",
+            "core-incomplete": "This checks project and property settings, sources and view envelopes. Widget payloads, Agenda and the external reference graph still need validation. This is not permission to install.",
             "core-invalid-type": "Field has the wrong type or range",
             "core-missing-field": "Required field is missing",
             "core-unknown-field": "Unknown field retained for review",
