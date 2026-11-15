@@ -1,6 +1,20 @@
 ﻿{
     "translation": {
         "package-inspect": {
+            "config-source-folder": "文件夹",
+            "config-source-tag": "标签",
+            "config-source-query": "查询",
+            "config-summary": "路径调整：{{changes}} · 待选择：{{issues}} · 数据源：{{scopes}}",
+            "config-candidates": "筛选和排除之前已有的 Markdown 文件（上限）",
+            "config-uncounted": "未计算",
+            "config-more": "每类最多显示 32 个示例；汇总显示总数。",
+            "config-scope": "这些仅是建议。导入前需要选择数据源范围并确认新笔记的创建文件夹。",
+            "config-invalid-shape": "此设置需要验证格式",
+            "config-unbound-file": "此文件未被选中，需要明确绑定",
+            "config-unbound-folder": "此文件夹没有已选文件，需要明确绑定",
+            "config-scope-choice-required": "需要选择数据源范围",
+            "config-creation-folder-choice-required": "需要选择新笔记的创建文件夹",
+            "config-unsupported-config": "此配置需要单独验证",
             "destination": "将来的导入文件夹",
             "destination-placeholder": "Projects/Imported",
             "preview-files": "检查文件夹",

@@ -116,6 +116,21 @@ export class ProjectPackageInspectModal extends Modal {
             const conflicts = pathDetails.createEl("ul");
             for (const conflict of result.conflicts) conflicts.createEl("li", { text: conflict.destination + " ↔ " + conflict.existing });
           }
+          const config = result.configuration;
+          pathDetails.createEl("p", { text: get(i18n).t("package-inspect.config-summary", { changes: config.changes.length, issues: config.issues.length, scopes: config.scopes.length }) });
+          const short = (value: string) => value.length > 160 ? value.slice(0, 160) + "…" : value;
+          const names = new Map(config.projects.map(item => [item.project.id, short(item.project.name)]));
+          const changes = pathDetails.createEl("ul");
+          for (const change of config.changes.slice(0, 32)) changes.createEl("li", { text: `${names.get(change.projectId) ?? ""}: ${short(change.source)} → ${short(change.destination)}` });
+          const issues = pathDetails.createEl("ul");
+          for (const issue of config.issues.slice(0, 32)) issues.createEl("li", { text: `${names.get(issue.projectId) ?? ""}: ${t("config-" + issue.code)}${issue.source ? " · " + short(issue.source) : ""}` });
+          if (config.scopes.length) {
+            pathDetails.createEl("p", { text: t("config-candidates") });
+            const scopes = pathDetails.createEl("ul");
+            for (const scope of config.scopes.slice(0, 32)) scopes.createEl("li", { text: `${names.get(scope.projectId) ?? ""} · ${t("config-source-" + scope.kind)}: ${short(scope.value) || (scope.kind === "folder" ? "/" : "—")} · ${scope.existingCandidates ?? t("config-uncounted")}` });
+          }
+          if (Math.max(config.changes.length, config.issues.length, config.scopes.length) > 32) pathDetails.createEl("p", { text: t("config-more") });
+          pathDetails.createEl("p", { text: t("config-scope") });
           if (result.notesNeedInspection) pathDetails.createEl("p", { text: t("note-links-pending") });
           pathDetails.createEl("p", { text: t("destination-scope") });
         } catch { if (this.alive) status.textContent = t("destination-failed"); }

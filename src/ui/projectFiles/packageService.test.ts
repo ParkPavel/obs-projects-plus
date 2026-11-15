@@ -81,6 +81,9 @@ test("file placement preview checks a fresh archive and current inventory withou
   const result = await service.previewFiles(saved.path, saved.sha256, "Imported");
   expect(result.files[0]?.destination).toBe("Imported/Note.md");
   expect(result.conflicts).toContainEqual({ code: "file-exists", destination: "Imported/Note.md", existing: "Imported/Note.md" });
+  expect(result.configuration.projects[0]!.project.dataSource.config).toMatchObject({ path: "Imported" });
+  expect(result.configuration.scopes[0]!.existingCandidates).toBe(1);
+  expect(result.configuration.issues.map(issue => issue.code)).toEqual(["scope-choice-required"]);
   expect(JSON.stringify(disk)).toBe(before); expect(create).not.toHaveBeenCalled(); expect(mkdir).not.toHaveBeenCalled(); expect(flush).not.toHaveBeenCalled();
   files.delete(occupied.path);
   expect((await service.previewFiles(saved.path, saved.sha256, "Imported")).conflicts).toEqual([]);

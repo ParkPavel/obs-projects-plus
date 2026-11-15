@@ -44,7 +44,7 @@ beforeAll(() => Object.defineProperty(HTMLElement.prototype, "empty", { configur
 afterAll(() => { if (beforeEmpty) Object.defineProperty(HTMLElement.prototype, "empty", beforeEmpty); else Reflect.deleteProperty(HTMLElement.prototype, "empty"); });
 beforeEach(() => {
   inspect = jest.fn(async () => inspected); dispose = jest.fn(); stage = jest.fn(async () => ({ folder: "Projects Plus/Incoming/hash", files: 2 }));
-  previewFiles = jest.fn(async () => ({ root: "Imported", files: [{ source: "Note.md", destination: "Imported/Note.md" }], conflicts: [{ destination: "Imported/Note.md", existing: "imported/Note.md" }], notesNeedInspection: true }));
+  previewFiles = jest.fn(async () => ({ root: "Imported", files: [{ source: "Note.md", destination: "Imported/Note.md" }], conflicts: [{ destination: "Imported/Note.md", existing: "imported/Note.md" }], notesNeedInspection: true, configuration: { projects: [], changes: [], issues: [], scopes: [] } }));
   modal = new ProjectPackageInspectModal({ vault: { getFiles: () => [{ path: "Incoming/Package.zip" }, { path: "Note.md" }] } } as unknown as App, { inspect, dispose, stage, previewFiles } as unknown as Service);
   modal.open();
 });
@@ -142,4 +142,22 @@ test("new ZIP or preparation clears an earlier destination preview; a failed fol
   pathButton().click(); await settle();
   button().click(); lastPicker().onChooseItem({ path: "Incoming/Other.zip" }); await settle();
   expect(modal.contentEl.textContent).not.toContain("Note.md → Imported/Note.md");
+});
+
+test("configuration proposals and pending scope choices render as bounded text, not installation approval", async () => {
+  previewFiles.mockResolvedValueOnce({ root: "Imported", files: [], conflicts: [], notesNeedInspection: false, configuration: {
+    projects: [{ project: { id: "p", name: "<img src=x onerror=alert(1)>" } }],
+    changes: Array.from({ length: 40 }, (_, i) => ({ projectId: "p", source: `Work/${i}.md`, destination: `Imported/Work/${i}.md` })),
+    issues: [{ projectId: "p", code: "scope-choice-required", source: "<img>" }],
+    scopes: [{ projectId: "p", kind: "query", value: "query".repeat(10000), existingCandidates: null }],
+  } });
+  button().click(); lastPicker().onChooseItem({ path: "Incoming/Package.zip" }); await settle(); destination("Imported");
+  pathButton().click(); await settle();
+  expect(modal.contentEl.querySelector("img")).toBeNull();
+  expect(modal.contentEl.textContent).toContain("Work/31.md → Imported/Work/31.md");
+  expect(modal.contentEl.textContent).not.toContain("Work/32.md → Imported/Work/32.md");
+  expect(modal.contentEl.textContent).toContain("package-inspect.config-scope-choice-required");
+  expect(modal.contentEl.textContent).toContain("package-inspect.config-uncounted");
+  expect(modal.contentEl.textContent).toContain("package-inspect.config-more");
+  expect(modal.contentEl.textContent!.length).toBeLessThan(10000); expect(stage).not.toHaveBeenCalled();
 });

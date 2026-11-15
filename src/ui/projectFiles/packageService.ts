@@ -14,7 +14,10 @@ import { inspectProjectPackage, type InspectedProjectPackage } from "src/lib/pro
 import { PackageInspectionError } from "src/lib/projectFiles/packagePolicy";
 import { stageProjectPackage, type StageReceipt } from "src/lib/projectFiles/packageStage";
 import { stageVaultStorage } from "src/lib/projectFiles/stageVaultStorage";
-import { planPackageFiles, type PackageFilePlan, type VaultPathEntry } from "src/lib/projectFiles/packageFilePlan";
+import type { PackageFilePlan, VaultPathEntry } from "src/lib/projectFiles/packageFilePlan";
+import { previewPackageConfigPaths, type PackageConfigPathPreview } from "src/lib/projectFiles/packageConfigPaths";
+
+export interface PackageDestinationPreview extends PackageFilePlan { readonly configuration: PackageConfigPathPreview }
 
 export class ProjectPackageService {
   private busy = false;
@@ -49,7 +52,7 @@ export class ProjectPackageService {
   }
 
   /** Fresh integrity check and placement preview only: never flushes settings or creates folders. */
-  async previewFiles(path: string, expectedHash: string, destination: string): Promise<PackageFilePlan> {
+  async previewFiles(path: string, expectedHash: string, destination: string): Promise<PackageDestinationPreview> {
     if (this.busy) throw projectFileError("package operation busy");
     this.busy = true;
     try {
@@ -63,8 +66,8 @@ export class ProjectPackageService {
         return { path: file.path, kind: file instanceof TFile ? "file" : "folder" };
       });
       const roots = configuredCopyRoots(get(settings).preferences.projectFiles);
-      const result = planPackageFiles(inspected.manifest, destination, inventory, this.host.app.vault.configDir, roots);
-      this.check(); return result;
+      const configuration = previewPackageConfigPaths(inspected.documents.map(document => document.project), inspected.manifest, destination, inventory, this.host.app.vault.configDir, roots);
+      this.check(); return Object.freeze({ ...configuration.files, configuration });
     } finally { this.busy = false; }
   }
 

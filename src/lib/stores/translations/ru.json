@@ -1,6 +1,20 @@
 ﻿{
     "translation": {
         "package-inspect": {
+            "config-source-folder": "Папка",
+            "config-source-tag": "Тег",
+            "config-source-query": "Запрос",
+            "config-summary": "Перепривязок путей: {{changes}} · требуют выбора: {{issues}} · источников: {{scopes}}",
+            "config-candidates": "Ранее существовавшие Markdown-файлы до фильтров и исключений (верхняя граница)",
+            "config-uncounted": "не рассчитано",
+            "config-more": "В каждой категории показано не более 32 примеров; сводка содержит общие количества.",
+            "config-scope": "Это только предложения. Перед импортом потребуется выбрать область источников и подтвердить папку новых заметок.",
+            "config-invalid-shape": "Настройка требует проверки формата",
+            "config-unbound-file": "Файл не выбран для переноса; нужна явная привязка",
+            "config-unbound-folder": "Для папки нет выбранных файлов; нужна явная привязка",
+            "config-scope-choice-required": "Нужно выбрать область данных источника",
+            "config-creation-folder-choice-required": "Нужно выбрать папку создания новых заметок",
+            "config-unsupported-config": "Эта конфигурация пока требует отдельной проверки",
             "destination": "Будущая папка импорта",
             "destination-placeholder": "Проекты/Импорт",
             "preview-files": "Проверить папку",

@@ -90,3 +90,13 @@ Obsidian configuration and service namespaces in current/previous copy roots are
 Preview does not save settings, create folders, move files or install projects. Changing the folder, checking a new ZIP or staging clears the previous path list. Note links are not inspected or rewritten yet. No conflicts does not mean ready to import: config/source-scope validation, link relocation and fresh destination checks during installation are still required.
 
 Different spellings of inferred parent folders inside the package also conflict: Work/a.md and work/b.md are not silently merged into one folder. Correct the original names and recreate the package; changing the common destination alone does not resolve this conflict.
+
+## Configuration path proposals
+
+Checking a folder now proposes bindings for selected templates, excluded notes, primary/additional source folders, explicit new-note folders, local covers, inverse-selection record paths and inline block sources. Bindings use exact selected file paths or containing folders. Recipient files are never chosen by basename. Missing bindings and unsupported settings remain with diagnostics; the original project and manifest archive state are preserved.
+
+An empty new-note folder retains inheritance from a primary folder/native-folder source. With a tag/query/derived source it requires an explicit choice, so creation does not silently fall back to the vault root. Tags, query text, filters, expressions and external HTTP(S) cover URLs are not rewritten or executed. Unknown configurations are retained.
+
+Each folder/tag/query scope still needs a decision before import. A successfully bound folder shows an upper bound of existing Markdown paths by folder and recursion, before filters, exclusions or content checks. This is not the project record count. Tags, queries, unbound folders and exhausted scan budgets show not calculated, never a partial or guessed count. Scans share a million-comparison budget and cache identical scope results.
+
+Proposals use private JSON copies and are not applied. Input/output limits are2MiB per configuration/16MiB total,4096 combined change/issue/scope records and16384 structural visits. UI shows total counts and up to32 examples per category, shortening long values. Full schema validation, scope decisions, note-link relocation and installation remain open; no diagnostics is not application authority.

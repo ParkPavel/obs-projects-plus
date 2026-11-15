@@ -1,6 +1,20 @@
 ﻿{
     "translation": {
         "package-inspect": {
+            "config-source-folder": "Folder",
+            "config-source-tag": "Tag",
+            "config-source-query": "Query",
+            "config-summary": "Path changes: {{changes}} · choices needed: {{issues}} · sources: {{scopes}}",
+            "config-candidates": "Potential existing .md files before filters and exclusions (an upper bound)",
+            "config-uncounted": "not calculated",
+            "config-more": "Each category shows up to 32 examples; the summary gives total counts.",
+            "config-scope": "These are proposals only. Before importing, choose source scopes and confirm where new notes will be created.",
+            "config-invalid-shape": "This setting needs format validation",
+            "config-unbound-file": "This file was not selected; an explicit binding is needed",
+            "config-unbound-folder": "This folder has no selected files; an explicit binding is needed",
+            "config-scope-choice-required": "Choose the source's data scope",
+            "config-creation-folder-choice-required": "Choose where new notes will be created",
+            "config-unsupported-config": "This configuration needs separate validation",
             "destination": "Future import folder",
             "destination-placeholder": "Projects/Imported",
             "preview-files": "Check folder",
