@@ -17,8 +17,22 @@ import { stageVaultStorage } from "src/lib/projectFiles/stageVaultStorage";
 import type { PackageFilePlan, VaultPathEntry } from "src/lib/projectFiles/packageFilePlan";
 import { previewPackageConfigPaths, type PackageConfigPathPreview } from "src/lib/projectFiles/packageConfigPaths";
 import { captureConfigPathChoices, type ConfigPathChoice } from "src/lib/projectFiles/packagePathBindings";
+import { capturePackageScopeChoices, reviewPackageScopes, type PackageScopeChoice, type PackageScopeReview } from "src/lib/projectFiles/packageScopeChoices";
 
-export interface PackageDestinationPreview extends PackageFilePlan { readonly configuration: PackageConfigPathPreview }
+export interface PackageDestinationPreview extends PackageFilePlan { readonly configuration: PackageConfigPathPreview; readonly scopeReview: PackageScopeReview }
+
+/** Metadata only, never query results. Stable ordering avoids unnecessary reconfirmation. */
+function scopeInventoryStamp(loaded: readonly import("obsidian").TAbstractFile[]): string {
+  if (loaded.length > 100000) throw projectFileError("file preview inventory too large");
+  let characters = 0;
+  const items = loaded.map(file => {
+    if (!(file instanceof TFile) && !(file instanceof TFolder)) throw projectFileError("unknown vault entry");
+    if (typeof file.path !== "string" || file.path.length > 4096 || (characters += file.path.length) > 16 * 1024 * 1024) throw projectFileError("file preview inventory too large");
+    return file instanceof TFile ? { path: file.path, kind: "file", size: file.stat.size, mtime: file.stat.mtime } : { path: file.path, kind: "folder" };
+  });
+  items.sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : 0);
+  return JSON.stringify(items);
+}
 
 export class ProjectPackageService {
   private busy = false;
@@ -53,9 +67,10 @@ export class ProjectPackageService {
   }
 
   /** Fresh integrity check and placement preview only: never flushes settings or creates folders. */
-  async previewFiles(path: string, expectedHash: string, destination: string, inputChoices: readonly ConfigPathChoice[] = []): Promise<PackageDestinationPreview> {
+  async previewFiles(path: string, expectedHash: string, destination: string, inputChoices: readonly ConfigPathChoice[] = [], inputScopes: readonly PackageScopeChoice[] = []): Promise<PackageDestinationPreview> {
     if (this.busy) throw projectFileError("package operation busy");
     const choices = captureConfigPathChoices(inputChoices);
+    const scopes = capturePackageScopeChoices(inputScopes);
     this.busy = true;
     try {
       const inspected = await this.readPackage(path);
@@ -69,7 +84,12 @@ export class ProjectPackageService {
       });
       const roots = configuredCopyRoots(get(settings).preferences.projectFiles);
       const configuration = previewPackageConfigPaths(inspected.documents.map(document => document.project), inspected.manifest, destination, inventory, this.host.app.vault.configDir, roots, choices);
-      this.check(); return Object.freeze({ ...configuration.files, configuration });
+      const stamp = scopeInventoryStamp(loaded), policy = JSON.stringify([this.host.app.vault.configDir, roots]);
+      const inventoryRevision = await textDigest(stamp); this.check();
+      const basis = await textDigest(JSON.stringify({ archiveHash: inspected.archiveHash, destination, inventoryRevision, policy, choices })); this.check();
+      const scopeReview = await reviewPackageScopes(configuration, basis, scopes, this.check);
+      if (scopeInventoryStamp(this.host.app.vault.getAllLoadedFiles()) !== stamp || JSON.stringify([this.host.app.vault.configDir, configuredCopyRoots(get(settings).preferences.projectFiles)]) !== policy) throw projectFileError("source scope preview changed");
+      this.check(); return Object.freeze({ ...configuration.files, configuration: Object.freeze({ ...configuration, issues: scopeReview.issues }), scopeReview });
     } finally { this.busy = false; }
   }
 

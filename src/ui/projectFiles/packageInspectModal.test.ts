@@ -11,6 +11,13 @@ jest.mock("./packageBindingsModal", () => {
     constructor(_app: unknown, value: unknown, callback: (choices: unknown[]) => void) { this.preview = value; this.submit = callback; instances.push(this); }
   }, lastEditor: () => instances.at(-1) };
 });
+jest.mock("./packageScopesModal", () => {
+  const instances: unknown[] = [];
+  return { ProjectPackageScopesModal: class {
+    close = jest.fn(); open = jest.fn(); submit: (choices: unknown[]) => void;
+    constructor(_app: unknown, _value: unknown, callback: (choices: unknown[]) => void) { this.submit = callback; instances.push(this); }
+  }, lastScopeEditor: () => instances.at(-1) };
+});
 
 jest.mock("src/lib/stores/i18n", () => ({ i18n: require("svelte/store").writable({ t: (key: string) => key }) }));
 jest.mock("src/lib/stores/settings", () => ({ settings: require("svelte/store").writable(require("src/settings/settings").DEFAULT_SETTINGS) }));
@@ -129,12 +136,28 @@ test("editor choices trigger a fresh check; a changed destination retires the ed
   edit().click(); const editor = lastEditor();
   const choices = [{ projectId: "p", location: ["templates", 0], root: "Imported", source: "Old.md", kind: "file", target: "Note.md", origin: "existing" }];
   editor.submit(choices); await settle();
-  expect(previewFiles).toHaveBeenLastCalledWith("Incoming/Package.zip", "a".repeat(64), "Imported", choices);
+  expect(previewFiles).toHaveBeenLastCalledWith("Incoming/Package.zip", "a".repeat(64), "Imported", choices, []);
   edit().click(); const stale = lastEditor(); destination("Elsewhere");
   expect(stale.close).toHaveBeenCalled();
   previewFiles.mockClear(); stale.submit(choices); await settle(); expect(previewFiles).not.toHaveBeenCalled();
   pathButton().click(); await settle();
-  expect(previewFiles).toHaveBeenLastCalledWith("Incoming/Package.zip", "a".repeat(64), "Elsewhere", []);
+  expect(previewFiles).toHaveBeenLastCalledWith("Incoming/Package.zip", "a".repeat(64), "Elsewhere", [], []);
+});
+
+test("scope choices are rechecked with the verified archive and retired when the folder changes", async () => {
+  const { lastScopeEditor } = require("./packageScopesModal");
+  const result = { ...await previewFiles(), scopeReview: { rows: [{ status: "pending" }], choices: [], issues: [] } };
+  previewFiles.mockClear(); previewFiles.mockResolvedValue(result);
+  button().click(); lastPicker().onChooseItem({ path: "Incoming/Package.zip" }); await settle(); destination("Imported");
+  pathButton().click(); await settle();
+  const edit = () => Array.from(modal.contentEl.querySelectorAll("button")).find(item => item.textContent === "package-inspect.scope-title")!;
+  edit().click(); const editor = lastScopeEditor();
+  const choices = [{ projectId: "p", location: ["dataSource", "config"], revision: "b".repeat(64), mode: "keep-rule" }];
+  editor.submit(choices); await settle();
+  expect(previewFiles).toHaveBeenLastCalledWith("Incoming/Package.zip", "a".repeat(64), "Imported", [], choices);
+  edit().click(); const stale = lastScopeEditor(); destination("Elsewhere"); expect(stale.close).toHaveBeenCalled();
+  previewFiles.mockClear(); stale.submit(choices); await settle(); expect(previewFiles).not.toHaveBeenCalled();
+  pathButton().click(); await settle(); expect(previewFiles).toHaveBeenLastCalledWith("Incoming/Package.zip", "a".repeat(64), "Elsewhere", [], []);
 });
 
 test("placement needs explicit folder and verified ZIP, then renders destinations and conflicts without staging", async () => {
@@ -142,7 +165,7 @@ test("placement needs explicit folder and verified ZIP, then renders destination
   button().click(); lastPicker().onChooseItem({ path: "Incoming/Package.zip" }); await settle();
   expect(pathButton().disabled).toBe(false); expect(previewFiles).not.toHaveBeenCalled();
   pathButton().click(); await settle();
-  expect(previewFiles).toHaveBeenCalledWith("Incoming/Package.zip", "a".repeat(64), "Imported", []);
+  expect(previewFiles).toHaveBeenCalledWith("Incoming/Package.zip", "a".repeat(64), "Imported", [], []);
   expect(modal.contentEl.textContent).toContain("Note.md → Imported/Note.md");
   expect(modal.contentEl.textContent).toContain("Imported/Note.md ↔ imported/Note.md");
   expect(modal.contentEl.textContent).toContain("package-inspect.note-links-pending");

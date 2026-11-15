@@ -6,6 +6,8 @@ import type { ProjectPackageService } from "./packageService";
 import { settings } from "src/lib/stores/settings";
 import type { ConfigPathChoice } from "src/lib/projectFiles/packagePathBindings";
 import { ProjectPackageBindingsModal } from "./packageBindingsModal";
+import { ProjectPackageScopesModal } from "./packageScopesModal";
+import type { PackageScopeChoice } from "src/lib/projectFiles/packageScopeChoices";
 
 class PackageArchivePicker extends FuzzySuggestModal<TFile> {
   constructor(app: App, private readonly choose: (file: TFile) => Promise<void>) {
@@ -21,6 +23,7 @@ export class ProjectPackageInspectModal extends Modal {
   private alive = false;
   private picker: PackageArchivePicker | undefined;
   private editor: ProjectPackageBindingsModal | undefined;
+  private scopeEditor: ProjectPackageScopesModal | undefined;
   constructor(app: App, private readonly service: ProjectPackageService) {
     super(app); this.containerEl.addClass("ppp-modal");
   }
@@ -37,24 +40,27 @@ export class ProjectPackageInspectModal extends Modal {
     let busy = false;
     let destination = "";
     let choices: readonly ConfigPathChoice[] = [];
+    let scopeChoices: readonly PackageScopeChoice[] = [];
     let target: { path: string; hash: string; root: string } | undefined;
     let stageButton: import("obsidian").ButtonComponent;
     let chooseButton: import("obsidian").ButtonComponent;
     let pathButton: import("obsidian").ButtonComponent;
     let destinationInput: import("obsidian").TextComponent;
     let bindingButton: import("obsidian").ButtonComponent | undefined;
-    const closeEditor = () => { this.editor?.close(); this.editor = undefined; };
+    let scopeButton: import("obsidian").ButtonComponent | undefined;
+    const closeEditor = () => { this.editor?.close(); this.editor = undefined; this.scopeEditor?.close(); this.scopeEditor = undefined; };
     const refresh = () => {
       chooseButton.setDisabled(busy); stageButton.setDisabled(busy || !target);
       pathButton.setDisabled(busy || !target || !destination); destinationInput.setDisabled(busy);
       bindingButton?.setDisabled(busy);
+      scopeButton?.setDisabled(busy);
     };
     controls.addButton(button => { chooseButton = button; button.setButtonText(t("choose")).onClick(() => {
       if (busy) return;
       this.picker?.close();
       this.picker = new PackageArchivePicker(this.app, async file => {
         if (!this.alive || busy) return;
-        busy = true; target = undefined; choices = []; closeEditor(); bindingButton = undefined; refresh(); details.empty(); pathDetails.empty(); status.textContent = t("checking");
+        busy = true; target = undefined; choices = []; scopeChoices = []; closeEditor(); bindingButton = undefined; scopeButton = undefined; refresh(); details.empty(); pathDetails.empty(); status.textContent = t("checking");
         try {
           const result = await this.service.inspect(file.path);
           if (!this.alive) return;
@@ -89,7 +95,7 @@ export class ProjectPackageInspectModal extends Modal {
       button.setButtonText(t("stage")).setDisabled(true).onClick(async () => {
         if (busy || !target) return;
         const selected = target;
-        busy = true; closeEditor(); bindingButton = undefined; refresh(); pathDetails.empty(); status.textContent = t("staging");
+        busy = true; closeEditor(); bindingButton = undefined; scopeButton = undefined; refresh(); pathDetails.empty(); status.textContent = t("staging");
         try {
           const receipt = await this.service.stage(selected.path, selected.hash, selected.root);
           if (this.alive) status.textContent = get(i18n).t("package-inspect.staged", { path: receipt.folder, files: receipt.files });
@@ -103,19 +109,20 @@ export class ProjectPackageInspectModal extends Modal {
       input.inputEl.setAttribute("aria-label", t("destination"));
       input.setPlaceholder(t("destination-placeholder")).onChange(value => {
         if (!this.alive) return;
-        if (destination !== value) { destination = value; choices = []; closeEditor(); bindingButton = undefined; pathDetails.empty(); }
+        if (destination !== value) { destination = value; choices = []; scopeChoices = []; closeEditor(); bindingButton = undefined; scopeButton = undefined; pathDetails.empty(); }
         if (!busy) refresh();
       });
     }).addButton(button => {
       pathButton = button;
-      const run = async (selected: { path: string; hash: string }, folder: string, nextChoices: readonly ConfigPathChoice[]) => {
+      const run = async (selected: { path: string; hash: string }, folder: string, nextChoices: readonly ConfigPathChoice[], nextScopes: readonly PackageScopeChoice[]) => {
         if (!this.alive || busy || !target || selected.path !== target.path || selected.hash !== target.hash || folder !== destination) return;
-        busy = true; closeEditor(); bindingButton = undefined; refresh(); pathDetails.empty(); status.textContent = t("checking-destination");
+        busy = true; closeEditor(); bindingButton = undefined; scopeButton = undefined; refresh(); pathDetails.empty(); status.textContent = t("checking-destination");
         try {
-          const result = await this.service.previewFiles(selected.path, selected.hash, folder, nextChoices);
+          const result = await this.service.previewFiles(selected.path, selected.hash, folder, nextChoices, nextScopes);
           if (!this.alive) return;
           if (folder !== destination || selected.path !== target?.path || selected.hash !== target?.hash) { status.textContent = t("binding-changed"); return; }
           choices = result.configuration.choices;
+          scopeChoices = result.scopeReview?.choices ?? [];
           status.textContent = t("destination-checked");
           pathDetails.createEl("p", { text: get(i18n).t("package-inspect.destination-summary", { path: result.root, files: result.files.length, conflicts: result.conflicts.length }) });
           const list = pathDetails.createEl("ul");
@@ -143,19 +150,29 @@ export class ProjectPackageInspectModal extends Modal {
             bindingButton = control;
             control.setButtonText(t("binding-title")).onClick(() => {
               if (busy || !this.alive) return;
-              closeEditor(); this.editor = new ProjectPackageBindingsModal(this.app, result, next => { void run(selected, folder, next); }); this.editor.open();
+              closeEditor(); this.editor = new ProjectPackageBindingsModal(this.app, result, next => { void run(selected, folder, next, scopeChoices); }); this.editor.open();
             });
           });
+          if (result.scopeReview && (result.scopeReview.rows.length || result.scopeReview.choices.length)) {
+            pathDetails.createEl("p", { text: get(i18n).t("package-inspect.scope-summary", { confirmed: result.scopeReview.rows.filter(row => row.status === "confirmed").length, total: result.scopeReview.rows.length }) });
+            new Setting(pathDetails).addButton(control => {
+              scopeButton = control;
+              control.setButtonText(t("scope-title")).onClick(() => {
+                if (busy || !this.alive) return;
+                closeEditor(); this.scopeEditor = new ProjectPackageScopesModal(this.app, result, next => { void run(selected, folder, choices, next); }); this.scopeEditor.open();
+              });
+            });
+          }
           pathDetails.createEl("p", { text: t("config-scope") });
           if (result.notesNeedInspection) pathDetails.createEl("p", { text: t("note-links-pending") });
           pathDetails.createEl("p", { text: t("destination-scope") });
-        } catch { if (this.alive) { pathDetails.empty(); bindingButton = undefined; status.textContent = t("destination-failed"); } }
+        } catch { if (this.alive) { pathDetails.empty(); bindingButton = undefined; scopeButton = undefined; status.textContent = t("destination-failed"); } }
         finally { busy = false; if (this.alive) refresh(); }
       };
-      button.setButtonText(t("preview-files")).setDisabled(true).onClick(() => { if (target && destination) void run(target, destination, choices); });
+      button.setButtonText(t("preview-files")).setDisabled(true).onClick(() => { if (target && destination) void run(target, destination, choices, scopeChoices); });
     });
   }
   onClose(): void {
-    this.alive = false; this.editor?.close(); this.editor = undefined; this.service.dispose(); this.picker?.close(); this.picker = undefined; this.contentEl.empty();
+    this.alive = false; this.editor?.close(); this.editor = undefined; this.scopeEditor?.close(); this.scopeEditor = undefined; this.service.dispose(); this.picker?.close(); this.picker = undefined; this.contentEl.empty();
   }
 }

@@ -1,6 +1,23 @@
 ﻿{
     "translation": {
         "package-inspect": {
+            "scope-title": "检查来源范围",
+            "scope-description": "启用要保留的每条规则。除了包内文件，它还可能包含仓库中现有和未来匹配的笔记。重新检查会核对当前预览。本操作不会安装项目或执行查询。",
+            "scope-keep-rule": "保留此来源规则",
+            "scope-candidates": "筛选前的现有 Markdown 候选数：{{value}}",
+            "scope-summary": "已确认来源规则：{{confirmed}} / {{total}}",
+            "scope-recursive": "包含子文件夹",
+            "scope-direct": "仅当前文件夹",
+            "scope-hierarchy": "包含嵌套标签",
+            "scope-exact-tag": "仅精确标签",
+            "scope-confirmed": "已为此预览确认规则",
+            "scope-pending-check": "需要重新检查选择",
+            "scope-unconfirmed": "尚未确认规则",
+            "scope-invalid": "预览已更改，请重新确认规则",
+            "scope-blocked-source-issues": "请先解决此来源的配置或路径错误",
+            "scope-blocked-long-rule": "此规则超出显示限制，无法在此确认",
+            "config-invalid-scope-choice": "来源范围选择已失效",
+            "config-stale-scope-choice": "来源范围选择指向不存在的字段",
             "binding-title": "配置路径绑定",
             "binding-description": "选择只会更改预览。重新检查会再次读取 ZIP 和路径，不会安装项目。",
             "binding-purpose-template": "笔记模板",

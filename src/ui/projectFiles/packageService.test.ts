@@ -114,6 +114,43 @@ test("manual choices are captured before an archive read and cannot change while
   expect(create).not.toHaveBeenCalled(); expect(mkdir).not.toHaveBeenCalled(); expect(flush).not.toHaveBeenCalled();
 });
 
+test("scope confirmation is read-only and is invalidated by current inventory, settings paths or archive changes", async () => {
+  const saved = await service.save(await service.prepare("p", ["Note.md"]));
+  const first = await service.previewFiles(saved.path, saved.sha256, "Imported"), row = first.scopeReview.rows[0]!;
+  const choice = { projectId: row.projectId, location: row.location, revision: row.revision, mode: "keep-rule" as const };
+  create.mockClear(); mkdir.mockClear(); flush.mockClear();
+  const confirmed = await service.previewFiles(saved.path, saved.sha256, "Imported", [], [choice]);
+  expect(confirmed.scopeReview.rows[0]!.status).toBe("confirmed"); expect(confirmed.configuration.issues).toEqual([]);
+  files.get("Note.md")!.stat.mtime++;
+  expect((await service.previewFiles(saved.path, saved.sha256, "Imported", [], [choice])).scopeReview.rows[0]!.status).toBe("invalid");
+  files.get("Note.md")!.stat.mtime--;
+  folders.set("Unrelated", new TFolder("Unrelated"));
+  expect((await service.previewFiles(saved.path, saved.sha256, "Imported", [], [choice])).scopeReview.rows[0]!.status).toBe("invalid");
+  folders.delete("Unrelated");
+  persist({ ...disk, preferences: { ...disk.preferences, projectFiles: { root: "Copies", autoSync: false, previousRoots: ["Old"] } } });
+  expect((await service.previewFiles(saved.path, saved.sha256, "Imported", [], [choice])).scopeReview.rows[0]!.status).toBe("invalid");
+  expect(create).not.toHaveBeenCalled(); expect(mkdir).not.toHaveBeenCalled(); expect(flush).not.toHaveBeenCalled();
+});
+
+test("scope choices are captured before reading, and changing metadata during hashing refuses stale results", async () => {
+  const saved = await service.save(await service.prepare("p", ["Note.md"]));
+  const first = await service.previewFiles(saved.path, saved.sha256, "Imported"), row = first.scopeReview.rows[0]!;
+  const choice = { projectId: row.projectId, location: [...row.location], revision: row.revision, mode: "keep-rule" as const };
+  let finish!: (value: ArrayBuffer) => void;
+  read.mockImplementationOnce(() => new Promise<ArrayBuffer>(resolve => { finish = resolve; }));
+  const pending = service.previewFiles(saved.path, saved.sha256, "Imported", [], [choice]);
+  choice.revision = "e".repeat(64); choice.location[0] = "unknown"; finish(new Uint8Array(files.get(saved.path)!.bytes).buffer);
+  expect((await pending).scopeReview.rows[0]!.status).toBe("confirmed");
+  const original = window.crypto.subtle.digest.bind(window.crypto.subtle);
+  const spy = jest.spyOn(window.crypto.subtle, "digest").mockImplementation(async (algorithm, data) => {
+    const digest = await original(algorithm, data);
+    const bytes = ArrayBuffer.isView(data) ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength) : new Uint8Array(data);
+    if (new TextDecoder().decode(bytes).startsWith('[{"path":')) files.get("Note.md")!.stat.mtime++;
+    return digest;
+  });
+  try { await expect(service.previewFiles(saved.path, saved.sha256, "Imported")).rejects.toThrow("scope preview changed"); } finally { spy.mockRestore(); }
+});
+
 test("unconfirmed primary state and stale previews cannot write packages", async () => {
   confirmed = null;
   await expect(service.prepare("p", ["Note.md"])).rejects.toThrow("not confirmed");

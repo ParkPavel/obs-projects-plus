@@ -12,7 +12,7 @@ const KNOWN_WIDGETS = new Set(["data-table", "chart", "stats", "comparison", "ch
 export interface ConfigPathIssue {
   readonly projectId: string;
   readonly location: Location;
-  readonly code: "invalid-shape" | "unbound-file" | "unbound-folder" | "scope-choice-required" | "creation-folder-choice-required" | "unsupported-config" | "invalid-binding" | "stale-binding";
+  readonly code: "invalid-shape" | "unbound-file" | "unbound-folder" | "scope-choice-required" | "creation-folder-choice-required" | "unsupported-config" | "invalid-binding" | "stale-binding" | "invalid-scope-choice" | "stale-scope-choice";
   readonly source?: string;
 }
 export interface ConfigPathChange {
@@ -28,6 +28,9 @@ export interface ConfigPathScope {
   readonly value: string;
   /** Upper bound from existing Markdown paths only, before filters/exclusions; null means not calculated. */
   readonly existingCandidates: number | null;
+  readonly context: string;
+  readonly recursive?: boolean;
+  readonly hierarchy?: boolean;
 }
 export interface PackageConfigPathPreview {
   readonly stage: "configuration-path-preview";
@@ -126,8 +129,8 @@ export function previewPackageConfigPaths(
     if (target !== undefined) object[key] = target;
     return target;
   };
-  const scope = (id: string, at: Location, kind: ConfigPathScope["kind"], value: string, candidates: number | null) => {
-    record(); scopes.push(Object.freeze({ projectId: id, location: Object.freeze([...at]), kind, value, existingCandidates: candidates }));
+  const scope = (id: string, at: Location, kind: ConfigPathScope["kind"], value: string, candidates: number | null, context: string, flags: { recursive?: boolean; hierarchy?: boolean } = {}) => {
+    record(); scopes.push(Object.freeze({ projectId: id, location: Object.freeze([...at]), kind, value, existingCandidates: candidates, context: context.slice(0, 160), ...flags }));
     issue(id, at, "scope-choice-required", value);
   };
   const source = (value: unknown, id: string, at: Location, owner = ""): boolean => {
@@ -140,13 +143,13 @@ export function previewPackageConfigPaths(
       if (typeof cfg['recursive'] !== "boolean") issue(id, [...location, "recursive"], "invalid-shape");
       if (typeof cfg['path'] === "string") {
         // Count only when the path was successfully bound; do not guess in the recipient's vault.
-        scope(id, location, "folder", cfg['path'], target !== undefined && typeof cfg['recursive'] === "boolean" ? countCandidates(target, cfg['recursive']) : null);
+        scope(id, location, "folder", cfg['path'], target !== undefined && typeof cfg['recursive'] === "boolean" ? countCandidates(target, cfg['recursive']) : null, context, typeof cfg['recursive'] === "boolean" ? { recursive: cfg['recursive'] } : {});
       }
       return true; // Primary folder source supplies the empty creation-folder fallback.
     };
     const tag = (cfg: ObjectValue, location: Location) => {
       if (typeof cfg['tag'] !== "string" || typeof cfg['hierarchy'] !== "boolean") issue(id, location, "invalid-shape");
-      if (typeof cfg['tag'] === "string") scope(id, location, "tag", cfg['tag'], null);
+      if (typeof cfg['tag'] === "string") scope(id, location, "tag", cfg['tag'], null, context, typeof cfg['hierarchy'] === "boolean" ? { hierarchy: cfg['hierarchy'] } : {});
       return false;
     };
     if (kind === "folder") return folder(config, [...at, "config"]);
@@ -160,7 +163,7 @@ export function previewPackageConfigPaths(
     }
     if (kind === "dataview") {
       if (typeof config['query'] !== "string") issue(id, [...at, "config", "query"], "invalid-shape");
-      else scope(id, [...at, "config"], "query", config['query'], null);
+      else scope(id, [...at, "config"], "query", config['query'], null, context);
       return false;
     }
     if (kind !== "derived") issue(id, at, "unsupported-config");
