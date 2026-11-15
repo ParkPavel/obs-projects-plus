@@ -4,6 +4,8 @@ import { checkProjectCoreJson } from "../projectCoreCheck";
 import { DataFieldType, type DataField } from "src/lib/dataframe/dataframe";
 import { suggestChart } from "src/ui/views/Dashboard/widgets/Chart/chartSuggest";
 import { defaultStatsConfig } from "src/ui/views/Dashboard/widgets/Stats/statsDefaults";
+import { migrateTransformToViewLevel } from "src/ui/views/Dashboard/widgets/legacyMigration";
+import type { WidgetDefinition, WidgetType } from "src/ui/views/Dashboard/types";
 
 const savedEncoder = window.TextEncoder;
 beforeAll(() => Object.defineProperty(window, "TextEncoder", { configurable: true, value: TextEncoder }));
@@ -31,6 +33,34 @@ test("real chart and statistics factories are accepted across all suggested char
   for (const fields of cases) {
     expect(inspect({ widgets: [widget("chart", suggestChart(fields)), widget("stats", defaultStatsConfig(fields), "stats")] }).issues).toEqual([]);
   }
+});
+
+test("a chart or statistics panel's stored project choice is part of the supported format", () => {
+  expect(inspect({ widgets: [widget("chart", { ...suggestChart([]), dataProjectId: "other" })] }).issues).toEqual([]);
+  expect(inspect({ widgets: [widget("stats", { ...defaultStatsConfig([]), dataProjectId: "other" })] }).issues).toEqual([]);
+});
+
+test("chart/statistics project selection keeps inheritance but rejects non-string saved references", () => {
+  for (const [type, config] of [["chart", suggestChart([])], ["stats", defaultStatsConfig([])]] as const) {
+    expect(inspect({ widgets: [widget(type, { ...config, dataProjectId: "" })] }).issues).toEqual([]);
+    expect(inspect({ widgets: [widget(type, { ...config, dataProjectId: ["other"] })] }).issues).toEqual([{ location: at("widgets", 0, "config", "dataProjectId"), code: "invalid-type" }]);
+  }
+});
+
+test("the common leading-filter migration produces a supported checklist config", () => {
+  const w = { ...widget("checklist", { field: "Done" }), transform: { steps: [{ type: "filter", conditions: { conditions: [{ field: "State", operator: "is", value: "Open", enabled: true }] } }] } } as WidgetDefinition;
+  const migrated = migrateTransformToViewLevel(w);
+  expect(migrated.migrated).toBe(true);
+  expect(inspect({ widgets: [{ ...w, config: migrated.config, transform: migrated.transform }] }).issues).toEqual([]);
+});
+
+test.each(["data-table", "chart", "stats", "comparison", "checklist", "view-port", "filter-tabs", "summary-row", "data-list", "sub-base-canvas", "yaml-visualizer", "database-call", "timeline", "cover-banner", "text", "divider"] as WidgetType[])("%s shares the canonical subFilter envelope without discarding it", type => {
+  const w = { ...widget(type, {}), transform: { steps: [{ type: "filter", conditions: { conditions: [{ field: "X", operator: "is", enabled: true, value: "Y" }] } }] } } as WidgetDefinition;
+  const migrated = migrateTransformToViewLevel(w);
+  expect(inspect({ widgets: [{ ...w, config: migrated.config, transform: migrated.transform }] }).issues).toEqual([]);
+  expect(migrated.config['subFilter']).toBeDefined();
+  const malformed = { ...migrated.config, subFilter: { conditions: [{ field: "X", enabled: true, operator: ["is"] }] } };
+  expect(inspect({ widgets: [widget(type, malformed)] }).issues).toEqual([{ location: at("widgets", 0, "config", "subFilter", "conditions", 0, "operator"), code: "invalid-type" }]);
 });
 
 test("chart series and persisted scatter extensions are checked without resolving their external frames", () => {

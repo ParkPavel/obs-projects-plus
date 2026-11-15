@@ -40,14 +40,14 @@ export function createDashboardConfigInspector(tools: DashboardInspectionTools):
   const xAxis = obj({ property: r(str), sortBy: r(e(["value", "label", "manual"])), sortOrder: r(asc), omitZero: r(bool), hiddenGroups: strings, dateGranularity: e(["day", "week", "month", "quarter", "year"]) });
   const yAxis = obj({ property: r(str), label: str, aggregation: r(aggregation), groupBy: str, cumulative: bool });
   const style = obj({ colorScheme: r(e(["auto", "accent", "categorical", "sequential"])), height: r(e(["small", "medium", "large"])), showGrid: r(bool), showLabels: r(bool), showLegend: r(bool), showValues: r(bool), smooth: bool, gradient: bool, showCenter: bool });
-  const chart = obj({ chartType: r(e(Object.keys(chartTypes))), xAxis: r(xAxis), yAxis: r(yAxis), style: r(style), groupMode: e(["values", "semantic"]), title: str, linkedSelection,
+  const chart = obj({ chartType: r(e(Object.keys(chartTypes))), xAxis: r(xAxis), yAxis: r(yAxis), style: r(style), groupMode: e(["values", "semantic"]), title: str, linkedSelection, dataProjectId: str,
     series: a(obj({ id: r(s.id), label: str, property: r(str), aggregation: r(aggregation), dataProjectId: str, xProperty: str, axis: e(["left", "right"]), cumulative: bool, selectionField: str }), "id"),
     // These persisted scatter keys are read by ChartWidget outside ChartConfig's interface.
     colorBy: str, sizeBy: str, showTrendLine: bool, showR2: bool, pointRadius: num, opacity: num,
     correlation: obj({ rightSourceId: r(str), on: r(obj({ leftKey: r(str), rightKey: r(str) })) }),
   });
   const statsCard = obj({ id: r(s.id), label: r(str), field: r(str), aggregation: r(aggregation), format, currencySymbol: str, showTrend: bool, color: str, sparkline: bool });
-  const stats = obj({ cards: r(a(statsCard, "id")), columns: r(s.rule((value, at) => { if (typeof value !== "number" || ![2, 3, 4].includes(value)) tools.issue(at, "invalid-type"); })), linkedSelection });
+  const stats = obj({ cards: r(a(statsCard, "id")), columns: r(s.rule((value, at) => { if (typeof value !== "number" || ![2, 3, 4].includes(value)) tools.issue(at, "invalid-type"); })), linkedSelection, dataProjectId: str });
   const dataList = obj({ titleField: str, fields: r(strings), limit: num, sortField: str, sortOrder: asc });
   const timeline = obj({ startField: r(str), endField: str, labelField: str, colorField: str, zoom: r(e(["day", "week", "month", "quarter", "year"])), windowStart: str });
   // Empty configs are real persisted unconfigured widgets/tabs; no defaults are synthesized.
@@ -92,7 +92,16 @@ export function createDashboardConfigInspector(tools: DashboardInspectionTools):
     const cfg = value as Record<string, unknown>;
     widgetEnvelope.inspect(cfg, at);
     const type = cfg['type'];
-    if (typeof type === "string" && Object.prototype.hasOwnProperty.call(payloads, type) && cfg['config'] && typeof cfg['config'] === "object" && !Array.isArray(cfg['config'])) payloads[type as WidgetType].inspect(cfg['config'], [...at, "config"]);
+    if (typeof type === "string" && Object.prototype.hasOwnProperty.call(payloads, type) && cfg['config'] && typeof cfg['config'] === "object" && !Array.isArray(cfg['config'])) {
+      const original = cfg['config'] as Record<string, unknown>, location = [...at, "config"];
+      // Axis A is common to every widget, including retired widgets: the host
+      // and the standard migration read/write it outside subtype interfaces.
+      if (Object.prototype.hasOwnProperty.call(original, "subFilter")) {
+        tools.filter(original['subFilter'], [...location, "subFilter"]);
+        const subtype = { ...original }; delete subtype['subFilter'];
+        payloads[type as WidgetType].inspect(subtype, location);
+      } else payloads[type as WidgetType].inspect(original, location);
+    }
   });
   const dashboard = obj({ widgets: a(widget, "id"), layoutMode: e(["free", "stack"]), layoutVersion: num, table, showWidgetToolbar: bool, compactMode: bool,
     formulaFields: a(obj({ name: r(str), expression: r(str), resultType: e(["string", "number", "date", "boolean"]), formulaVersion: version }), "name"),
