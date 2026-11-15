@@ -4,6 +4,7 @@ import { checkProject, jsonObject, MAX_PROJECT_DOCUMENT_BYTES, projectFileError 
 import { planPackageFiles, type PackageFilePlan, type VaultPathEntry } from "./packageFilePlan";
 import { packageNameKey } from "./packageManifest";
 import { PACKAGE_LIMITS } from "./packagePolicy";
+import { captureConfigPathChoices, createConfigPathBindings, type ConfigPathChoice, type ConfigBindingTarget } from "./packagePathBindings";
 
 type ObjectValue = Record<string, unknown>;
 type Location = readonly (string | number)[];
@@ -11,7 +12,7 @@ const KNOWN_WIDGETS = new Set(["data-table", "chart", "stats", "comparison", "ch
 export interface ConfigPathIssue {
   readonly projectId: string;
   readonly location: Location;
-  readonly code: "invalid-shape" | "unbound-file" | "unbound-folder" | "scope-choice-required" | "creation-folder-choice-required" | "unsupported-config";
+  readonly code: "invalid-shape" | "unbound-file" | "unbound-folder" | "scope-choice-required" | "creation-folder-choice-required" | "unsupported-config" | "invalid-binding" | "stale-binding";
   readonly source?: string;
 }
 export interface ConfigPathChange {
@@ -35,6 +36,22 @@ export interface PackageConfigPathPreview {
   readonly changes: readonly ConfigPathChange[];
   readonly issues: readonly ConfigPathIssue[];
   readonly scopes: readonly ConfigPathScope[];
+  readonly bindings: readonly ConfigPathBindingOption[];
+  readonly targets: readonly ConfigBindingTarget[];
+  readonly choices: readonly ConfigPathChoice[];
+}
+export interface ConfigPathBindingOption {
+  readonly projectId: string;
+  readonly location: Location;
+  readonly source: string;
+  readonly kind: "file" | "folder";
+  readonly purpose: "template" | "excluded-note" | "source-folder" | "creation-folder" | "cover" | "record";
+  readonly context: string;
+  readonly mode: "selected" | "inherited" | "missing" | "explicit" | "invalid";
+  readonly defaultMode: "selected" | "inherited" | "missing";
+  readonly defaultTarget?: string;
+  readonly target?: string;
+  readonly origin?: "existing" | "planned";
 }
 
 /**
@@ -45,8 +62,11 @@ export interface PackageConfigPathPreview {
 export function previewPackageConfigPaths(
   imported: readonly ProjectDefinition[], manifest: PackageManifest, destination: string,
   existing: readonly VaultPathEntry[], configDir: string, copyRoots: readonly string[],
+  inputChoices: readonly ConfigPathChoice[] = [],
 ): PackageConfigPathPreview {
+  const choices = captureConfigPathChoices(inputChoices);
   const files = planPackageFiles(manifest, destination, existing, configDir, copyRoots);
+  const explicit = createConfigPathBindings(files, existing, configDir, copyRoots, choices);
   if (imported.length !== manifest.projects.length) throw projectFileError("configuration project coverage mismatch");
   let inputBytes = 0, outputBytes = 0, work = 0, records = 0, comparisons = 0;
   const copies = new Map<string, ProjectDefinition>();
@@ -74,20 +94,35 @@ export function previewPackageConfigPaths(
   const visit = () => { if (++work > 16384) throw projectFileError("configuration path preview too complex"); };
   const record = () => { if (++records > PACKAGE_LIMITS.dependencies) throw projectFileError("too many configuration path decisions"); };
   const changes: ConfigPathChange[] = [], issues: ConfigPathIssue[] = [], scopes: ConfigPathScope[] = [];
+  const bindings: ConfigPathBindingOption[] = [];
   const issue = (id: string, location: Location, code: ConfigPathIssue["code"], source?: string) => {
     record(); issues.push(Object.freeze({ projectId: id, location: Object.freeze([...location]), code, ...(source !== undefined ? { source } : {}) }));
   };
-  const mapPath = (value: unknown, id: string, location: Location, kind: "file" | "folder") => {
+  const mapPath = (value: unknown, id: string, location: Location, kind: "file" | "folder", purpose: ConfigPathBindingOption["purpose"], context = "", emptyFallback?: boolean) => {
     visit();
     if (typeof value !== "string" || value.length > 240 || (kind === "file" && !value)) { issue(id, location, "invalid-shape"); return; }
-    let target: string;
-    try { target = kind === "file" ? files.fileDestination(value) : files.folderDestination(value === "/" ? "" : value); }
-    catch { issue(id, location, kind === "file" ? "unbound-file" : "unbound-folder", value); return; }
+    let defaultTarget: string | undefined;
+    if (emptyFallback === undefined) {
+      try { defaultTarget = kind === "file" ? files.fileDestination(value) : files.folderDestination(value === "/" ? "" : value); }
+      catch { /* A missing automatic binding remains an explicit user choice. */ }
+    }
+    const defaultMode = defaultTarget !== undefined ? "selected" : emptyFallback ? "inherited" : "missing";
+    const selected = explicit.resolve(id, location, value, kind);
+    const target = selected.status === "chosen" ? selected.target.path : selected.status === "invalid" ? undefined : defaultTarget;
+    const mode = selected.status === "chosen" ? "explicit" : selected.status === "invalid" ? "invalid" : defaultMode;
+    if (bindings.length >= PACKAGE_LIMITS.dependencies) throw projectFileError("too many configuration path decisions");
+    bindings.push(Object.freeze({ projectId: id, location: Object.freeze([...location]), source: value, kind, purpose, context: context.slice(0, 160), mode, defaultMode,
+      ...(defaultTarget !== undefined ? { defaultTarget } : {}), ...(target !== undefined ? { target, origin: selected.status === "chosen" ? selected.target.origin : "planned" as const } : {}) }));
+    if (selected.status === "invalid") { issue(id, location, "invalid-binding", value); return; }
+    if (target === undefined) {
+      if (emptyFallback === undefined) issue(id, location, kind === "file" ? "unbound-file" : "unbound-folder", value);
+      return;
+    }
     if (target !== value) { record(); changes.push(Object.freeze({ projectId: id, location: Object.freeze([...location]), source: value, destination: target })); }
     return target;
   };
-  const bind = (object: ObjectValue, key: string, id: string, at: Location, kind: "file" | "folder") => {
-    const target = mapPath(object[key], id, [...at, key], kind);
+  const bind = (object: ObjectValue, key: string, id: string, at: Location, kind: "file" | "folder", purpose: ConfigPathBindingOption["purpose"], context = "") => {
+    const target = mapPath(object[key], id, [...at, key], kind, purpose, context);
     if (target !== undefined) object[key] = target;
     return target;
   };
@@ -95,12 +130,13 @@ export function previewPackageConfigPaths(
     record(); scopes.push(Object.freeze({ projectId: id, location: Object.freeze([...at]), kind, value, existingCandidates: candidates }));
     issue(id, at, "scope-choice-required", value);
   };
-  const source = (value: unknown, id: string, at: Location): boolean => {
+  const source = (value: unknown, id: string, at: Location, owner = ""): boolean => {
     visit();
     if (!jsonObject(value) || !jsonObject(value['config'])) { issue(id, at, "invalid-shape"); return false; }
     const config = value['config'], kind = value['kind'];
+    const context = [owner, typeof value['name'] === "string" ? value['name'] : ""].filter(Boolean).join(" · ");
     const folder = (cfg: ObjectValue, location: Location) => {
-      const target = bind(cfg, "path", id, location, "folder");
+      const target = bind(cfg, "path", id, location, "folder", "source-folder", context);
       if (typeof cfg['recursive'] !== "boolean") issue(id, [...location, "recursive"], "invalid-shape");
       if (typeof cfg['path'] === "string") {
         // Count only when the path was successfully bound; do not guess in the recipient's vault.
@@ -136,7 +172,7 @@ export function previewPackageConfigPaths(
       const list = value[key];
       if (!Array.isArray(list)) { issue(id, [key], "invalid-shape"); continue; }
       list.forEach((path: unknown, index: number) => {
-        const target = mapPath(path, id, [key, index], "file"); if (target !== undefined) list[index] = target;
+        const target = mapPath(path, id, [key, index], "file", key === "templates" ? "template" : "excluded-note"); if (target !== undefined) list[index] = target;
       });
     }
     const folderFallback = source(project.dataSource, id, ["dataSource"]);
@@ -145,8 +181,12 @@ export function previewPackageConfigPaths(
       else project.additionalSources.forEach((item, index) => source(item, id, ["additionalSources", index]));
     }
     if (typeof value['newNotesFolder'] !== "string") issue(id, ["newNotesFolder"], "invalid-shape");
-    else if (value['newNotesFolder']) bind(value, "newNotesFolder", id, [], "folder");
-    else if (!folderFallback) issue(id, ["newNotesFolder"], "creation-folder-choice-required", "");
+    else if (value['newNotesFolder']) bind(value, "newNotesFolder", id, [], "folder", "creation-folder");
+    else {
+      const target = mapPath("", id, ["newNotesFolder"], "folder", "creation-folder", "", folderFallback);
+      if (target !== undefined) value['newNotesFolder'] = target;
+      else if (!folderFallback) issue(id, ["newNotesFolder"], "creation-folder-choice-required", "");
+    }
     project.views.forEach((view, vi) => {
       visit(); const at: Location = ["views", vi];
       if (view.type !== "dashboard" && view.type !== "database") {
@@ -166,14 +206,15 @@ export function previewPackageConfigPaths(
         if (widget['type'] === "cover-banner") {
           const src = cfg['src'];
           if (typeof src !== "string") issue(id, [...wa, "config", "src"], "invalid-shape");
-          else if (src && !/^https?:\/\//i.test(src)) bind(cfg, "src", id, [...wa, "config"], "file");
-        } else if (widget['type'] === "sub-base-canvas" && cfg['inverseTargetId'] !== undefined && cfg['inverseTargetId'] !== "") bind(cfg, "inverseTargetId", id, [...wa, "config"], "file");
-        else if (widget['type'] === "database-call" && cfg['sourceConfig'] !== undefined) source(cfg['sourceConfig'], id, [...wa, "config", "sourceConfig"]);
+          else if (src && !/^https?:\/\//i.test(src)) bind(cfg, "src", id, [...wa, "config"], "file", "cover", typeof widget['title'] === "string" ? widget['title'] : "");
+        } else if (widget['type'] === "sub-base-canvas" && cfg['inverseTargetId'] !== undefined && cfg['inverseTargetId'] !== "") bind(cfg, "inverseTargetId", id, [...wa, "config"], "file", "record", typeof widget['title'] === "string" ? widget['title'] : "");
+        else if (widget['type'] === "database-call" && cfg['sourceConfig'] !== undefined) source(cfg['sourceConfig'], id, [...wa, "config", "sourceConfig"], [view.name, widget['title']].filter((label): label is string => typeof label === "string").join(" · "));
       });
     });
     const bytes = new TextEncoder().encode(JSON.stringify(project)).length; outputBytes += bytes;
     if (bytes > MAX_PROJECT_DOCUMENT_BYTES || outputBytes > PACKAGE_LIMITS.totalBytes) throw projectFileError("configuration path preview too large");
     return Object.freeze({ project, archived: meta.archived });
   });
-  return Object.freeze({ stage: "configuration-path-preview", files, projects: Object.freeze(projects), changes: Object.freeze(changes), issues: Object.freeze(issues), scopes: Object.freeze(scopes) });
+  for (const unused of explicit.unused()) issue(unused.projectId, unused.location, "stale-binding", unused.source);
+  return Object.freeze({ stage: "configuration-path-preview", files, projects: Object.freeze(projects), changes: Object.freeze(changes), issues: Object.freeze(issues), scopes: Object.freeze(scopes), bindings: Object.freeze(bindings), targets: explicit.targets, choices });
 }

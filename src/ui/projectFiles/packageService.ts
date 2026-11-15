@@ -16,6 +16,7 @@ import { stageProjectPackage, type StageReceipt } from "src/lib/projectFiles/pac
 import { stageVaultStorage } from "src/lib/projectFiles/stageVaultStorage";
 import type { PackageFilePlan, VaultPathEntry } from "src/lib/projectFiles/packageFilePlan";
 import { previewPackageConfigPaths, type PackageConfigPathPreview } from "src/lib/projectFiles/packageConfigPaths";
+import { captureConfigPathChoices, type ConfigPathChoice } from "src/lib/projectFiles/packagePathBindings";
 
 export interface PackageDestinationPreview extends PackageFilePlan { readonly configuration: PackageConfigPathPreview }
 
@@ -52,8 +53,9 @@ export class ProjectPackageService {
   }
 
   /** Fresh integrity check and placement preview only: never flushes settings or creates folders. */
-  async previewFiles(path: string, expectedHash: string, destination: string): Promise<PackageDestinationPreview> {
+  async previewFiles(path: string, expectedHash: string, destination: string, inputChoices: readonly ConfigPathChoice[] = []): Promise<PackageDestinationPreview> {
     if (this.busy) throw projectFileError("package operation busy");
+    const choices = captureConfigPathChoices(inputChoices);
     this.busy = true;
     try {
       const inspected = await this.readPackage(path);
@@ -66,7 +68,7 @@ export class ProjectPackageService {
         return { path: file.path, kind: file instanceof TFile ? "file" : "folder" };
       });
       const roots = configuredCopyRoots(get(settings).preferences.projectFiles);
-      const configuration = previewPackageConfigPaths(inspected.documents.map(document => document.project), inspected.manifest, destination, inventory, this.host.app.vault.configDir, roots);
+      const configuration = previewPackageConfigPaths(inspected.documents.map(document => document.project), inspected.manifest, destination, inventory, this.host.app.vault.configDir, roots, choices);
       this.check(); return Object.freeze({ ...configuration.files, configuration });
     } finally { this.busy = false; }
   }

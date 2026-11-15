@@ -97,6 +97,23 @@ test("file preview rejects stale hash and protected destination without changing
   expect(create).not.toHaveBeenCalled(); expect(mkdir).not.toHaveBeenCalled(); expect(flush).not.toHaveBeenCalled();
 });
 
+test("manual choices are captured before an archive read and cannot change while awaiting it", async () => {
+  const saved = await service.save(await service.prepare("p", ["Note.md"]));
+  folders.set("Other", new TFolder("Other"));
+  const choice = { projectId: "p", location: ["newNotesFolder"], root: "Imported", source: "", kind: "folder" as const, target: "Other", origin: "existing" as const };
+  const bytes = new Uint8Array(files.get(saved.path)!.bytes).buffer;
+  let finish!: (value: ArrayBuffer) => void;
+  read.mockImplementationOnce(() => new Promise<ArrayBuffer>(resolve => { finish = resolve; }));
+  create.mockClear(); mkdir.mockClear(); flush.mockClear();
+  const pending = service.previewFiles(saved.path, saved.sha256, "Imported", [choice]);
+  choice.target = "AppConfig"; choice.location[0] = "templates";
+  finish(bytes);
+  const result = await pending;
+  expect(result.configuration.projects[0]!.project.newNotesFolder).toBe("Other");
+  expect(result.configuration.choices[0]).toMatchObject({ target: "Other", location: ["newNotesFolder"] });
+  expect(create).not.toHaveBeenCalled(); expect(mkdir).not.toHaveBeenCalled(); expect(flush).not.toHaveBeenCalled();
+});
+
 test("unconfirmed primary state and stale previews cannot write packages", async () => {
   confirmed = null;
   await expect(service.prepare("p", ["Note.md"])).rejects.toThrow("not confirmed");

@@ -3,6 +3,15 @@ type Service = import("./packageService").ProjectPackageService;
 type Inspected = import("src/lib/projectFiles/packageInspect").InspectedProjectPackage;
 import { PackageInspectionError } from "src/lib/projectFiles/packagePolicy";
 
+jest.mock("./packageBindingsModal", () => {
+  const instances: unknown[] = [];
+  return { ProjectPackageBindingsModal: class {
+    close = jest.fn(); open = jest.fn();
+    preview: unknown; submit: (choices: unknown[]) => void;
+    constructor(_app: unknown, value: unknown, callback: (choices: unknown[]) => void) { this.preview = value; this.submit = callback; instances.push(this); }
+  }, lastEditor: () => instances.at(-1) };
+});
+
 jest.mock("src/lib/stores/i18n", () => ({ i18n: require("svelte/store").writable({ t: (key: string) => key }) }));
 jest.mock("src/lib/stores/settings", () => ({ settings: require("svelte/store").writable(require("src/settings/settings").DEFAULT_SETTINGS) }));
 jest.mock("obsidian", () => {
@@ -19,6 +28,7 @@ jest.mock("obsidian", () => {
     controlEl = document.createElement("div");
     constructor(target: HTMLElement) { target.append(this.controlEl); }
     setName(value: string) { this.controlEl.setAttribute("aria-label", value); return this; }
+    setDesc(value: string | DocumentFragment) { const text = document.createElement("p"); if (typeof value === "string") text.textContent = value; else text.append(value); this.controlEl.append(text); return this; }
     addText(callback: (control: unknown) => void) {
       const input = document.createElement("input"); this.controlEl.append(input);
       const control = { inputEl: input, setPlaceholder(value: string) { input.placeholder = value; return control; }, setDisabled(value: boolean) { input.disabled = value; return control; }, onChange(fn: (value: string) => void) { input.addEventListener("input", () => fn(input.value)); return control; } };
@@ -26,7 +36,7 @@ jest.mock("obsidian", () => {
     }
     addButton(callback: (control: unknown) => void) {
       const button = document.createElement("button"); this.controlEl.append(button);
-      const control = { setButtonText(value: string) { button.textContent = value; return control; }, setDisabled(value: boolean) { button.disabled = value; return control; }, onClick(fn: () => void) { button.addEventListener("click", fn); return control; } };
+      const control = { buttonEl: button, setCta() { return control; }, setButtonText(value: string) { button.textContent = value; return control; }, setDisabled(value: boolean) { button.disabled = value; return control; }, onClick(fn: () => void) { button.addEventListener("click", fn); return control; } };
       callback(control); return this;
     }
   }
@@ -44,7 +54,7 @@ beforeAll(() => Object.defineProperty(HTMLElement.prototype, "empty", { configur
 afterAll(() => { if (beforeEmpty) Object.defineProperty(HTMLElement.prototype, "empty", beforeEmpty); else Reflect.deleteProperty(HTMLElement.prototype, "empty"); });
 beforeEach(() => {
   inspect = jest.fn(async () => inspected); dispose = jest.fn(); stage = jest.fn(async () => ({ folder: "Projects Plus/Incoming/hash", files: 2 }));
-  previewFiles = jest.fn(async () => ({ root: "Imported", files: [{ source: "Note.md", destination: "Imported/Note.md" }], conflicts: [{ destination: "Imported/Note.md", existing: "imported/Note.md" }], notesNeedInspection: true, configuration: { projects: [], changes: [], issues: [], scopes: [] } }));
+  previewFiles = jest.fn(async () => ({ root: "Imported", files: [{ source: "Note.md", destination: "Imported/Note.md" }], conflicts: [{ destination: "Imported/Note.md", existing: "imported/Note.md" }], notesNeedInspection: true, configuration: { projects: [], changes: [], issues: [], scopes: [], bindings: [], targets: [], choices: [] } }));
   modal = new ProjectPackageInspectModal({ vault: { getFiles: () => [{ path: "Incoming/Package.zip" }, { path: "Note.md" }] } } as unknown as App, { inspect, dispose, stage, previewFiles } as unknown as Service);
   modal.open();
 });
@@ -108,12 +118,31 @@ test("closing during preparation disables both actions and retires late completi
 const pathButton = () => Array.from(modal.contentEl.querySelectorAll("button")).find(button => button.textContent === "package-inspect.preview-files")!;
 const destination = (value: string) => { const input = modal.contentEl.querySelector("input")!; input.value = value; input.dispatchEvent(new Event("input")); };
 
+test("editor choices trigger a fresh check; a changed destination retires the editor callback", async () => {
+  const { lastEditor } = require("./packageBindingsModal");
+  const result = await previewFiles(); previewFiles.mockClear();
+  result.configuration.bindings = [{}];
+  previewFiles.mockResolvedValue(result);
+  button().click(); lastPicker().onChooseItem({ path: "Incoming/Package.zip" }); await settle(); destination("Imported");
+  pathButton().click(); await settle();
+  const edit = () => Array.from(modal.contentEl.querySelectorAll("button")).find(item => item.textContent === "package-inspect.binding-title")!;
+  edit().click(); const editor = lastEditor();
+  const choices = [{ projectId: "p", location: ["templates", 0], root: "Imported", source: "Old.md", kind: "file", target: "Note.md", origin: "existing" }];
+  editor.submit(choices); await settle();
+  expect(previewFiles).toHaveBeenLastCalledWith("Incoming/Package.zip", "a".repeat(64), "Imported", choices);
+  edit().click(); const stale = lastEditor(); destination("Elsewhere");
+  expect(stale.close).toHaveBeenCalled();
+  previewFiles.mockClear(); stale.submit(choices); await settle(); expect(previewFiles).not.toHaveBeenCalled();
+  pathButton().click(); await settle();
+  expect(previewFiles).toHaveBeenLastCalledWith("Incoming/Package.zip", "a".repeat(64), "Elsewhere", []);
+});
+
 test("placement needs explicit folder and verified ZIP, then renders destinations and conflicts without staging", async () => {
   expect(pathButton().disabled).toBe(true); destination("Imported"); expect(pathButton().disabled).toBe(true);
   button().click(); lastPicker().onChooseItem({ path: "Incoming/Package.zip" }); await settle();
   expect(pathButton().disabled).toBe(false); expect(previewFiles).not.toHaveBeenCalled();
   pathButton().click(); await settle();
-  expect(previewFiles).toHaveBeenCalledWith("Incoming/Package.zip", "a".repeat(64), "Imported");
+  expect(previewFiles).toHaveBeenCalledWith("Incoming/Package.zip", "a".repeat(64), "Imported", []);
   expect(modal.contentEl.textContent).toContain("Note.md → Imported/Note.md");
   expect(modal.contentEl.textContent).toContain("Imported/Note.md ↔ imported/Note.md");
   expect(modal.contentEl.textContent).toContain("package-inspect.note-links-pending");
@@ -150,6 +179,7 @@ test("configuration proposals and pending scope choices render as bounded text, 
     changes: Array.from({ length: 40 }, (_, i) => ({ projectId: "p", source: `Work/${i}.md`, destination: `Imported/Work/${i}.md` })),
     issues: [{ projectId: "p", code: "scope-choice-required", source: "<img>" }],
     scopes: [{ projectId: "p", kind: "query", value: "query".repeat(10000), existingCandidates: null }],
+    bindings: [], targets: [], choices: [],
   } });
   button().click(); lastPicker().onChooseItem({ path: "Incoming/Package.zip" }); await settle(); destination("Imported");
   pathButton().click(); await settle();
@@ -160,4 +190,15 @@ test("configuration proposals and pending scope choices render as bounded text, 
   expect(modal.contentEl.textContent).toContain("package-inspect.config-uncounted");
   expect(modal.contentEl.textContent).toContain("package-inspect.config-more");
   expect(modal.contentEl.textContent!.length).toBeLessThan(10000); expect(stage).not.toHaveBeenCalled();
+});
+
+test("a late input event while disabled invalidates the old folder result instead of rendering stale choices", async () => {
+  let finish!: (value: unknown) => void;
+  previewFiles.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  button().click(); lastPicker().onChooseItem({ path: "Incoming/Package.zip" }); await settle(); destination("Imported");
+  pathButton().click(); destination("Changed");
+  finish({ root: "Imported", files: [{ source: "old", destination: "Imported/old" }] }); await settle();
+  expect(modal.contentEl.textContent).not.toContain("Imported/old");
+  expect(modal.contentEl.textContent).toContain("package-inspect.binding-changed");
+  expect(pathButton().disabled).toBe(false);
 });
