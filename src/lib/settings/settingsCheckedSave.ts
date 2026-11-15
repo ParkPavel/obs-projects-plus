@@ -24,24 +24,29 @@ export async function saveCheckedSettings(
   adapter: CheckedSettingsAdapter,
   path: string,
   base: SettingsWriteBase,
-  value: unknown
+  value: unknown,
+  guard?: () => boolean
 ): Promise<void | typeof SETTINGS_WRITE_REFUSED> {
   // Refuse unserializable state before even bootstrapping an empty file.
   const serialized = JSON.stringify(value, null, 2);
   const desired = canonical(value);
+  if (guard && !guard()) return SETTINGS_WRITE_REFUSED;
   if (serialized === undefined || desired === null) throw new Error("settings are not JSON serializable");
   const fresh = base.canonical === canonical(null) && base.raw === null;
   let bootstrapped = false;
   if ((base.canonical !== null || base.raw !== null) && !(await adapter.exists(path))) {
     // append-empty never truncates a version which appeared after exists().
     // A host refusing creation reports failure; there is no blind-write fallback.
+    if (guard && !guard()) return SETTINGS_WRITE_REFUSED;
     await adapter.append(path, "");
     bootstrapped = true;
   }
   let called = false;
   let accepted = false;
+  if (guard && !guard()) return SETTINGS_WRITE_REFUSED;
   await adapter.process(path, (raw) => {
     called = true;
+    if (guard && !guard()) return raw;
     let current: string | null = null;
     try { current = canonical(JSON.parse(raw)); } catch { /* recovery compares exact damaged bytes */ }
     accepted = (base.canonical !== null ? current === base.canonical : base.raw !== null && raw === base.raw)

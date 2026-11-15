@@ -91,6 +91,8 @@ export const SETTINGS_RECONCILE_BACKSTOP_MS = 10000;
  */
 export type WriteVerdict = "confirmed" | "not-written" | "diverged";
 
+export type CandidateCommitResult = "confirmed" | "stale" | "refused" | "failed" | "closed";
+
 /**
  * #212 step D — how an episode ends, in the writer's own vocabulary.
  *
@@ -161,11 +163,12 @@ type Permit =
   | { kind: "open" }
   | { kind: "fenced"; code: string; until: number }
   | { kind: "held"; code: string }
+  | { kind: "committing" }
   | { kind: "closed" };
 
 export interface SettingsWriterOptions<T> {
   /** SETTINGS_WRITE_REFUSED means the other version was kept; reconcile without retrying it away. */
-  save: (value: T) => Promise<unknown>;
+  save: (value: T, guard?: () => boolean) => Promise<unknown>;
   /**
    * #199 — confirm that `value` is what the file now holds. Resolving `false`
    * is a failed write and takes the same path as a thrown one.
@@ -202,6 +205,16 @@ export interface SettingsWriterOptions<T> {
 }
 
 export interface SettingsWriter<T> {
+  /**
+   * Persist a private candidate before synchronously publishing it. The host
+   * save MUST check the supplied guard inside its queued mutation callback.
+   * Ordinary pending edits must be flushed before this operation; stale bases
+   * are refused. Failed candidates are never queued for automatic retry.
+   * A non-confirmed result does not prove the disk was untouched: an edit or
+   * unload can arrive after the host write. Callers must reconcile their
+   * durable journal with actual primary state before retrying or rolling back.
+   */
+  commitCandidate(expected: T, candidate: T, check: () => boolean, publish: (value: T) => void): Promise<CandidateCommitResult>;
   /**
    * Record `value` as already being on disk without writing it.
    *
@@ -440,6 +453,7 @@ export function createSettingsWriter<T>(
         return true;
       case "fenced":
       case "held":
+      case "committing":
         return false;
       case "closed":
         return force;
@@ -607,8 +621,10 @@ export function createSettingsWriter<T>(
    * change — so the claim is checked, and an unconfirmed write is a failed one.
    */
   async function attemptWrite(
-    value: T
+    value: T,
+    guard?: () => boolean
   ): Promise<"confirmed" | "diverged" | "rejected"> {
+    if (guard && !guard()) return "rejected";
     if (beforeWrite !== undefined && !(await beforeWrite())) {
       // Somebody else's version is on disk and nothing has reconciled it yet.
       // Writing now would erase it with no copy anywhere — which is the defect
@@ -623,7 +639,8 @@ export function createSettingsWriter<T>(
       // would exist only in memory until the next reload took it.
       return "rejected";
     }
-    if ((await save(value)) === SETTINGS_WRITE_REFUSED) return "rejected";
+    if (guard && !guard()) return "rejected";
+    if ((await (guard ? save(value, guard) : save(value))) === SETTINGS_WRITE_REFUSED) return "rejected";
     if (verify === undefined) return "confirmed";
     const verdict = await verify(value);
     if (verdict === "confirmed") return "confirmed";
@@ -745,7 +762,54 @@ export function createSettingsWriter<T>(
     });
   }
 
-  return {
+  const writer: SettingsWriter<T> = {
+    async commitCandidate(expected, candidate, check, publish): Promise<CandidateCommitResult> {
+      if (abandoned()) return "closed";
+      // No unverified candidate publication on hosts lacking read-back.
+      if (!verify) return "refused";
+      const result: { value: CandidateCommitResult } = { value: "failed" };
+      const completion: { finish?: () => void } = {};
+      const outcome = await writer.withExclusive(SETTINGS_DIVERGED, async entry => {
+        if (entry.pending || last === null || last.value !== expected || !check()) { result.value = "stale"; return { kind: "release" }; }
+        const commitEpoch = epoch;
+        // A commit has no reconciliation timeout. A long host write must not
+        // let ordinary debounced edits overtake its queued mutation.
+        clearPermitTimer(); permit = { kind: "committing" };
+        setStatus({ kind: "saving" });
+        const guard = () => !abandoned() && permit.kind === "committing" && epoch === commitEpoch && last?.value === expected && check();
+        // flush waits for the whole episode, including the memory decision,
+        // rather than only the write/read-back promise.
+        inFlight = new Promise<void>(resolve => { completion.finish = resolve; });
+        let verdict: "confirmed" | "diverged" | "rejected";
+        try { verdict = await attemptWrite(candidate, guard); }
+        catch (error) {
+          result.value = abandoned() ? "closed" : "failed";
+          if (!abandoned()) logError(SETTINGS_WRITE_FAILED, "candidate commit", error);
+          return { kind: "hold", code: SETTINGS_WRITE_FAILED };
+        }
+        if (abandoned()) { result.value = "closed"; return { kind: "release" }; }
+        if (verdict === "rejected" && (epoch !== commitEpoch || last?.value !== expected)) { result.value = "stale"; return { kind: "release" }; }
+        if (verdict !== "confirmed") {
+          result.value = "refused";
+          return { kind: "hold", code: SETTINGS_DIVERGED };
+        }
+        // Verification may have updated the host's confirmed disk base. Its
+        // pre-write check is no longer meaningful here; the local epoch is.
+        if (epoch !== commitEpoch || last?.value !== expected) { result.value = "stale"; return { kind: "release" }; }
+        last = { value: candidate };
+        queue = null;
+        publish(candidate);
+        result.value = "confirmed";
+        return { kind: "adopted", settings: candidate };
+      });
+      if (completion.finish) {
+        inFlight = null;
+        completion.finish();
+        if (flushing && queue !== null) startWrite(true);
+      }
+      if (abandoned()) return "closed";
+      return result.value === "confirmed" && outcome.kind !== "adopted" ? "stale" : result.value;
+    },
     prime(value: T): void {
       last = { value };
       queue = null;
@@ -923,4 +987,5 @@ export function createSettingsWriter<T>(
       return hasPendingNow();
     },
   };
+  return writer;
 }

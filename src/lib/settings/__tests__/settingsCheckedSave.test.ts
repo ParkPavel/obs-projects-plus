@@ -26,6 +26,33 @@ function disk(initial: string | null) {
 }
 
 describe("checked save at the host process boundary", () => {
+  it("a stale candidate precondition refuses before creating a first settings file", async () => {
+    const d = disk(null);
+    expect(await saveCheckedSettings(d.adapter, PATH, basis(null), C, () => false)).toBe(SETTINGS_WRITE_REFUSED);
+    expect(d.adapter.exists).not.toHaveBeenCalled(); expect(d.adapter.append).not.toHaveBeenCalled();
+    expect(d.adapter.process).not.toHaveBeenCalled(); expect(d.get()).toBeNull();
+  });
+
+  it("checks the local candidate precondition inside the queued callback as well as the disk CAS", async () => {
+    const d = disk(JSON.stringify(A)); let current = true;
+    const process = d.adapter.process.getMockImplementation()!;
+    d.adapter.process.mockImplementation(async (path, update) => { current = false; return process(path, update); });
+    expect(await saveCheckedSettings(d.adapter, PATH, basis(A), C, () => current)).toBe(SETTINGS_WRITE_REFUSED);
+    expect(JSON.parse(d.get()!)).toEqual(A); expect(d.writes).toEqual([]);
+  });
+
+  it("a local change during exists refuses before bootstrapping a settings file", async () => {
+    const d = disk(null); let current = true;
+    d.adapter.exists.mockImplementation(async () => { current = false; return false; });
+    expect(await saveCheckedSettings(d.adapter, PATH, basis(null), C, () => current)).toBe(SETTINGS_WRITE_REFUSED);
+    expect(d.adapter.append).not.toHaveBeenCalled(); expect(d.adapter.process).not.toHaveBeenCalled(); expect(d.get()).toBeNull();
+  });
+
+  it("a valid local guard cannot waive a foreign disk base", async () => {
+    const d = disk(JSON.stringify(B));
+    expect(await saveCheckedSettings(d.adapter, PATH, basis(A), C, () => true)).toBe(SETTINGS_WRITE_REFUSED);
+    expect(JSON.parse(d.get()!)).toEqual(B); expect(d.writes).toEqual([]);
+  });
   it("preserves the JSON contract, false/zero, and uses the supplied custom config path", async () => {
     const d = disk(JSON.stringify(A));
     await expect(saveCheckedSettings(d.adapter, PATH, basis(A), C)).resolves.toBeUndefined();

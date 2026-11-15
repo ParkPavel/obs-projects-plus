@@ -79,6 +79,8 @@ The result is labelled reference-preview. Unresolved references, malformed known
 
 The import-folder preview now checks closed identity references after structural inspection: named sources, active tabs, linked views and known cross-project references. Cyclic or overly deep block reads use the runtime's existing chain rule; mutual ordinary project relations remain valid. Malformed or unknown envelopes stop reference traversal and retain their structural diagnostics. This is still a read-only preview, not permission to install a project or evaluate expressions.
 
+The existing settings writer also has an internal candidate-commit operation for future import/apply flows. It serializes with reconciliation, checks the local precondition inside the queued disk mutation alongside the disk-base comparison, verifies the saved value, then publishes it synchronously. Newer local edits and unload prevent candidate publication; failed candidates are not automatically retried. This foundation does not yet install files, register imported projects, or provide recovery/restore controls.
+
 This module is not connected to import UI yet. Even an empty diagnostic list is not installation approval: full schema validation, unknown-config handling, file/link relocation, folder/tag scope choices, installation journaling and verified registration remain open. This increment changes no active projects or notes.
 
 Preview limits: up to100 projects, 2MiB per configuration and16MiB total both before and after ID replacement; up to4096 nonempty reference-mapping attempts and4096 diagnostics. Exceeding a limit refuses the preview. activeTabId is checked even when no tab list exists.

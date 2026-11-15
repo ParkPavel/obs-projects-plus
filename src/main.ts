@@ -473,7 +473,7 @@ export default class ProjectsPlusPlugin extends Plugin {
     // One writer owns data.json. Its injected save checks the base inside the
     // adapter's queue (#213); the status remains out of band under coalescing.
     const writer = createSettingsWriter<LatestProjectsPluginSettings>({
-      save: (value) => this.saveSettingsWithCheck(value),
+      save: (value, guard) => this.saveSettingsWithCheck(value, guard),
       // #199: a host write resolving is a claim, not a fact. A live run with
       // `data.json` made read-only had it report success while the file did
       // not change — and #185's whole visibility hangs off a rejection that
@@ -754,14 +754,15 @@ export default class ProjectsPlusPlugin extends Plugin {
 
   /** The writer's only mutation primitive; refusal keeps its queued value. */
   private async saveSettingsWithCheck(
-    value: LatestProjectsPluginSettings
+    value: LatestProjectsPluginSettings,
+    guard?: () => boolean
   ): Promise<void | typeof SETTINGS_WRITE_REFUSED> {
     const path = settingsFilePath(this.manifest.dir);
     if (path === null) throw new Error("cannot determine the plugin settings path");
     const result = await saveCheckedSettings(this.app.vault.adapter, path, {
       canonical: this.confirmedOnDisk,
       raw: this.confirmedRawOnDisk,
-    }, value);
+    }, value, guard);
     if (result === SETTINGS_WRITE_REFUSED) this.scheduleSettingsReconciliation();
     return result;
   }
