@@ -21,6 +21,13 @@ const read = (rel: string) => readFileSync(resolve(SRC, rel), "utf8");
 
 const ANALYZER_FRAGMENT = "function analyzePattern";
 
+// These are grammar/conformance checks using the real detector and its step/score
+// bounds. A cold analysis must not fail merely because the host was descheduled
+// for >25ms. Production retains its deadline; regexAdmission.test.ts separately
+// verifies that timedOut/hitMaxSteps/analysis failures never admit execution.
+beforeEach(() => { jest.spyOn(Date, "now").mockReturnValue(0); });
+afterEach(() => jest.restoreAllMocks());
+
 describe("#126 isUnsafePattern", () => {
   it.each([
     ["lookahead", "(?=foo)bar"],
