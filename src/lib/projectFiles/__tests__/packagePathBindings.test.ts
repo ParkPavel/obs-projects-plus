@@ -48,6 +48,18 @@ test("planned targets and root folders are available without creating them; orig
   expect(preview([choice({ target: "Imported/Work/a.md", origin: "existing" })]).issues.map(issue => issue.code)).toContain("invalid-binding");
 });
 
+test("generated settings are never implicit or explicit note targets, and their file ancestors cannot become folders", () => {
+  const config = `Imported/Project settings/${"a".repeat(64)}.json`;
+  const r = preview([choice({ target: config, origin: "planned" })]);
+  expect(r.targets.some(target => target.path === config)).toBe(false);
+  expect(r.targets).toContainEqual({ path: "Imported/Project settings", kind: "folder", origin: "planned" });
+  expect(r.issues.map(issue => issue.code)).toContain("invalid-binding");
+  const withChild = preview([], [{ path: config + "/child.md", kind: "file" }]);
+  expect(withChild.targets.some(target => target.path.startsWith(config))).toBe(false);
+  const other = { ...p, templates: [`Project settings/${"a".repeat(64)}.json`] };
+  expect(previewPackageConfigPaths([other], manifest, "Imported", [], "AppConfig", []).issues.map(issue => issue.code)).toContain("unbound-file");
+});
+
 test.each([
   ["AppConfig/plugins/data.json", "file"], ["Copies/Projects/x.md", "file"], ["Copies/Backups/x.md", "file"],
   ["Copies/Incoming/x.md", "file"], ["Copies/Packages/x.md", "file"], ["Copies/sync-index.json", "file"],

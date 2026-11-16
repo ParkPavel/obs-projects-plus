@@ -15,15 +15,21 @@ export interface PlannedPackageFile {
   readonly sha256: string;
 }
 export interface PackagePathConflict {
-  readonly code: "file-exists" | "folder-exists" | "parent-file" | "path-alias" | "planned-path-alias";
+  readonly code: "file-exists" | "folder-exists" | "parent-file" | "path-alias" | "planned-path-alias" | "planned-file-conflict";
   readonly destination: string;
   /** Conflicting host path, or another planned spelling for planned-path-alias. */
   readonly existing: string;
+}
+export interface PlannedProjectConfiguration {
+  readonly projectId: string;
+  /** Visible JSON beside imported notes. Content and ownership are compiled at installation. */
+  readonly destination: string;
 }
 export interface PackageFilePlan {
   readonly stage: "file-preview";
   readonly root: string;
   readonly files: readonly PlannedPackageFile[];
+  readonly configurations: readonly PlannedProjectConfiguration[];
   /** All required ancestors, in parent-first order, not a claim of folder ownership. */
   readonly folders: readonly string[];
   readonly conflicts: readonly PackagePathConflict[];
@@ -62,6 +68,14 @@ export function planPackageFiles(
     });
   const index = snapshotVaultPathIndex(existing);
   const needed = new Set([...parents(root), root]);
+  // Manifest project document paths are unique, portable, fixed-length identifiers.
+  // Using that stable component keeps placement independent of newly allocated runtime IDs.
+  const configurations = manifest.projects.map(project => {
+    const destination = `${root}/Project settings/${project.path.split("/")[1]}.json`;
+    checkDestination(destination, true);
+    for (const parent of parents(destination)) needed.add(parent);
+    return Object.freeze({ projectId: project.id, destination });
+  });
   const fileMap = new Map<string, string>(), folderMap = new Map<string, string>();
   for (const file of files) {
     for (const parent of parents(file.destination)) needed.add(parent);
@@ -87,20 +101,24 @@ export function planPackageFiles(
   const folders = [...needed].sort((a, b) => a.split("/").length - b.split("/").length || (a < b ? -1 : a > b ? 1 : 0));
   // Distinct files can still imply incompatible parent spellings (Work/a vs work/b).
   // Keep one representative per key, avoiding quadratic pairwise alias reporting.
-  const planned = new Map<string, string>();
-  for (const path of [...folders, ...files.map(file => file.destination)]) {
+  const planned = new Map<string, { path: string; kind: VaultPathEntry["kind"] }>();
+  const addPlanned = (path: string, kind: VaultPathEntry["kind"]) => {
     const key = packageNameKey(path), prior = planned.get(key);
-    if (prior !== undefined && prior !== path) conflict("planned-path-alias", path, prior);
-    else planned.set(key, path);
-  }
+    if (prior !== undefined) {
+      if (prior.path !== path) conflict("planned-path-alias", path, prior.path);
+      else if (kind === "file" || prior.kind === "file") conflict("planned-file-conflict", path, prior.path);
+    } else planned.set(key, { path, kind });
+  };
+  for (const folder of folders) addPlanned(folder, "folder");
+  for (const file of [...files, ...configurations]) addPlanned(file.destination, "file");
   for (const folder of folders) inspect(folder, "folder");
-  for (const file of files) inspect(file.destination, "file");
+  for (const file of [...files, ...configurations]) inspect(file.destination, "file");
   const lookup = (map: ReadonlyMap<string, string>, path: string) => {
     const result = map.get(path);
     if (result === undefined) throw projectFileError("unbound package path");
     return result;
   };
-  return Object.freeze({ stage: "file-preview", root, files: Object.freeze(files), folders: Object.freeze(folders), conflicts: Object.freeze(conflicts),
+  return Object.freeze({ stage: "file-preview", root, files: Object.freeze(files), configurations: Object.freeze(configurations), folders: Object.freeze(folders), conflicts: Object.freeze(conflicts),
     notesNeedInspection: files.some(file => file.role === "note"),
     fileDestination: (source: string) => lookup(fileMap, source), folderDestination: (source: string) => lookup(folderMap, source) });
 }

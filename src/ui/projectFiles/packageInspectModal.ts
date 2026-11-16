@@ -124,9 +124,10 @@ export class ProjectPackageInspectModal extends Modal {
           choices = result.configuration.choices;
           scopeChoices = result.scopeReview?.choices ?? [];
           status.textContent = t("destination-checked");
-          pathDetails.createEl("p", { text: get(i18n).t("package-inspect.destination-summary", { path: result.root, files: result.files.length, conflicts: result.conflicts.length }) });
+          pathDetails.createEl("p", { text: get(i18n).t("package-inspect.destination-summary", { path: result.root, files: result.files.length + result.configurations.length, conflicts: result.conflicts.length }) });
           const list = pathDetails.createEl("ul");
           for (const file of result.files) list.createEl("li", { text: file.source + " → " + file.destination });
+          for (const file of result.configurations) list.createEl("li", { text: file.destination });
           if (result.conflicts.length) {
             pathDetails.createEl("p", { text: t("destination-conflicts") });
             const conflicts = pathDetails.createEl("ul");

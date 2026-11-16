@@ -20,7 +20,7 @@ test("preserves selected subtrees and metadata, with exact file/folder lookups a
   ]);
   expect(r.fileDestination("Work/Note.md")).toBe("Import/Client/Work/Note.md");
   expect(r.folderDestination("Work")).toBe("Import/Client/Work"); expect(r.folderDestination("")).toBe("Import/Client");
-  expect(r.folders).toEqual(["Import", "Import/Client", "Import/Client/Assets", "Import/Client/Work"]);
+  expect(r.folders).toEqual(["Import", "Import/Client", "Import/Client/Assets", "Import/Client/Project settings", "Import/Client/Work"]);
   expect(JSON.stringify(input)).toBe(before);
 });
 
@@ -110,4 +110,26 @@ test("root folder entry, duplicates and unrelated legacy names do not invent con
 test.each([["Work", "work"], ["Cafe\u0301", "Café"]])("planned folders %s and %s cannot silently merge even with distinct filenames", (first, second) => {
   const r = plan([], [`${first}/a.md`, `${second}/b.md`]);
   expect(r.conflicts).toContainEqual({ code: "planned-path-alias", destination: `Import/Client/${second}`, existing: `Import/Client/${first}` });
+});
+
+test("visible configurations are planned even without notes, detached and outside source path mappings", () => {
+  const input = manifest([]), r = planPackageFiles(input, "Imported", [], "AppConfig", []);
+  expect(r.configurations).toEqual([{ projectId: "p", destination: `Imported/Project settings/${"a".repeat(64)}.json` }]);
+  expect(r.folders).toEqual(["Imported", "Imported/Project settings"]);
+  expect(r.files).toEqual([]);
+  expect(() => r.fileDestination(`Project settings/${"a".repeat(64)}.json`)).toThrow("unbound");
+  expect(() => r.folderDestination("Project settings")).toThrow("unbound");
+  input.projects[0]!.id = "changed";
+  expect(r.configurations[0]!.projectId).toBe("p");
+  expect(Object.isFrozen(r.configurations)).toBe(true); expect(Object.isFrozen(r.configurations[0])).toBe(true);
+});
+
+test("generated configurations participate in exact file, ancestor and portable spelling conflicts", () => {
+  const config = `Project settings/${"a".repeat(64)}.json`, destination = `Import/Client/${config}`;
+  expect(plan([], [config]).conflicts).toContainEqual({ code: "planned-file-conflict", destination, existing: destination });
+  expect(plan([], [config + "/child.md"]).conflicts).toContainEqual({ code: "planned-file-conflict", destination, existing: destination });
+  expect(plan([], ["Project settings"]).conflicts).toContainEqual({ code: "planned-file-conflict", destination: "Import/Client/Project settings", existing: "Import/Client/Project settings" });
+  expect(plan([], [config.toUpperCase()]).conflicts.some(c => c.code === "planned-path-alias")).toBe(true);
+  expect(plan([{ path: destination, kind: "file" }]).conflicts).toContainEqual({ code: "file-exists", destination, existing: destination });
+  expect(plan([{ path: "Import/Client/Project settings", kind: "file" }]).conflicts).toContainEqual({ code: "parent-file", destination: "Import/Client/Project settings", existing: "Import/Client/Project settings" });
 });

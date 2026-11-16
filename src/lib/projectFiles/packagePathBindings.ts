@@ -59,6 +59,9 @@ export function createConfigPathBindings(files: PackageFilePlan, existing: reado
   for (const variants of snapshotVaultPathIndex(existing).values()) for (const [path, kind] of variants) add(path, kind, true);
   for (const folder of files.folders) add(folder, "folder", false);
   for (const file of files.files) add(file.destination, "file", false);
+  // These paths take part in folder safety but are never offered as note/template targets.
+  const configurations = new Set(files.configurations.map(file => packageNameKey(file.destination)));
+  for (const file of files.configurations) add(file.destination, "file", false);
   const ancestry = new Map<string, boolean>();
   const safeFolder = (path: string): boolean => {
     if (ancestry.has(path)) return ancestry.get(path)!;
@@ -67,7 +70,8 @@ export function createConfigPathBindings(files: PackageFilePlan, existing: reado
     ancestry.set(path, safe); return safe;
   };
   const targets: ConfigBindingTarget[] = [];
-  for (const variants of index.values()) {
+  for (const [key, variants] of index) {
+    if (configurations.has(key)) continue;
     if (variants.size !== 1) continue;
     for (const [path, row] of variants) {
       if (row.kind === null) continue;

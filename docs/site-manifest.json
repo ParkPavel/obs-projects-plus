@@ -117,11 +117,11 @@
     },
     {
       "name": "read/development-3.7.3-ru.html",
-      "sha256": "03b3fb82ae343d74237c2c08aa9b8c608a85f9c8a5a71c985409a6c4af9acd12"
+      "sha256": "a54de2388f1ad4e115dee9b5b316f7437a41e1eb69b8007d2784c30dfe3dc636"
     },
     {
       "name": "read/development-3.7.3.html",
-      "sha256": "052da6ea872ca29dbfc59d0273894161133866f53aff5ccc9428437f74d97ef1"
+      "sha256": "c0ac9323a200ab091d06f4f52fad7a82c63c6a08c5a40e8430ab2a78b895fb9f"
     },
     {
       "name": "read/next-versions-ru.html",
@@ -261,7 +261,7 @@
     },
     {
       "name": "search-index.json",
-      "sha256": "efd31ebd6379534e65592a62b5b38edbe04bdd05ba02c40102548bff73e1ac16"
+      "sha256": "d9407ff510b5bd444d38a246ad3219d07e2ffedf2d8450050647282a2023f287"
     },
     {
       "name": ".nojekyll",

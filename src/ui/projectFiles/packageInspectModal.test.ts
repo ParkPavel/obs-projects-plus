@@ -61,7 +61,7 @@ beforeAll(() => Object.defineProperty(HTMLElement.prototype, "empty", { configur
 afterAll(() => { if (beforeEmpty) Object.defineProperty(HTMLElement.prototype, "empty", beforeEmpty); else Reflect.deleteProperty(HTMLElement.prototype, "empty"); });
 beforeEach(() => {
   inspect = jest.fn(async () => inspected); dispose = jest.fn(); stage = jest.fn(async () => ({ folder: "Projects Plus/Incoming/hash", files: 2 }));
-  previewFiles = jest.fn(async () => ({ root: "Imported", files: [{ source: "Note.md", destination: "Imported/Note.md" }], conflicts: [{ destination: "Imported/Note.md", existing: "imported/Note.md" }], notesNeedInspection: true, configuration: { projects: [], changes: [], issues: [], scopes: [], bindings: [], targets: [], choices: [] } }));
+  previewFiles = jest.fn(async () => ({ root: "Imported", configurations: [], files: [{ source: "Note.md", destination: "Imported/Note.md" }], conflicts: [{ destination: "Imported/Note.md", existing: "imported/Note.md" }], notesNeedInspection: true, configuration: { projects: [], changes: [], issues: [], scopes: [], bindings: [], targets: [], choices: [] } }));
   modal = new ProjectPackageInspectModal({ vault: { getFiles: () => [{ path: "Incoming/Package.zip" }, { path: "Note.md" }] } } as unknown as App, { inspect, dispose, stage, previewFiles } as unknown as Service);
   modal.open();
 });
@@ -124,6 +124,16 @@ test("closing during preparation disables both actions and retires late completi
 
 const pathButton = () => Array.from(modal.contentEl.querySelectorAll("button")).find(button => button.textContent === "package-inspect.preview-files")!;
 const destination = (value: string) => { const input = modal.contentEl.querySelector("input")!; input.value = value; input.dispatchEvent(new Event("input")); };
+
+test("placement preview includes the visible project configuration beside note destinations without writing", async () => {
+  const result = { ...await previewFiles(), configurations: [{ projectId: "p", destination: "Imported/Project settings/config.json" }] };
+  previewFiles.mockClear(); previewFiles.mockResolvedValueOnce(result);
+  button().click(); lastPicker().onChooseItem({ path: "Incoming/Package.zip" }); await settle(); destination("Imported");
+  pathButton().click(); await settle();
+  expect(modal.contentEl.textContent).toContain("Imported/Project settings/config.json");
+  expect(modal.contentEl.textContent).toContain("Note.md → Imported/Note.md");
+  expect(stage).not.toHaveBeenCalled();
+});
 
 test("editor choices trigger a fresh check; a changed destination retires the editor callback", async () => {
   const { lastEditor } = require("./packageBindingsModal");
@@ -197,7 +207,7 @@ test("new ZIP or preparation clears an earlier destination preview; a failed fol
 });
 
 test("configuration proposals and pending scope choices render as bounded text, not installation approval", async () => {
-  previewFiles.mockResolvedValueOnce({ root: "Imported", files: [], conflicts: [], notesNeedInspection: false, configuration: {
+  previewFiles.mockResolvedValueOnce({ root: "Imported", configurations: [], files: [], conflicts: [], notesNeedInspection: false, configuration: {
     projects: [{ project: { id: "p", name: "<img src=x onerror=alert(1)>" } }],
     changes: Array.from({ length: 40 }, (_, i) => ({ projectId: "p", source: `Work/${i}.md`, destination: `Imported/Work/${i}.md` })),
     issues: [{ projectId: "p", code: "scope-choice-required", source: "<img>" }],
@@ -220,7 +230,7 @@ test("a late input event while disabled invalidates the old folder result instea
   previewFiles.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
   button().click(); lastPicker().onChooseItem({ path: "Incoming/Package.zip" }); await settle(); destination("Imported");
   pathButton().click(); destination("Changed");
-  finish({ root: "Imported", files: [{ source: "old", destination: "Imported/old" }] }); await settle();
+  finish({ root: "Imported", configurations: [], files: [{ source: "old", destination: "Imported/old" }] }); await settle();
   expect(modal.contentEl.textContent).not.toContain("Imported/old");
   expect(modal.contentEl.textContent).toContain("package-inspect.binding-changed");
   expect(pathButton().disabled).toBe(false);
