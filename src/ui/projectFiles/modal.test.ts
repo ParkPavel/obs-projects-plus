@@ -88,3 +88,34 @@ test("changing a destination remembers current and older roots for record isolat
   button().click();await settle();
   expect(get(settings).preferences.projectFiles).toEqual({ root: "New copies", autoSync: false, previousRoots: ["Old copies", "Older copies"] });
 });
+
+test.each(["Enter", "blur"])("a pending import refuses a root change on %s and keeps autoSync usable", async action => {
+  modal.close(); const hash = "a".repeat(64);
+  const pendingImport = { format: "obs-projects-plus/pending-import" as const, schemaVersion: 1 as const, id: "attempt", archiveHash: hash, journal: `Copies/Incoming/${hash}/Installations/attempt.json`, paths: ["Imported/Note.md"] };
+  settings.set({ ...DEFAULT_SETTINGS, preferences: { ...DEFAULT_SETTINGS.preferences, projectFiles: { root: "Copies", autoSync: false, pendingImport } } });
+  modal.open(); jest.mocked(settings.updatePreferences).mockClear();
+  const field = input(); field.focus(); field.value = "Elsewhere"; field.dispatchEvent(new Event("input", { bubbles: true })); await settle();
+  if (action === "Enter") field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); else field.dispatchEvent(new FocusEvent("blur"));
+  await settle();
+  expect(get(settings).preferences.projectFiles?.root).toBe("Copies");
+  expect(modal.contentEl.textContent).toContain("project-files.root-locked");
+  field.dispatchEvent(new FocusEvent("blur")); await settle(); expect(input().value).toBe("Copies");
+  const toggle = modal.contentEl.querySelector("input[type=checkbox]") as HTMLInputElement;
+  toggle.checked = true; toggle.dispatchEvent(new Event("change", { bubbles: true })); await settle();
+  expect(toggle.checked).toBe(true);
+  expect(get(settings).preferences.projectFiles).toEqual({ root: "Copies", autoSync: true, pendingImport });
+  expect(settings.updatePreferences).toHaveBeenCalledTimes(1);
+});
+
+test("external preferences update the toggle without clobbering an active IME draft", async () => {
+  const field = input(); field.focus(); field.dispatchEvent(new CompositionEvent("compositionstart"));
+  field.value = "Рабочие копии"; field.dispatchEvent(new Event("input", { bubbles: true })); await settle();
+  settings.set({ ...DEFAULT_SETTINGS, preferences: { ...DEFAULT_SETTINGS.preferences, projectFiles: { root: "External", autoSync: true } } });
+  await settle(); expect(field.value).toBe("Рабочие копии");
+  expect((modal.contentEl.querySelector("input[type=checkbox]") as HTMLInputElement).checked).toBe(true);
+  expect(settings.updatePreferences).not.toHaveBeenCalled();
+  field.dispatchEvent(new CompositionEvent("compositionend")); await settle();
+  field.dispatchEvent(new FocusEvent("blur")); await settle();
+  expect(get(settings).preferences.projectFiles).toEqual({ root: "Рабочие копии", autoSync: true, previousRoots: ["External"] });
+  expect(settings.updatePreferences).toHaveBeenCalledTimes(1);
+});

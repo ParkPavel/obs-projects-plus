@@ -3,13 +3,14 @@ import { get } from "svelte/store";
 import { i18n } from "src/lib/stores/i18n";
 import { settings } from "src/lib/stores/settings";
 import TextField from "src/ui/components/fields/TextField.svelte";
-import { nextCopyPreferences, projectFilesRoot } from "src/lib/projectFiles/paths";
+import { nextCopyPreferences } from "src/lib/projectFiles/paths";
 import type { ProjectFilesController } from "./controller";
 
 /** Reuses native modal scrolling and the shared IME-aware field kit. */
 export class ProjectFilesModal extends Modal {
-  private field: (TextField & { syncForSubmit(): boolean }) | undefined;
+  private field: (TextField & { syncForSubmit(): boolean; reset(value: string): void }) | undefined;
   private off: (() => void) | undefined;
+  private offSettings: (() => void) | undefined;
 
   constructor(app: App, private readonly controller: ProjectFilesController) {
     super(app);
@@ -25,21 +26,44 @@ export class ProjectFilesModal extends Modal {
     }
     const current = get(settings).preferences.projectFiles;
     let root = current?.root ?? "Projects Plus";
-    const valid = (value: string) => { try { projectFilesRoot(value, this.app.vault.configDir); return true; } catch { return false; } };
+    const folderError = this.contentEl.createEl("p", { attr: { role: "alert" } });
+    folderError.hidden = true;
+    const explain = (value: string) => {
+      const persisted = get(settings).preferences.projectFiles;
+      folderError.textContent = t(persisted?.pendingImport !== undefined && value !== persisted.root ? "root-locked" : "folder-invalid");
+      folderError.hidden = false;
+    };
+    const valid = (value: string) => {
+      const persisted = get(settings).preferences.projectFiles;
+      try { nextCopyPreferences(persisted, value, persisted?.autoSync ?? false, this.app.vault.configDir); folderError.textContent = ""; folderError.hidden = true; return true; }
+      catch { explain(value); return false; }
+    };
     const folder = new Setting(this.contentEl).setName(t("folder")).setDesc(t("folder-description"));
-    this.field = new TextField({ target: folder.controlEl, props: { value: root, ariaLabel: t("folder"), validate: valid } }) as TextField & { syncForSubmit(): boolean };
+    this.field = new TextField({ target: folder.controlEl, props: { value: root, ariaLabel: t("folder"), validate: valid } }) as TextField & { syncForSubmit(): boolean; reset(value: string): void };
     this.field.$on("commit", (event: CustomEvent<{ value: string }>) => {
-      root = event.detail.value;
-      this.field?.$set({ value: root });
       const preferences = get(settings).preferences;
-      settings.updatePreferences({ ...preferences, projectFiles: nextCopyPreferences(preferences.projectFiles, root, preferences.projectFiles?.autoSync ?? false, this.app.vault.configDir) });
+      try {
+        const next = nextCopyPreferences(preferences.projectFiles, event.detail.value, preferences.projectFiles?.autoSync ?? false, this.app.vault.configDir);
+        settings.updatePreferences({ ...preferences, projectFiles: next });
+        root = next.root; this.field?.$set({ value: root }); folderError.textContent = ""; folderError.hidden = true;
+      } catch {
+        root = get(settings).preferences.projectFiles?.root ?? "Projects Plus";
+        this.field?.reset(root); explain(event.detail.value);
+      }
     });
     const toggle = new Setting(this.contentEl).setName(t("automatic")).setDesc(t("automatic-description"));
-    toggle.addToggle(control => control.setValue(current?.autoSync ?? false).onChange(autoSync => {
+    let automaticControl: import("obsidian").ToggleComponent | undefined;
+    toggle.addToggle(control => { automaticControl = control; control.setValue(current?.autoSync ?? false).onChange(autoSync => {
       if (!this.field?.syncForSubmit() || !valid(root)) { control.setValue(get(settings).preferences.projectFiles?.autoSync ?? false); return; }
       const preferences = get(settings).preferences;
-      settings.updatePreferences({ ...preferences, projectFiles: nextCopyPreferences(preferences.projectFiles, root, autoSync, this.app.vault.configDir) });
-    }));
+      try { settings.updatePreferences({ ...preferences, projectFiles: nextCopyPreferences(preferences.projectFiles, root, autoSync, this.app.vault.configDir) }); }
+      catch { control.setValue(get(settings).preferences.projectFiles?.autoSync ?? false); explain(root); }
+    }); });
+    this.offSettings = settings.subscribe(value => {
+      root = value.preferences.projectFiles?.root ?? "Projects Plus";
+      this.field?.$set({ value: root });
+      automaticControl?.setValue(value.preferences.projectFiles?.autoSync ?? false);
+    });
     const status = this.contentEl.createEl("p", { attr: { role: "status", "aria-live": "polite" } });
     const documents = this.contentEl.createEl("ul");
     const action = new Setting(this.contentEl);
@@ -81,6 +105,7 @@ export class ProjectFilesModal extends Modal {
 
   onClose(): void {
     this.off?.(); this.off = undefined;
+    this.offSettings?.(); this.offSettings = undefined;
     this.field?.$destroy(); this.field = undefined;
     this.contentEl.empty();
   }

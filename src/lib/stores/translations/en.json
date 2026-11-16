@@ -123,6 +123,8 @@
             "pending-recovery": "This vault has an unfinished import. Its notes are temporarily excluded from project data.",
             "import-paused-title": "Import in progress",
             "import-paused": "Project data is temporarily unavailable until the import is completed or recovered.",
+            "root-locked": "The copy folder cannot be changed while an import is unfinished.",
+            "folder-invalid": "Choose a valid folder inside this vault.",
             "description": "Keep data.json as the active configuration. Create readable, verified project copies in a visible vault folder.",
             "open": "Manage copies",
             "folder": "Copy folder",
