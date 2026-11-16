@@ -18,6 +18,8 @@ export interface InstalledProjectConfiguration {
   readonly owner: string;
   readonly baseRevision: string;
   readonly sha256: string;
+  /** Confirmed before an owned file write; reconciles interruption before acknowledgment. */
+  readonly pendingWrite?: { readonly sha256: string; readonly baseRevision: string };
 }
 export interface InstalledProjectPackage {
   readonly id: string;

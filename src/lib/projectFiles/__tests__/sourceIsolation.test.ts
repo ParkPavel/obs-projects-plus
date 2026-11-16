@@ -12,7 +12,7 @@ const preferences = { ...DEFAULT_SETTINGS.preferences, projectSizeLimit: 1, proj
 function definition(dataSource: ProjectDefinition["dataSource"]): ProjectDefinition { return { ...DEFAULT_PROJECT, id: "project", name: "Project", dataSource }; }
 async function files() {
   const fs = new InMemFileSystem({});
-  for (const path of [copy, backup, note]) await fs.create(path, "---\nstatus: todo\n---\n#task\n");
+  for (const path of [copy, backup, note, `Copies/Incoming/Configuration drafts/${key}/${key}.md`]) await fs.create(path, "---\nstatus: todo\n---\n#task\n");
   return fs;
 }
 

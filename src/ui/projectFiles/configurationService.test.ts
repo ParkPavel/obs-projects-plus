@@ -26,7 +26,7 @@ async function fixture() {
   const commit = jest.fn(async (expected: State, candidate: State, guard?: () => boolean) => { if (current !== expected || guard && !guard()) return "stale" as const; current = candidate; return "confirmed" as const; });
   const service = new ProjectConfigurationService(host, { read: async () => current, commit }, () => true);
   const editDraft = (name: string, counter = 1) => { const doc = JSON.parse(files.get(path)!.text); doc.project.name = name; doc.project.uniqueIdCounter = counter; files.get(path)!.text = JSON.stringify(doc); };
-  return { service, files, path, create, commit, editDraft, current: () => current, changePrimary: (name: string, counter = 5) => { current = { ...current, projects: [{ ...current.projects[0]!, name, uniqueIdCounter: counter }] }; } };
+  return { service, files, path, create, commit, editDraft, current: () => current, setState: (value: State) => { current = value; }, changePrimary: (name: string, counter = 5) => { current = { ...current, projects: [{ ...current.projects[0]!, name, uniqueIdCounter: counter }] }; } };
 }
 test("explicit draft application backs up the old project, preserves counter and rebases the visible config", async () => {
   const f = await fixture(); f.editDraft("After");
@@ -67,4 +67,43 @@ test("unconfirmed application keeps the backup and draft, and cannot claim succe
   await expect(f.service.apply(await f.service.preview(f.path, "draft"))).rejects.toThrow("unconfirmed");
   expect(f.current().projects[0]!.name).toBe("Before"); expect(f.create).toHaveBeenCalledTimes(2);
   expect(JSON.parse(f.files.get(f.path)!.text).project.name).toBe("After");
+});
+
+test("outbound preflight does not update an earlier file when a later configuration has external edits", async () => {
+  const f = await fixture(), state = f.current(), config = state.preferences.projectFiles!.installations![0]!.configurations[0]!;
+  const second = { ...state.projects[0]!, id: "q", name: "Other" }, path = "Project/Project settings/q.json", text = await createProjectConfiguration(second, "owner-1");
+  f.files.set(path, new TFile(path, text));
+  f.setState({ ...state, projects: [{ ...state.projects[0]!, name: "Local" }, second], preferences: { ...state.preferences, projectFiles: { ...state.preferences.projectFiles!, installations: [{ ...state.preferences.projectFiles!.installations![0]!, configurations: [config, { ...config, projectId: "q", path, sha256: await textDigest(text), baseRevision: await textDigest(JSON.stringify(second)) }] }] } } });
+  const original = f.files.get(f.path)!.text;
+  f.files.get(path)!.text += " ";
+  await expect(f.service.syncOwned()).rejects.toThrow("external edits");
+  expect(f.files.get(f.path)!.text).toBe(original); expect(f.commit).not.toHaveBeenCalled();
+});
+
+test("an interrupted file-to-descriptor acknowledgment recovers the pinned bytes after another primary edit", async () => {
+  const f = await fixture(); f.changePrimary("First");
+  const realCommit = f.commit.getMockImplementation()!;
+  f.commit.mockImplementation(async (expected, candidate, guard) => {
+    const descriptor = candidate.preferences.projectFiles!.installations![0]!.configurations[0]!;
+    if (descriptor.sha256 !== expected.preferences.projectFiles!.installations![0]!.configurations[0]!.sha256) return "stale";
+    return realCommit(expected, candidate, guard);
+  });
+  await expect(f.service.syncOwned()).rejects.toThrow("unconfirmed");
+  expect(JSON.parse(f.files.get(f.path)!.text).project.name).toBe("First");
+  f.commit.mockImplementation(realCommit); f.changePrimary("Second");
+  await f.service.syncOwned();
+  expect(JSON.parse(f.files.get(f.path)!.text).project.name).toBe("Second");
+  expect(f.current().preferences.projectFiles!.installations![0]!.configurations[0]!.sha256).toBe(await textDigest(f.files.get(f.path)!.text));
+});
+
+test("removing a block used by an incoming project refuses preview before any write", async () => {
+  const f = await fixture(), state = f.current();
+  const view = { id: "v", name: "V", type: "dashboard", sort: { criteria: [] }, filter: { conjunction: "and" as const, conditions: [] }, colors: { conditions: [] } };
+  const project = { ...state.projects[0]!, views: [{ ...view, config: { widgets: [{ id: "w", type: "database-call", title: "Data", layout: { x: 0, y: 0, w: 12, h: 8 }, config: {} }] } }] };
+  const reader = { ...DEFAULT_PROJECT, id: "q", name: "Reader", views: [{ ...view, config: { widgets: [{ id: "chart", type: "chart", title: "Chart", layout: { x: 0, y: 0, w: 12, h: 8 }, config: { dataProjectId: "p::block:v:w" } }] } }] };
+  f.setState({ ...state, projects: [project, reader] });
+  const text = await createProjectConfiguration(project, "owner-1"), draft = JSON.parse(text); draft.project.views[0].config.widgets = [];
+  f.files.get(f.path)!.text = JSON.stringify(draft);
+  await expect(f.service.preview(f.path, "draft")).rejects.toThrow("references");
+  expect(f.create).not.toHaveBeenCalled(); expect(f.commit).not.toHaveBeenCalled();
 });

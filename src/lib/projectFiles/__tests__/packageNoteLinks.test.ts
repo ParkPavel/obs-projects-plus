@@ -53,6 +53,13 @@ test("external and same-note heading links are retained without recipient resolu
   expect(r.issues).toEqual([]); expect(output(r)).toBe(text); expect(r.bindings).toEqual([]);
 });
 
+test("explicit Markdown targets encode parentheses that could terminate the destination", () => {
+  const text = "[label](Missing.md)", inventory = [{ path: "Local/A).md", kind: "file" as const }];
+  const config = previewPackageConfigPaths([project], manifest, "Imported", inventory, "AppConfig", []);
+  const r = previewPackageNoteLinks(config, manifest, new Map([["Work/Note.md", { text, cache: { links: [ref(text, text, "Missing.md")] } }], ["Work/A.md", { text: "", cache: {} }]]), [choice("Missing.md", "Local/A).md", "existing")], inventory, "AppConfig", []);
+  expect(r.issues).toEqual([]); expect(output(r)).toBe("[label](../../Local/A%29.md)");
+});
+
 test("stale native positions refuse output instead of editing a similar occurrence", () => {
   const text = "[[A]]", cache = { links: [{ ...ref(text, text, "A"), original: "[[B]]" }] };
   const r = run(text, cache); expect(r.issues.some(issue => issue.code === "unsupported-note-link")).toBe(true); expect(r.content.has("Imported/Work/Note.md")).toBe(false);

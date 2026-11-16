@@ -1,5 +1,5 @@
 import type { ProjectDefinition } from "src/settings/settings";
-import { blockReadCycle, blockRefId, blockRefsReadBy, blocksOf, dashboardsOf, MAX_BLOCK_CHAIN, parseBlockRef } from "src/lib/relations/blockRefs";
+import { blockRefId, blockRefsReadBy, blocksOf, dashboardsOf, MAX_BLOCK_CHAIN, parseBlockRef } from "src/lib/relations/blockRefs";
 import { projectFileError } from "./document";
 import { PACKAGE_LIMITS } from "./packagePolicy";
 
@@ -16,21 +16,16 @@ export function createPackageBlockCheck(projects: readonly ProjectDefinition[]):
     if ((count += next.length) > PACKAGE_LIMITS.dependencies) throw projectFileError("too many indexed block reads");
     edges.set(blockRefId(project.id, dashboard.viewId, block.id), next);
   }
-  const memo = Array.from({ length: MAX_BLOCK_CHAIN + 1 }, () => new Map<string, boolean>());
-  const invalid = (key: string, remaining: number): boolean => {
-    // Runtime refuses the ninth target before attempting its lookup, including
-    // a missing target. Any cycle also supplies a path beyond this finite bound.
-    if (!remaining) return true;
-    const previous = memo[remaining]!.get(key); if (previous !== undefined) return previous;
-    const result = (edges.get(key) ?? []).some(next => invalid(next, remaining - 1));
-    memo[remaining]!.set(key, result); return result;
-  };
   return (self, target) => {
-    const key = canonical(target); if (key === undefined) return false;
-    if (self === key) return true;
-    // Batch callers provide actual outgoing reads. Preserve the general helper
-    // contract for a hypothetical self/target pair outside that stored graph.
-    if (self !== undefined && !edges.get(self)?.includes(key)) return blockReadCycle(projects, self, target);
-    return invalid(key, MAX_BLOCK_CHAIN);
+    const done = new Set<string>();
+    const walk = (key: string, path: readonly string[]): boolean => {
+      // Keep the runtime's ordered DFS and shared done-set exactly, including
+      // its depth-before-done rule for shared nodes reached along unequal paths.
+      if (key === self || path.includes(key) || path.length >= MAX_BLOCK_CHAIN) return true;
+      if (done.has(key)) return false;
+      for (const next of edges.get(key) ?? []) if (walk(next, [...path, key])) return true;
+      done.add(key); return false;
+    };
+    const key = canonical(target); return key === undefined ? false : walk(key, []);
   };
 }

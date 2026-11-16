@@ -10,7 +10,7 @@ function corpus(edges: readonly (readonly string[])[]) {
   })) } }] }];
 }
 test("indexed checks match the runtime oracle on loops, missing nodes, shared DAGs and the 8/9 target boundary", () => {
-  const graphs: string[][][] = [[[]], [["0"]], [["1"], ["0"]], [["1", "2"], ["3"], ["3"], []], [["missing"]]];
+  const graphs: string[][][] = [[[]], [["0"]], [["1"], ["0"]], [["1", "2"], ["3"], ["3"], []], [["missing"]], [["7", "1"], ["2"], ["3"], ["4"], ["5"], ["6"], ["7"], ["8"], []]];
   for (let n = 2; n <= 10; n++) graphs.push(Array.from({ length: n }, (_, i) => i + 1 < n ? [String(i + 1)] : []));
   for (let seed = 0; seed < 16; seed++) graphs.push(Array.from({ length: 7 }, (_, i) => [String((i * 3 + seed) % 8), String((i + seed * 2) % 8)]));
   for (const graph of graphs) {

@@ -15,7 +15,7 @@ const splitLink = (link: string) => { const at = link.indexOf("#"); return at < 
 function relative(from: string, target: string): string {
   const a = from.split("/").slice(0, -1), b = target.split("/");
   while (a.length && b.length && a[0] === b[0]) { a.shift(); b.shift(); }
-  return [...a.map(() => ".."), ...b].map(part => encodeURIComponent(part)).join("/");
+  return [...a.map(() => ".."), ...b].map(part => encodeURIComponent(part).replace(/\(/g, "%28").replace(/\)/g, "%29")).join("/");
 }
 function resolveRelative(source: string, path: string): string | undefined {
   const parts = path.startsWith("/") ? [] : source.split("/").slice(0, -1);

@@ -35,6 +35,7 @@ function changes(before: unknown, after: unknown): readonly ConfigurationChange[
       const left = a as Record<string, unknown>, right = b as Record<string, unknown>;
       const leftKeys = Object.keys(left), rightKeys = Object.keys(right);
       if (!Array.isArray(a) && leftKeys.length === rightKeys.length && leftKeys.every(key => Object.prototype.hasOwnProperty.call(right, key)) && JSON.stringify(leftKeys) !== JSON.stringify(rightKeys)) result.push(Object.freeze({ location: Object.freeze([...at, "$key-order"]), before: describe(leftKeys), after: describe(rightKeys) }));
+      // coercion-exempt: Class B - structural array-index token from Object.keys, never record data.
       for (const key of new Set([...Object.keys(left), ...Object.keys(right)])) visit(Object.prototype.hasOwnProperty.call(left, key) ? left[key] : undefined, Object.prototype.hasOwnProperty.call(right, key) ? right[key] : undefined, [...at, Array.isArray(a) ? Number(key) : key], depth + 1);
     } else result.push(Object.freeze({ location: Object.freeze([...at]), before: describe(a), after: describe(b) }));
   };
@@ -73,7 +74,7 @@ export class ProjectConfigurationService {
     if (!original) throw projectFileError("configuration project no longer exists");
     if (owned) {
       const descriptor = this.descriptors(value).find(item => item.projectId === original.id && item.path === path);
-      if (!descriptor || !("owner" in document) || document.owner !== descriptor.owner) throw projectFileError("configuration owner mismatch");
+      if (!descriptor || descriptor.pendingWrite || !("owner" in document) || document.owner !== descriptor.owner) throw projectFileError("configuration owner mismatch or pending sync");
     } else if (mode === "draft" && !path.endsWith(`/Projects/${await textDigest(original.id)}/Project.md`)) throw projectFileError("configuration project path mismatch");
     const revision = await textDigest(JSON.stringify(original));
     if (checkProjectCoreJson(JSON.stringify(document.project)).issues.length) throw projectFileError("configuration schema unsupported");
@@ -83,8 +84,14 @@ export class ProjectConfigurationService {
     }
     const project = { ...canonicalPackageProject(document.project), isDefault: original.isDefault,
       ...(original.uniqueIdCounter !== undefined || document.project.uniqueIdCounter !== undefined ? { uniqueIdCounter: Math.max(original.uniqueIdCounter ?? 0, document.project.uniqueIdCounter ?? 0) } : {}) };
-    const candidate = replaceProject(value, project), dependencies = packageDependencies(candidate, project.id);
-    const graph = checkPackageGraph(dependencies.projects.map(item => item.project));
+    const candidate = replaceProject(value, project), affected = new Map<string, ProjectDefinition>();
+    // Include incoming readers as well as outgoing dependencies: removing a
+    // published block/source must not break an otherwise unrelated project.
+    for (const item of allProjects(candidate)) {
+      const dependencies = packageDependencies(candidate, item.id);
+      if (dependencies.projects.some(dependency => dependency.project.id === project.id)) for (const dependency of dependencies.projects) affected.set(dependency.project.id, dependency.project);
+    }
+    const graph = checkPackageGraph([...affected.values()]);
     if (!graph.referencesChecked || graph.issues.length || graph.coreChecks.some(item => item.check.issues.length)) throw projectFileError("configuration schema or references unsupported");
     const preview: ConfigurationApplyPreview = Object.freeze({ path, mode, projectId: project.id, name: project.name, sourceHash,
       settingsRevision: await settingsRevision(value), changes: changes(original, project) });
@@ -129,27 +136,48 @@ export class ProjectConfigurationService {
 
   /** A changed copy is a draft. Never overwrite it, even when the active project has also changed. */
   async syncOwned(): Promise<void> {
-    const current = await this.primary.read(); this.check();
+    let current = await this.primary.read(); this.check();
     const updates = new Map<string, InstalledProjectConfiguration>(), storage = projectVaultStorage(this.host.app.vault, this.active);
+    const writes: { path: string; before: string; next: string; descriptor: InstalledProjectConfiguration }[] = [];
+    // Read and validate the whole batch before changing its first file.
     for (const descriptor of this.descriptors(current)) {
       const project = allProjects(current).find(item => item.id === descriptor.projectId); if (!project) continue;
-      const text = await this.read(descriptor.path);
-      if (await textDigest(text) !== descriptor.sha256) throw projectFileError("owned configuration has external edits");
+      const text = await this.read(descriptor.path), actualHash = await textDigest(text);
       const document = parseProjectConfiguration(text);
       if (document.owner !== descriptor.owner || document.project.id !== descriptor.projectId) throw projectFileError("configuration owner changed");
+      const pending = descriptor.pendingWrite, owned = { ...descriptor }; delete owned.pendingWrite;
+      if (pending) {
+        if (Object.keys(pending).length !== 2 || !/^[a-f0-9]{64}$/.test(pending.sha256) || !/^[a-f0-9]{64}$/.test(pending.baseRevision)) throw projectFileError("invalid pending configuration write");
+        if (actualHash === pending.sha256) {
+          if (document.baseRevision !== pending.baseRevision || await textDigest(JSON.stringify(document.project)) !== pending.baseRevision) throw projectFileError("pending configuration payload changed");
+          Object.assign(owned, pending);
+        } else if (actualHash !== descriptor.sha256) throw projectFileError("owned configuration has external edits");
+        updates.set(descriptor.path, owned);
+      } else if (actualHash !== descriptor.sha256) throw projectFileError("owned configuration has external edits");
       const revision = await textDigest(JSON.stringify(project));
-      if (revision === descriptor.baseRevision && JSON.stringify(document.project) === JSON.stringify(project)) continue;
+      if (revision === owned.baseRevision && JSON.stringify(document.project) === JSON.stringify(project)) continue;
       const next = await createProjectConfiguration(project, descriptor.owner);
-      if (canonical(await this.primary.read()) !== canonical(current)) throw projectFileError("configuration changed during sync");
-      await checkedProjectWrite(storage, descriptor.path, text, next); this.check();
-      updates.set(descriptor.path, { ...descriptor, baseRevision: revision, sha256: await textDigest(next) });
+      writes.push({ path: descriptor.path, before: text, next, descriptor: { ...owned, baseRevision: revision, sha256: await textDigest(next) } });
     }
-    if (!updates.size) return;
-    const latest = await this.primary.read(); this.check();
-    if (canonical(latest) !== canonical(current)) throw projectFileError("configuration sync publication stale");
-    const preferences = latest.preferences.projectFiles!;
-    const candidate = { ...copy(latest), preferences: { ...copy(latest.preferences), projectFiles: { ...preferences,
-      installations: preferences.installations?.map(item => ({ ...item, configurations: item.configurations.map(config => updates.get(config.path) ?? config) })) ?? [] } } };
-    if (await this.primary.commit(latest, candidate, this.active) !== "confirmed") throw projectFileError("configuration sync publication unconfirmed");
+    const publish = async (descriptors: ReadonlyMap<string, InstalledProjectConfiguration>) => {
+      const latest = await this.primary.read(); this.check();
+      if (canonical(latest) !== canonical(current)) throw projectFileError("configuration sync publication stale");
+      const preferences = latest.preferences.projectFiles!;
+      const candidate = { ...copy(latest), preferences: { ...copy(latest.preferences), projectFiles: { ...preferences,
+        installations: preferences.installations?.map(item => ({ ...item, configurations: item.configurations.map(config => descriptors.get(config.path) ?? config) })) ?? [] } } };
+      if (await this.primary.commit(latest, candidate, this.active) !== "confirmed") throw projectFileError("configuration sync publication unconfirmed");
+      current = await this.primary.read(); this.check();
+      if (canonical(current) !== canonical(candidate)) throw projectFileError("configuration changed during sync");
+    };
+    if (updates.size) await publish(updates);
+    for (const write of writes) {
+      const previous = this.descriptors(current).find(item => item.path === write.path)!;
+      // Persist only hashes/revision, before writing bytes. A restart can then
+      // distinguish the exact owned output from an external draft, even if the
+      // active project changes before the interrupted acknowledgment is retried.
+      await publish(new Map([[write.path, { ...previous, pendingWrite: { sha256: write.descriptor.sha256, baseRevision: write.descriptor.baseRevision } }]]));
+      await checkedProjectWrite(storage, write.path, write.before, write.next); this.check();
+      await publish(new Map([[write.path, write.descriptor]]));
+    }
   }
 }
