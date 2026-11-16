@@ -119,3 +119,21 @@ test("external preferences update the toggle without clobbering an active IME dr
   expect(get(settings).preferences.projectFiles).toEqual({ root: "Рабочие копии", autoSync: true, previousRoots: ["External"] });
   expect(settings.updatePreferences).toHaveBeenCalledTimes(1);
 });
+
+test.each(["pending", "invalid", "composition"])("a rejected %s draft restores the latest external root before autoSync", async scenario => {
+  modal.close(); settings.set({ ...DEFAULT_SETTINGS, preferences: { ...DEFAULT_SETTINGS.preferences, projectFiles: { root: "Copies", autoSync: false } } }); modal.open();
+  const field = input(); field.focus();
+  if (scenario === "composition") field.dispatchEvent(new CompositionEvent("compositionstart"));
+  field.value = scenario === "invalid" ? "Bad/../Folder" : "Elsewhere";
+  field.dispatchEvent(new Event("input", { bubbles: true })); await settle();
+  const hash = "a".repeat(64), pendingImport = { format: "obs-projects-plus/pending-import" as const, schemaVersion: 1 as const, id: "attempt", archiveHash: hash, journal: `External/Incoming/${hash}/Installations/attempt.json`, paths: ["Imported/Note.md"] };
+  const current = { root: "External", autoSync: false, ...(scenario === "invalid" ? {} : { pendingImport }) };
+  settings.set({ ...DEFAULT_SETTINGS, preferences: { ...DEFAULT_SETTINGS.preferences, projectFiles: current } }); await settle();
+  expect(field.value).not.toBe("External");
+  field.dispatchEvent(new FocusEvent("blur"));
+  if (scenario === "composition") { await settle(); expect(field.value).toBe("Elsewhere"); field.dispatchEvent(new CompositionEvent("compositionend")); }
+  await settle(); expect(field.value).toBe("External"); expect(get(settings).preferences.projectFiles?.root).toBe("External");
+  const toggle = modal.contentEl.querySelector("input[type=checkbox]") as HTMLInputElement;
+  toggle.checked = true; toggle.dispatchEvent(new Event("change", { bubbles: true })); await settle();
+  expect(toggle.checked).toBe(true); expect(get(settings).preferences.projectFiles).toEqual({ ...current, autoSync: true });
+});

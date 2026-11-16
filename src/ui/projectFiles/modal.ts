@@ -40,6 +40,16 @@ export class ProjectFilesModal extends Modal {
     };
     const folder = new Setting(this.contentEl).setName(t("folder")).setDesc(t("folder-description"));
     this.field = new TextField({ target: folder.controlEl, props: { value: root, ariaLabel: t("folder"), validate: valid } }) as TextField & { syncForSubmit(): boolean; reset(value: string): void };
+    const restoreSavedRoot = () => {
+      root = get(settings).preferences.projectFiles?.root ?? "Projects Plus";
+      this.field?.reset(root);
+    };
+    this.field.$on("reject", (event: CustomEvent<{ reason: string }>) => {
+      if (event.detail.reason === "blur") restoreSavedRoot();
+    });
+    this.field.$on("cancel", () => {
+      restoreSavedRoot(); folderError.textContent = ""; folderError.hidden = true;
+    });
     this.field.$on("commit", (event: CustomEvent<{ value: string }>) => {
       const preferences = get(settings).preferences;
       try {
@@ -47,8 +57,7 @@ export class ProjectFilesModal extends Modal {
         settings.updatePreferences({ ...preferences, projectFiles: next });
         root = next.root; this.field?.$set({ value: root }); folderError.textContent = ""; folderError.hidden = true;
       } catch {
-        root = get(settings).preferences.projectFiles?.root ?? "Projects Plus";
-        this.field?.reset(root); explain(event.detail.value);
+        restoreSavedRoot(); explain(event.detail.value);
       }
     });
     const toggle = new Setting(this.contentEl).setName(t("automatic")).setDesc(t("automatic-description"));
