@@ -21,6 +21,7 @@ import { i18n, syncLocale } from "src/lib/stores/i18n";
 import { app, plugin } from "src/lib/stores/obsidian";
 import { watchViewport } from "src/lib/stores/ui";
 import { settings } from "src/lib/stores/settings";
+import { refreshPendingImportIsolation } from "src/lib/projectFiles/pendingImportIsolation";
 import { CreateNoteModal } from "src/ui/modals/createNoteModal";
 import { CreateProjectModal } from "src/ui/modals/createProjectModal";
 import { createDemoWithNotices } from "src/ui/app/onboarding/demoRun";
@@ -73,6 +74,7 @@ import {
   type Preservation,
 } from "src/lib/settings/settingsEpisode";
 import { canonical, classifyDisk } from "src/lib/settings/settingsVerify";
+import { ProjectFilesController } from "src/ui/projectFiles/controller";
 import type {
   EpisodeEntry,
   WriteOutcome,
@@ -147,6 +149,7 @@ export default class ProjectsPlusPlugin extends Plugin {
   private fileSystemWatcher?: ObsidianFileSystemWatcher;
   /** #185: the only thing in the plugin that writes `data.json`. */
   private settingsWriter?: SettingsWriter<LatestProjectsPluginSettings>;
+  projectFiles?: ProjectFilesController;
   /**
    * #185: the exact object `loadSettings` put into the store. The writer is
    * primed with THIS reference, so the echo firing is recognised by identity
@@ -199,6 +202,18 @@ export default class ProjectsPlusPlugin extends Plugin {
 
     // Helper function for translation.
     const { t } = get(i18n);
+
+    // Existing views must not acquire incomplete imports during restoration.
+    let pendingImportReported = false;
+    let initialImportState = true;
+    this.register(settings.subscribe(value => {
+      const state = refreshPendingImportIsolation(value.preferences.projectFiles, this.app.vault.configDir);
+      const invalid = state === "invalid";
+      if (invalid && !pendingImportReported) new Notice(t("project-files.pending-invalid"), 15000);
+      else if (initialImportState && state === "pending") new Notice(t("project-files.pending-recovery"), 15000);
+      pendingImportReported = invalid;
+      initialImportState = false;
+    }));
 
     this.addSettingTab(new ProjectsSettingTab(this.app, this));
 
@@ -471,7 +486,7 @@ export default class ProjectsPlusPlugin extends Plugin {
     // One writer owns data.json. Its injected save checks the base inside the
     // adapter's queue (#213); the status remains out of band under coalescing.
     const writer = createSettingsWriter<LatestProjectsPluginSettings>({
-      save: (value) => this.saveSettingsWithCheck(value),
+      save: (value, guard) => this.saveSettingsWithCheck(value, guard),
       // #199: a host write resolving is a claim, not a fact. A live run with
       // `data.json` made read-only had it report success while the file did
       // not change — and #185's whole visibility hangs off a rejection that
@@ -486,6 +501,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       onStatus: (status) => saveStatus.set(status),
     });
     this.settingsWriter = writer;
+    this.projectFiles = new ProjectFilesController(this, () => writer.flush(), () => this.confirmedOnDisk);
     setSaveRetryHandler(() => writer.retry());
 
     // The chip lives in `CompactNavBar`, which exists only inside the Projects
@@ -751,14 +767,15 @@ export default class ProjectsPlusPlugin extends Plugin {
 
   /** The writer's only mutation primitive; refusal keeps its queued value. */
   private async saveSettingsWithCheck(
-    value: LatestProjectsPluginSettings
+    value: LatestProjectsPluginSettings,
+    guard?: () => boolean
   ): Promise<void | typeof SETTINGS_WRITE_REFUSED> {
     const path = settingsFilePath(this.manifest.dir);
     if (path === null) throw new Error("cannot determine the plugin settings path");
     const result = await saveCheckedSettings(this.app.vault.adapter, path, {
       canonical: this.confirmedOnDisk,
       raw: this.confirmedRawOnDisk,
-    }, value);
+    }, value, guard);
     if (result === SETTINGS_WRITE_REFUSED) this.scheduleSettingsReconciliation();
     return result;
   }
@@ -1174,6 +1191,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       if (verdict === "confirmed") {
         this.confirmedOnDisk = canonical(value);
         this.confirmedRawOnDisk = null;
+        this.projectFiles?.onConfirmed(value);
         return "confirmed";
       }
       if (verdict === "superseded") {

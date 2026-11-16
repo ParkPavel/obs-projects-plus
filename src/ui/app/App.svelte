@@ -10,6 +10,7 @@
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
   import { settings } from "src/lib/stores/settings";
+  import { pendingImportRevision } from "src/lib/projectFiles/pendingImportIsolation";
   import { isMobileDevice } from "src/lib/stores/ui";
   import { agendaDrawer, toggle as toggleAgendaDrawer } from "src/lib/stores/agendaDrawer";
   import { fileSystem } from "src/lib/stores/fileSystem";
@@ -246,6 +247,11 @@
   // Invalidate when projects are added, removed or renamed, or their source or
   // field configuration changes (rollups are folded into sibling frames).
   let lastProjectsKey = "";
+  let lastPendingImportRevision = get(pendingImportRevision);
+  $: if ($pendingImportRevision !== lastPendingImportRevision) {
+    lastPendingImportRevision = $pendingImportRevision;
+    invalidateExternalFrameCache();
+  }
   $: {
     const key = projectsCacheKey($settings.projects ?? []);
     if (key !== lastProjectsKey) {

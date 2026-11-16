@@ -105,6 +105,9 @@ export class ProjectsSettingTab extends PluginSettingTab {
           })
       );
 
+    new Setting(containerEl).setName(t("project-files.title")).setDesc(t("project-files.description"))
+      .addButton(button => button.setButtonText(t("project-files.open")).onClick(() => this.plugin.projectFiles?.open()));
+
     new Setting(containerEl)
       .setName(get(i18n).t("settings.front-matter.heading"))
       .setHeading();

@@ -9,6 +9,7 @@ import { DataviewDataSource } from "./dataview/datasource";
 import { FolderDataSource } from "./folder/datasource";
 import { NativeQueryDataSource } from "./native-query/datasource";
 import { TagDataSource } from "./tag/datasource";
+import { pendingImportState } from "src/lib/projectFiles/pendingImportIsolation";
 
 export { DataSource } from "./dataSource";
 
@@ -45,7 +46,7 @@ export type DataSourceResolution =
       readonly reason: DataSourceUnavailableReason;
     };
 
-export type DataSourceUnavailableReason = "dataview-unavailable";
+export type DataSourceUnavailableReason = "dataview-unavailable" | "pending-import";
 
 /**
  * Single construction site for {@link DataSource} instances. Used by
@@ -59,6 +60,14 @@ export function createDataSource(
   project: ProjectDefinition,
   deps: DataSourceFactoryDeps
 ): DataSourceResolution {
+  const isolation = pendingImportState();
+  // DQL aggregates can contain pending notes without exposing their paths.
+  // Pause the whole composite project rather than silently dropping its DQL
+  // part or claiming an untraceable aggregate is safe.
+  if (isolation.scope === "all" || isolation.scope === "paths" &&
+      [project.dataSource, ...(project.additionalSources ?? [])].some(source => source.kind === "dataview")) {
+    return { kind: "unavailable", reason: "pending-import" };
+  }
   switch (project.dataSource.kind) {
     case "dataview": {
       if (!deps.dataviewApi) {

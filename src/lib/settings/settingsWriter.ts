@@ -91,6 +91,8 @@ export const SETTINGS_RECONCILE_BACKSTOP_MS = 10000;
  */
 export type WriteVerdict = "confirmed" | "not-written" | "diverged";
 
+export type CandidateCommitResult = "confirmed" | "stale" | "refused" | "failed" | "closed";
+
 /**
  * #212 step D — how an episode ends, in the writer's own vocabulary.
  *
@@ -161,11 +163,12 @@ type Permit =
   | { kind: "open" }
   | { kind: "fenced"; code: string; until: number }
   | { kind: "held"; code: string }
+  | { kind: "committing" }
   | { kind: "closed" };
 
 export interface SettingsWriterOptions<T> {
   /** SETTINGS_WRITE_REFUSED means the other version was kept; reconcile without retrying it away. */
-  save: (value: T) => Promise<unknown>;
+  save: (value: T, guard?: () => boolean) => Promise<unknown>;
   /**
    * #199 — confirm that `value` is what the file now holds. Resolving `false`
    * is a failed write and takes the same path as a thrown one.
@@ -202,6 +205,16 @@ export interface SettingsWriterOptions<T> {
 }
 
 export interface SettingsWriter<T> {
+  /**
+   * Persist a private candidate before synchronously publishing it. The host
+   * save MUST check the supplied guard inside its queued mutation callback.
+   * Ordinary pending edits must be flushed before this operation; stale bases
+   * are refused. Failed candidates are never queued for automatic retry.
+   * A non-confirmed result does not prove the disk was untouched: an edit or
+   * unload can arrive after the host write. Callers must reconcile their
+   * durable journal with actual primary state before retrying or rolling back.
+   */
+  commitCandidate(expected: T, candidate: T, check: () => boolean, publish: (value: T) => void): Promise<CandidateCommitResult>;
   /**
    * Record `value` as already being on disk without writing it.
    *
@@ -319,6 +332,8 @@ export function createSettingsWriter<T>(
    */
   let queue: { value: T } | null = null;
   let inFlight: Promise<void> | null = null;
+  // Registered at API entry, including commits waiting for an earlier episode.
+  const pendingCommits = new Set<Promise<void>>();
   let debounceTimer: number | null = null;
   let ceilingTimer: number | null = null;
   let retryTimer: number | null = null;
@@ -440,6 +455,7 @@ export function createSettingsWriter<T>(
         return true;
       case "fenced":
       case "held":
+      case "committing":
         return false;
       case "closed":
         return force;
@@ -447,14 +463,15 @@ export function createSettingsWriter<T>(
   }
 
   /**
-   * #212 step D — bumped by every `push`, and by nothing else.
+   * #212 step D — bumped by every `push`. Candidate commits also invalidate
+   * their publication on prime/pushNow; ordinary reconciliation is unchanged.
    *
    * It is the whole of I5: adopting the disk is legal only when the user queued
    * nothing while the decision was being made. Today that holds only because no
    * `await` separates the check from the adoption in `main.ts`; this makes it
    * hold by construction.
    *
-   * `pushNow` does not move it, and that distinction is load-bearing: our own
+   * Outside a candidate commit, `pushNow` does not move it: our own
    * carry and migration writes are not the user typing, and counting them made
    * a valid adoption look contested.
    */
@@ -607,8 +624,10 @@ export function createSettingsWriter<T>(
    * change — so the claim is checked, and an unconfirmed write is a failed one.
    */
   async function attemptWrite(
-    value: T
+    value: T,
+    guard?: () => boolean
   ): Promise<"confirmed" | "diverged" | "rejected"> {
+    if (guard && !guard()) return "rejected";
     if (beforeWrite !== undefined && !(await beforeWrite())) {
       // Somebody else's version is on disk and nothing has reconciled it yet.
       // Writing now would erase it with no copy anywhere — which is the defect
@@ -623,7 +642,8 @@ export function createSettingsWriter<T>(
       // would exist only in memory until the next reload took it.
       return "rejected";
     }
-    if ((await save(value)) === SETTINGS_WRITE_REFUSED) return "rejected";
+    if (guard && !guard()) return "rejected";
+    if ((await (guard ? save(value, guard) : save(value))) === SETTINGS_WRITE_REFUSED) return "rejected";
     if (verify === undefined) return "confirmed";
     const verdict = await verify(value);
     if (verdict === "confirmed") return "confirmed";
@@ -745,8 +765,69 @@ export function createSettingsWriter<T>(
     });
   }
 
-  return {
+  const writer: SettingsWriter<T> = {
+    async commitCandidate(expected, candidate, check, publish): Promise<CandidateCommitResult> {
+      if (abandoned()) return "closed";
+      // No unverified candidate publication on hosts lacking read-back.
+      if (!verify) return "refused";
+      let finishCall!: () => void;
+      const call = new Promise<void>(resolve => { finishCall = resolve; });
+      pendingCommits.add(call);
+      try {
+      const result: { value: CandidateCommitResult } = { value: "failed" };
+      const completion: { finish?: () => void } = {};
+      const outcome = await writer.withExclusive(SETTINGS_DIVERGED, async entry => {
+        if (entry.pending || last === null || last.value !== expected || !check()) { result.value = "stale"; return { kind: "release" }; }
+        const commitEpoch = epoch;
+        // A commit has no reconciliation timeout. A long host write must not
+        // let ordinary debounced edits overtake its queued mutation.
+        clearPermitTimer(); permit = { kind: "committing" };
+        setStatus({ kind: "saving" });
+        const guard = () => !abandoned() && permit.kind === "committing" && epoch === commitEpoch && last?.value === expected && check();
+        // flush waits for the whole episode, including the memory decision,
+        // rather than only the write/read-back promise.
+        inFlight = new Promise<void>(resolve => { completion.finish = resolve; });
+        let verdict: "confirmed" | "diverged" | "rejected";
+        try { verdict = await attemptWrite(candidate, guard); }
+        catch (error) {
+          result.value = abandoned() ? "closed" : "failed";
+          if (!abandoned()) logError(SETTINGS_WRITE_FAILED, "candidate commit", error);
+          return { kind: "hold", code: SETTINGS_WRITE_FAILED };
+        }
+        if (abandoned()) { result.value = "closed"; return { kind: "release" }; }
+        if (verdict === "rejected" && (epoch !== commitEpoch || last?.value !== expected)) { result.value = "stale"; return { kind: "release" }; }
+        if (verdict !== "confirmed") {
+          result.value = "refused";
+          return { kind: "hold", code: SETTINGS_DIVERGED };
+        }
+        // Verification may have updated the host's confirmed disk base. Its
+        // pre-write check is no longer meaningful here; the local epoch is.
+        if (epoch !== commitEpoch || last?.value !== expected) { result.value = "stale"; return { kind: "release" }; }
+        last = { value: candidate };
+        queue = null;
+        publish(candidate);
+        // pushNow deliberately does not move the user epoch. Its queued value
+        // and a prime performed by a synchronous subscriber must survive too.
+        if (epoch !== commitEpoch || last?.value !== candidate || queue !== null) { result.value = "stale"; return { kind: "release" }; }
+        result.value = "confirmed";
+        return { kind: "adopted", settings: candidate };
+      });
+      if (completion.finish) {
+        inFlight = null;
+        completion.finish();
+        if (flushing && queue !== null) startWrite(true);
+      }
+      if (abandoned()) return "closed";
+      return result.value === "confirmed" && outcome.kind !== "adopted" ? "stale" : result.value;
+      } finally {
+        pendingCommits.delete(call);
+        finishCall();
+      }
+    },
     prime(value: T): void {
+      // A new confirmed base during candidate publication invalidates the
+      // candidate, including a microtask before the episode's final adoption.
+      if (permit.kind === "committing") epoch += 1;
       last = { value };
       queue = null;
       toOpen();
@@ -770,8 +851,12 @@ export function createSettingsWriter<T>(
       schedule();
     },
     pushNow(value: T): void {
+      // Forced writes made during a candidate commit must survive its final
+      // adoption. Reconciliation's ordinary counter carry keeps its old epoch
+      // semantics because its permit is fenced, not committing.
+      if (permit.kind === "committing") epoch += 1;
       if (status.kind === "failed") attempt = 0;
-      // Deliberately NOT an epoch bump. The epoch answers one question — did
+      // Outside a candidate commit, deliberately NOT an epoch bump. It asks — did
       // the USER change something while a decision was being made — and this is
       // our own write: the migration at load, or the counter carried forward
       // after an adoption. Counting it found the review a real defect: the
@@ -901,8 +986,8 @@ export function createSettingsWriter<T>(
         } else {
           startWrite(true);
         }
-        while (inFlight !== null) {
-          await inFlight;
+        while (inFlight !== null || pendingCommits.size > 0) {
+          await Promise.all([...pendingCommits, ...(inFlight === null ? [] : [inFlight])]);
         }
       } finally {
         flushing = false;
@@ -923,4 +1008,5 @@ export function createSettingsWriter<T>(
       return hasPendingNow();
     },
   };
+  return writer;
 }

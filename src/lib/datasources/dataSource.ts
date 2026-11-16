@@ -4,6 +4,8 @@ import type {
 } from "src/settings/settings";
 import type { DataField, DataFrame } from "../dataframe/dataframe";
 import type { IFile } from "../filesystem/filesystem";
+import { configuredCopyRoots, isProjectCopyPath } from "src/lib/projectFiles/paths";
+import { isPendingImportPath } from "src/lib/projectFiles/pendingImportIsolation";
 
 /**
  * DataSource reads data frames from a project.
@@ -13,6 +15,10 @@ export abstract class DataSource {
     readonly project: ProjectDefinition,
     readonly preferences: ProjectsPluginPreferences
   ) {}
+
+  protected isProjectCopy(path: string): boolean {
+    return isPendingImportPath(path) || isProjectCopyPath(path, configuredCopyRoots(this.preferences.projectFiles));
+  }
 
   /**
    * Returns a DataFrame with all records in the project.

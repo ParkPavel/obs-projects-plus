@@ -21,6 +21,8 @@
     "docs/architecture.md",
     "docs/development-3.7.1-RU.md",
     "docs/development-3.7.1.md",
+    "docs/development-3.7.3-RU.md",
+    "docs/development-3.7.3.md",
     "docs/next-versions-RU.md",
     "docs/next-versions.md",
     "docs/plan-3.7.3-RU.md",
@@ -112,6 +114,14 @@
     {
       "name": "read/development-3.7.1.html",
       "sha256": "257cb239086d6846810e6a24c609c3cbf10e35cb05953a66d7acbc1a6f4c2713"
+    },
+    {
+      "name": "read/development-3.7.3-ru.html",
+      "sha256": "a54de2388f1ad4e115dee9b5b316f7437a41e1eb69b8007d2784c30dfe3dc636"
+    },
+    {
+      "name": "read/development-3.7.3.html",
+      "sha256": "c0ac9323a200ab091d06f4f52fad7a82c63c6a08c5a40e8430ab2a78b895fb9f"
     },
     {
       "name": "read/next-versions-ru.html",
@@ -251,7 +261,7 @@
     },
     {
       "name": "search-index.json",
-      "sha256": "2ebbc14eb85b23742a8f3345e48db0eaea354891d765781100df77dc63946ab2"
+      "sha256": "d9407ff510b5bd444d38a246ad3219d07e2ffedf2d8450050647282a2023f287"
     },
     {
       "name": ".nojekyll",

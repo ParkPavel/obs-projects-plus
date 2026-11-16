@@ -45,7 +45,7 @@ export abstract class FrontMatterDataSource extends DataSource {
   async queryAll(): Promise<DataFrame> {
     const files = this.fileSystem
       .getAllFiles()
-      .filter(({ path }) => this.includes(path));
+      .filter(({ path }) => !this.isProjectCopy(path) && this.includes(path));
 
     if (files.length > this.preferences.projectSizeLimit) {
       throw new TooManyNotesError(
@@ -58,6 +58,7 @@ export abstract class FrontMatterDataSource extends DataSource {
   }
 
   async queryFiles(files: IFile[], predefinedFields?: DataField[]) {
+    files = files.filter(file => !this.isProjectCopy(file.path));
     const standardizedRecords = await standardizeRecords(files);
 
     const res = A.separate(standardizedRecords);

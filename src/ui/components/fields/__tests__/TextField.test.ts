@@ -16,9 +16,11 @@ function mount(props: Record<string, unknown> = {}) {
   document.body.appendChild(target);
   const component = new TextField({ target, props: { value: "a", placeholder: "p", disabled: false, ...props } });
   const commits: Commit[] = [];
+  const rejects: Commit[] = [];
   const inputs: string[] = [];
   let cancels = 0;
   component.$on("commit", (e: CustomEvent<Commit>) => commits.push(e.detail));
+  component.$on("reject", (e: CustomEvent<Commit>) => rejects.push(e.detail));
   component.$on("input", (e: CustomEvent<string>) => inputs.push(e.detail));
   component.$on("cancel", () => (cancels += 1));
   const input = target.querySelector("input") as HTMLInputElement;
@@ -27,6 +29,7 @@ function mount(props: Record<string, unknown> = {}) {
     component,
     input,
     commits,
+    rejects,
     inputs,
     cancels: () => cancels,
     destroy() {
@@ -264,7 +267,18 @@ describe("TextField", () => {
     expect(m.commits).toEqual([]);
     expect(m.input.value).toBe("a");
     expect(m.input).not.toHaveAttribute("aria-invalid");
+    expect(m.rejects).toEqual([{ value: "12x", reason: "enter" }, { value: "12x", reason: "blur" }]);
     m.destroy();
+  });
+
+  test("rejected composition reports only the final native text after the deferred blur", async () => {
+    const m = mount({ validate: () => false }); m.input.focus();
+    m.input.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+    type(m.input, "に"); m.input.blur(); await tick(); expect(m.rejects).toEqual([]);
+    m.input.value = "日本";
+    m.input.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: "日本" })); await tick();
+    expect(m.rejects).toEqual([{ value: "日本", reason: "blur" }]);
+    expect(m.commits).toEqual([]); expect(m.input.value).toBe("a"); m.destroy();
   });
 
   test("validate: an accepted draft commits", async () => {

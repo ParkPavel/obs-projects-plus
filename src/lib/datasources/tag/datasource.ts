@@ -24,7 +24,7 @@ export class TagDataSource extends FrontMatterDataSource {
       return false;
     }
 
-    if (this.project.excludedNotes?.includes(path)) {
+    if (this.project.excludedNotes?.includes(path) || this.isProjectCopy(path)) {
       return false;
     }
 
