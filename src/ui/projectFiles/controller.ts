@@ -10,6 +10,7 @@ import { projectVaultStorage } from "src/lib/projectFiles/vaultStorage";
 import { projectFileError } from "src/lib/projectFiles/document";
 import { projectFilesRoot } from "src/lib/projectFiles/paths";
 import { ProjectFilesModal } from "./modal";
+import type { InstallationPrimary } from "src/lib/projectFiles/packageInstallation";
 
 export interface ProjectFilesStatus {
   kind: "idle" | "pending" | "waiting" | "copying" | "saved" | "failed";
@@ -30,7 +31,7 @@ export class ProjectFilesController {
   private observedCopyPreferences: LatestProjectsPluginSettings["preferences"]["projectFiles"];
   private initializeRoot: string | undefined;
 
-  constructor(private readonly host: Plugin, private readonly flush: () => Promise<void>, private readonly confirmed: () => string | null) {
+  constructor(private readonly host: Plugin, private readonly flush: () => Promise<void>, private readonly confirmed: () => string | null, private readonly primary?: InstallationPrimary) {
     host.addCommand({ id: "project-files", name: get(i18n).t("project-files.title"), callback: () => this.open() });
     host.addCommand({ id: "project-package", name: get(i18n).t("project-package.title"), callback: () => { void this.openPackages(); } });
     host.addCommand({ id: "project-package-inspect", name: get(i18n).t("package-inspect.title"), callback: () => { void this.openInspector(); } });
@@ -53,7 +54,7 @@ export class ProjectFilesController {
     if (!this.alive) return;
     this.modal?.close();
     this.packageModal?.close();
-    this.packageModal = new ProjectPackageModal(this.host.app, new ProjectPackageService(this.host, this.flush, this.confirmed, () => this.alive));
+    this.packageModal = new ProjectPackageModal(this.host.app, new ProjectPackageService(this.host, this.flush, this.confirmed, () => this.alive, this.primary));
     this.packageModal.open();
   }
 
@@ -61,7 +62,16 @@ export class ProjectFilesController {
     const [{ ProjectPackageInspectModal }, { ProjectPackageService }] = await Promise.all([import("./packageInspectModal"), import("./packageService")]);
     if (!this.alive) return;
     this.modal?.close(); this.packageModal?.close();
-    this.packageModal = new ProjectPackageInspectModal(this.host.app, new ProjectPackageService(this.host, this.flush, this.confirmed, () => this.alive));
+    this.packageModal = new ProjectPackageInspectModal(this.host.app, new ProjectPackageService(this.host, this.flush, this.confirmed, () => this.alive, this.primary));
+    this.packageModal.open();
+  }
+
+  async openConfiguration(mode: import("./configurationService").ConfigurationApplyMode): Promise<void> {
+    if (!this.primary) return;
+    const [{ ProjectConfigurationService }, { ProjectConfigurationModal }] = await Promise.all([import("./configurationService"), import("./configurationModal")]);
+    if (!this.alive) return;
+    this.modal?.close(); this.packageModal?.close();
+    this.packageModal = new ProjectConfigurationModal(this.host.app, new ProjectConfigurationService(this.host, this.primary, () => this.alive), mode);
     this.packageModal.open();
   }
 
@@ -138,6 +148,10 @@ export class ProjectFilesController {
     if (!allowInitialize && await storage.read(root + "/sync-index.json") === null) throw projectFileError("copy folder binding missing");
     const receipt = await syncProjectCopies(storage, root,
       JSON.parse(JSON.stringify(value)) as LatestProjectsPluginSettings, this.host.app.vault.configDir);
+    if (this.primary) {
+      const { ProjectConfigurationService } = await import("./configurationService");
+      await new ProjectConfigurationService(this.host, this.primary, () => this.alive).syncOwned();
+    }
     if (canonical(raw) === this.confirmed()) this.pending = false;
     return receipt;
   }

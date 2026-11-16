@@ -26,7 +26,7 @@ export function captureConfigPathChoices(input: readonly ConfigPathChoice[]): re
     if (!jsonObject(value) || Object.keys(value).some(key => !allowed.includes(key))) throw projectFileError("invalid path choice");
     const { projectId, location: rawLocation, root, source, kind, target, origin } = value;
     if (typeof projectId !== "string" || !projectId || projectId.length > 512 ||
-        !Array.isArray(rawLocation) || !rawLocation.length || rawLocation.length > 16 || rawLocation.some((part: unknown) => typeof part === "string" ? !part || part.length > 100 : typeof part !== "number" || !Number.isSafeInteger(part) || part < 0) ||
+        !Array.isArray(rawLocation) || !rawLocation.length || rawLocation.length > 16 || rawLocation.some((part: unknown) => typeof part === "string" ? !part || part.length > 512 : typeof part !== "number" || !Number.isSafeInteger(part) || part < 0) ||
         typeof root !== "string" || !root || root.length > 240 || typeof source !== "string" || source.length > 240 ||
         typeof target !== "string" || !target || target.length > 240 || (kind !== "file" && kind !== "folder") || (origin !== "existing" && origin !== "planned")) throw projectFileError("invalid path choice");
     const key = configPathChoiceKey(projectId, rawLocation);

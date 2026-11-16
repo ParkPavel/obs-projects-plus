@@ -1,8 +1,30 @@
 ﻿{
     "translation": {
         "package-inspect": {
+            "inspection-recovery-description": "临时笔记准备已中断。请将临时文件保留为数据文件并确认 Dataview 索引清理，然后重新准备 ZIP。",
+            "reset-preparation": "清理中断的准备",
+            "preparation-reset": "临时准备已清理，文件已保留。请选择 ZIP 并重新准备。",
+            "keep-archive": "保留原始 ZIP",
+            "keep-archive-description": "默认启用。关闭后，仅在安装确认成功时将未修改的原始 ZIP 移至 Obsidian 配置的回收站。",
+            "installed-archive-kept": "安装已确认。原始 ZIP 无法移至回收站，已保留。",
+            "config-note-inspection-required": "请先准备软件包，使用 Obsidian 检查笔记链接。",
+            "config-unsupported-note-link": "无法安全映射此笔记中的链接。",
+            "binding-purpose-note-link": "笔记中的链接",
+            "install-title": "安装已审核的软件包",
+            "install-description": "创建新项目、笔记和可见的 JSON 配置。不替换现有文件，保留原始 ZIP，也不更改默认项目。",
+            "install": "安装软件包",
+            "installing": "正在安装并验证文件…",
+            "installed": "软件包已安装，设置写入已确认。",
+            "install-failed": "安装未完成。请重新打开窗口以继续或回滚。现有文件已保留。",
+            "recovery-title": "未完成的安装",
+            "recovery-description": "继续已保存的计划或回滚。回滚会将未修改的操作文件移动到 Incoming/Recovery，保留已修改和未确认的文件。原始 ZIP 将保留。",
+            "resume": "继续安装",
+            "rollback": "回滚并保留修改",
+            "recovering": "正在检查日志和文件…",
+            "recovery-failed": "恢复未完成。请保留日志和文件；不允许自动覆盖。",
+            "rolled-back": "已回滚：{{recovered}} 个文件已移至恢复目录，{{retained}} 个文件保留在原位。",
             "core-summary": "项目结构检查：{{projects}} 个项目，{{issues}} 条诊断",
-            "core-incomplete": "已检查项目、视图和组件的设置格式。跨项目引用和笔记链接仍需验证，暂不支持安装项目。",
+            "core-incomplete": "已检查设置格式。请先解决显示的诊断、路径绑定和数据源规则，再进行安装。",
             "core-invalid-type": "字段类型或范围错误",
             "core-missing-field": "缺少必填字段",
             "core-unknown-field": "已保留未知字段供检查",
@@ -111,11 +133,17 @@
             "preview": "预览内容",
             "summary": "项目：{{projects}} · 所选文件：{{files}} · 字节：{{bytes}}",
             "missing": "部分已知依赖缺失或无效，此包不完整：",
-            "scope": "仅包含列出的配置和明确选择的文件。不会自动添加模板、链接笔记或附件。自定义视图的依赖可能需要手动检查。导入路径和 ID 尚未重新映射。",
+            "scope": "仅包含列出的配置和明确选择的文件。不会自动添加模板、链接笔记或附件。路径和 ID 将在安装时单独检查和映射。",
             "save": "保存已验证的 ZIP",
             "saved": "ZIP 已保存并验证：{{path}}",
             "failed": "未保存包。请检查文件夹、文件大小和已确认的设置；刷新预览后重试。",
-            "limits": "开发阶段：最多 256 项，每文件 4 MiB，总计 16 MiB。不压缩的 ZIP。尚未实现导入、恢复或原生分享。"
+            "limits": "最多 256 个归档项，每文件 4 MiB，总计 16 MiB。不压缩的 ZIP。分享取决于设备支持的功能。",
+            "share": "分享",
+            "sharing": "正在分享软件包…",
+            "shared": "软件包已分享。",
+            "share-cancelled": "已取消分享。",
+            "share-unavailable": "此环境不支持系统分享。请使用文件或文件管理器中的已保存 ZIP。",
+            "share-failed": "无法分享该软件包。已保存的 ZIP 仍可在文件或文件管理器中查看。"
         },
         "project-files": {
             "title": "项目副本与备份",
@@ -2807,6 +2835,21 @@
             "unknown": "请先选择字段类型，再编辑此值",
             "prefix-label": "ID 前缀",
             "prefix-hint": "生成 ID 的前缀，例如 TASK-。每个新笔记和副本都会获得新的 ID。"
+        },
+        "project-configuration": {
+            "draft": "应用配置更改",
+            "restore": "还原配置快照",
+            "description": "应用前请检查更改。系统先保存原设置和编辑文件的完整副本。仅更改项目设置：默认项目选择和笔记保持不变，唯一 ID 计数器不会减少。",
+            "choose": "选择配置文件",
+            "checking": "正在检查配置…",
+            "review": "请在应用前检查以下更改。",
+            "failed": "操作未确认。请保留文件和备份，并在重试前刷新预览。",
+            "summary": "发现 {{count}} 处更改。",
+            "open-source": "打开源笔记",
+            "apply": "应用配置",
+            "applying": "正在应用并验证…",
+            "applied": "配置已应用。备份：{{path}}",
+            "applied-copy-pending": "项目设置已确认，但文件刷新需要手动重试。备份：{{path}}。草稿已保留。"
         }
     }
 }

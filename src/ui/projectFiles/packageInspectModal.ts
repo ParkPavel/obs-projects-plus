@@ -41,6 +41,8 @@ export class ProjectPackageInspectModal extends Modal {
     let destination = "";
     let choices: readonly ConfigPathChoice[] = [];
     let scopeChoices: readonly PackageScopeChoice[] = [];
+    let keepArchive = true;
+    let keepArchiveControl: import("obsidian").ToggleComponent | undefined;
     let target: { path: string; hash: string; root: string } | undefined;
     let stageButton: import("obsidian").ButtonComponent;
     let chooseButton: import("obsidian").ButtonComponent;
@@ -48,18 +50,41 @@ export class ProjectPackageInspectModal extends Modal {
     let destinationInput: import("obsidian").TextComponent;
     let bindingButton: import("obsidian").ButtonComponent | undefined;
     let scopeButton: import("obsidian").ButtonComponent | undefined;
+    let installButton: import("obsidian").ButtonComponent | undefined;
+    const recoveryButtons: import("obsidian").ButtonComponent[] = [];
+    const pending = get(settings).preferences.projectFiles?.pendingImport;
+    if (pending) {
+      const inspection = pending.phase === "note-inspection";
+      new Setting(this.contentEl).setName(t("recovery-title")).setDesc(t(inspection ? "inspection-recovery-description" : "recovery-description"));
+      for (const mode of inspection ? ["rollback"] as const : ["resume", "rollback"] as const) new Setting(this.contentEl).addButton(control => {
+        recoveryButtons.push(control);
+        control.setButtonText(t(inspection ? "reset-preparation" : mode)).onClick(async () => {
+          if (busy) return;
+          busy = true; refresh(); status.textContent = t("recovering");
+          try {
+            const result = await this.service.recover(mode, pending.id);
+            if (this.alive) status.textContent = "preparationReset" in result ? t("preparation-reset") : "retained" in result ? get(i18n).t("package-inspect.rolled-back", { recovered: result.recovered.length, retained: result.retained.length }) : t("installed");
+          } catch { if (this.alive) status.textContent = t("recovery-failed"); }
+          finally { busy = false; if (this.alive) refresh(); }
+        });
+      });
+    }
     const closeEditor = () => { this.editor?.close(); this.editor = undefined; this.scopeEditor?.close(); this.scopeEditor = undefined; };
     const refresh = () => {
       chooseButton.setDisabled(busy); stageButton.setDisabled(busy || !target);
       pathButton.setDisabled(busy || !target || !destination); destinationInput.setDisabled(busy);
       bindingButton?.setDisabled(busy);
       scopeButton?.setDisabled(busy);
+      installButton?.setDisabled(busy);
+      keepArchiveControl?.setDisabled(busy);
+      for (const button of recoveryButtons) button.setDisabled(busy || !get(settings).preferences.projectFiles?.pendingImport);
     };
     controls.addButton(button => { chooseButton = button; button.setButtonText(t("choose")).onClick(() => {
       if (busy) return;
       this.picker?.close();
       this.picker = new PackageArchivePicker(this.app, async file => {
         if (!this.alive || busy) return;
+        keepArchive = true;
         busy = true; target = undefined; choices = []; scopeChoices = []; closeEditor(); bindingButton = undefined; scopeButton = undefined; refresh(); details.empty(); pathDetails.empty(); status.textContent = t("checking");
         try {
           const result = await this.service.inspect(file.path);
@@ -109,14 +134,14 @@ export class ProjectPackageInspectModal extends Modal {
       input.inputEl.setAttribute("aria-label", t("destination"));
       input.setPlaceholder(t("destination-placeholder")).onChange(value => {
         if (!this.alive) return;
-        if (destination !== value) { destination = value; choices = []; scopeChoices = []; closeEditor(); bindingButton = undefined; scopeButton = undefined; pathDetails.empty(); }
+        if (destination !== value) { destination = value; choices = []; scopeChoices = []; closeEditor(); bindingButton = undefined; scopeButton = undefined; installButton = undefined; pathDetails.empty(); }
         if (!busy) refresh();
       });
     }).addButton(button => {
       pathButton = button;
       const run = async (selected: { path: string; hash: string }, folder: string, nextChoices: readonly ConfigPathChoice[], nextScopes: readonly PackageScopeChoice[]) => {
         if (!this.alive || busy || !target || selected.path !== target.path || selected.hash !== target.hash || folder !== destination) return;
-        busy = true; closeEditor(); bindingButton = undefined; scopeButton = undefined; refresh(); pathDetails.empty(); status.textContent = t("checking-destination");
+        busy = true; closeEditor(); bindingButton = undefined; scopeButton = undefined; installButton = undefined; refresh(); pathDetails.empty(); status.textContent = t("checking-destination");
         try {
           const result = await this.service.previewFiles(selected.path, selected.hash, folder, nextChoices, nextScopes);
           if (!this.alive) return;
@@ -175,6 +200,25 @@ export class ProjectPackageInspectModal extends Modal {
               control.setButtonText(t("scope-title")).onClick(() => {
                 if (busy || !this.alive) return;
                 closeEditor(); this.scopeEditor = new ProjectPackageScopesModal(this.app, result, next => { void run(selected, folder, choices, next); }); this.scopeEditor.open();
+              });
+            });
+          }
+          if (!result.conflicts.length && !config.issues.length && result.scopeReview?.rows.every(row => row.status === "confirmed")) {
+            new Setting(pathDetails).setName(t("keep-archive")).setDesc(t("keep-archive-description")).addToggle(control => {
+              keepArchiveControl = control; control.setValue(keepArchive).onChange(value => { if (!busy) keepArchive = value; });
+            });
+            new Setting(pathDetails).setName(t("install-title")).setDesc(t("install-description")).addButton(control => {
+              installButton = control;
+              control.setButtonText(t("install")).setCta().onClick(async () => {
+                if (busy || !this.alive || folder !== destination || selected.hash !== target?.hash || selected.path !== target?.path) return;
+                busy = true; closeEditor(); refresh(); status.textContent = t("installing");
+                try {
+                  const receipt = await this.service.install(selected.path, selected.hash, folder, choices, scopeChoices);
+                  let archiveKept = false;
+                  if (!keepArchive) try { await this.service.trashSource(selected.path, receipt); } catch { archiveKept = true; }
+                  if (this.alive) { status.textContent = t(archiveKept ? "installed-archive-kept" : "installed"); target = undefined; pathDetails.empty(); installButton = undefined; keepArchiveControl = undefined; }
+                } catch { if (this.alive) { status.textContent = t("install-failed"); pathDetails.empty(); installButton = undefined; } }
+                finally { busy = false; if (this.alive) refresh(); }
               });
             });
           }

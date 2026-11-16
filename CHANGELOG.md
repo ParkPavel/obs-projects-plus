@@ -8,6 +8,16 @@ Downloadable versions and their publication dates are listed in
 The version in [manifest.json](https://github.com/ParkPavel/obs-projects-plus/blob/main/manifest.json) identifies this source tree; it does not
 mean that a new release has been published.
 
+## 3.7.3 — Unreleased
+
+- Visible configuration copies, immutable snapshots and optional outbound synchronization; data.json remains authoritative.
+- ZIP project packages with selected notes and attachments, fresh identity mapping, explicit path/source/link decisions and visible JSON configuration beside imported notes.
+- Checked installation, durable restart/recovery and rollback that preserves edited files. Source ZIP is kept by default; optional cleanup uses Obsidian's trash after success.
+- Reviewed external/AI configuration edits and snapshot restore with before-change backups; unique-ID counters never decrease.
+- Explicit file sharing when supported, with a saved-file fallback on other devices.
+
+This development version is not published or accepted yet. See the [workflow and limits](docs/development-3.7.3.md); physical iPhone acceptance remains separate from automated checks.
+
 ## 3.7.2 — 2026-11-14
 
 ### Unified formulas

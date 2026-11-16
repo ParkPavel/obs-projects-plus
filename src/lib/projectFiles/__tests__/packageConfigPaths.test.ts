@@ -18,6 +18,33 @@ const manifest = (projects: ProjectDefinition[], paths: string[]): PackageManife
 const preview = (p = project(), paths = ["Work/a.md", "Templates/t.md", "Assets/cover.png"], existing: VaultPathEntry[] = []) =>
   previewPackageConfigPaths([p], manifest([p], paths), "Imported", existing, "AppConfig", []);
 
+test("native Board order and Gallery per-record frames move with selected notes without editing opaque strings", () => {
+  const p = project({ views: [
+    { id: "b", type: "board", config: { columns: { Todo: { records: ["Work/a.md"] } }, cardFramesByRecord: { "Work/a.md": { heightRem: 12 } } } },
+    { id: "g", type: "gallery", config: { cardFramesByRecord: { "Work/a.md": { gridSpan: 2 } }, header: "Work/a.md" } },
+  ] });
+  const r = preview(p);
+  expect(r.projects[0]!.project.views[0]!.config).toEqual({ columns: { Todo: { records: ["Imported/Work/a.md"] } }, cardFramesByRecord: { "Imported/Work/a.md": { heightRem: 12 } } });
+  expect(r.projects[0]!.project.views[1]!.config).toEqual({ cardFramesByRecord: { "Imported/Work/a.md": { gridSpan: 2 } }, header: "Work/a.md" });
+  expect(p.views[0]!.config['cardFramesByRecord']).toEqual({ "Work/a.md": { heightRem: 12 } });
+});
+
+test("opaque Dataview IDs and transform-derived card identities are retained with blocking diagnostics", () => {
+  const p = project({ dataSource: { kind: "dataview", config: { query: "TABLE WITHOUT ID 1" } }, views: [{ id: "b", type: "board", config: { columns: { Todo: { records: ["row-0"] } } } }] });
+  const r = preview(p);
+  expect(r.projects[0]!.project.views[0]!.config).toEqual(p.views[0]!.config);
+  expect(r.issues).toContainEqual({ projectId: "p", location: ["views", 0, "config", "columns", "Todo", "records", 0], code: "unsupported-config" });
+  const embedded = project({ views: [{ id: "d", type: "dashboard", config: { widgets: [{ id: "w", type: "database-call", transform: { steps: [{ type: "unnest", field: "Items" }] }, config: { viewTabs: [{ id: "t", viewType: "gallery", config: { cardFramesByRecord: { "Work/a.md__unnest_0": { heightRem: 10 } } } }] } }] } }] });
+  expect(preview(embedded).issues.some(issue => issue.code === "unsupported-config")).toBe(true);
+});
+
+test("database-call external native tabs map notes while a host transform and dormant source config stay unrelated", () => {
+  const p = project({ views: [{ id: "d", type: "dashboard", config: { widgets: [{ id: "w", type: "database-call", sourceConfig: { projectId: "q" }, transform: { steps: [{ type: "pivot" }] }, config: { sourceConfig: { projectId: "retired" }, viewTabs: [{ id: "t", viewType: "board", config: { columns: { Todo: { records: ["Work/a.md"] } } } }] } }] } }] });
+  const q = project({ id: "q" }), r = previewPackageConfigPaths([p, q], manifest([p, q], ["Work/a.md"]), "Imported", [], "AppConfig", []);
+  expect(r.changes).toContainEqual({ projectId: "p", location: ["views", 0, "config", "widgets", 0, "config", "viewTabs", 0, "config", "columns", "Todo", "records", 0], source: "Work/a.md", destination: "Imported/Work/a.md" });
+  expect(r.issues.filter(issue => issue.code === "unsupported-config")).toEqual([]);
+});
+
 test("binds exact template/exclusion/source/creation paths in a private copy and retains opaque state", () => {
   const p = project({ templates: ["Templates/t.md"], excludedNotes: ["Work/a.md"], newNotesFolder: "Work", uniqueIdCounter: 42, isDefault: true,
     extra: { link: "[[Work/a#heading|alias]]", expression: "Work" } });

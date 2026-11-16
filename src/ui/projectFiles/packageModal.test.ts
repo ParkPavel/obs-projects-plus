@@ -20,6 +20,7 @@ jest.mock("obsidian", () => {
     controlEl = document.createElement("div");
     constructor(target: HTMLElement) { target.append(this.controlEl); }
     setName(value: string) { this.controlEl.dataset['name'] = value; return this; }
+    setDesc(value: string) { this.controlEl.createEl("p", { text: value }); return this; }
     addButton(callback: (control: unknown) => void) {
       const button = document.createElement("button"); this.controlEl.append(button);
       const control = { setButtonText(value: string) { button.textContent = value; return control; }, setCta() { return control; }, setDisabled(value: boolean) { button.disabled = value; return control; }, onClick(fn: () => void) { button.addEventListener("click", fn); return control; } };
@@ -33,7 +34,7 @@ const { settings } = require("src/lib/stores/settings") as typeof import("src/li
 const { DEFAULT_PROJECT, DEFAULT_SETTINGS } = require("src/settings/settings") as typeof import("src/settings/settings");
 const { lastPicker } = require("obsidian") as { lastPicker(): { onChooseItem(file: { path: string }): void; close(): void } };
 const emptyBefore = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "empty");
-let modal: InstanceType<typeof ProjectPackageModal>, prepare: jest.Mock, save: jest.Mock, dispose: jest.Mock;
+let modal: InstanceType<typeof ProjectPackageModal>, prepare: jest.Mock, save: jest.Mock, dispose: jest.Mock, prepareShare: jest.Mock;
 const capture = { manifest: { projects: [{ id: "p", name: "Project" }], dependencies: [{ reference: "missing", resolved: false }], files: [{ bytes: 3 }] } } as unknown as Prepared;
 const settle = async () => { await Promise.resolve(); await Promise.resolve(); };
 const button = (name: string) => Array.from(modal.contentEl.querySelectorAll("button")).find(button => button.textContent === "project-package." + name)!;
@@ -42,10 +43,20 @@ afterAll(() => { if (emptyBefore) Object.defineProperty(HTMLElement.prototype, "
 beforeEach(() => {
   settings.set({ ...DEFAULT_SETTINGS, projects: [{ ...DEFAULT_PROJECT, id: "p", name: "Project" }, { ...DEFAULT_PROJECT, id: "q", name: "Other" }] });
   prepare = jest.fn(async () => capture); save = jest.fn(async () => ({ path: "Copies/Packages/template.zip" })); dispose = jest.fn();
-  modal = new ProjectPackageModal({ vault: { getFiles: () => [] } } as unknown as App, { prepare, save, dispose, eligible: () => true } as unknown as Service);
+  prepareShare = jest.fn(async () => ({ available: () => false, share: jest.fn() }));
+  modal = new ProjectPackageModal({ vault: { getFiles: () => [] } } as unknown as App, { prepare, save, dispose, prepareShare, eligible: () => true } as unknown as Service);
   modal.open();
 });
 afterEach(() => { modal.close(); document.body.replaceChildren(); });
+
+test("saving prepares Share but never sends automatically; only the direct Share click hands off bytes", async () => {
+  const share = jest.fn(async () => "shared"); prepareShare.mockResolvedValueOnce({ available: () => true, share });
+  button("preview").click(); await settle(); button("save").click();
+  for (let i = 0; i < 8; i++) await Promise.resolve();
+  expect(prepareShare).toHaveBeenCalled(); expect(share).not.toHaveBeenCalled();
+  button("share").click(); expect(share).toHaveBeenCalledTimes(1); await settle();
+  expect(modal.contentEl.textContent).toContain("project-package.shared");
+});
 
 test("saving requires explicit preview; selected files and missing dependencies are visible", async () => {
   expect(button("save").disabled).toBe(true);

@@ -76,6 +76,8 @@ export class ProjectFilesModal extends Modal {
     const status = this.contentEl.createEl("p", { attr: { role: "status", "aria-live": "polite" } });
     const documents = this.contentEl.createEl("ul");
     const action = new Setting(this.contentEl);
+    new Setting(this.contentEl).addButton(button => button.setButtonText(get(i18n).t("project-configuration.draft")).onClick(() => { void this.controller.openConfiguration("draft"); }));
+    new Setting(this.contentEl).addButton(button => button.setButtonText(get(i18n).t("project-configuration.restore")).onClick(() => { void this.controller.openConfiguration("restore"); }));
     action.addButton(button => {
       button.setButtonText(t("sync")).setCta().onClick(async () => {
         if (!this.field?.syncForSubmit() || !valid(root)) return;

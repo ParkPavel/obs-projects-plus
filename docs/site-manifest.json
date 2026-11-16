@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceVersion": "3.7.2",
+  "sourceVersion": "3.7.3",
   "generator": "node scripts/build-docs-site.mjs",
   "sources": [
     "README.md",
@@ -45,19 +45,19 @@
   "files": [
     {
       "name": "read/project-readme.html",
-      "sha256": "57134c368ac7922d5779e3175c96fa7e44adb20f5d38c0f1b44e2ab5ecee09df"
+      "sha256": "51bea470c4242961a6ec33f661f444dce55ffcf8fb926649554cbb61c9528840"
     },
     {
       "name": "read/readme-ru.html",
-      "sha256": "ceeb692cce137dd914314772f6e158477a2fa7210453367d3f6a9d2c6234eed3"
+      "sha256": "2afcd8a9412ae9f7bb8c887d042d404bcf61bac77e8a3a09b5297863dd8457ba"
     },
     {
       "name": "read/changelog.html",
-      "sha256": "5ce2943d6495e16046285f2e2b5bd6d8ba310deec11e3022725e1b4207ce30bf"
+      "sha256": "da1aac41eeca37b4791c2bf6012b2ab0d25e84109af03c37b723f1254dba8253"
     },
     {
       "name": "read/changelog-ru.html",
-      "sha256": "09f1a7325c365c344624968000c67f27d18702aa972a5ba9e062cc5858f6a993"
+      "sha256": "4d1c7f3e1e96e0b5d7126c1deea41cf5613707b6ba2f56ee5b919d1c77f1b21b"
     },
     {
       "name": "read/roadmap.html",
@@ -117,11 +117,11 @@
     },
     {
       "name": "read/development-3.7.3-ru.html",
-      "sha256": "a54de2388f1ad4e115dee9b5b316f7437a41e1eb69b8007d2784c30dfe3dc636"
+      "sha256": "98f2cf488318c19090c0f2dbe3ea2aab81574b3a33df6795854017cdb7824a31"
     },
     {
       "name": "read/development-3.7.3.html",
-      "sha256": "c0ac9323a200ab091d06f4f52fad7a82c63c6a08c5a40e8430ab2a78b895fb9f"
+      "sha256": "aa38c3a4c910f25d25031d7dc7dd34778625159c873c0f739902c1d08c62af46"
     },
     {
       "name": "read/next-versions-ru.html",
@@ -261,7 +261,7 @@
     },
     {
       "name": "search-index.json",
-      "sha256": "d9407ff510b5bd444d38a246ad3219d07e2ffedf2d8450050647282a2023f287"
+      "sha256": "6f203b6635d8dcf6dc63091534dd13642f98962a95285d4e2d8e7727588e6996"
     },
     {
       "name": ".nojekyll",

@@ -36,6 +36,11 @@ jest.mock("obsidian", () => {
     constructor(target: HTMLElement) { target.append(this.controlEl); }
     setName(value: string) { this.controlEl.setAttribute("aria-label", value); return this; }
     setDesc(value: string | DocumentFragment) { const text = document.createElement("p"); if (typeof value === "string") text.textContent = value; else text.append(value); this.controlEl.append(text); return this; }
+    addToggle(callback: (control: unknown) => void) {
+      const input = document.createElement("input"); input.type = "checkbox"; this.controlEl.append(input);
+      const control = { setValue(value: boolean) { input.checked = value; return control; }, setDisabled(value: boolean) { input.disabled = value; return control; }, onChange(fn: (value: boolean) => void) { input.addEventListener("change", () => fn(input.checked)); return control; } };
+      callback(control); return this;
+    }
     addText(callback: (control: unknown) => void) {
       const input = document.createElement("input"); this.controlEl.append(input);
       const control = { inputEl: input, setPlaceholder(value: string) { input.placeholder = value; return control; }, setDisabled(value: boolean) { input.disabled = value; return control; }, onChange(fn: (value: string) => void) { input.addEventListener("input", () => fn(input.value)); return control; } };
@@ -52,7 +57,7 @@ jest.mock("obsidian", () => {
 const { ProjectPackageInspectModal } = require("./packageInspectModal") as typeof import("./packageInspectModal");
 const { lastPicker } = require("obsidian") as { lastPicker(): { onChooseItem(file: { path: string }): void; getItems(): { path: string }[] } };
 const beforeEmpty = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "empty");
-let modal: InstanceType<typeof ProjectPackageInspectModal>, inspect: jest.Mock, dispose: jest.Mock, stage: jest.Mock, previewFiles: jest.Mock;
+let modal: InstanceType<typeof ProjectPackageInspectModal>, inspect: jest.Mock, dispose: jest.Mock, stage: jest.Mock, previewFiles: jest.Mock, install: jest.Mock;
 const inspected = { archiveHash: "a".repeat(64), manifest: { projects: [{ name: "<img src=x onerror=alert(1)>", archived: false }], files: [{ role: "note", sourcePath: "Notes/Visit.md", bytes: 42 }], dependencies: [{ reference: "missing", resolved: false }] } } as unknown as Inspected;
 const settle = async () => { await Promise.resolve(); await Promise.resolve(); };
 const button = () => modal.contentEl.querySelector("button")!;
@@ -62,7 +67,8 @@ afterAll(() => { if (beforeEmpty) Object.defineProperty(HTMLElement.prototype, "
 beforeEach(() => {
   inspect = jest.fn(async () => inspected); dispose = jest.fn(); stage = jest.fn(async () => ({ folder: "Projects Plus/Incoming/hash", files: 2 }));
   previewFiles = jest.fn(async () => ({ root: "Imported", configurations: [], files: [{ source: "Note.md", destination: "Imported/Note.md" }], conflicts: [{ destination: "Imported/Note.md", existing: "imported/Note.md" }], notesNeedInspection: true, configuration: { projects: [], changes: [], issues: [], scopes: [], bindings: [], targets: [], choices: [] } }));
-  modal = new ProjectPackageInspectModal({ vault: { getFiles: () => [{ path: "Incoming/Package.zip" }, { path: "Note.md" }] } } as unknown as App, { inspect, dispose, stage, previewFiles } as unknown as Service);
+  install = jest.fn(async () => ({}));
+  modal = new ProjectPackageInspectModal({ vault: { getFiles: () => [{ path: "Incoming/Package.zip" }, { path: "Note.md" }] } } as unknown as App, { inspect, dispose, stage, previewFiles, install } as unknown as Service);
   modal.open();
 });
 afterEach(() => { modal.close(); document.body.replaceChildren(); });
@@ -124,6 +130,18 @@ test("closing during preparation disables both actions and retires late completi
 
 const pathButton = () => Array.from(modal.contentEl.querySelectorAll("button")).find(button => button.textContent === "package-inspect.preview-files")!;
 const destination = (value: string) => { const input = modal.contentEl.querySelector("input")!; input.value = value; input.dispatchEvent(new Event("input")); };
+
+test("install is exposed only after a resolved preview and sends displayed intent on an explicit click", async () => {
+  const result = { ...await previewFiles(), conflicts: [], scopeReview: { rows: [], choices: [] } };
+  previewFiles.mockClear(); previewFiles.mockResolvedValueOnce(result);
+  button().click(); lastPicker().onChooseItem({ path: "Incoming/Package.zip" }); await settle(); destination("Imported");
+  pathButton().click(); await settle();
+  const action = Array.from(modal.contentEl.querySelectorAll("button")).find(button => button.textContent === "package-inspect.install")!;
+  expect(action).toBeDefined(); expect(install).not.toHaveBeenCalled();
+  action.click(); await settle();
+  expect(install).toHaveBeenCalledWith("Incoming/Package.zip", "a".repeat(64), "Imported", [], []);
+  expect(modal.contentEl.textContent).toContain("package-inspect.installed");
+});
 
 test("placement preview includes the visible project configuration beside note destinations without writing", async () => {
   const result = { ...await previewFiles(), configurations: [{ projectId: "p", destination: "Imported/Project settings/config.json" }] };

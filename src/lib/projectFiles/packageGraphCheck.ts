@@ -1,10 +1,11 @@
 import type { ProjectDefinition } from "src/settings/settings";
-import { blockReadCycle, blockRefId, blockRefsReadBy, dashboardsOf } from "src/lib/relations/blockRefs";
+import { blockRefId, blockRefsReadBy, dashboardsOf } from "src/lib/relations/blockRefs";
 import { checkProjectCoreJson, type ProjectCoreCheck } from "./projectCoreCheck";
 import { previewPackageReferences, type PackageRemapIssue } from "./packageRemap";
 import { MAX_PROJECT_DOCUMENT_BYTES, projectFileError } from "./document";
 import { PACKAGE_LIMITS } from "./packagePolicy";
 import { createPackageCheckAllocator } from "./packageIdentities";
+import { createPackageBlockCheck } from "./packageBlockCheck";
 
 export interface PackageGraphCheck {
   readonly stage: "package-graph-check";
@@ -40,6 +41,7 @@ export function checkPackageGraph(input: readonly ProjectDefinition[]): PackageG
   const captured = projects.map(item => item.project);
   const preview = previewPackageReferences(captured, { projects: [], archives: [] }, createPackageCheckAllocator(captured));
   const issues: PackageGraphCheck['issues'][number][] = [...preview.issues];
+  const invalidBlockRead = createPackageBlockCheck(captured);
   let reads = 0;
   for (const project of captured) for (const dashboard of dashboardsOf(project)) {
     const vi = project.views.findIndex(view => view.id === dashboard.viewId);
@@ -47,7 +49,7 @@ export function checkPackageGraph(input: readonly ProjectDefinition[]): PackageG
       for (const reference of blockRefsReadBy(widget)) {
         if (++reads > PACKAGE_LIMITS.dependencies) throw projectFileError("too many block graph reads");
         const self = widget.type === "database-call" ? blockRefId(project.id, dashboard.viewId, widget.id) : undefined;
-        if (blockReadCycle(captured, self, reference)) {
+        if (invalidBlockRead(self, reference)) {
           if (issues.length >= PACKAGE_LIMITS.dependencies) throw projectFileError("too many graph diagnostics");
           issues.push(Object.freeze({ projectId: project.id, location: Object.freeze(["views", vi, "config", "widgets", wi]), code: "block-read-cycle" }));
           break;

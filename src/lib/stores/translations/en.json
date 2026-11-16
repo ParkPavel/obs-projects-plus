@@ -1,8 +1,30 @@
 ﻿{
     "translation": {
         "package-inspect": {
+            "inspection-recovery-description": "Temporary note preparation was interrupted. Preserve its files as opaque bytes and confirm Dataview cleanup before preparing the ZIP again.",
+            "reset-preparation": "Clean up interrupted preparation",
+            "preparation-reset": "Temporary preparation cleaned up; files are preserved. Choose the ZIP and prepare it again.",
+            "keep-archive": "Keep the source ZIP",
+            "keep-archive-description": "Enabled by default. If disabled, the unchanged source ZIP moves to Obsidian's configured trash only after installation is confirmed.",
+            "installed-archive-kept": "Installation confirmed. The source ZIP could not be moved to trash and was kept.",
+            "config-note-inspection-required": "Prepare the package to inspect note links using Obsidian.",
+            "config-unsupported-note-link": "This note contains a link that could not be safely mapped.",
+            "binding-purpose-note-link": "Link inside a note",
+            "install-title": "Install the reviewed package",
+            "install-description": "Create new projects, notes and visible JSON configurations. Existing files are not replaced; the source ZIP is kept. Imported projects do not replace your default project.",
+            "install": "Install package",
+            "installing": "Installing and verifying files…",
+            "installed": "Package installed and settings confirmed.",
+            "install-failed": "Installation could not finish. Reopen this window to resume or roll back a pending operation. Existing files are preserved.",
+            "recovery-title": "Unfinished installation",
+            "recovery-description": "Resume the saved plan, or roll back. Rollback moves unchanged owned files to Incoming/Recovery and keeps edited or unacknowledged files in place. The source ZIP is kept.",
+            "resume": "Resume installation",
+            "rollback": "Roll back and keep edits",
+            "recovering": "Checking the journal and files…",
+            "recovery-failed": "Recovery could not finish. Keep the journal and files; no automatic overwrite is allowed.",
+            "rolled-back": "Rolled back: {{recovered}} files moved to recovery, {{retained}} files kept in place.",
             "core-summary": "Project structure check: {{projects}} projects, {{issues}} diagnostics",
-            "core-incomplete": "Project, view and block setting formats have been checked. Cross-project references and note links still need validation. Installation is not available yet.",
+            "core-incomplete": "Setting formats have been checked. Resolve all displayed diagnostics, path bindings and source rules before installation.",
             "core-invalid-type": "Field has the wrong type or range",
             "core-missing-field": "Required field is missing",
             "core-unknown-field": "Unknown field retained for review",
@@ -111,11 +133,17 @@
             "preview": "Preview contents",
             "summary": "Projects: {{projects}} · Selected files: {{files}} · Bytes: {{bytes}}",
             "missing": "Some known dependencies are missing or invalid. This package is incomplete:",
-            "scope": "Only the listed configurations and explicitly selected files are included. Template files, linked notes and attachments are not added automatically. Custom view dependencies may need manual review. Imported paths and IDs are not remapped yet.",
+            "scope": "Only the listed configurations and explicitly selected files are included. Templates, linked notes and attachments are not added automatically. Paths and IDs are reviewed and mapped separately during installation.",
             "save": "Save verified ZIP",
             "saved": "ZIP saved and verified: {{path}}",
             "failed": "Package not saved. Check the folder, file sizes and confirmed settings; create a new preview and retry.",
-            "limits": "Development: up to 256 entries, 4 MiB per file and 16 MiB total. Stored ZIP, without compression. Import, restore and native Share are not implemented in this stage."
+            "limits": "Up to 256 archive entries, 4 MiB per file and 16 MiB total. Stored ZIP, without compression. Sharing uses the device's available capabilities.",
+            "share": "Share",
+            "sharing": "Sharing the package…",
+            "shared": "Package shared.",
+            "share-cancelled": "Sharing was cancelled.",
+            "share-unavailable": "Native sharing is not available here. Use the saved ZIP in Files or your file manager.",
+            "share-failed": "The package could not be shared. The saved ZIP is still available in Files or your file manager."
         },
         "project-files": {
             "title": "Project copies and backups",
@@ -2708,6 +2736,21 @@
             "unknown": "Choose a field type before editing this value",
             "prefix-label": "ID prefix",
             "prefix-hint": "Prefix for generated IDs, for example TASK-. Each new note and copy receives a new ID."
+        },
+        "project-configuration": {
+            "draft": "Apply configuration edits",
+            "restore": "Restore a configuration snapshot",
+            "description": "Review the changes before applying them. Previous settings and the exact edited draft are backed up first. Only project settings change: your default project choice and note files stay unchanged, and unique-ID counters never decrease.",
+            "choose": "Choose a configuration file",
+            "checking": "Checking the configuration…",
+            "review": "Review the changes below before applying them.",
+            "failed": "The operation is NOT confirmed. Keep your files and backups, and refresh the preview before trying again.",
+            "summary": "{{count}} change(s) found.",
+            "open-source": "Open source note",
+            "apply": "Apply configuration",
+            "applying": "Applying and verifying…",
+            "applied": "Configuration applied. Backup: {{path}}",
+            "applied-copy-pending": "Project settings are confirmed, but the file refresh needs a manual retry. Backup: {{path}}. Drafts are preserved."
         }
     }
 }

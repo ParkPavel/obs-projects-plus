@@ -32,6 +32,7 @@ afterAll(() => {
 let disk: State, confirmed: string | null, service: import("./packageService").ProjectPackageService;
 let files: Map<string, { path: string; stat: { size: number; mtime: number }; bytes: Uint8Array }>;
 let folders: Map<string, unknown>, create: jest.Mock, read: jest.Mock, flush: jest.Mock, mkdir: jest.Mock, primaryMissing: boolean;
+let host: Plugin;
 function persist(state: State) { disk = state; confirmed = canonical(state); settings.set(state); }
 beforeEach(() => {
   jest.mocked(settings.updatePreferences).mockClear();
@@ -46,13 +47,14 @@ beforeEach(() => {
     const file = new TFile(path, { size: buffer.byteLength, mtime: 1 }); file.bytes = new Uint8Array(buffer); files.set(path, file); return file;
   });
   mkdir = jest.fn(async (path: string) => { folders.set(path, new TFolder(path)); });
-  const host = { manifest: { dir: "AppConfig/plugins/projects" }, app: { vault: {
+  host = { manifest: { dir: "AppConfig/plugins/projects" }, app: { vault: {
     configDir: "AppConfig", adapter: { read: async () => { if (primaryMissing) throw Error("ENOENT: no data.json yet"); return JSON.stringify(disk); } },
     getAbstractFileByPath: (path: string) => files.get(path) ?? folders.get(path),
     getAllLoadedFiles: () => [...files.values(), ...folders.values()],
     readBinary: read, createBinary: create, createFolder: mkdir,
     read: async (file: { bytes: Uint8Array }) => new TextDecoder().decode(file.bytes),
     create: async (path: string, text: string) => create(path, new TextEncoder().encode(text).buffer),
+    rename: async (file: { path: string }, destination: string) => { const value = files.get(file.path); if (!value || files.has(destination)) throw Error("rename conflict"); files.delete(file.path); value.path = destination; files.set(destination, value); },
     process: async (file: { bytes: Uint8Array; stat: { size: number; mtime: number } }, transform: (text: string) => string) => {
       file.bytes = new TextEncoder().encode(transform(new TextDecoder().decode(file.bytes)));
       file.stat.size = file.bytes.length; file.stat.mtime++;
@@ -61,6 +63,96 @@ beforeEach(() => {
   service = new ProjectPackageService(host, flush, () => confirmed, () => true);
 });
 afterEach(() => service.dispose());
+
+test("configuration-only package reaches verified visible JSON and confirmed new project through the real service", async () => {
+  service.dispose();
+  const commits = jest.fn(async (expected: State, candidate: State, guard?: () => boolean) => {
+    if (get(settings) !== expected || guard && !guard()) return "stale" as const;
+    persist(candidate); return "confirmed" as const;
+  });
+  service = new ProjectPackageService(host, flush, () => confirmed, () => true, { read: async () => get(settings), commit: commits });
+  const saved = await service.save(await service.prepare("p", []));
+  const choice = { projectId: "p", location: ["dataSource", "config", "path"], root: "Imported", source: "", kind: "folder" as const, target: "Imported", origin: "planned" as const };
+  const preview = await service.previewFiles(saved.path, saved.sha256, "Imported", [choice]);
+  const scopes = preview.scopeReview.rows.map(row => ({ projectId: row.projectId, location: row.location, revision: row.revision, mode: "keep-rule" as const }));
+  const receipt = await service.install(saved.path, saved.sha256, "Imported", [choice], scopes);
+  expect(receipt.configurations).toHaveLength(1); expect(commits).toHaveBeenCalledTimes(2);
+  expect(disk.projects).toHaveLength(2); expect(disk.projects[1]!.id).not.toBe("p");
+  expect(disk.projects[1]!.dataSource.config).toMatchObject({ path: "Imported" });
+  const config = files.get(receipt.configurations[0]!.path)!;
+  expect(JSON.parse(new TextDecoder().decode(config.bytes)).project.id).toBe(disk.projects[1]!.id);
+  expect(disk.preferences.projectFiles?.pendingImport).toBeUndefined();
+  expect(files.has(saved.path)).toBe(true);
+  const trash = jest.fn(async (file: { path: string }) => { files.delete(file.path); });
+  Object.defineProperty(host.app, "fileManager", { configurable: true, value: { trashFile: trash } });
+  await service.trashSource(saved.path, receipt);
+  expect(trash).toHaveBeenCalledTimes(1); expect(files.has(saved.path)).toBe(false); expect(disk.projects).toHaveLength(2);
+});
+
+test("native preparation unlocks a note package and preserves original bytes until verified activation", async () => {
+  service.dispose();
+  let changed: ((file: unknown, text: string, cache: unknown) => void) | undefined;
+  Object.defineProperty(host.app, "metadataCache", { configurable: true, value: { on: (_name: string, callback: typeof changed) => { changed = callback; return {}; }, offref: () => { changed = undefined; } } });
+  const createText = host.app.vault.create.bind(host.app.vault);
+  host.app.vault.create = async (path, text) => { const file = await createText(path, text); changed?.(file, text, {}); return file; };
+  service = new ProjectPackageService(host, flush, () => confirmed, () => true, { read: async () => get(settings), commit: async (expected, candidate, guard) => {
+    if (expected !== get(settings) || guard && !guard()) return "stale"; persist(candidate); return "confirmed";
+  } });
+  const saved = await service.save(await service.prepare("p", ["Note.md"]));
+  expect((await service.previewFiles(saved.path, saved.sha256, "Imported")).configuration.issues.some(issue => issue.code === "note-inspection-required")).toBe(true);
+  await service.stage(saved.path, saved.sha256, "Copies");
+  const preview = await service.previewFiles(saved.path, saved.sha256, "Imported");
+  expect(preview.configuration.issues.map(issue => issue.code)).toEqual(["scope-choice-required"]);
+  const scopes = preview.scopeReview.rows.map(row => ({ projectId: row.projectId, location: row.location, revision: row.revision, mode: "keep-rule" as const }));
+  await service.install(saved.path, saved.sha256, "Imported", [], scopes);
+  expect(files.get("Imported/Note.md")!.bytes).toEqual(new Uint8Array([1, 2, 3]));
+  expect(disk.projects).toHaveLength(2); expect(disk.preferences.projectFiles?.pendingImport).toBeUndefined();
+});
+
+test("native inspection pauses acquisition before Markdown creation and waits for Dataview index cleanup", async () => {
+  service.dispose();
+  const indexed = new Set<string>(); let changed: ((file: unknown, text: string, cache: unknown) => void) | undefined;
+  Object.defineProperty(host.app, "plugins", { configurable: true, value: { enabledPlugins: new Set(["dataview"]), plugins: { dataview: { api: { pagePaths: () => ({ array: () => [...indexed] }) } } } } });
+  Object.defineProperty(host.app, "metadataCache", { configurable: true, value: { on: (_name: string, callback: typeof changed) => { changed = callback; return {}; }, offref: () => { changed = undefined; } } });
+  const createText = host.app.vault.create.bind(host.app.vault), rename = host.app.vault.rename.bind(host.app.vault);
+  const observed: string[] = [];
+  host.app.vault.create = async (path, text) => {
+    const file = await createText(path, text);
+    if (path.endsWith(".md") && changed) {
+      expect(get(settings).preferences.projectFiles?.pendingImport?.phase).toBe("note-inspection");
+      indexed.add(path.toLowerCase()); observed.push(path); changed(file, text, {});
+    }
+    return file;
+  };
+  host.app.vault.rename = async (file, destination) => { const old = file.path.toLowerCase(); await rename(file, destination); window.setTimeout(() => indexed.delete(old), 10); };
+  service = new ProjectPackageService(host, flush, () => confirmed, () => true, { read: async () => get(settings), commit: async (expected, candidate, guard) => {
+    if (expected !== get(settings) || guard && !guard()) return "stale";
+    if (!candidate.preferences.projectFiles?.pendingImport && get(settings).preferences.projectFiles?.pendingImport?.phase === "note-inspection") expect(indexed.size).toBe(0);
+    persist(candidate); return "confirmed";
+  } });
+  const saved = await service.save(await service.prepare("p", ["Note.md"]));
+  await service.stage(saved.path, saved.sha256, "Copies");
+  expect(observed).toHaveLength(1); expect(indexed.size).toBe(0);
+  expect(files.has(observed[0]!)).toBe(false); expect(files.has(observed[0]!.slice(0, -3) + ".bin")).toBe(true);
+  expect(get(settings).preferences.projectFiles?.pendingImport).toBeUndefined();
+});
+
+test("interrupted native preparation remains fenced and cleanup preserves its bytes before clearing the flag", async () => {
+  service.dispose();
+  Object.defineProperty(host.app, "metadataCache", { configurable: true, value: { on: () => ({}), offref: () => {} } });
+  const createText = host.app.vault.create.bind(host.app.vault);
+  host.app.vault.create = async (path, text) => { const file = await createText(path, text); if (path.includes("Note inspection/") && path.endsWith(".md")) throw Error("parser interrupted"); return file; };
+  service = new ProjectPackageService(host, flush, () => confirmed, () => true, { read: async () => get(settings), commit: async (expected, candidate, guard) => { if (expected !== get(settings) || guard && !guard()) return "stale"; persist(candidate); return "confirmed"; } });
+  const saved = await service.save(await service.prepare("p", ["Note.md"]));
+  await expect(service.stage(saved.path, saved.sha256, "Copies")).rejects.toThrow("parser interrupted");
+  const pending = get(settings).preferences.projectFiles!.pendingImport!;
+  expect(pending.phase).toBe("note-inspection"); expect(files.has(pending.paths[0]!)).toBe(true);
+  await expect(service.recover("rollback", "another-operation")).rejects.toThrow("intent changed");
+  expect(files.has(pending.paths[0]!)).toBe(true);
+  expect(await service.recover("rollback", pending.id)).toEqual({ preparationReset: true });
+  expect(files.get(pending.paths[0]!.slice(0, -3) + ".bin")!.bytes).toEqual(new Uint8Array([1, 2, 3]));
+  expect(get(settings).preferences.projectFiles?.pendingImport).toBeUndefined(); expect(get(settings).projects).toHaveLength(1);
+});
 
 test("preview performs no writes; save creates one visible ZIP and verifies actual bytes", async () => {
   const prepared = await service.prepare("p", ["Note.md"]);
@@ -94,7 +186,7 @@ test("file placement preview checks a fresh archive and current inventory withou
   expect(result.conflicts).toContainEqual({ code: "file-exists", destination: "Imported/Note.md", existing: "Imported/Note.md" });
   expect(result.configuration.projects[0]!.project.dataSource.config).toMatchObject({ path: "Imported" });
   expect(result.configuration.scopes[0]!.existingCandidates).toBe(1);
-  expect(result.configuration.issues.map(issue => issue.code)).toEqual(["scope-choice-required"]);
+  expect(result.configuration.issues.map(issue => issue.code)).toEqual(["scope-choice-required", "note-inspection-required"]);
   expect(JSON.stringify(disk)).toBe(before); expect(create).not.toHaveBeenCalled(); expect(mkdir).not.toHaveBeenCalled(); expect(flush).not.toHaveBeenCalled();
   files.delete(occupied.path);
   expect((await service.previewFiles(saved.path, saved.sha256, "Imported")).conflicts).toEqual([]);
@@ -131,7 +223,7 @@ test("scope confirmation is read-only and is invalidated by current inventory, s
   const choice = { projectId: row.projectId, location: row.location, revision: row.revision, mode: "keep-rule" as const };
   create.mockClear(); mkdir.mockClear(); flush.mockClear();
   const confirmed = await service.previewFiles(saved.path, saved.sha256, "Imported", [], [choice]);
-  expect(confirmed.scopeReview.rows[0]!.status).toBe("confirmed"); expect(confirmed.configuration.issues).toEqual([]);
+  expect(confirmed.scopeReview.rows[0]!.status).toBe("confirmed"); expect(confirmed.configuration.issues.map(issue => issue.code)).toEqual(["note-inspection-required"]);
   files.get("Note.md")!.stat.mtime++;
   expect((await service.previewFiles(saved.path, saved.sha256, "Imported", [], [choice])).scopeReview.rows[0]!.status).toBe("invalid");
   files.get("Note.md")!.stat.mtime--;

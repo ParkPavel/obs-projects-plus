@@ -13,7 +13,7 @@ export function nextCopyPreferences(previous: CopyPreferences, input: string, au
   const root = projectFilesRoot(input, configDir);
   if (previous?.pendingImport !== undefined && root !== previous.root) throw projectFileError("copy destination has a pending import");
   const previousRoots = configuredCopyRoots(previous).filter(old => old.toLowerCase() !== root.toLowerCase());
-  return { root, autoSync, ...(previousRoots.length ? { previousRoots } : {}), ...(previous?.pendingImport !== undefined ? { pendingImport: previous.pendingImport } : {}) };
+  return { root, autoSync, ...(previousRoots.length ? { previousRoots } : {}), ...(previous?.pendingImport !== undefined ? { pendingImport: previous.pendingImport } : {}), ...(previous?.installations !== undefined ? { installations: previous.installations } : {}) };
 }
 
 /** Portable vault-relative destinations; no normalization that changes ownership. */

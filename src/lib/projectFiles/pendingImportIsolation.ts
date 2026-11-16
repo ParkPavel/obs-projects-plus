@@ -14,6 +14,26 @@ export interface PendingProjectImport {
   readonly archiveHash: string;
   readonly journal: string;
   readonly paths: string[];
+  readonly phase?: "note-inspection";
+}
+
+/** Operational object order is irrelevant; exact plan/journal identity and canonical path membership are not. */
+export function samePendingImport(left: PendingProjectImport | undefined, right: PendingProjectImport): boolean {
+  const identity = (input: PendingProjectImport | undefined): string | null => {
+    if (!input || !jsonObject(input)) return null;
+    const required = ["format", "schemaVersion", "id", "archiveHash", "journal", "paths"];
+    if (required.some(key => !Object.prototype.hasOwnProperty.call(input, key)) || Object.keys(input).some(key => !required.includes(key) && key !== "phase") ||
+        Object.prototype.hasOwnProperty.call(input, "phase") && input.phase !== "note-inspection" || input.format !== "obs-projects-plus/pending-import" || input.schemaVersion !== 1 ||
+        typeof input.id !== "string" || typeof input.archiveHash !== "string" || typeof input.journal !== "string" || !Array.isArray(input.paths) || !input.paths.length || input.paths.length > PACKAGE_LIMITS.files) return null;
+    let characters = 0; const paths = new Set<string>();
+    for (const path of input.paths) {
+      if (typeof path !== "string" || (characters += path.length) > 65536) return null;
+      const key = packageNameKey(path); if (paths.has(key)) return null; paths.add(key);
+    }
+    return JSON.stringify([input.format, input.schemaVersion, input.id, input.archiveHash, input.journal, input.phase ?? null, [...paths].sort()]);
+  };
+  const expected = identity(right);
+  return expected !== null && identity(left) === expected;
 }
 
 const revision = writable(0);
@@ -42,7 +62,8 @@ export function refreshPendingImportIsolation(config: ProjectsPluginPreferences[
       const fail = () => { throw projectFileError("invalid pending import"); };
       if (!config || !jsonObject(pending)) return fail();
       const keys = ["format", "schemaVersion", "id", "archiveHash", "journal", "paths"];
-      if (Object.keys(pending).some(key => !keys.includes(key)) || keys.some(key => !Object.prototype.hasOwnProperty.call(pending, key))) return fail();
+      if (Object.keys(pending).some(key => !keys.includes(key) && key !== "phase") || keys.some(key => !Object.prototype.hasOwnProperty.call(pending, key)) ||
+          Object.prototype.hasOwnProperty.call(pending, "phase") && pending['phase'] !== "note-inspection") return fail();
       const { id, archiveHash, journal, paths: files } = pending;
       if (pending['format'] !== "obs-projects-plus/pending-import" || pending['schemaVersion'] !== 1 ||
           typeof id !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(id) || typeof archiveHash !== "string" || !/^[a-f0-9]{64}$/.test(archiveHash) ||
@@ -53,12 +74,15 @@ export function refreshPendingImportIsolation(config: ProjectsPluginPreferences[
       let characters = 0;
       for (const path of files as unknown[]) {
         if (typeof path !== "string" || (characters += path.length) > 65536) return fail();
-        guard(path, true);
+        if (pending['phase'] === "note-inspection") {
+          const prefix = `${root}/Incoming/${archiveHash}/Note inspection/${id}/`;
+          if (!/^[a-f0-9]{64}$/.test(id) || !path.startsWith(prefix) || !/^[a-f0-9]{64}\.md$/.test(path.slice(prefix.length))) return fail();
+        } else guard(path, true);
         const key = packageNameKey(path);
         if (nextPaths.has(key)) return fail();
         nextPaths.add(key);
       }
-      next = JSON.stringify([id, archiveHash, journal, [...nextPaths].sort()]);
+      next = JSON.stringify([id, archiveHash, journal, [...nextPaths].sort(), pending['phase'] ?? null]);
       status = "pending";
     }
   } catch {

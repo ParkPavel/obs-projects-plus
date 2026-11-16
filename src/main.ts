@@ -21,7 +21,7 @@ import { i18n, syncLocale } from "src/lib/stores/i18n";
 import { app, plugin } from "src/lib/stores/obsidian";
 import { watchViewport } from "src/lib/stores/ui";
 import { settings } from "src/lib/stores/settings";
-import { refreshPendingImportIsolation } from "src/lib/projectFiles/pendingImportIsolation";
+import { refreshPendingImportIsolation, samePendingImport } from "src/lib/projectFiles/pendingImportIsolation";
 import { CreateNoteModal } from "src/ui/modals/createNoteModal";
 import { CreateProjectModal } from "src/ui/modals/createProjectModal";
 import { createDemoWithNotices } from "src/ui/app/onboarding/demoRun";
@@ -501,7 +501,23 @@ export default class ProjectsPlusPlugin extends Plugin {
       onStatus: (status) => saveStatus.set(status),
     });
     this.settingsWriter = writer;
-    this.projectFiles = new ProjectFilesController(this, () => writer.flush(), () => this.confirmedOnDisk);
+    this.projectFiles = new ProjectFilesController(this, () => writer.flush(), () => this.confirmedOnDisk, {
+      read: async () => {
+        await writer.flush();
+        const value = get(settings), path = settingsFilePath(this.manifest.dir);
+        if (!path || this.settingsWriter !== writer) throw new Error("Project settings unavailable");
+        const raw: unknown = JSON.parse(await this.app.vault.adapter.read(path));
+        if (this.settingsWriter !== writer || get(settings) !== value || canonical(raw) !== canonical(value) || canonical(raw) !== this.confirmedOnDisk) throw new Error("Project settings not confirmed");
+        return value;
+      },
+      commit: (expected, candidate, guard = () => true) => writer.commitCandidate(expected, candidate,
+        () => this.settingsWriter === writer && get(settings) === expected && this.confirmedOnDisk === canonical(expected) && guard(),
+        value => { if (this.settingsWriter !== writer || !guard()) throw new Error("Project operation retired"); settings.set(value); }),
+      pending: expected => {
+        const preferences = get(settings).preferences.projectFiles;
+        return this.settingsWriter === writer && !!preferences && expected.journal.startsWith(preferences.root + "/Incoming/") && samePendingImport(preferences.pendingImport, expected);
+      },
+    });
     setSaveRetryHandler(() => writer.retry());
 
     // The chip lives in `CompactNavBar`, which exists only inside the Projects

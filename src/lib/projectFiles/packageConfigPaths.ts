@@ -4,6 +4,7 @@ import { checkProject, jsonObject, MAX_PROJECT_DOCUMENT_BYTES, projectFileError 
 import { planPackageFiles, type PackageFilePlan, type VaultPathEntry } from "./packageFilePlan";
 import { packageNameKey } from "./packageManifest";
 import { PACKAGE_LIMITS } from "./packagePolicy";
+import { parseBaseRef } from "src/lib/relations/baseRef";
 import { captureConfigPathChoices, createConfigPathBindings, type ConfigPathChoice, type ConfigBindingTarget } from "./packagePathBindings";
 
 type ObjectValue = Record<string, unknown>;
@@ -12,7 +13,7 @@ const KNOWN_WIDGETS = new Set(["data-table", "chart", "stats", "comparison", "ch
 export interface ConfigPathIssue {
   readonly projectId: string;
   readonly location: Location;
-  readonly code: "invalid-shape" | "unbound-file" | "unbound-folder" | "scope-choice-required" | "creation-folder-choice-required" | "unsupported-config" | "invalid-binding" | "stale-binding" | "invalid-scope-choice" | "stale-scope-choice" | "schema-invalid" | "schema-unsupported";
+  readonly code: "invalid-shape" | "unbound-file" | "unbound-folder" | "scope-choice-required" | "creation-folder-choice-required" | "unsupported-config" | "invalid-binding" | "stale-binding" | "invalid-scope-choice" | "stale-scope-choice" | "schema-invalid" | "schema-unsupported" | "note-inspection-required" | "unsupported-note-link";
   readonly source?: string;
 }
 export interface ConfigPathChange {
@@ -48,7 +49,7 @@ export interface ConfigPathBindingOption {
   readonly location: Location;
   readonly source: string;
   readonly kind: "file" | "folder";
-  readonly purpose: "template" | "excluded-note" | "source-folder" | "creation-folder" | "cover" | "record";
+  readonly purpose: "template" | "excluded-note" | "source-folder" | "creation-folder" | "cover" | "record" | "note-link";
   readonly context: string;
   readonly mode: "selected" | "inherited" | "missing" | "explicit" | "invalid";
   readonly defaultMode: "selected" | "inherited" | "missing";
@@ -169,6 +170,34 @@ export function previewPackageConfigPaths(
     if (kind !== "derived") issue(id, at, "unsupported-config");
     return false;
   };
+  const nativeRecords = (project: ProjectDefinition, sourceId?: string): boolean => {
+    const sources = [project.dataSource, ...(project.additionalSources ?? [])];
+    const selected = sourceId ? sources.filter(item => item.id === sourceId) : sources;
+    return selected.length > 0 && selected.every(item => ["folder", "tag", "native-query"].includes(item.kind));
+  };
+  const recordConfig = (kind: string, config: unknown, id: string, at: Location, native: boolean) => {
+    if (kind !== "board" && kind !== "gallery" || !jsonObject(config)) return;
+    const mapRecord = (value: unknown, location: Location) => {
+      if (!native) { issue(id, location, "unsupported-config"); return; }
+      return mapPath(value, id, location, "file", "record");
+    };
+    const frames = config['cardFramesByRecord'];
+    if (jsonObject(frames)) {
+      const output: ObjectValue = Object.create(null) as ObjectValue;
+      for (const [record, frame] of Object.entries(frames)) {
+        const location = [...at, "cardFramesByRecord", record], target = mapRecord(record, location) ?? record;
+        if (Object.prototype.hasOwnProperty.call(output, target)) { issue(id, location, "invalid-binding", record); continue; }
+        output[target] = frame;
+      }
+      // A conflicting plan never replaces the original map with a lossy proposal.
+      if (Object.keys(output).length === Object.keys(frames).length) config['cardFramesByRecord'] = output;
+    }
+    const columns = config['columns'];
+    if (kind === "board" && jsonObject(columns)) for (const [column, value] of Object.entries(columns)) {
+      if (!jsonObject(value) || !Array.isArray(value['records'])) continue;
+      value['records'] = value['records'].map((record: unknown, index: number) => mapRecord(record, [...at, "columns", column, "records", index]) ?? record);
+    }
+  };
   const projects = manifest.projects.map(meta => {
     const project = copies.get(meta.id)!, id = project.id, value = project as unknown as ObjectValue;
     for (const key of ["templates", "excludedNotes"]) {
@@ -192,6 +221,7 @@ export function previewPackageConfigPaths(
     }
     project.views.forEach((view, vi) => {
       visit(); const at: Location = ["views", vi];
+      recordConfig(view.type, view.config, id, [...at, "config"], nativeRecords(project));
       if (view.type !== "dashboard" && view.type !== "database") {
         if (!["table", "board", "calendar", "gallery"].includes(view.type)) issue(id, at, "unsupported-config");
         return;
@@ -206,6 +236,18 @@ export function previewPackageConfigPaths(
         if (!jsonObject(widget) || !jsonObject(widget['config'])) { issue(id, wa, "invalid-shape"); return; }
         if (typeof widget['type'] !== "string" || !KNOWN_WIDGETS.has(widget['type'])) { issue(id, wa, "unsupported-config"); return; }
         const cfg = widget['config'];
+        if (widget['type'] === "database-call" && Array.isArray(cfg['viewTabs'])) {
+          const widgetSource = widget['sourceConfig'], reference = jsonObject(widgetSource) && typeof widgetSource['projectId'] === "string" ? widgetSource['projectId'] : "";
+          const parsed = parseBaseRef(reference), owner = reference ? copies.get(parsed.projectId) : project;
+          const sourceId = reference ? parsed.sourceId : jsonObject(widgetSource) && typeof widgetSource['sourceId'] === "string" ? widgetSource['sourceId'] : undefined;
+          const transform = widget['transform'], preserving = !jsonObject(transform) || !Array.isArray(transform['steps']) || transform['steps'].every((step: unknown) => jsonObject(step) && (step['disabled'] === true || step['type'] === "compute" || step['type'] === "filter"));
+          // External db-call frames replace the host transform result. Qualified
+          // block/derived sources stay explicit unsupported record contexts.
+          const native = !!owner && nativeRecords(owner, sourceId) && (!!reference || preserving);
+          cfg['viewTabs'].forEach((tab: unknown, index: number) => {
+            if (jsonObject(tab) && typeof tab['viewType'] === "string") recordConfig(tab['viewType'], tab['config'], id, [...wa, "config", "viewTabs", index, "config"], native);
+          });
+        }
         if (widget['type'] === "cover-banner") {
           const src = cfg['src'];
           if (typeof src !== "string") issue(id, [...wa, "config", "src"], "invalid-shape");

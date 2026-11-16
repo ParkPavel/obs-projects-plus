@@ -4,6 +4,7 @@ import { settings } from "src/lib/stores/settings";
 import { i18n } from "src/lib/stores/i18n";
 import { PACKAGE_LIMITS, type PreparedProjectPackage } from "src/lib/projectFiles/package";
 import type { ProjectPackageService } from "./packageService";
+import type { PreparedPackageShare } from "src/lib/projectFiles/packageShare";
 
 class PackageFilePicker extends FuzzySuggestModal<TFile> {
   constructor(app: App, private readonly service: ProjectPackageService, private readonly choose: (file: TFile) => void) {
@@ -40,8 +41,10 @@ export class ProjectPackageModal extends Modal {
     const preview = this.contentEl.createDiv({ attr: { role: "status", "aria-live": "polite" } });
     const saveRow = new Setting(this.contentEl);
     const result = this.contentEl.createEl("p", { attr: { role: "status", "aria-live": "polite" } });
+    const shareRow = this.contentEl.createDiv();
+    let sharing: PreparedPackageShare | undefined;
     let updateButtons = () => {};
-    const invalidate = () => { prepared = undefined; preview.empty(); result.textContent = ""; updateButtons(); };
+    const invalidate = () => { prepared = undefined; sharing = undefined; shareRow.empty(); preview.empty(); result.textContent = ""; updateButtons(); };
     const renderFiles = () => {
       chosen.empty();
       for (const path of paths) new Setting(chosen).setName(path).addButton(button => button.setButtonText(t("remove")).setDisabled(busy).onClick(() => {
@@ -98,7 +101,21 @@ export class ProjectPackageModal extends Modal {
         busy = true; renderFiles(); updateButtons();
         try {
           const receipt = await this.service.save(prepared);
-          if (this.alive) result.textContent = get(i18n).t("project-package.saved", { path: receipt.path });
+          if (this.alive) {
+            result.textContent = get(i18n).t("project-package.saved", { path: receipt.path });
+            sharing = undefined; shareRow.empty();
+            try { sharing = await this.service.prepareShare(receipt.path, receipt.sha256); } catch { /* The saved ZIP remains available through the filesystem. */ }
+            if (!this.alive) return;
+            const row = new Setting(shareRow);
+            if (!sharing?.available()) row.setDesc(t("share-unavailable"));
+            row.addButton(button => button.setButtonText(t("share")).setDisabled(!sharing?.available()).onClick(() => {
+              if (busy || !this.alive || !sharing) return;
+              // Invoke synchronously in this click; all archive I/O was completed above.
+              const operation = sharing.share(); busy = true; button.setDisabled(true); updateButtons(); result.textContent = t("sharing");
+              void operation.then(outcome => { if (this.alive) result.textContent = t(outcome === "shared" ? "shared" : "share-" + outcome); })
+                .finally(() => { busy = false; if (this.alive) { button.setDisabled(!sharing?.available()); updateButtons(); } });
+            }));
+          }
         } catch { if (this.alive) { prepared = undefined; result.textContent = t("failed"); } }
         finally { busy = false; if (this.alive) { renderFiles(); updateButtons(); } }
       });
