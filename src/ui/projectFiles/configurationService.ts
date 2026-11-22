@@ -5,7 +5,8 @@ import { createProjectConfiguration, parseProjectConfiguration } from "src/lib/p
 import { createProjectDocument, printProjectDocument, parseProjectDocument, projectFileError, textDigest, MAX_PROJECT_DOCUMENT_BYTES } from "src/lib/projectFiles/document";
 import { configuredCopyRoots, projectFilesRoot } from "src/lib/projectFiles/paths";
 import { checkPackageGraph } from "src/lib/projectFiles/packageGraphCheck";
-import { packageDependencies } from "src/lib/projectFiles/packageDependencies";
+import { directPackageReferences, packageDependencies } from "src/lib/projectFiles/packageDependencies";
+import { parseBaseRef } from "src/lib/relations/baseRef";
 import { projectVaultStorage } from "src/lib/projectFiles/vaultStorage";
 import { ensureProjectFolders, writeProjectSnapshot, checkedProjectWrite } from "src/lib/projectFiles/storage";
 import { canonical } from "src/lib/settings/settingsVerify";
@@ -87,10 +88,14 @@ export class ProjectConfigurationService {
     const candidate = replaceProject(value, project), affected = new Map<string, ProjectDefinition>();
     // Include incoming readers as well as outgoing dependencies: removing a
     // published block/source must not break an otherwise unrelated project.
-    for (const item of allProjects(candidate)) {
-      const dependencies = packageDependencies(candidate, item.id);
-      if (dependencies.projects.some(dependency => dependency.project.id === project.id)) for (const dependency of dependencies.projects) affected.set(dependency.project.id, dependency.project);
+    const incoming = new Map<string, Set<string>>();
+    for (const item of allProjects(candidate)) for (const reference of directPackageReferences(item)) {
+      const target = parseBaseRef(reference).projectId, readers = incoming.get(target) ?? new Set<string>();
+      readers.add(item.id); incoming.set(target, readers);
     }
+    const readers = new Set([project.id]), pending = [project.id];
+    while (pending.length) for (const reader of incoming.get(pending.shift()!) ?? []) if (!readers.has(reader)) { readers.add(reader); pending.push(reader); }
+    for (const reader of readers) for (const dependency of packageDependencies(candidate, reader).projects) affected.set(dependency.project.id, dependency.project);
     const graph = checkPackageGraph([...affected.values()]);
     if (!graph.referencesChecked || graph.issues.length || graph.coreChecks.some(item => item.check.issues.length)) throw projectFileError("configuration schema or references unsupported");
     const preview: ConfigurationApplyPreview = Object.freeze({ path, mode, projectId: project.id, name: project.name, sourceHash,

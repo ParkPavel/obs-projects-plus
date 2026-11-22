@@ -8,6 +8,13 @@ import { PACKAGE_LIMITS } from "./packagePolicy";
 export interface PackageDependency { from: string; reference: string; target: string; resolved: boolean }
 export interface PackageProject { project: ProjectDefinition; archived: boolean }
 
+/** Direct typed references, shared by export traversal and the reverse edit-dependency index. */
+export function directPackageReferences(project: ProjectDefinition): readonly string[] {
+  const references = new Set(extractRelationTargetIds(project.id, project.fieldConfig));
+  for (const dashboard of dashboardsOf(project)) for (const widget of dashboard.widgets) for (const reference of refsReadBy(widget)) references.add(reference);
+  return [...references];
+}
+
 /** Known typed runtime references only. Opaque custom configs are preserved, never rewritten. */
 export function packageDependencies(settings: LatestProjectsPluginSettings, rootId: string): { projects: PackageProject[]; dependencies: PackageDependency[] } {
   const all = [...settings.projects.map(project => ({ project, archived: false })), ...settings.archives.map(project => ({ project, archived: true }))];
@@ -26,11 +33,7 @@ export function packageDependencies(settings: LatestProjectsPluginSettings, root
     const item = byId.get(id)!;
     projects.push(item);
     if (projects.length > PACKAGE_LIMITS.projects) throw projectFileError("too many package dependencies");
-    const references = new Set(extractRelationTargetIds(id, item.project.fieldConfig));
-    for (const dashboard of dashboardsOf(item.project)) for (const widget of dashboard.widgets) {
-      for (const reference of refsReadBy(widget)) references.add(reference);
-    }
-    for (const reference of references) {
+    for (const reference of directPackageReferences(item.project)) {
       const ref = parseBaseRef(reference), target = byId.get(ref.projectId);
       const block = parseBlockRef(reference);
       const resolved = !!target && (block ? !!blockAt(all.map(item => item.project), block)

@@ -107,3 +107,10 @@ test("removing a block used by an incoming project refuses preview before any wr
   await expect(f.service.preview(f.path, "draft")).rejects.toThrow("references");
   expect(f.create).not.toHaveBeenCalled(); expect(f.commit).not.toHaveBeenCalled();
 });
+
+test("a large disconnected dependency graph cannot block a small independent configuration edit", async () => {
+  const f = await fixture(), state = f.current();
+  const others = Array.from({ length: 101 }, (_, i) => ({ ...DEFAULT_PROJECT, id: `q${i}`, name: `Q${i}`, fieldConfig: i < 100 ? { link: { relation: { targetProjectId: `q${i + 1}` } } } : {} }));
+  f.setState({ ...state, projects: [...state.projects, ...others] }); f.editDraft("After");
+  expect((await f.service.preview(f.path, "draft")).changes.some(change => change.location[0] === "name")).toBe(true);
+});
