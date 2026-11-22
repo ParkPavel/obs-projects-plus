@@ -89,6 +89,32 @@ test("configuration-only package reaches verified visible JSON and confirmed new
   expect(trash).toHaveBeenCalledTimes(1); expect(files.has(saved.path)).toBe(false); expect(disk.projects).toHaveLength(2);
 });
 
+test("the actual Vault root object with slash path is omitted from preview and install inventory, without allowing other absolute paths", async () => {
+  const root = new TFolder("/"), loaded = host.app.vault.getAllLoadedFiles.bind(host.app.vault);
+  Object.defineProperty(host.app.vault, "getRoot", { value: () => {
+    const entries = loaded();
+    for (const entry of entries) {
+      Object.assign(entry, { name: entry.path.split("/").at(-1) });
+      if (entry instanceof TFolder) Object.assign(entry, { children: entries.filter(file => file.path.slice(0, file.path.lastIndexOf("/")) === entry.path) });
+    }
+    root.children = entries.filter(file => !file.path.includes("/"));
+    return root;
+  } });
+  host.app.vault.getAllLoadedFiles = () => [root, ...loaded()];
+  service.dispose();
+  service = new ProjectPackageService(host, flush, () => confirmed, () => true, { read: async () => get(settings), commit: async (expected, candidate, guard) => {
+    if (get(settings) !== expected || guard && !guard()) return "stale"; persist(candidate); return "confirmed";
+  } });
+  const saved = await service.save(await service.prepare("p", []));
+  const choice = { projectId: "p", location: ["dataSource", "config", "path"], root: "Imported", source: "", kind: "folder" as const, target: "Imported", origin: "planned" as const };
+  const preview = await service.previewFiles(saved.path, saved.sha256, "Imported", [choice]);
+  const scopes = preview.scopeReview.rows.map(row => ({ projectId: row.projectId, location: row.location, revision: row.revision, mode: "keep-rule" as const }));
+  await service.install(saved.path, saved.sha256, "Imported", [choice], scopes);
+  expect(disk.projects).toHaveLength(2);
+  host.app.vault.getAllLoadedFiles = () => [root, new TFolder("/other"), ...loaded()];
+  await expect(service.previewFiles(saved.path, saved.sha256, "Other")).rejects.toThrow("invalid file preview inventory");
+});
+
 test("native preparation unlocks a note package and preserves original bytes until verified activation", async () => {
   service.dispose();
   let changed: ((file: unknown, text: string, cache: unknown) => void) | undefined;

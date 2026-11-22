@@ -58,6 +58,12 @@ export class ProjectPackageService {
 
   dispose(): void { this.retired = true; }
   private check = () => { if (this.retired || !this.alive()) throw projectFileError("operation retired"); };
+  private loadedFiles() {
+    const vault = this.host.app.vault, root = typeof vault.getRoot === "function" ? vault.getRoot() : undefined;
+    // Obsidian includes its root TFolder with path "/". It is host metadata,
+    // not an absolute recipient path; omit only that exact object identity.
+    return vault.getAllLoadedFiles().filter(file => file !== root);
+  }
   private operationPrimary(): InstallationPrimary {
     const primary = this.primary;
     if (!primary) throw projectFileError("confirmed installation unavailable");
@@ -99,7 +105,7 @@ export class ProjectPackageService {
       const inspected = await this.readPackage(path);
       if (inspected.archiveHash !== expectedHash) throw projectFileError("archive preview is stale");
       this.check();
-      const loaded = this.host.app.vault.getAllLoadedFiles();
+      const loaded = this.loadedFiles();
       if (loaded.length > 100000) throw projectFileError("file preview inventory too large");
       const inventory: VaultPathEntry[] = loaded.map(file => {
         if (!(file instanceof TFile) && !(file instanceof TFolder)) throw projectFileError("unknown vault entry");
@@ -125,7 +131,7 @@ export class ProjectPackageService {
       const inventoryRevision = await textDigest(stamp); this.check();
       const basis = await textDigest(JSON.stringify({ archiveHash: inspected.archiveHash, destination, inventoryRevision, policy, choices })); this.check();
       const scopeReview = await reviewPackageScopes(configuration, basis, scopes, this.check);
-      if (scopeInventoryStamp(this.host.app.vault.getAllLoadedFiles()) !== stamp || JSON.stringify([this.host.app.vault.configDir, configuredCopyRoots(get(settings).preferences.projectFiles)]) !== policy) throw projectFileError("source scope preview changed");
+      if (scopeInventoryStamp(this.loadedFiles()) !== stamp || JSON.stringify([this.host.app.vault.configDir, configuredCopyRoots(get(settings).preferences.projectFiles)]) !== policy) throw projectFileError("source scope preview changed");
       this.check(); return Object.freeze({ ...configuration.files, notesNeedInspection: noteLinks.issues.length > 0, inventoryRevision, policy, configuration: Object.freeze({ ...configuration, issues: scopeReview.issues }), scopeReview, coreChecks });
     } finally { this.busy = false; }
   }
@@ -199,7 +205,7 @@ export class ProjectPackageService {
       if (!copyRoot) throw projectFileError("prepare the package before installation");
       const archive = await this.readPackage(path);
       if (archive.archiveHash !== expectedHash) throw projectFileError("archive changed before installation");
-      const loaded = this.host.app.vault.getAllLoadedFiles(), stamp = scopeInventoryStamp(loaded);
+      const loaded = this.loadedFiles(), stamp = scopeInventoryStamp(loaded);
       if (await textDigest(stamp) !== preview.inventoryRevision || JSON.stringify([this.host.app.vault.configDir, configuredCopyRoots(current.preferences.projectFiles)]) !== preview.policy) throw projectFileError("installation source confirmation changed");
       const inventory: VaultPathEntry[] = loaded.map(file => ({ path: file.path, kind: file instanceof TFile ? "file" : "folder" }));
       const links = previewPackageNoteLinks(preview.configuration, archive.manifest, this.inspectedNotes, choices.filter(choice => choice.location[0] === "packageFiles"), inventory, this.host.app.vault.configDir, configuredCopyRoots(current.preferences.projectFiles));
@@ -220,7 +226,7 @@ export class ProjectPackageService {
       const files = await Promise.all([...content].map(async ([filePath, bytes]) => ({ path: filePath, bytes: bytes.length, sha256: await binaryDigest(bytes) })));
       const plan: ProjectInstallationPlan = { format: "obs-projects-plus/installation", schemaVersion: 1, owner, archivePath: path, archiveHash: expectedHash, root: preview.root, copyRoot, projects, files };
       this.check();
-      if (scopeInventoryStamp(this.host.app.vault.getAllLoadedFiles()) !== stamp || canonical(await this.primary.read()) !== canonical(current)) throw projectFileError("installation preview changed");
+      if (scopeInventoryStamp(this.loadedFiles()) !== stamp || canonical(await this.primary.read()) !== canonical(current)) throw projectFileError("installation preview changed");
       return await installProjectPackage(installationVaultStorage(this.host.app.vault, this.check), this.operationPrimary(), plan, content, this.host.app.vault.configDir, this.check);
     } finally { this.busy = false; }
   }
