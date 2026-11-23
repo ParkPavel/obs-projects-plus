@@ -16,15 +16,19 @@ export function registerFileEvents(watcher: IFileSystemWatcher) {
   watcher.onCreate(async (file) => {
     await withDataSource(async (source) => {
       if (source.includes(file.path)) {
-        dataFrame.merge(await source.queryOne(file, get(dataFrame).fields));
+        const frame = await source.queryOne(file, get(dataFrame).fields);
+        if (get(dataSource) !== source) return;
+        dataFrame.merge(frame);
       }
     });
   });
   watcher.onRename(async (file, oldPath) => {
     await withDataSource(async (source) => {
       if (source.includes(file.path)) {
+        const frame = await source.queryOne(file, get(dataFrame).fields);
+        if (get(dataSource) !== source) return;
         dataFrame.deleteRecord(oldPath);
-        dataFrame.merge(await source.queryOne(file, get(dataFrame).fields));
+        dataFrame.merge(frame);
       } else if (source.includes(oldPath)) {
         dataFrame.deleteRecord(oldPath);
       }

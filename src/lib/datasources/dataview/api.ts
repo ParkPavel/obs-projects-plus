@@ -61,6 +61,8 @@ export type DataviewResult<T> =
   | { readonly successful: false; readonly error: string };
 
 export interface DataviewApi {
+  /** Public index path list; optional so unsupported hosts cannot falsely confirm inspection cleanup. */
+  pagePaths?(): { array(): unknown };
   readonly settings: { readonly tableIdColumnName: string };
   query(
     source: string,

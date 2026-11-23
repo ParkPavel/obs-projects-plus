@@ -1,6 +1,6 @@
 {
   "name": "obs-projects-plus",
-  "version": "3.7.2",
+  "version": "3.7.3",
   "description": "Turn your notes into projects with dashboards, tables, boards, calendars and galleries built from note properties, relations, rollups and formulas.",
   "main": "main.js",
   "scripts": {
@@ -58,6 +58,7 @@
     "eslint": "^9.30.1",
     "eslint-plugin-obsidianmd": "^0.4.2",
     "eslint-plugin-tsdoc": "^0.4.0",
+    "fflate": "0.8.3",
     "fp-ts": "^2.16.6",
     "globals": "^15.12.0",
     "i18next": "^24.0.2",

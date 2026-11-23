@@ -32,6 +32,7 @@ jest.mock("obsidian", () => {
 });
 jest.mock("src/ui/settings/Projects.svelte", () => jest.fn().mockImplementation(() => ({ $set() {}, $destroy() {} })));
 jest.mock("src/ui/settings/Archives.svelte", () => jest.fn().mockImplementation(() => ({ $set() {}, $destroy() {} })));
+jest.mock("src/ui/settings/ProjectManagement.svelte", () => jest.fn().mockImplementation(() => ({ $set() {}, $destroy() {} })));
 // Preserve the real compiled components across TS→Svelte default import interop.
 jest.mock("src/ui/components/fields/NumberField.svelte", () => ({ __esModule: true, default: jest.requireActual("src/ui/components/fields/NumberField.svelte").default }));
 jest.mock("src/ui/components/fields/SelectField.svelte", () => ({ __esModule: true, default: jest.requireActual("src/ui/components/fields/SelectField.svelte").default }));

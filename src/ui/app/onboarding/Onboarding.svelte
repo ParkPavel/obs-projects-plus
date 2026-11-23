@@ -6,6 +6,8 @@
   import InlineTranslatedText from "./InlineTranslatedText.svelte";
 
   export let onCreate: () => void;
+  export let onImport: (() => void | Promise<void>) | undefined = undefined;
+  export let importFailed = false;
   /**
    * 3.6.1 — the primary path: the three linked demo projects. Resolves once
    * they are written and registered (the modal then closes); `false` keeps
@@ -60,6 +62,15 @@
       {t("onboarding.create-new")}
     </Button>
   </ModalButtonGroup>
+  {#if onImport}
+    <button type="button" class="ppp-onboarding-template" disabled={busy} on:click={async () => {
+      if (busy || !onImport) return;
+      busy = true; importFailed = false;
+      try { await onImport(); } catch { importFailed = true; }
+      finally { busy = false; }
+    }}>{t("project-manager.import")}</button>
+  {/if}
+  {#if importFailed}<p role="alert">{t("project-manager.failed")}</p>{/if}
 
   <details class="ppp-onboarding-secondary">
     <summary>{t("onboarding.other-ways-summary")}</summary>
@@ -104,6 +115,7 @@ published: false
 </div>
 
 <style>
+  .ppp-onboarding-template { width: 100%; min-height: 2.75rem; height: auto; white-space: normal; overflow-wrap: anywhere; }
   /* The demo card: a real block with its own height, so the title and the
      summary wrap inside it at any width (the profile cards it replaces let
      their text run over the border). */

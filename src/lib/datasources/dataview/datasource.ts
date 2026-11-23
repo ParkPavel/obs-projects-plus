@@ -27,6 +27,16 @@ import { applyDeclaredStoredTypes } from "src/lib/relations/declaredFieldTypes";
 import { parseRecords } from "../helpers";
 import { detectSchema } from "./schema";
 import { standardizeValues } from "./standardize";
+import { pendingImportState } from "src/lib/projectFiles/pendingImportIsolation";
+
+function checkImportQuery(generation: number): void {
+  const state = pendingImportState();
+  if (state.scope !== "none" || state.generation !== generation) {
+    const error = new Error(get(i18n).t("project-files.import-paused"));
+    error.name = get(i18n).t("project-files.import-paused-title");
+    throw error;
+  }
+}
 
 export class UnsupportedCapability extends Error {
   constructor(message: string) {
@@ -61,6 +71,8 @@ export class DataviewDataSource extends DataSource {
   }
 
   async queryAll(): Promise<DataFrame> {
+    const generation = pendingImportState().generation;
+    checkImportQuery(generation);
     if (this.project.dataSource.kind !== "dataview") {
       return emptyDataFrame;
     }
@@ -72,6 +84,9 @@ export class DataviewDataSource extends DataSource {
         forceId: true,
       }
     );
+    // A query started before quarantine can finish after files arrive. Reject
+    // its result even if quarantine has already been released in the meantime.
+    checkImportQuery(generation);
 
     if (!result?.successful) {
       throw new Error("dataview query failed");
@@ -95,7 +110,7 @@ export class DataviewDataSource extends DataSource {
     } else {
       throw new Error(`Unsupported Dataview query type: ${value.type}`);
     }
-    const standardizedRecords = this.standardizeRecords(rows);
+    const standardizedRecords = this.standardizeRecords(rows).filter(record => !this.isProjectCopy(record.id));
 
     let fields = this.sortFields(
       detectSchema(standardizedRecords),
@@ -158,7 +173,7 @@ export class DataviewDataSource extends DataSource {
   }
 
   includes(path: string): boolean {
-    return !this.project.excludedNotes?.includes(path);
+    return !this.project.excludedNotes?.includes(path) && !this.isProjectCopy(path);
   }
 
   readonly(): boolean {

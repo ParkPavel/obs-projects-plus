@@ -6,7 +6,9 @@
    * parent that re-renders with the old value cannot overwrite an edit that
    * commits later (R0.34). Enter and blur commit once; Escape restores the text
    * the field had on entry; an IME composition suppresses Enter and Escape.
-   * Consumers own validation (`validate`) and persistence (`commit`).
+   * Consumers own validation (`validate`) and persistence (`commit`). A
+   * `reject` event reports a failed validation after lifecycle handling, so
+   * a consumer can restore its latest persisted value after a rejected blur.
    */
   import { createEventDispatcher, onDestroy } from "svelte";
   import { createDraftController, recordImeCompositionEnd } from "./draftController";
@@ -56,6 +58,7 @@
     input: string;
     commit: { value: string; reason: "enter" | "blur" | "tab" };
     cancel: void;
+    reject: { value: string; reason: "enter" | "blur" | "tab" };
   }>();
 
   const ctl = createDraftController(value);
@@ -105,12 +108,14 @@
 
   function emit(reason: "enter" | "blur" | "tab"): boolean {
     if (!alive || readOnly || disabled || ctl.isComposing()) return false;
-    const verdict = accepts(ctl.getState().draft);
+    const attempted = ctl.getState().draft;
+    const verdict = accepts(attempted);
     const result = reason === "blur" ? ctl.blur({ accept: verdict, unchanged: commitUnchanged }) : ctl.commit(reason, { accept: verdict, unchanged: commitUnchanged });
     pull();
     reportedInput = draft;
     // A rejected draft left on blur was restored, so nothing is invalid any more.
     if (reason === "blur") invalid = false;
+    if (!verdict) dispatch("reject", { value: attempted, reason });
     if (result) { commits++; dispatch("commit", { value: result.value, reason }); }
     return verdict;
   }

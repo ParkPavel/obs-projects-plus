@@ -8,8 +8,9 @@
   import { buildDerivedSource, projectSourceOptions, sourceNameTaken } from "src/lib/datasources/namedSource";
   import { api } from "src/lib/stores/api";
   import { i18n } from "src/lib/stores/i18n";
-  import { app } from "src/lib/stores/obsidian";
+  import { app, plugin } from "src/lib/stores/obsidian";
   import { settings } from "src/lib/stores/settings";
+  import { pendingImportRevision } from "src/lib/projectFiles/pendingImportIsolation";
   import { isMobileDevice } from "src/lib/stores/ui";
   import { agendaDrawer, toggle as toggleAgendaDrawer } from "src/lib/stores/agendaDrawer";
   import { fileSystem } from "src/lib/stores/fileSystem";
@@ -246,6 +247,11 @@
   // Invalidate when projects are added, removed or renamed, or their source or
   // field configuration changes (rollups are folded into sibling frames).
   let lastProjectsKey = "";
+  let lastPendingImportRevision = get(pendingImportRevision);
+  $: if ($pendingImportRevision !== lastPendingImportRevision) {
+    lastPendingImportRevision = $pendingImportRevision;
+    invalidateExternalFrameCache();
+  }
   $: {
     const key = projectsCacheKey($settings.projects ?? []);
     if (key !== lastProjectsKey) {
@@ -307,8 +313,12 @@
   }
 
   onMount(() => {
+    let active = true;
+    let onboarding: OnboardingModal | undefined;
     if (!projects.length) {
-      new OnboardingModal(
+      const showOnboarding = () => {
+        if (!active) return;
+        onboarding = new OnboardingModal(
         $app,
         // Create from scratch.
         () => {
@@ -321,9 +331,19 @@
           ).open();
         },
         // 3.6.1 — the three linked demo projects: the window's primary path.
-        createDemo
-      ).open();
+        createDemo,
+        async () => {
+          const controller = get(plugin)?.projectFiles;
+          if (!controller) throw new Error("Project transfer is not ready");
+          await controller.openInspector(() => { if (active && !get(settings).projects.length) showOnboarding(); });
+        },
+        () => active
+      );
+      onboarding.open();
+      };
+      showOnboarding();
     }
+    return () => { active = false; onboarding?.close(); };
   });
 
   function openCreateProject() {

@@ -20,6 +20,15 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
 }
 
 describe("Onboarding — the demo is the primary path", () => {
+  it("offers template import without commands and prevents a second click while opening it", async () => {
+    const gate = deferred<void>(), onImport = jest.fn(() => gate.promise);
+    const { container } = render(Onboarding, { props: { onCreate: jest.fn(), onTry: jest.fn(async () => true), onImport } });
+    const button = container.querySelector<HTMLButtonElement>(".ppp-onboarding-template")!;
+    await fireEvent.click(button); await fireEvent.click(button);
+    expect(onImport).toHaveBeenCalledTimes(1); expect(button).toBeDisabled();
+    gate.resolve(); await gate.promise;
+    await waitFor(() => expect(button).not.toBeDisabled());
+  });
   it("offers no starter profiles", () => {
     const { container } = render(Onboarding, { props: { onCreate: jest.fn(), onTry: jest.fn(() => Promise.resolve(true)) } });
     expect(container.querySelector(".ppp-onboarding-profile")).toBeNull();

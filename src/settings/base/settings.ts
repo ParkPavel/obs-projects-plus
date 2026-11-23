@@ -2,6 +2,8 @@
 // imported as type-only to introduce no runtime coupling from the settings
 // layer into the Database engine layer.
 import type { RollupFunction } from "src/lib/engine/aggregate";
+import type { PendingProjectImport } from "src/lib/projectFiles/pendingImportIsolation";
+import type { InstalledProjectPackage } from "src/lib/projectFiles/packageInstallation";
 
 export type ProjectId = string;
 export type ViewId = string;
@@ -394,6 +396,8 @@ export type AnimationBehavior = "smooth" | "instant";
 export interface ColorFavorite { readonly color: string; readonly name: string; }
 
 export type ProjectsPluginPreferences = {
+  /** Opt-in verified project copies. Active configuration remains in data.json. */
+  readonly projectFiles?: { readonly root: string; readonly autoSync: boolean; readonly previousRoots?: string[]; readonly pendingImport?: PendingProjectImport; readonly installations?: InstalledProjectPackage[] };
   /** Shared fallback palette, synced by the ordinary settings writer. */
   readonly colorFavorites?: ColorFavorite[];
   readonly projectSizeLimit: number;

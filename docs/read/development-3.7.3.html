@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="3.7.3 development: copies, packages and transfer"><meta name="color-scheme" content="light dark">
+<meta name="referrer" content="strict-origin-when-cross-origin"><title>3.7.3 development: copies, packages and transfer · Projects Plus</title>
+<meta property="og:type" content="website"><meta property="og:title" content="3.7.3 development: copies, packages and transfer"><meta property="og:description" content="3.7.3 development: copies, packages and transfer"><meta property="og:url" content="https://parkpavel.github.io/obs-projects-plus/read/development-3.7.3.html"><meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://parkpavel.github.io/obs-projects-plus/read/development-3.7.3.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/site.css">
+<script type="module" src="../assets/site.js"></script></head>
+<body data-prefix="../" data-language="en"><a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header"><a class="wordmark" href="../en.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
+<nav aria-label="Main navigation"><a href="../en.html#ideas">Garden of ideas</a><a href="../read/user-guide-en.html">Documentation</a><a href="../en.html#screenshots">Screenshots</a><a class="nav-support" href="https://web.tribute.tg/d/Sh6">♡ Support</a><a class="language" href="../read/development-3.7.3-ru.html" hreflang="ru">Русский</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../en.html">← Explore the plugin</a><strong>On this page</strong><nav aria-label="On this page"><a href="#what-the-increment-adds">What the increment adds</a><a href="#safety-rules-that-apply-everywhere">Safety rules that apply everywhere</a><a href="#visible-copies-and-mirrors">Visible copies and mirrors</a><a href="#packages">Packages</a><a href="#inspecting-and-preparing-a-received-package">Inspecting and preparing a received package</a><a href="#destination-and-bindings">Destination and bindings</a><a href="#note-links-and-references">Note links and references</a><a href="#installation-and-rollback">Installation and rollback</a><a href="#configuration-edits">Configuration edits</a><a href="#sharing-a-saved-package">Sharing a saved package</a><a href="#limits-that-remain">Limits that remain</a><a href="#verification-and-next-steps">Verification and next steps</a></nav></aside><article class="doc-article"><p class="doc-version">Documentation follows the source code; an installed release may differ.</p><h1 id="373-development-copies-packages-and-transfer">3.7.3 development: copies, packages and transfer</h1>
+<p><a href="../read/development-3.7.3-ru.html">Русский</a> · <a href="../read/plan-3.7.3.html">Specification</a></p>
+<p>Following testing on 23 November 2026, the owner requested a usability redesign. The <a href="../read/project-management-ux-3.7.3.html">management panel and wizard specification</a> defines the next increment; functional candidate verification does not establish release-ready usability.</p>
+<p>Status: <strong>in development on the 3.7.3 branch; not published and not accepted</strong>. The published stable plugin remains 3.7.2, and <code>main</code> and the release tag are unchanged. This page describes behaviour implemented in the development branch; it is not a release announcement.</p>
+<h2 id="what-the-increment-adds">What the increment adds</h2>
+<p>Visible configuration copies, versioned package archives, an inspector and explicit preparation of a received package, destination and binding checks, note-link relocation, verified installation with rollback, apply and restore of configuration edits, and sharing of a saved archive. Every step is explicit: nothing is selected, sent or installed automatically.</p>
+<p>A typical path through the feature:</p>
+<ol>
+<li>Keep readable copies of project settings in a visible folder.</li>
+<li>Save a project as a ZIP package, with only the files you choose.</li>
+<li>Inspect a received package and prepare its files.</li>
+<li>Check the destination folder and confirm the bindings and source scopes.</li>
+<li>Install with fresh identities; resume or roll back if installation is interrupted.</li>
+</ol>
+<p>Steps 3 to 5 are optional: an archive can be inspected, copied through the file system or kept as a backup without installing anything.</p>
+<h2 id="safety-rules-that-apply-everywhere">Safety rules that apply everywhere</h2>
+<ul>
+<li>Nothing is selected, transmitted or installed without an explicit action.</li>
+<li>Existing unrelated files are never overwritten; equal bytes do not authorise replacement. Updates to owned configuration copies use checked hashes and compare-and-write.</li>
+<li>Installation has a durable plan and compiled payloads for restart and recovery. Interrupted note preparation can be cleaned up and repeated.</li>
+<li>Nothing is permanently deleted; removal goes through the system trash or a recovery folder.</li>
+<li>Query, formula and link text is never executed or blindly rewritten by these checks.</li>
+<li>Installation does not continue after quitting Obsidian; interrupted work remains available for recovery.</li>
+</ul>
+<h2 id="visible-copies-and-mirrors">Visible copies and mirrors</h2>
+<p>The Project copies and backups command and the settings button open copy management. Choose a visible vault folder; automatic refresh is opt-in and off by default. data.json stays the authoritative fast state, and copies are written only after the primary settings writer confirms it.</p>
+<p>Each project keeps a readable Project.md, an immutable configuration snapshot in Backups and an entry in sync-index.json. Snapshots are content-addressed, so repeating the same configuration does not duplicate them.</p>
+<p>Removing a project never deletes its copies. After the destination changes, previous roots stay reserved so their service documents never become project records. A folder renamed outside Obsidian is not relocated automatically: disable automatic mode and select the real destination.</p>
+<h2 id="packages">Packages</h2>
+<p>Package a project (ZIP) takes the active or archived project, adds the known transitive definitions, and includes only the individual notes, templates and attachments you select. The preview shows projects, file count, size and unresolved known references; saving writes the archive and verifies the bytes it read back. Different existing content is never overwritten.</p>
+<p>Format schema1 is experimental: manifest.json, Projects/ID-hash/Project.md and the selected files under Files/original-vault-path, with sizes and SHA-256. The writer uses pinned fflate 0.8.3 and stored entries only, so no compression and no background worker are involved.</p>
+<p>Bounds: 256 entries including the manifest, 4 MiB per file, 16 MiB total data, 20 MiB archive, 100 project definitions, 512 KiB manifest and 4096 known references. Encrypted, compressed and ZIP64 archives and unsafe paths are refused.</p>
+<p>Verified hashes prove the bytes, not the author&#39;s identity or the safety of imported formulas. This is a selected subset, not a complete vault backup: global preferences, records, templates and attachments you did not select stay outside the archive.</p>
+<h2 id="inspecting-and-preparing-a-received-package">Inspecting and preparing a received package</h2>
+<p>Inspect a project ZIP reads an archive that is already in the vault and shows its projects, files, unresolved references and SHA-256 without saving settings, extracting files or evaluating anything.</p>
+<p>Prepare or resume then rechecks the archive and stages its payload under Incoming as opaque .bin files next to a journal that pins the plan. Native Obsidian metadata is parsed from that isolated copy without rendering notes or evaluating queries.</p>
+<p>Preparation can be interrupted, cleaned up and repeated. Changed payloads, foreign journals and unclaimed folders are kept and block writes. A durable quarantine is confirmed before creating temporary parsing notes; all parsing Markdown is renamed to opaque .bin and Dataview&#39;s public path index is checked before the quarantine is cleared. The native Obsidian parser is used without adding a parser dependency.</p>
+<h2 id="destination-and-bindings">Destination and bindings</h2>
+<p>Checking the import folder preserves the selected subtrees and lists the destination of every selected note and attachment. One visible JSON configuration per project is planned under Project settings/ID-hash.json, also for configuration-only packages.</p>
+<p>Existing files, occupied folders, parent-file conflicts and case or NFC aliases block placement; equal bytes never authorise replacement.</p>
+<p>Bindings are explicit for notes, templates, external sources, primary and additional source folders, and the folder used for new notes; a tag-based project must choose its creation folder. A source keep rule can cover existing and future recipient notes, and that scope is shown before you confirm. Query and formula strings are never rewritten or evaluated by these checks.</p>
+<h2 id="note-links-and-references">Note links and references</h2>
+<p>Note links are moved at their real native positions: Markdown links, wiki links, embeds, reference definitions and YAML scalars. Alias, heading, block, title and code text are preserved.</p>
+<p>Schema1 carries no sender resolution catalogue, so ambiguous wiki links and external links need explicit bindings; the plugin never guesses by basename.</p>
+<p>Unsupported link styles and contexts are retained and block activation instead of being dropped. Board and Gallery cards remap their order only when the stored row IDs are native; persisted rows produced by transforms or other views block safe transfer. Deterministic canonicalisation of legacy tables preserves exactly the pages that are empty today.</p>
+<h2 id="installation-and-rollback">Installation and rollback</h2>
+<p>Installation runs only after every check and choice. It allocates fresh IDs, rewrites runtime references and known paths, writes notes and their owned JSON beside them, and publishes projects only after the written files are read back.</p>
+<p>A durable pending descriptor isolates partial files and pauses Dataview acquisition for the affected projects. The journal and the compiled .bin payload pin the plan across restarts, so resuming an install does not need the original ZIP.</p>
+<p>Rollback moves owned files that were not edited to Incoming/Recovery and leaves edited or unacknowledged files in place. Nothing is permanently deleted. The source ZIP is kept by default; an unchanged archive can be moved to the system trash only after confirmed success.</p>
+<h2 id="configuration-edits">Configuration edits</h2>
+<p>Apply configuration edits and Restore a configuration snapshot are available in copy management. Both show a read-only, paginated diff and apply only on explicit confirmation after owner, base, schema and graph checks; stale drafts are refused.</p>
+<p>An immutable copy of the project before the change and the exact draft are saved before the primary commit. The default project choice and record files are not replaced wholesale, and the unique-ID counter never decreases.</p>
+<p>Owned JSON is refreshed, and the mirror and index acknowledge the applied edit. External drafts block automatic overwrite. If the file refresh fails after the primary settings were confirmed, that failure is shown separately and can be retried; this is not a distributed transaction.</p>
+<h2 id="sharing-a-saved-package">Sharing a saved package</h2>
+<p>After saving, the verified archive is prepared as a private File. Share calls the public Web Share files API from the explicit button, and only when the host reports that it can share files.</p>
+<p>On a PC or an unsupported host the plugin says so and points to the saved ZIP in Files or your file manager. There is no automatic transmission and no private OS or Obsidian API. Acceptance on a physical iPhone is still required; widgets and notifications belong to 3.7.4.</p>
+<h2 id="limits-that-remain">Limits that remain</h2>
+<ul>
+<li>The Markdown mirror and configuration backups are excluded from native sources and file-linked Dataview output, but vault-wide Dataview aggregates must exclude the copy folder themselves; queries are not rewritten.</li>
+<li>Temporary parsing and import isolation does not rewrite aggregate queries either.</li>
+<li>Integrity checks do not prove authorship, and unknown configuration is retained rather than migrated.</li>
+<li>Folder renames made outside Obsidian need a manual destination change.</li>
+<li>Same-vault copies do not protect against losing that vault; keep an independent backup.</li>
+</ul>
+<h2 id="verification-and-next-steps">Verification and next steps</h2>
+<p>Before release: full checks on the exact candidate commit, an independent qualified review, published candidate hashes and a manual PC and iPhone protocol. No result of those gates is claimed here, and no historical test totals are reused. The published stable version, <code>main</code> and the release tag remain 3.7.2.</p>
+<p class="doc-source"><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/docs/development-3.7.3.md">Page source ↗</a></p></article></main>
+<footer class="site-footer"><a class="wordmark" href="../en.html">Projects Plus</a><p>An open-source project by Park Pavel. Based on Obsidian Projects by Marcus Olsson.</p><div><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache-2.0</a><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE">Attribution</a><a href="https://web.tribute.tg/d/Sh6">♡ Support the project</a><a href="https://github.com/ParkPavel/obs-projects-plus/issues">Feedback</a></div></footer>
+<aside class="search-panel" aria-label="Search documentation"><label for="doc-search">Search documentation</label><div class="search-input-wrap"><input id="doc-search" type="search" placeholder="Search…" autocomplete="off" aria-controls="search-results"><kbd>/</kbd></div><ul id="search-results" hidden></ul><p id="search-status" role="status" aria-live="polite" data-empty="No matches. Try “calendar”, “formula” or “source”."></p></aside>
+</body></html>

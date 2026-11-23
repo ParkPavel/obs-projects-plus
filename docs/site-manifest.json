@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceVersion": "3.7.2",
+  "sourceVersion": "3.7.3",
   "generator": "node scripts/build-docs-site.mjs",
   "sources": [
     "README.md",
@@ -21,12 +21,16 @@
     "docs/architecture.md",
     "docs/development-3.7.1-RU.md",
     "docs/development-3.7.1.md",
+    "docs/development-3.7.3-RU.md",
+    "docs/development-3.7.3.md",
     "docs/next-versions-RU.md",
     "docs/next-versions.md",
     "docs/plan-3.7.3-RU.md",
     "docs/plan-3.7.3.md",
     "docs/plan-3.7.4-RU.md",
     "docs/plan-3.7.4.md",
+    "docs/project-management-ux-3.7.3-RU.md",
+    "docs/project-management-ux-3.7.3.md",
     "docs/release-3.7.2-RU.md",
     "docs/release-3.7.2.md",
     "docs/site-maintenance-RU.md",
@@ -43,19 +47,19 @@
   "files": [
     {
       "name": "read/project-readme.html",
-      "sha256": "57134c368ac7922d5779e3175c96fa7e44adb20f5d38c0f1b44e2ab5ecee09df"
+      "sha256": "51bea470c4242961a6ec33f661f444dce55ffcf8fb926649554cbb61c9528840"
     },
     {
       "name": "read/readme-ru.html",
-      "sha256": "ceeb692cce137dd914314772f6e158477a2fa7210453367d3f6a9d2c6234eed3"
+      "sha256": "2afcd8a9412ae9f7bb8c887d042d404bcf61bac77e8a3a09b5297863dd8457ba"
     },
     {
       "name": "read/changelog.html",
-      "sha256": "5ce2943d6495e16046285f2e2b5bd6d8ba310deec11e3022725e1b4207ce30bf"
+      "sha256": "da1aac41eeca37b4791c2bf6012b2ab0d25e84109af03c37b723f1254dba8253"
     },
     {
       "name": "read/changelog-ru.html",
-      "sha256": "09f1a7325c365c344624968000c67f27d18702aa972a5ba9e062cc5858f6a993"
+      "sha256": "4d1c7f3e1e96e0b5d7126c1deea41cf5613707b6ba2f56ee5b919d1c77f1b21b"
     },
     {
       "name": "read/roadmap.html",
@@ -114,6 +118,14 @@
       "sha256": "257cb239086d6846810e6a24c609c3cbf10e35cb05953a66d7acbc1a6f4c2713"
     },
     {
+      "name": "read/development-3.7.3-ru.html",
+      "sha256": "45ad61cda37bb0ff56c3b7d763f88ba52ed3874b51a9c0b2484790ca05b0207c"
+    },
+    {
+      "name": "read/development-3.7.3.html",
+      "sha256": "6c784962b26a324d0971010a0ed625e0bad7904d6bac6dd443b391f2768ccd26"
+    },
+    {
       "name": "read/next-versions-ru.html",
       "sha256": "f2b60525f0325302b034da8d25416a90ddd6f5b99587e9556f94d9d3ae85aebc"
     },
@@ -136,6 +148,14 @@
     {
       "name": "read/plan-3.7.4.html",
       "sha256": "4fe239ec4d68047a3db17eaa8986d9f24ab12f5de9b1ca8619502135bc3d3576"
+    },
+    {
+      "name": "read/project-management-ux-3.7.3-ru.html",
+      "sha256": "545780f699d71788e22df08eace1d67de932cd622b82b770fb91eba361966976"
+    },
+    {
+      "name": "read/project-management-ux-3.7.3.html",
+      "sha256": "9fe094b2c365fb3b08da1ccd37714496b78d6922925164f1c2cfa9efda665a45"
     },
     {
       "name": "read/release-3.7.2-ru.html",
@@ -251,7 +271,7 @@
     },
     {
       "name": "search-index.json",
-      "sha256": "2ebbc14eb85b23742a8f3345e48db0eaea354891d765781100df77dc63946ab2"
+      "sha256": "cc2d03acc05ce8ad8b0ae931bf7e7098fde23921331939d8e883af3fb85017e8"
     },
     {
       "name": ".nojekyll",

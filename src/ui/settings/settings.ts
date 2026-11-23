@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import Projects from "src/ui/settings/Projects.svelte";
 import Archives from "src/ui/settings/Archives.svelte";
+import ProjectManagement from "./ProjectManagement.svelte";
 import { settings } from "src/lib/stores/settings";
 import { get } from "svelte/store";
 import type ProjectsPlugin from "src/main";
@@ -51,6 +52,23 @@ export class ProjectsSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     const t = (key: string) => get(i18n).t(key);
+    const manager = new ProjectManagement({ target: containerEl, props: {
+      onCreate: () => { if (owner === this.displayRevision) this.plugin.openProjectCreator(); },
+      onImport: () => owner === this.displayRevision ? this.plugin.projectFiles?.openInspector() : undefined,
+      onCopies: () => { if (owner === this.displayRevision) this.plugin.projectFiles?.open(); },
+      onShare: (id: string) => owner === this.displayRevision ? this.plugin.projectFiles?.openPackages(id) : undefined,
+      onConfiguration: (mode: "draft" | "restore") => owner === this.displayRevision ? this.plugin.projectFiles?.openConfiguration(mode) : undefined,
+      onOpen: (id: string) => {
+        if (owner !== this.displayRevision || !get(settings).projects.some(project => project.id === id)) return false;
+        this.plugin.activateView(id);
+        // Closing global settings has no public SettingTab hook. Keep this
+        // optional host capability contained; opening still works without it.
+        const host = this.app as App & { setting?: { close?: () => void } };
+        if (typeof host.setting?.close === "function") { host.setting.close(); return true; }
+        return false;
+      },
+    } });
+    this.mounted.push(manager);
     const preferenceBindings: Array<(prefs: ProjectsPluginPreferences) => void> = [];
     const choices = (prefix: string, values: readonly string[]) => values.map(value => ({ value, label: t(prefix + ".options." + value) }));
     const choice = (key: string, read: (prefs: ProjectsPluginPreferences) => string, options: readonly { value: string; label: string }[], write: (value: string) => void, description = false) => {
@@ -157,7 +175,8 @@ export class ProjectsSettingTab extends PluginSettingTab {
       if (owner !== this.displayRevision) return;
       preferences = current.preferences;
       for (const refresh of preferenceBindings) refresh(preferences);
-      projectsManager.$set({ preferences });
+      projectsManager.$set({ preferences, projects: current.projects });
+      archivesManager.$set({ archives: current.archives });
     });
     // Unsubscribe before destroying controls, so a retiring child cannot refresh them.
     this.mounted.unshift({ $destroy: unsubscribePreferences });

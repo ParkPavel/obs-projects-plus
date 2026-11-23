@@ -22,7 +22,8 @@ function generateId(): string {
  * Creates a single DataTable widget with the old table settings.
  */
 export function migrateTableConfig(
-  old: LegacyTableConfig
+  old: LegacyTableConfig,
+  widgetId = generateId(),
 ): DatabaseViewConfig {
   const tableConfig: DataTableConfig = {
     ...(old.fieldConfig != null && { fieldConfig: old.fieldConfig }),
@@ -36,7 +37,7 @@ export function migrateTableConfig(
   return {
     widgets: [
       {
-        id: generateId(),
+        id: widgetId,
         type: "data-table",
         title: "Table",
         layout: { x: 0, y: 0, w: 12, h: 8 },

@@ -60,6 +60,7 @@ const WIKILINK_SITES: ReadonlyArray<readonly [string, string]> = [
   ["ui/components/TagList/RichTextTag.svelte", "an anchor inside a rendered tag"],
   ["ui/views/Board/components/Board/ColumnHeader.svelte", "an anchor inside a rendered column title"],
   ["ui/properties/NotePropertiesSession.svelte", "a parsed wikilink in a property value of the note header"],
+  ["ui/projectFiles/configurationModal.ts", "the explicitly selected owned configuration document, opened as source text rather than a project record"],
 ];
 
 const CALL = /workspace\s*\.\s*openLinkText\s*\(/;

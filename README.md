@@ -20,7 +20,7 @@ Dashboard formulas add calculated columns to the data shown in a view. They are 
 
 **3.7.4 — mobile widgets and reminders.** Explore compact project elements, native OS integration and notification delivery on selected devices.
 
-These are plans, not features in installed 3.7.2; no dates are committed. [Announcement and stages](docs/next-versions.md) · [3.7.3 specification](docs/plan-3.7.3.md) · [3.7.4 research](docs/plan-3.7.4.md).
+3.7.3 is being implemented and tested; 3.7.4 remains planned. These features are not in published 3.7.2. [3.7.3 workflow and limits](docs/development-3.7.3.md) · [Announcement and stages](docs/next-versions.md) · [3.7.3 specification](docs/plan-3.7.3.md) · [3.7.4 research](docs/plan-3.7.4.md).
 
 ## Release 3.7.2
 

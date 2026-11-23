@@ -55,6 +55,8 @@ jest.mock("src/ui/settings/Projects.svelte", () =>
   jest.fn().mockImplementation(() => { const c = { $set: jest.fn(), $destroy: jest.fn() }; mockMounted.push(c); return c; }));
 jest.mock("src/ui/settings/Archives.svelte", () =>
   jest.fn().mockImplementation(() => { const c = { $set: jest.fn(), $destroy: jest.fn() }; mockMounted.push(c); return c; }));
+jest.mock("src/ui/settings/ProjectManagement.svelte", () =>
+  jest.fn().mockImplementation(() => { mockRendered.push("panel:projects"); const c = { $set: jest.fn(), $destroy: jest.fn() }; mockMounted.push(c); return c; }));
 
 jest.mock("src/lib/stores/settings", () => {
   const { writable } = require("svelte/store");
@@ -72,6 +74,26 @@ function renderTab(): string[] {
 }
 
 describe("settings tab", () => {
+  test("archiving and restoring refreshes both lower lists without reopening or remounting controls", () => {
+    const { settings } = require("src/lib/stores/settings") as typeof import("src/lib/stores/settings");
+    const { DEFAULT_SETTINGS, DEFAULT_PROJECT } = require("src/settings/settings") as typeof import("src/settings/settings");
+    const Projects = require("src/ui/settings/Projects.svelte") as jest.Mock;
+    const Archives = require("src/ui/settings/Archives.svelte") as jest.Mock;
+    const project = { ...DEFAULT_PROJECT, id: "live-project", name: "Live project" };
+    settings.set({ ...DEFAULT_SETTINGS, projects: [project], archives: [] });
+    const tab = new ProjectsSettingTab({}, { manifest: { version: "0.0.0" } }); tab.display();
+    const projects = Projects.mock.results.at(-1)!.value as { $set: jest.Mock }, archives = Archives.mock.results.at(-1)!.value as { $set: jest.Mock };
+    projects.$set.mockClear(); archives.$set.mockClear();
+    settings.set({ ...DEFAULT_SETTINGS, projects: [], archives: [project] });
+    expect(projects.$set).toHaveBeenLastCalledWith(expect.objectContaining({ projects: [] }));
+    expect(archives.$set).toHaveBeenLastCalledWith(expect.objectContaining({ archives: [project] }));
+    settings.set({ ...DEFAULT_SETTINGS, projects: [project], archives: [] });
+    expect(projects.$set).toHaveBeenLastCalledWith(expect.objectContaining({ projects: [project] }));
+    expect(archives.$set).toHaveBeenLastCalledWith(expect.objectContaining({ archives: [] }));
+    tab.hide(); projects.$set.mockClear(); archives.$set.mockClear();
+    settings.set(DEFAULT_SETTINGS);
+    expect(projects.$set).not.toHaveBeenCalled(); expect(archives.$set).not.toHaveBeenCalled();
+  });
   test("offers no Link behavior control", () => {
     const out = renderTab();
     expect(out.filter((r) => r.includes("link-behavior"))).toEqual([]);
@@ -85,11 +107,11 @@ describe("settings tab", () => {
     expect(out).toContain("name:settings.general.start-of-week.name");
   });
 
-  // Catalogue guideline: general settings first, without a heading, and no
-  // top-level heading named after the plugin; "About" belongs at the end.
-  test("opens with the general settings, not with a heading", () => {
+  // Owner UX requirement23.11: project management precedes general controls.
+  test("opens with project management, followed by general settings", () => {
     const out = renderTab();
-    expect(out[0]).toBe("name:settings.general.size-limit.name");
+    expect(out[0]).toBe("panel:projects");
+    expect(out[1]).toBe("name:settings.general.size-limit.name");
   });
 
   test("the About section comes last, under one heading", () => {
