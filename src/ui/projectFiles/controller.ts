@@ -30,6 +30,7 @@ export class ProjectFilesController {
   private failureReported = false;
   private observedCopyPreferences: LatestProjectsPluginSettings["preferences"]["projectFiles"];
   private initializeRoot: string | undefined;
+  private closePackageModal(): void { const modal = this.packageModal; delete this.packageModal; modal?.close(); }
 
   constructor(private readonly host: Plugin, private readonly flush: () => Promise<void>, private readonly confirmed: () => string | null, private readonly primary?: InstallationPrimary) {
     host.addCommand({ id: "project-files", name: get(i18n).t("project-files.title"), callback: () => this.open() });
@@ -42,35 +43,40 @@ export class ProjectFilesController {
 
   open(): void {
     if (!this.alive) return;
-    this.packageModal?.close();
+    this.closePackageModal();
     this.modal?.close();
     this.modal = new ProjectFilesModal(this.host.app, this);
     this.modal.open();
   }
 
-  async openPackages(): Promise<void> {
+  async openPackages(projectId?: string): Promise<void> {
     if (!get(settings).preferences.projectFiles) { this.open(); return; }
     const [{ ProjectPackageModal }, { ProjectPackageService }] = await Promise.all([import("./packageModal"), import("./packageService")]);
     if (!this.alive) return;
     this.modal?.close();
-    this.packageModal?.close();
-    this.packageModal = new ProjectPackageModal(this.host.app, new ProjectPackageService(this.host, this.flush, this.confirmed, () => this.alive, this.primary));
+    this.closePackageModal();
+    this.packageModal = new ProjectPackageModal(this.host.app, new ProjectPackageService(this.host, this.flush, this.confirmed, () => this.alive, this.primary), projectId);
     this.packageModal.open();
   }
 
-  async openInspector(): Promise<void> {
+  async openInspector(afterClose?: () => void): Promise<void> {
     const [{ ProjectPackageInspectModal }, { ProjectPackageService }] = await Promise.all([import("./packageInspectModal"), import("./packageService")]);
     if (!this.alive) return;
-    this.modal?.close(); this.packageModal?.close();
-    this.packageModal = new ProjectPackageInspectModal(this.host.app, new ProjectPackageService(this.host, this.flush, this.confirmed, () => this.alive, this.primary));
-    this.packageModal.open();
+    this.modal?.close(); this.closePackageModal();
+    const modal = new ProjectPackageInspectModal(this.host.app, new ProjectPackageService(this.host, this.flush, this.confirmed, () => this.alive, this.primary), () => {
+      if (this.packageModal !== modal) return;
+      delete this.packageModal;
+      if (this.alive) afterClose?.();
+    });
+    this.packageModal = modal;
+    modal.open();
   }
 
   async openConfiguration(mode: import("./configurationService").ConfigurationApplyMode): Promise<void> {
     if (!this.primary) return;
     const [{ ProjectConfigurationService }, { ProjectConfigurationModal }] = await Promise.all([import("./configurationService"), import("./configurationModal")]);
     if (!this.alive) return;
-    this.modal?.close(); this.packageModal?.close();
+    this.modal?.close(); this.closePackageModal();
     this.packageModal = new ProjectConfigurationModal(this.host.app, new ProjectConfigurationService(this.host, this.primary, () => this.alive), mode);
     this.packageModal.open();
   }
@@ -166,6 +172,6 @@ export class ProjectFilesController {
     this.pending = false;
     window.clearTimeout(this.timer);
     this.modal?.close();
-    this.packageModal?.close();
+    this.closePackageModal();
   }
 }

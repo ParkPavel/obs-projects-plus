@@ -1,4 +1,5 @@
-import { Modal, Setting, TFile, type App } from "obsidian";
+import { Setting, TFile, type App } from "obsidian";
+import { ProjectTransferModal as Modal } from "./transferModal";
 import { get } from "svelte/store";
 import { i18n } from "src/lib/stores/i18n";
 import { settings } from "src/lib/stores/settings";

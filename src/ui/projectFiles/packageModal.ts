@@ -1,4 +1,5 @@
-import { FuzzySuggestModal, Modal, Setting, TFile, type App } from "obsidian";
+import { Setting, TFile, getAllTags, type App } from "obsidian";
+import { ProjectTransferModal as Modal, ProjectTransferSuggestModal as FuzzySuggestModal } from "./transferModal";
 import { get } from "svelte/store";
 import { settings } from "src/lib/stores/settings";
 import { i18n } from "src/lib/stores/i18n";
@@ -15,11 +16,18 @@ class PackageFilePicker extends FuzzySuggestModal<TFile> {
   onChooseItem(file: TFile): void { this.choose(file); }
 }
 
+class PackageGroupPicker extends FuzzySuggestModal<string> {
+  constructor(app: App, private readonly items: string[], private readonly choose: (value: string) => void) { super(app); this.containerEl.addClass("ppp-modal"); }
+  getItems(): string[] { return this.items; }
+  getItemText(item: string): string { return item; }
+  onChooseItem(item: string): void { this.choose(item); }
+}
+
 /** Native scrolling and explicit preview; no archive is written merely by opening a picker. */
 export class ProjectPackageModal extends Modal {
   private alive = false;
-  private picker: PackageFilePicker | undefined;
-  constructor(app: App, private readonly service: ProjectPackageService) {
+  private picker: { open(): void; close(): void } | undefined;
+  constructor(app: App, private readonly service: ProjectPackageService, private readonly initialProjectId?: string) {
     super(app); this.containerEl.addClass("ppp-modal");
   }
   onOpen(): void {
@@ -29,14 +37,19 @@ export class ProjectPackageModal extends Modal {
     this.contentEl.createEl("p", { text: t("description") });
     const projects = [...get(settings).projects, ...get(settings).archives];
     if (!projects.length) { this.contentEl.createEl("p", { text: t("empty") }); return; }
-    let projectId = projects[0]!.id, prepared: PreparedProjectPackage | undefined, busy = false;
+    if (this.initialProjectId && !projects.some(project => project.id === this.initialProjectId)) {
+      this.contentEl.createEl("p", { text: get(i18n).t("project-manager.project-missing"), attr: { role: "alert" } }); return;
+    }
+    let projectId = this.initialProjectId ?? projects[0]!.id, prepared: PreparedProjectPackage | undefined, busy = false;
     const paths = new Set<string>();
     const projectRow = new Setting(this.contentEl).setName(t("project"));
     const select = projectRow.controlEl.createEl("select", { attr: { "aria-label": t("project") } });
     const archived = new Set(get(settings).archives.map(project => project.id));
     for (const project of projects) select.createEl("option", { value: project.id,
       text: project.name + (archived.has(project.id) ? " · " + get(i18n).t("project-files.archived") : "") });
+    select.value = projectId;
     const chosen = this.contentEl.createDiv();
+    const groupControls = new Setting(this.contentEl).setName(get(i18n).t("project-manager.include-files"));
     const controls = new Setting(this.contentEl);
     const preview = this.contentEl.createDiv({ attr: { role: "status", "aria-live": "polite" } });
     const saveRow = new Setting(this.contentEl);
@@ -53,12 +66,53 @@ export class ProjectPackageModal extends Modal {
     };
     select.addEventListener("change", () => { if (busy) return; projectId = select.value; invalidate(); });
     let addButton: import("obsidian").ButtonComponent, previewButton: import("obsidian").ButtonComponent, saveButton: import("obsidian").ButtonComponent;
+    const groupButtons: import("obsidian").ButtonComponent[] = [];
     updateButtons = () => {
       select.disabled = busy;
+      for (const button of groupButtons) button.setDisabled(busy);
       addButton?.setDisabled(busy || paths.size >= PACKAGE_LIMITS.files - 2);
       previewButton?.setDisabled(busy);
       saveButton?.setDisabled(busy || !prepared);
     };
+    const addGroup = (kind: "folder" | "tag") => {
+      if (busy || !this.alive) return;
+      try {
+        const available = this.app.vault.getFiles().filter(file => this.service.eligible(file.path));
+        const tags = (file: TFile) => {
+          if (file.extension !== "md") return [];
+          const cache = this.app.metadataCache.getFileCache(file);
+          if (!cache) throw new Error("metadata not ready");
+          return getAllTags(cache) ?? [];
+        };
+        const groups = new Set<string>();
+        for (const file of available) {
+          if (kind === "tag") for (const tag of tags(file)) groups.add(tag);
+          else {
+            const parts = file.path.split("/"); parts.pop();
+            for (let i = 1; i <= parts.length; i++) groups.add(parts.slice(0, i).join("/"));
+          }
+        }
+        this.picker?.close();
+        this.picker = new PackageGroupPicker(this.app, [...groups].sort(), value => {
+          if (!this.alive || busy) return;
+          try {
+            // Reacquire membership after the picker closes; never use stale file
+            // objects or silently truncate a group at the archive limit.
+            const selected = this.app.vault.getFiles().filter(file => this.service.eligible(file.path) &&
+              (kind === "folder" ? file.path.startsWith(value + "/") : tags(file).includes(value))).map(file => file.path);
+            const next = new Set([...paths, ...selected]);
+            if (next.size > PACKAGE_LIMITS.files - 2) { result.textContent = t("limits"); return; }
+            for (const path of next) paths.add(path);
+            invalidate(); renderFiles();
+          } catch { result.textContent = t("failed"); }
+        });
+        this.picker.open();
+      } catch { result.textContent = t("failed"); }
+    };
+    for (const kind of ["folder", "tag"] as const) groupControls.addButton(button => {
+      groupButtons.push(button);
+      button.setButtonText(get(i18n).t("project-manager.include-" + kind)).onClick(() => addGroup(kind));
+    });
     controls.addButton(button => {
       addButton = button;
       button.setButtonText(t("add-file")).onClick(() => {

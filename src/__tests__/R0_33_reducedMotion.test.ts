@@ -422,6 +422,7 @@ describe("R0.33 — the tree", () => {
       "ui/projectFiles/packageInspectModal.ts",
       "ui/projectFiles/packageModal.ts",
       "ui/projectFiles/packageScopesModal.ts",
+      "ui/projectFiles/transferModal.ts",
       "ui/views/VisualizerPane/RelationPickerModal.ts",
     ]);
     const bare = modals.filter(({ classes, roots }) => roots < classes).map(({ file }) => file);

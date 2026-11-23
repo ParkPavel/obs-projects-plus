@@ -62,6 +62,12 @@ const inspected = { archiveHash: "a".repeat(64), manifest: { projects: [{ name: 
 const settle = async () => { await Promise.resolve(); await Promise.resolve(); };
 const button = () => modal.contentEl.querySelector("button")!;
 const stageButton = () => Array.from(modal.contentEl.querySelectorAll("button")).find(button => button.textContent === "package-inspect.stage")!;
+
+test("closing an inspector reports completion only once per opening", () => {
+  const returned = jest.fn();
+  const other = new ProjectPackageInspectModal({} as App, { dispose } as unknown as Service, returned);
+  other.open(); other.close(); other.close(); expect(returned).toHaveBeenCalledTimes(1);
+});
 beforeAll(() => Object.defineProperty(HTMLElement.prototype, "empty", { configurable: true, value: function(this: HTMLElement) { this.replaceChildren(); } }));
 afterAll(() => { if (beforeEmpty) Object.defineProperty(HTMLElement.prototype, "empty", beforeEmpty); else Reflect.deleteProperty(HTMLElement.prototype, "empty"); });
 beforeEach(() => {

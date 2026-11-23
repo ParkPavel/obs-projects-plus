@@ -34,7 +34,7 @@ jest.mock("obsidian", () => {
       callback(control);return this;
     }
   }
-  return { Modal, Setting, TFile: class {}, Platform: { isMacOS: false } };
+  return { Modal, FuzzySuggestModal: class extends Modal {}, Setting, TFile: class {}, Platform: { isMacOS: false } };
 });
 const { ProjectFilesModal } = require("./modal") as typeof import("./modal");
 const { settings } = require("src/lib/stores/settings") as typeof import("src/lib/stores/settings");

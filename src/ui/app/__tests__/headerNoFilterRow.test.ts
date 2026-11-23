@@ -30,7 +30,7 @@ jest.mock("src/ui/app/ProjectsEmptyState.svelte", () => ({
   default: jest.requireActual("src/__mocks__/obsidian-svelte.js").Icon,
 }));
 jest.mock("src/ui/app/onboarding/onboardingModal", () => ({
-  OnboardingModal: jest.fn().mockImplementation(() => ({ open: jest.fn() })),
+  OnboardingModal: jest.fn().mockImplementation(() => ({ open: jest.fn(), close: jest.fn() })),
 }));
 jest.mock("src/ui/app/onboarding/demoRun", () => ({
   createDemoWithNotices: jest.fn(() => Promise.resolve(null)),

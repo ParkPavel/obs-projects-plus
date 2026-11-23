@@ -151,11 +151,11 @@
     },
     {
       "name": "read/project-management-ux-3.7.3-ru.html",
-      "sha256": "94b399efbcf7dd3c628fab3b5ff9940874c4f78bb2737c6ba2f0f5c864d56d36"
+      "sha256": "545780f699d71788e22df08eace1d67de932cd622b82b770fb91eba361966976"
     },
     {
       "name": "read/project-management-ux-3.7.3.html",
-      "sha256": "65f4a691d1392909dc0730d6b13dd5d23fdae40c084596130ed040fa93dbf104"
+      "sha256": "9fe094b2c365fb3b08da1ccd37714496b78d6922925164f1c2cfa9efda665a45"
     },
     {
       "name": "read/release-3.7.2-ru.html",
@@ -271,7 +271,7 @@
     },
     {
       "name": "search-index.json",
-      "sha256": "9f158086e925a6c7de978d80b4cd3a957d8725bebc04e8c509a87060226ffd6b"
+      "sha256": "cc2d03acc05ce8ad8b0ae931bf7e7098fde23921331939d8e883af3fb85017e8"
     },
     {
       "name": ".nojekyll",

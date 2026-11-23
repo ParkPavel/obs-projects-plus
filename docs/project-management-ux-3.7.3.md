@@ -2,7 +2,9 @@
 
 [Русский](project-management-ux-3.7.3-RU.md) · [Implemented technical foundation](development-3.7.3.md)
 
-Status: **next-iteration specification, 23 November 2026**. The owner found candidate 579c052d relatively successful functionally but rejected its usability. This is not release acceptance. The interface below is not implemented yet. Stable remains 3.7.2.
+Status: **next-iteration implementation, 23 November 2026**. The owner found candidate 579c052d relatively successful functionally but rejected its usability. This is not release acceptance. Stable remains 3.7.2.
+
+The first increment in the working branch adds a settings panel with project search, open, share and archive actions; ZIP-template onboarding; whole-folder or exact-tag selection when packaging; and readable ZIP names with dates and collision numbering. Transfer windows share keyboard-visible viewport handling and long-text wrapping. Real iPhone verification is still required. The unified wizard, automatic linked-file inclusion, simpler extraction and configuration naming migration remain subsequent stages. Existing files are not renamed automatically.
 
 ## 1. Goal and evidence
 

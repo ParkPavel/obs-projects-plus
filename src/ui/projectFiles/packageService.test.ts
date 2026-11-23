@@ -184,7 +184,7 @@ test("preview performs no writes; save creates one visible ZIP and verifies actu
   const prepared = await service.prepare("p", ["Note.md"]);
   expect(create).not.toHaveBeenCalled(); expect(folders.size).toBe(0);
   const saved = await service.save(prepared);
-  expect(saved.path).toMatch(/^Copies\/Packages\/[a-f0-9]{64}-[a-f0-9]{64}\.zip$/);
+  expect(saved.path).toMatch(/^Copies\/Packages\/Project — \d{4}-\d{2}-\d{2}\.zip$/);
   expect(saved.bytes).toBe(files.get(saved.path)?.bytes.length);
   expect(create).toHaveBeenCalledTimes(1);
   expect(disk).toEqual(get(settings));
@@ -374,12 +374,35 @@ test("corrupt read-back is an error and never rewrites the archive or primary se
   expect(disk.projects[0]?.name).toBe("Project");
 });
 
-test("an existing changed ZIP is preserved", async () => {
+test("an existing changed ZIP is preserved and a numbered archive is created", async () => {
   const prepared = await service.prepare("p", []), saved = await service.save(prepared);
   files.get(saved.path)!.bytes[0] = 0;
-  await expect(service.save(prepared)).rejects.toThrow("read-back");
-  expect(create).toHaveBeenCalledTimes(1);
+  const next = await service.save(prepared);
+  expect(next.path).toBe(saved.path.replace(/\.zip$/, " (2).zip"));
+  expect(create).toHaveBeenCalledTimes(2);
   expect(files.get(saved.path)?.bytes[0]).toBe(0);
+});
+
+test("readable archive names reuse identical bytes and avoid portable aliases", async () => {
+  const prepared = await service.prepare("p", []), first = await service.save(prepared);
+  expect(first.path).toMatch(/^Copies\/Packages\/Project — \d{4}-\d{2}-\d{2}\.zip$/);
+  expect(await service.save(prepared)).toEqual(first);
+  expect(create).toHaveBeenCalledTimes(1);
+  const file = files.get(first.path)!;
+  files.delete(first.path); file.path = first.path.toUpperCase(); files.set(file.path, file);
+  const next = await service.save(prepared);
+  expect(next.path).toBe(first.path.replace(/\.zip$/, " (2).zip"));
+  expect(files.get(file.path)).toBe(file);
+});
+
+test("an alias introduced while reading an existing archive cannot report an unambiguous success", async () => {
+  const prepared = await service.prepare("p", []), first = await service.save(prepared);
+  read.mockImplementationOnce(async file => {
+    const alias = new TFile(first.path.toUpperCase(), { size: 1, mtime: 1 }); alias.bytes = new Uint8Array([7]); files.set(alias.path, alias);
+    return new Uint8Array(file.bytes as Uint8Array).buffer;
+  });
+  await expect(service.save(prepared)).rejects.toThrow("ambiguous");
+  expect(create).toHaveBeenCalledTimes(1); expect(files.get(first.path.toUpperCase())?.bytes[0]).toBe(7);
 });
 
 test("a ZIP disappearing during verification cannot report success", async () => {

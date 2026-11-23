@@ -329,15 +329,7 @@ export default class ProjectsPlusPlugin extends Plugin {
     this.addCommand({
       id: "create-project",
       name: t("commands.create-project.name"),
-      callback: () => {
-        new CreateProjectModal(
-          this.app,
-          t("modals.project.create.title"),
-          t("modals.project.create.cta"),
-          (project) => settings.addProject(project),
-          createProject()
-        ).open();
-      },
+      callback: () => this.openProjectCreator(),
     });
 
     // w4-p12: where the start-up's time went, as text a phone can paste.
@@ -1355,9 +1347,13 @@ export default class ProjectsPlusPlugin extends Plugin {
     settings.set(value);
   }
 
-  /**
-   * activateView opens the main Projects view in a new workspace leaf.
-   * */
+  openProjectCreator(): void {
+    const t = get(i18n).t;
+    new CreateProjectModal(this.app, t("modals.project.create.title"), t("modals.project.create.cta"),
+      project => settings.addProject(project), createProject()).open();
+  }
+
+  /** Opens the main Projects view in a workspace leaf. */
   activateView(projectId?: ProjectId, viewId?: ViewId): void {
     const leaf = this.getOrCreateLeaf();
 

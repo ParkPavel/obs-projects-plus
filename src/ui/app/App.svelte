@@ -8,7 +8,7 @@
   import { buildDerivedSource, projectSourceOptions, sourceNameTaken } from "src/lib/datasources/namedSource";
   import { api } from "src/lib/stores/api";
   import { i18n } from "src/lib/stores/i18n";
-  import { app } from "src/lib/stores/obsidian";
+  import { app, plugin } from "src/lib/stores/obsidian";
   import { settings } from "src/lib/stores/settings";
   import { pendingImportRevision } from "src/lib/projectFiles/pendingImportIsolation";
   import { isMobileDevice } from "src/lib/stores/ui";
@@ -313,8 +313,12 @@
   }
 
   onMount(() => {
+    let active = true;
+    let onboarding: OnboardingModal | undefined;
     if (!projects.length) {
-      new OnboardingModal(
+      const showOnboarding = () => {
+        if (!active) return;
+        onboarding = new OnboardingModal(
         $app,
         // Create from scratch.
         () => {
@@ -327,9 +331,19 @@
           ).open();
         },
         // 3.6.1 — the three linked demo projects: the window's primary path.
-        createDemo
-      ).open();
+        createDemo,
+        async () => {
+          const controller = get(plugin)?.projectFiles;
+          if (!controller) throw new Error("Project transfer is not ready");
+          await controller.openInspector(() => { if (active && !get(settings).projects.length) showOnboarding(); });
+        },
+        () => active
+      );
+      onboarding.open();
+      };
+      showOnboarding();
     }
+    return () => { active = false; onboarding?.close(); };
   });
 
   function openCreateProject() {

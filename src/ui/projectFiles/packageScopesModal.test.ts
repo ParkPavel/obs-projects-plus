@@ -26,7 +26,7 @@ jest.mock("obsidian", () => {
       callback(control); return this;
     }
   }
-  return { Modal, Setting };
+  return { Modal, FuzzySuggestModal: class extends Modal {}, Setting };
 });
 const { ProjectPackageScopesModal } = require("./packageScopesModal") as typeof import("./packageScopesModal");
 const savedEmpty = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "empty"), savedWin = Object.getOwnPropertyDescriptor(Document.prototype, "win");

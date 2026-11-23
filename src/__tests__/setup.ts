@@ -81,11 +81,12 @@ if (typeof (globalThis.crypto as any).randomUUID !== "function") {
 // Obsidian's DOM helpers are globals in the app; code prefers them to raw
 // document.createElement (obsidianmd/prefer-create-el). Minimal stand-ins:
 // the element, its text and class, which is all the plugin passes them.
-type DomInfo = string | { text?: string; cls?: string | string[]; attr?: Record<string, string> } | undefined;
+type DomInfo = string | { text?: string; value?: string; cls?: string | string[]; attr?: Record<string, string> } | undefined;
 const make = <K extends keyof HTMLElementTagNameMap>(tag: K, o?: DomInfo): HTMLElementTagNameMap[K] => {
   const el = document.createElement(tag);
   const info = typeof o === "string" ? { cls: o } : o;
   if (info?.text !== undefined) el.textContent = info.text;
+  if (info?.value !== undefined) el.setAttribute("value", info.value);
   if (info?.cls) el.classList.add(...(Array.isArray(info.cls) ? info.cls : info.cls.split(" ").filter(Boolean)));
   for (const [k, v] of Object.entries(info?.attr ?? {})) el.setAttribute(k, v);
   return el;
@@ -97,6 +98,11 @@ if (typeof g.createSpan !== "function") g.createSpan = (o?: DomInfo) => make("sp
 if (typeof g.createFragment !== "function") g.createFragment = () => document.createDocumentFragment();
 // Element helpers create the child in place, as Obsidian's do.
 const proto = HTMLElement.prototype as any;
+if (typeof proto.setCssProps !== "function") {
+  proto.setCssProps = function (this: HTMLElement, props: Record<string, string>) {
+    for (const [name, value] of Object.entries(props)) this.style.setProperty(name, value);
+  };
+}
 if (typeof proto.createEl !== "function") {
   proto.createEl = function (this: HTMLElement, tag: keyof HTMLElementTagNameMap, o?: DomInfo) {
     return this.appendChild(make(tag, o));

@@ -1,4 +1,5 @@
-import { Modal, Setting, type App } from "obsidian";
+import { Setting, type App } from "obsidian";
+import { ProjectTransferModal as Modal } from "./transferModal";
 import { get } from "svelte/store";
 import { i18n } from "src/lib/stores/i18n";
 import { configPathChoiceKey } from "src/lib/projectFiles/packagePathBindings";

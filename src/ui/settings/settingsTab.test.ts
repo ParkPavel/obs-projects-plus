@@ -55,6 +55,8 @@ jest.mock("src/ui/settings/Projects.svelte", () =>
   jest.fn().mockImplementation(() => { const c = { $set: jest.fn(), $destroy: jest.fn() }; mockMounted.push(c); return c; }));
 jest.mock("src/ui/settings/Archives.svelte", () =>
   jest.fn().mockImplementation(() => { const c = { $set: jest.fn(), $destroy: jest.fn() }; mockMounted.push(c); return c; }));
+jest.mock("src/ui/settings/ProjectManagement.svelte", () =>
+  jest.fn().mockImplementation(() => { mockRendered.push("panel:projects"); const c = { $set: jest.fn(), $destroy: jest.fn() }; mockMounted.push(c); return c; }));
 
 jest.mock("src/lib/stores/settings", () => {
   const { writable } = require("svelte/store");
@@ -85,11 +87,11 @@ describe("settings tab", () => {
     expect(out).toContain("name:settings.general.start-of-week.name");
   });
 
-  // Catalogue guideline: general settings first, without a heading, and no
-  // top-level heading named after the plugin; "About" belongs at the end.
-  test("opens with the general settings, not with a heading", () => {
+  // Owner UX requirement23.11: project management precedes general controls.
+  test("opens with project management, followed by general settings", () => {
     const out = renderTab();
-    expect(out[0]).toBe("name:settings.general.size-limit.name");
+    expect(out[0]).toBe("panel:projects");
+    expect(out[1]).toBe("name:settings.general.size-limit.name");
   });
 
   test("the About section comes last, under one heading", () => {

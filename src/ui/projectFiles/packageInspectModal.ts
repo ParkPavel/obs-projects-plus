@@ -1,4 +1,5 @@
-import { FuzzySuggestModal, Modal, Setting, TFile, type App } from "obsidian";
+import { Setting, TFile, type App } from "obsidian";
+import { ProjectTransferModal as Modal, ProjectTransferSuggestModal as FuzzySuggestModal } from "./transferModal";
 import { get } from "svelte/store";
 import { i18n } from "src/lib/stores/i18n";
 import { PackageInspectionError } from "src/lib/projectFiles/packagePolicy";
@@ -24,10 +25,12 @@ export class ProjectPackageInspectModal extends Modal {
   private picker: PackageArchivePicker | undefined;
   private editor: ProjectPackageBindingsModal | undefined;
   private scopeEditor: ProjectPackageScopesModal | undefined;
-  constructor(app: App, private readonly service: ProjectPackageService) {
+  private reportedClose = false;
+  constructor(app: App, private readonly service: ProjectPackageService, private readonly afterClose?: () => void) {
     super(app); this.containerEl.addClass("ppp-modal");
   }
   onOpen(): void {
+    this.reportedClose = false;
     this.alive = true;
     const t = (key: string) => get(i18n).t("package-inspect." + key);
     this.setTitle(t("title"));
@@ -233,5 +236,6 @@ export class ProjectPackageInspectModal extends Modal {
   }
   onClose(): void {
     this.alive = false; this.editor?.close(); this.editor = undefined; this.scopeEditor?.close(); this.scopeEditor = undefined; this.service.dispose(); this.picker?.close(); this.picker = undefined; this.contentEl.empty();
+    if (!this.reportedClose) { this.reportedClose = true; this.afterClose?.(); }
   }
 }

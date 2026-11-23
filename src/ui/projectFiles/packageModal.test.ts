@@ -27,7 +27,7 @@ jest.mock("obsidian", () => {
       callback(control); return this;
     }
   }
-  return { Modal, FuzzySuggestModal, Setting, TFile: class {}, lastPicker: () => pickers.at(-1) };
+  return { Modal, FuzzySuggestModal, Setting, TFile: class {}, getAllTags: (cache: { tags: string[] }) => cache.tags, lastPicker: () => pickers.at(-1) };
 });
 const { ProjectPackageModal } = require("./packageModal") as typeof import("./packageModal");
 const { settings } = require("src/lib/stores/settings") as typeof import("src/lib/stores/settings");
@@ -56,6 +56,28 @@ test("saving prepares Share but never sends automatically; only the direct Share
   expect(prepareShare).toHaveBeenCalled(); expect(share).not.toHaveBeenCalled();
   button("share").click(); expect(share).toHaveBeenCalledTimes(1); await settle();
   expect(modal.contentEl.textContent).toContain("project-package.shared");
+});
+
+test.each(["folder", "tag"])("selecting a %s adds its current group, excluding neighbours and protected files", async kind => {
+  modal.close();
+  const files = ["Work/A.md", "Work/sub/B.md", "Workshop/C.md", "Work/private.zip"].map(path => ({ path, extension: path.endsWith(".md") ? "md" : "zip" }));
+  const app = { vault: { getFiles: () => files }, metadataCache: { getFileCache: (file: { path: string }) => ({ tags: file.path.startsWith("Work/") ? ["#work"] : ["#workshop"] }) } } as unknown as App;
+  modal = new ProjectPackageModal(app, { prepare, save, dispose, prepareShare, eligible: (path: string) => !path.endsWith(".zip") } as unknown as Service, "q");
+  modal.open();
+  const select = modal.contentEl.querySelector("select")!; expect(select.value).toBe("q");
+  Array.from(modal.contentEl.querySelectorAll("button")).find(button => button.textContent === "project-manager.include-" + kind)!.click();
+  const picker = lastPicker() as unknown as { onChooseItem(value: string): void };
+  files.push({ path: "Work/Late.md", extension: "md" });
+  picker.onChooseItem(kind === "folder" ? "Work" : "#work");
+  button("preview").click(); await settle();
+  expect(prepare).toHaveBeenCalledWith("q", ["Work/A.md", "Work/sub/B.md", "Work/Late.md"]);
+});
+
+test("a project removed before opening is not silently replaced with another", () => {
+  modal.close();
+  modal = new ProjectPackageModal({} as App, { dispose } as unknown as Service, "removed"); modal.open();
+  expect(modal.contentEl.querySelector('[role="alert"]')?.textContent).toBe("project-manager.project-missing");
+  expect(modal.contentEl.querySelector("select")).toBeNull(); expect(prepare).not.toHaveBeenCalled();
 });
 
 test("saving requires explicit preview; selected files and missing dependencies are visible", async () => {

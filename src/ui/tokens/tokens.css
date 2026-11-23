@@ -745,6 +745,42 @@ body {
   min-width: 0;
 }
 
+/* Shared transfer forms retain native theme and one scroll area. */
+.ppp-transfer-modal .modal {
+  min-width: 0;
+  max-width: 100%;
+}
+.ppp-transfer-modal .modal-content {
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-wrap: anywhere;
+}
+.ppp-transfer-modal :is(.setting-item-info, .setting-item-control) {
+  min-width: 0;
+  max-width: 100%;
+}
+.ppp-transfer-modal .setting-item-control { flex-wrap: wrap; }
+.ppp-transfer-modal button {
+  white-space: normal;
+  height: auto;
+  min-height: 2.75rem;
+  overflow-wrap: anywhere;
+}
+.ppp-transfer-viewport {
+  box-sizing: border-box;
+  padding: max(var(--size-4-2), env(safe-area-inset-top, 0rem))
+    max(var(--size-4-2), env(safe-area-inset-right, 0rem))
+    max(var(--size-4-2), calc(env(safe-area-inset-bottom, 0rem) - var(--keyboard-height, 0rem)))
+    max(var(--size-4-2), env(safe-area-inset-left, 0rem));
+}
+.ppp-transfer-viewport .modal {
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+}
+.ppp-transfer-viewport .modal-content { overflow-y: auto; }
+
 /* i2-base-style: on a phone a setting row's name was squeezed to «Н…» and
    «З… по у…» beside its control. Under 30rem the name sits above the control
    in every plugin modal, as Obsidian lays out its own phone settings. */

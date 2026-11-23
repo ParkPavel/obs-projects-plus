@@ -1,9 +1,11 @@
-import { App, Modal } from "obsidian";
+import { App } from "obsidian";
+import { ProjectTransferModal as Modal } from "src/ui/projectFiles/transferModal";
 
 import Onboarding from "./Onboarding.svelte";
 
 export class OnboardingModal extends Modal {
   component?: Onboarding;
+  private importFailed = false;
 
   constructor(
     readonly app: App,
@@ -12,7 +14,9 @@ export class OnboardingModal extends Modal {
      * 3.6.1 — the primary path: the three linked demo projects. The modal
      * closes once this resolves `true`; `false` keeps it open with a message.
      */
-    readonly onTry: () => Promise<boolean>
+    readonly onTry: () => Promise<boolean>,
+    readonly onImport?: () => void | Promise<void>,
+    readonly ownerAlive: () => boolean = () => true
   ) {
     super(app);
     // Shared plugin modal root: phone input size, reduced motion (tokens.css).
@@ -23,6 +27,12 @@ export class OnboardingModal extends Modal {
     this.component = new Onboarding({
       target: this.contentEl,
       props: {
+        importFailed: this.importFailed,
+        onImport: this.onImport ? async () => {
+          this.close();
+          try { await this.onImport?.(); }
+          catch { if (this.ownerAlive()) { this.importFailed = true; this.open(); } }
+        } : undefined,
         onCreate: () => {
           this.onCreate();
           this.close();

@@ -1,4 +1,5 @@
-import { FuzzySuggestModal, Modal, Setting, type App } from "obsidian";
+import { Setting, type App } from "obsidian";
+import { ProjectTransferModal as Modal, ProjectTransferSuggestModal as FuzzySuggestModal } from "./transferModal";
 import { get } from "svelte/store";
 import { i18n } from "src/lib/stores/i18n";
 import { configPathChoiceKey, type ConfigBindingTarget, type ConfigPathChoice } from "src/lib/projectFiles/packagePathBindings";

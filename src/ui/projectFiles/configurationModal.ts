@@ -1,4 +1,5 @@
-import { FuzzySuggestModal, Modal, Setting, type App, type TFile } from "obsidian";
+import { Setting, type App, type TFile } from "obsidian";
+import { ProjectTransferModal as Modal, ProjectTransferSuggestModal as FuzzySuggestModal } from "./transferModal";
 import { get } from "svelte/store";
 import { settings } from "src/lib/stores/settings";
 import { i18n } from "src/lib/stores/i18n";

@@ -32,6 +32,8 @@ import { previewPackageNoteLinks } from "src/lib/projectFiles/packageNoteLinks";
 import { v4 as uuidv4 } from "uuid";
 import { canonicalPackageProject } from "src/lib/projectFiles/packageCanonical";
 import { preparePackageShare, type PreparedPackageShare } from "src/lib/projectFiles/packageShare";
+import { packageArchivePath } from "src/lib/projectFiles/packageNaming";
+import { packageNameKey } from "src/lib/projectFiles/packageManifest";
 
 export interface PackageDestinationPreview extends PackageFilePlan { readonly inventoryRevision: string; readonly policy: string; readonly configuration: PackageConfigPathPreview; readonly scopeReview: PackageScopeReview; readonly coreChecks: readonly { readonly projectId: string; readonly name: string; readonly check: ProjectCoreCheck }[] }
 
@@ -312,7 +314,14 @@ export class ProjectPackageService {
       const folder = root + "/Packages";
       await ensureProjectFolders(projectVaultStorage(this.host.app.vault, () => !this.retired && this.alive()), folder);
       this.check();
-      const path = `${folder}/${await textDigest(prepared.manifest.rootProjectId)}-${hash}.zip`;
+      const name = prepared.manifest.projects.find(project => project.id === prepared.manifest.rootProjectId)?.name;
+      if (name === undefined) throw projectFileError("package root project missing");
+      const loaded = this.loadedFiles(); scopeInventoryStamp(loaded);
+      const occupied = new Map<string, string[]>();
+      for (const item of loaded) {
+        const key = packageNameKey(item.path), paths = occupied.get(key) ?? [];
+        paths.push(item.path); occupied.set(key, paths);
+      }
       const latest = await this.snapshot();
       if (await textDigest(JSON.stringify(latest)) !== prepared.settingsRevision) throw projectFileError("package preview is stale");
       // The final asynchronous preparation is complete. Keep this synchronous
@@ -323,19 +332,39 @@ export class ProjectPackageService {
         this.check();
         if (canonical(get(settings)) !== expected || this.confirmed() !== expected) throw projectFileError("package preview is stale");
       };
+      const unaliased = (path: string) => {
+        const current = this.loadedFiles(); scopeInventoryStamp(current);
+        const key = packageNameKey(path);
+        return current.every(item => packageNameKey(item.path) !== key || item.path === path);
+      };
       checkCurrent();
-      let file = this.host.app.vault.getAbstractFileByPath(path);
-      if (!file) {
+      for (let ordinal = 1; ordinal <= 1000; ordinal++) {
+        const path = packageArchivePath(folder, name, prepared.manifest.createdAt, ordinal, this.host.app.vault.configDir);
+        const aliases = occupied.get(packageNameKey(path));
+        if (aliases && (aliases.length !== 1 || aliases[0] !== path)) continue;
+        let file = this.host.app.vault.getAbstractFileByPath(path);
+        if (file) {
+          if (!(file instanceof TFile) || file.stat.size !== zip.length) continue;
+          const before = { ...file.stat }, bytes = new Uint8Array(await this.host.app.vault.readBinary(file));
+          checkCurrent();
+          if (this.host.app.vault.getAbstractFileByPath(path) !== file || file.stat.size !== before.size || file.stat.mtime !== before.mtime) throw projectFileError("existing archive changed during capture");
+          if (await binaryDigest(bytes) !== hash) continue;
+        } else {
+          checkCurrent();
+          // Encoding/reads yield to Vault events. Recheck portable aliases next
+          // to creation, including collisions introduced since the inventory.
+          if (!unaliased(path)) continue;
+          file = await this.host.app.vault.createBinary(path, new Uint8Array(zip).buffer);
+        }
+        if (!(file instanceof TFile) || file.stat.size !== zip.length) throw projectFileError("package destination conflict");
+        const before = { ...file.stat }, saved = new Uint8Array(await this.host.app.vault.readBinary(file));
+        this.check();
+        if (await binaryDigest(saved) !== hash || this.host.app.vault.getAbstractFileByPath(path) !== file || before.size !== file.stat.size || before.mtime !== file.stat.mtime) throw projectFileError("package read-back failed");
         checkCurrent();
-        file = await this.host.app.vault.createBinary(path, new Uint8Array(zip).buffer);
+        if (!unaliased(path)) throw projectFileError("archive destination became ambiguous");
+        return { path, bytes: zip.length, sha256: hash };
       }
-      if (!(file instanceof TFile) || file.stat.size !== zip.length) throw projectFileError("package destination conflict");
-      const before = { ...file.stat };
-      const saved = new Uint8Array(await this.host.app.vault.readBinary(file));
-      this.check();
-      if (await binaryDigest(saved) !== hash || this.host.app.vault.getAbstractFileByPath(path) !== file || before.size !== file.stat.size || before.mtime !== file.stat.mtime) throw projectFileError("package read-back failed");
-      checkCurrent();
-      return { path, bytes: zip.length, sha256: hash };
+      throw projectFileError("too many archive name conflicts");
     } finally { this.busy = false; }
   }
 }
