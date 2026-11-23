@@ -29,6 +29,8 @@
     "docs/plan-3.7.3.md",
     "docs/plan-3.7.4-RU.md",
     "docs/plan-3.7.4.md",
+    "docs/project-management-ux-3.7.3-RU.md",
+    "docs/project-management-ux-3.7.3.md",
     "docs/release-3.7.2-RU.md",
     "docs/release-3.7.2.md",
     "docs/site-maintenance-RU.md",
@@ -117,11 +119,11 @@
     },
     {
       "name": "read/development-3.7.3-ru.html",
-      "sha256": "98f2cf488318c19090c0f2dbe3ea2aab81574b3a33df6795854017cdb7824a31"
+      "sha256": "45ad61cda37bb0ff56c3b7d763f88ba52ed3874b51a9c0b2484790ca05b0207c"
     },
     {
       "name": "read/development-3.7.3.html",
-      "sha256": "aa38c3a4c910f25d25031d7dc7dd34778625159c873c0f739902c1d08c62af46"
+      "sha256": "6c784962b26a324d0971010a0ed625e0bad7904d6bac6dd443b391f2768ccd26"
     },
     {
       "name": "read/next-versions-ru.html",
@@ -146,6 +148,14 @@
     {
       "name": "read/plan-3.7.4.html",
       "sha256": "4fe239ec4d68047a3db17eaa8986d9f24ab12f5de9b1ca8619502135bc3d3576"
+    },
+    {
+      "name": "read/project-management-ux-3.7.3-ru.html",
+      "sha256": "94b399efbcf7dd3c628fab3b5ff9940874c4f78bb2737c6ba2f0f5c864d56d36"
+    },
+    {
+      "name": "read/project-management-ux-3.7.3.html",
+      "sha256": "65f4a691d1392909dc0730d6b13dd5d23fdae40c084596130ed040fa93dbf104"
     },
     {
       "name": "read/release-3.7.2-ru.html",
@@ -261,7 +271,7 @@
     },
     {
       "name": "search-index.json",
-      "sha256": "6f203b6635d8dcf6dc63091534dd13642f98962a95285d4e2d8e7727588e6996"
+      "sha256": "9f158086e925a6c7de978d80b4cd3a957d8725bebc04e8c509a87060226ffd6b"
     },
     {
       "name": ".nojekyll",

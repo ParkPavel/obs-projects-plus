@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Project management 3.7.3: a simple primary workflow"><meta name="color-scheme" content="light dark">
+<meta name="referrer" content="strict-origin-when-cross-origin"><title>Project management 3.7.3: a simple primary workflow · Projects Plus</title>
+<meta property="og:type" content="website"><meta property="og:title" content="Project management 3.7.3: a simple primary workflow"><meta property="og:description" content="Project management 3.7.3: a simple primary workflow"><meta property="og:url" content="https://parkpavel.github.io/obs-projects-plus/read/project-management-ux-3.7.3.html"><meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://parkpavel.github.io/obs-projects-plus/read/project-management-ux-3.7.3.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/site.css">
+<script type="module" src="../assets/site.js"></script></head>
+<body data-prefix="../" data-language="en"><a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header"><a class="wordmark" href="../en.html" aria-label="Projects Plus"><span class="brand-icon" aria-hidden="true">P<span>+</span></span>Projects Plus</a>
+<nav aria-label="Main navigation"><a href="../en.html#ideas">Garden of ideas</a><a href="../read/user-guide-en.html">Documentation</a><a href="../en.html#screenshots">Screenshots</a><a class="nav-support" href="https://web.tribute.tg/d/Sh6">♡ Support</a><a class="language" href="../read/project-management-ux-3.7.3-ru.html" hreflang="ru">Русский</a><a class="nav-github" href="https://github.com/ParkPavel/obs-projects-plus">GitHub ↗</a></nav></header>
+<main id="main" class="doc-layout"><aside class="doc-sidebar"><a href="../en.html">← Explore the plugin</a><strong>On this page</strong><nav aria-label="On this page"><a href="#1-goal-and-evidence">1. Goal and evidence</a><a href="#2-panel-in-general-settings">2. Panel in general settings</a><a href="#3-bulk-selection">3. Bulk selection</a><a href="#4-readable-files-and-folders">4. Readable files and folders</a><a href="#5-import-and-destination">5. Import and destination</a><a href="#6-link-catalogue-and-compatibility">6. Link catalogue and compatibility</a><a href="#7-first-launch">7. First launch</a><a href="#8-keyboard-text-and-accessibility">8. Keyboard, text and accessibility</a><a href="#9-operations-and-external-edits">9. Operations and external edits</a><a href="#10-implementation-architecture">10. Implementation architecture</a><a href="#11-delivery-order">11. Delivery order</a><a href="#12-acceptance">12. Acceptance</a></nav></aside><article class="doc-article"><p class="doc-version">Documentation follows the source code; an installed release may differ.</p><h1 id="project-management-373-a-simple-primary-workflow">Project management 3.7.3: a simple primary workflow</h1>
+<p><a href="../read/project-management-ux-3.7.3-ru.html">Русский</a> · <a href="../read/development-3.7.3.html">Implemented technical foundation</a></p>
+<p>Status: <strong>next-iteration specification, 23 November 2026</strong>. The owner found candidate 579c052d relatively successful functionally but rejected its usability. This is not release acceptance. The interface below is not implemented yet. Stable remains 3.7.2.</p>
+<h2 id="1-goal-and-evidence">1. Goal and evidence</h2>
+<p>People must save, share and open projects without knowing command palettes, hashes, JSON, bindings or staging journals. Keep the plugin&#39;s Obsidian design language and existing settings. Simplicity reduces required decisions while preserving data protections.</p>
+<p>Source-confirmed: <code>src/ui/settings/settings.ts</code> exposes a single copy-management button; <code>src/ui/settings/Projects.svelte</code> configures commands. Transfer is spread across the modals in <code>src/ui/projectFiles</code>. <code>packageService.save</code> builds ZIP names from two full hashes. <code>Onboarding.svelte</code> offers a demo and an empty project, without a ZIP-template entry.</p>
+<p>Owner-reported defects: fields disappear below the mobile keyboard and text escapes its parents. These require reproduction and fixes. Current screenshots could not be captured: Computer Use reports <code>native pipe unavailable</code>. This is a specification grounded in the report and source, not a visual audit or iPhone verification.</p>
+<h2 id="2-panel-in-general-settings">2. Panel in general settings</h2>
+<p>Put a Projects section near the start of Projects Plus settings. Expose the same screen from plugin navigation. Commands remain optional shortcuts.</p>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Primary controls</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Start</td>
+<td>Create project; Open template</td>
+</tr>
+<tr>
+<td>Projects</td>
+<td>Search and active projects; archived projects in a separate expandable section</td>
+</tr>
+<tr>
+<td>Project card</td>
+<td>Name, folder/tag, readable status; Open, Share and more actions</td>
+</tr>
+<tr>
+<td>Project menu</td>
+<td>Create copy; Save template; Restore; Configure; Archive</td>
+</tr>
+<tr>
+<td>Copies</td>
+<td>Destination, last successful copy, opt-in automatic refresh, Update now</td>
+</tr>
+<tr>
+<td>Needs attention</td>
+<td>Interrupted transfer, external draft conflict, outdated copy; an action per state</td>
+</tr>
+</tbody></table>
+<p>Show names, counts and dates first. IDs, hashes, journals and schema versions belong in expandable details. Mobile controls stack vertically instead of requiring horizontal table scrolling. Move command configuration to additional settings without resetting saved shortcuts.</p>
+<h2 id="3-bulk-selection">3. Bulk selection</h2>
+<p>The Share project wizard starts with a project and one material-selection mode:</p>
+<table>
+<thead>
+<tr>
+<th>Choice</th>
+<th>Selection</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>All project materials</td>
+<td>Files belonging to the project; the open view&#39;s display filter does not reduce the copy</td>
+</tr>
+<tr>
+<td>From folder</td>
+<td>Selected folder, including subfolders by default</td>
+</tr>
+<tr>
+<td>By tag</td>
+<td>Matching notes, with an explicit subtag option</td>
+</tr>
+<tr>
+<td>Linked notes and files</td>
+<td>Project materials and local outgoing link targets, with cycle protection</td>
+</tr>
+<tr>
+<td>Settings only</td>
+<td>Configuration template without personal records</td>
+</tr>
+</tbody></table>
+<p>Include attachments referenced by selected notes by default, with an option to disable this. Backlinks never expand the selection automatically. Linked-note traversal is bounded and its scope/count shown before approval. Never download remote URLs. Aggregated project rows cannot be guessed into source files: offer a folder/tag instead.</p>
+<p>First collect paths and sizes, then show a readable summary and an optional expandable tree. Individual exclusions/additions remain available but are not the primary workflow. Switching modes replaces the previous scope; never silently union a folder and tag selection.</p>
+<p>Do not copy payloads before Create archive. Deduplicate files; exclude excluded project notes, hidden settings, service copies and existing archives from automatic traversal. Explain size limits and offer a smaller scope, without silent truncation. Changes after review invalidate the affected selection and require fresh approval.</p>
+<h2 id="4-readable-files-and-folders">4. Readable files and folders</h2>
+<p>Examples: <code>Home renovation — 2026-11-23.zip</code>, <code>Home renovation — template.zip</code>, <code>Project.json</code>, <code>Home renovation — 2026-11-23 14-30.md</code>. Offer a numbered suffix on collision. Allow editing the proposed archive name. Shorten unsafe/long filenames without changing the displayed project name.</p>
+<p>Hashes verify contents inside manifests/indexes; they are not the visible name. IDs and confirmed ownership indexes identify managed files. Check duplicate project names, case/NFC aliases, invalid characters and occupied ancestors before and adjacent to writes. Names alone never authorise replacement.</p>
+<p>New visible documents have readable names; preparation belongs in a separately explained service area. Never automatically rename user notes or previously exported ZIPs. Continue reading old copies; moving to readable copy names is a checked, reversible action with a report. Renaming requires updating ownership and source isolation together.</p>
+<h2 id="5-import-and-destination">5. Import and destination</h2>
+<p>Primary path: Open template → choose ZIP → choose folder → Add project. Three wizard screens: Template, Destination, Review and add. Preparation, validation and journaling happen behind these actions instead of separate technical buttons.</p>
+<p>Suggest a new folder named after the project. Allow another vault folder, a project-name edit, and Materials included / Settings only. Notes and Project.json live together. Resolve collisions with a new folder or safely renamed copies and consistent link relocation, not default overwrites.</p>
+<p>A tag project still needs a creation folder. Show whether existing notes with the tag will join. The desired default is Only added materials: this needs an explicitly persisted source-scope restriction that also handles future notes in the import folder. Filtering preview results once cannot implement it. Keeping the original broad rule is an explicit choice. Never rewrite DQL text automatically; explain unsupported isolation before installation.</p>
+<p>Multiple projects receive readable subfolders and a shared dependency review. Keep the original ZIP by default; optional trash happens after confirmed success. Finish with Project added, Open project and its folder.</p>
+<h2 id="6-link-catalogue-and-compatibility">6. Link catalogue and compatibility</h2>
+<p>New packages need a versioned catalogue of exact sender-resolved link targets: source file, verified text revision, position/original text, resolved target and role. Build it from native metadata plus checked bytes, not basename matching. Preserve relative/wiki/YAML links, aliases, headings and blocks.</p>
+<p>Together with the immutable placement plan this enables automatic bindings for included files. Present only missing targets, external files, collisions and unsupported syntax. Allow grouped folder decisions when the mapping is unambiguous and explicitly confirmed.</p>
+<p>Schema1 rejects unknown fields: do not silently extend it. Design schema2 with its own validation while retaining schema1 readers. Ambiguous legacy wiki links still need explicit decisions; a unique selected basename is not proof of sender intent.</p>
+<h2 id="7-first-launch">7. First launch</h2>
+<p>Offer Create project, Open template and Try example. ZIP selection opens the same wizard used by settings. Back/cancel returns without adding an empty project or losing choices. Template preview never executes received queries or formulas.</p>
+<p>Selecting a ZIP already in the vault is required. Prototype public per-host support for the system file picker and external Open with. If unavailable, explain how to save the ZIP into the vault first. Do not use private filesystem interfaces.</p>
+<h2 id="8-keyboard-text-and-accessibility">8. Keyboard, text and accessibility</h2>
+<p>Use one shared transfer-form container: header, one scrolling body and accessible actions. Avoid a second full-screen modal behind a picker and duplicated keyboard offsets. Reuse visibleViewport/onKeyboardChange/fitVisibleViewport and tokens; validate their integration with native Modal rather than applying them blindly.</p>
+<p>Use ownerDocument/defaultView, visualViewport, safe areas, Obsidian&#39;s toolbar, keyboard and rotation. Keep the focused control and confirmation actions reachable. List updates preserve caret, IME, focus and scroll. Suggestions stay in the correct layer. Large text and unbroken names must not expand parents: min-width:0, wrapping and stacked actions instead of clipping essential labels.</p>
+<p>The project&#39;s touch-target criterion is at least 44 CSS px. Preserve theme support, visible labels/focus, announced status, reduced motion and keyboard navigation; do not encode status only by colour. These are acceptance requirements, not an accessibility certification claim.</p>
+<h2 id="9-operations-and-external-edits">9. Operations and external edits</h2>
+<p>Back preserves choices. Reopening a running transfer shows its state rather than starting another operation. Cancellation explains whether work stopped or only the window closed. After restart show Continue and Cancel transfer while preserving files.</p>
+<p>Use readable phases and counts when known. Distinguish primary success from secondary-copy failure. Errors provide a next action with technical details behind disclosure. Closing/backgrounding cannot produce false success.</p>
+<p>Project cards expose Apply changes from file and Restore copy with a readable diff. Ordinary management never requires JSON editing. Preserve external drafts during automatic copying and recover interrupted owned-write acknowledgments.</p>
+<h2 id="10-implementation-architecture">10. Implementation architecture</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ProjectManagementPanel</td>
+<td>Settings/list/status using the existing store and writer</td>
+</tr>
+<tr>
+<td>TransferWizard</td>
+<td>Shared step flow for settings, navigation and onboarding</td>
+</tr>
+<tr>
+<td>SelectionPlanner</td>
+<td>Native membership/metadata, scope, deduplication, bounds and inclusion reasons; no payload writes</td>
+</tr>
+<tr>
+<td>TransferDraft</td>
+<td>Immutable selection/revision/decision snapshot with invalidation</td>
+</tr>
+<tr>
+<td>SenderLinkCatalogue</td>
+<td>Exact sender targets and bounded traversal; schema2</td>
+</tr>
+<tr>
+<td>PackageNaming / Placement</td>
+<td>Readable names, exclusive creation, internal IDs and ownership indexes</td>
+</tr>
+<tr>
+<td>OperationCoordinator</td>
+<td>One mutating transfer per vault, progress, late callbacks, recovery</td>
+</tr>
+<tr>
+<td>Shared transfer form</td>
+<td>Common viewport/scroll/focus contract</td>
+</tr>
+</tbody></table>
+<p>Reuse package codecs, guards, typed remapping, checked settings writer, quarantine, installer/journal/recovery and configuration service. UI selection is not write authority. Incoming ZIPs remain untrusted. Naming changes require a versioned copy index and updated isProjectCopyPath/eligibility: service Markdown must stay out of folder/tag/native and file-linked DQL output. Arbitrary global DQL aggregates still need an explicit copy-area exclusion.</p>
+<p>For tag-within-folder isolation, first prototype existing native-query: a tag source plus a canonical path condition through the shared filterEvaluator, preserving the source ID. Prove folder boundaries, recursion, new notes, exclusions and size-limit behaviour. Never add an unknown option to a plain tag source that older runtimes would ignore and silently broaden. If the existing contract cannot express the scope exactly, use a versioned model change rather than a second filtering engine.</p>
+<h2 id="11-delivery-order">11. Delivery order</h2>
+<ol>
+<li>Shared mobile container and keyboard/overflow reproductions across new windows.</li>
+<li>Management panel and one wizard; commands call the same actions. No automatic old-file renames.</li>
+<li>SelectionPlanner, four bulk modes, composition review and readable new ZIP names.</li>
+<li>Link catalogue/schema2, readable configs/snapshots and checked index transition; legacy compatibility.</li>
+<li>Destination/scope import, onboarding, panel recovery and end-to-end acceptance.</li>
+</ol>
+<p>Each increment has focused verification and independent review; full C1 and a new candidate follow the connected workflow. Mobile defects block release.</p>
+<h2 id="12-acceptance">12. Acceptance</h2>
+<ul>
+<li>A new user creates, packages a folder/tag, opens a template and restores a copy without commands.</li>
+<li>A self-contained new package imports without per-file bindings; ambiguous legacy packages get understandable exceptions without guessing.</li>
+<li>Duplicate names, Unicode/NFC, subtags, cycles, duplicate files, limits, changing sources and destination conflicts never cause loss or silent omission.</li>
+<li>Cover 320/375/390 CSS px phones, large fonts, long labels, IME, keyboard, rotation and folder pickers. A physical iPhone is mandatory.</li>
+<li>Interruptions around file writes/primary publication, repeated clicks and restart recovery preserve old data and truthful outcomes.</li>
+<li>Retain schema1/copies/counters/formulas/project order; verify readable-name migration by readback and rollback.</li>
+<li>Keep automated evidence, manual results and host file-sharing limitations distinct in the final protocol.</li>
+</ul>
+<p class="doc-source"><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/docs/project-management-ux-3.7.3.md">Page source ↗</a></p></article></main>
+<footer class="site-footer"><a class="wordmark" href="../en.html">Projects Plus</a><p>An open-source project by Park Pavel. Based on Obsidian Projects by Marcus Olsson.</p><div><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE">Apache-2.0</a><a href="https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE">Attribution</a><a href="https://web.tribute.tg/d/Sh6">♡ Support the project</a><a href="https://github.com/ParkPavel/obs-projects-plus/issues">Feedback</a></div></footer>
+<aside class="search-panel" aria-label="Search documentation"><label for="doc-search">Search documentation</label><div class="search-input-wrap"><input id="doc-search" type="search" placeholder="Search…" autocomplete="off" aria-controls="search-results"><kbd>/</kbd></div><ul id="search-results" hidden></ul><p id="search-status" role="status" aria-live="polite" data-empty="No matches. Try “calendar”, “formula” or “source”."></p></aside>
+</body></html>

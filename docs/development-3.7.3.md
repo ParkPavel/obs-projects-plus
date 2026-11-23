@@ -2,6 +2,8 @@
 
 [Русский](development-3.7.3-RU.md) · [Specification](plan-3.7.3.md)
 
+Following testing on 23 November 2026, the owner requested a usability redesign. The [management panel and wizard specification](project-management-ux-3.7.3.md) defines the next increment; functional candidate verification does not establish release-ready usability.
+
 Status: **in development on the 3.7.3 branch; not published and not accepted**. The published stable plugin remains 3.7.2, and `main` and the release tag are unchanged. This page describes behaviour implemented in the development branch; it is not a release announcement.
 
 ## What the increment adds
