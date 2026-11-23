@@ -175,7 +175,8 @@ export class ProjectsSettingTab extends PluginSettingTab {
       if (owner !== this.displayRevision) return;
       preferences = current.preferences;
       for (const refresh of preferenceBindings) refresh(preferences);
-      projectsManager.$set({ preferences });
+      projectsManager.$set({ preferences, projects: current.projects });
+      archivesManager.$set({ archives: current.archives });
     });
     // Unsubscribe before destroying controls, so a retiring child cannot refresh them.
     this.mounted.unshift({ $destroy: unsubscribePreferences });
